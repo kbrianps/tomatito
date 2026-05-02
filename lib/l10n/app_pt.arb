@@ -1,0 +1,15 @@
+{
+  "@@locale": "pt",
+  "appName": "Tomatito",
+  "tagline": "Foco, com uma pitada de ciência.",
+  "play": "Iniciar",
+  "pause": "Pausar",
+  "reset": "Redefinir",
+  "skip": "Pular",
+  "focusing": "Em foco",
+  "paused": "Em pausa",
+  "shortBreak": "Pausa curta",
+  "longBreak": "Pausa longa",
+  "minutesShort": "min",
+  "scaffoldPlaceholder": "Esqueleto da Fase 0. UI chega na Fase 1."
+}

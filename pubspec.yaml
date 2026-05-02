@@ -1,0 +1,44 @@
+name: tomatito
+description: "Lightweight cross-platform Pomodoro timer."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.7.0
+  flutter: ">=3.32.0"
+
+dependencies:
+  cupertino_icons: ^1.0.8
+  drift: ^2.20.0
+  flutter:
+    sdk: flutter
+  flutter_animate: ^4.5.0
+  flutter_foreground_task: ^8.10.0
+  flutter_local_notifications: ^17.2.0
+  flutter_localizations:
+    sdk: flutter
+  flutter_riverpod: ^2.5.1
+  intl: any
+  just_audio: ^0.9.40
+  meta: ^1.16.0
+  path: ^1.9.0
+  path_provider: ^2.1.4
+  shared_preferences: ^2.3.0
+  sqlite3_flutter_libs: ^0.5.20
+  window_manager: ^0.4.0
+
+dev_dependencies:
+  build_runner: ^2.4.0
+  drift_dev: ^2.20.0
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  mocktail: ^1.0.4
+  very_good_analysis: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+  assets:
+    - assets/sounds/

@@ -1,0 +1,35 @@
+{
+  "@@locale": "en",
+  "appName": "Tomatito",
+  "@appName": {
+    "description": "App name."
+  },
+  "tagline": "Focus, with a pinch of science.",
+  "@tagline": {
+    "description": "App tagline shown on welcome screen and About."
+  },
+  "play": "Play",
+  "@play": {},
+  "pause": "Pause",
+  "@pause": {},
+  "reset": "Reset",
+  "@reset": {},
+  "skip": "Skip",
+  "@skip": {},
+  "focusing": "Focusing",
+  "@focusing": {},
+  "paused": "Paused",
+  "@paused": {},
+  "shortBreak": "Short break",
+  "@shortBreak": {},
+  "longBreak": "Long break",
+  "@longBreak": {},
+  "minutesShort": "min",
+  "@minutesShort": {
+    "description": "Suffix after the minutes number on the dial."
+  },
+  "scaffoldPlaceholder": "Phase 0 scaffold. UI lands in Phase 1.",
+  "@scaffoldPlaceholder": {
+    "description": "Temporary placeholder shown while UI is unimplemented."
+  }
+}
