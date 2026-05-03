@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:tomatito/core/dial/dial_style.dart';
 import 'package:tomatito/core/locale/locale_choice.dart';
 import 'package:tomatito/core/sound/sound_bank.dart';
 import 'package:tomatito/core/theme/app_themes.dart';
@@ -20,6 +21,7 @@ class FakeSettingsRepository implements SettingsRepository {
     bool initialHasSeenOnboarding = false,
     bool initialTickEnabled = false,
     LocaleChoice initialLocaleChoice = LocaleChoice.system,
+    DialStyle initialDialStyle = DialStyle.ticks,
   }) : _config = initialConfig ?? SessionConfig.pomodoroDefault,
        _theme = initialTheme,
        _dailyGoal = initialDailyGoalMinutes,
@@ -30,7 +32,8 @@ class FakeSettingsRepository implements SettingsRepository {
        _oemTipShown = initialOemTipShown,
        _hasSeenOnboarding = initialHasSeenOnboarding,
        _tickEnabled = initialTickEnabled,
-       _localeChoice = initialLocaleChoice;
+       _localeChoice = initialLocaleChoice,
+       _dialStyle = initialDialStyle;
 
   SessionConfig _config;
   AppThemeId _theme;
@@ -43,6 +46,7 @@ class FakeSettingsRepository implements SettingsRepository {
   bool _hasSeenOnboarding;
   bool _tickEnabled;
   LocaleChoice _localeChoice;
+  DialStyle _dialStyle;
   final StreamController<void> _changes = StreamController<void>.broadcast();
 
   @override
@@ -144,6 +148,15 @@ class FakeSettingsRepository implements SettingsRepository {
   @override
   Future<void> saveLocaleChoice(LocaleChoice choice) async {
     _localeChoice = choice;
+    _changes.add(null);
+  }
+
+  @override
+  Future<DialStyle> loadDialStyle() async => _dialStyle;
+
+  @override
+  Future<void> saveDialStyle(DialStyle style) async {
+    _dialStyle = style;
     _changes.add(null);
   }
 

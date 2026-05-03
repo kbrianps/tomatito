@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:tomatito/core/dial/dial_style.dart';
 import 'package:tomatito/core/locale/locale_choice.dart';
 import 'package:tomatito/core/sound/sound_bank.dart';
 import 'package:tomatito/core/sound/sound_player.dart';
@@ -242,6 +243,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ]),
+        _Section(loc.settingsDial, [
+          RadioGroup<DialStyle>(
+            groupValue: ref.watch(dialStyleProvider),
+            onChanged: (v) {
+              if (v == null) return;
+              ref.read(dialStyleProvider.notifier).state = v;
+              ref.read(settingsRepositoryProvider).saveDialStyle(v);
+            },
+            child: Column(
+              children: [
+                for (final s in DialStyle.values)
+                  RadioListTile<DialStyle>(
+                    title: Text(_dialStyleLabel(loc, s)),
+                    value: s,
+                  ),
+              ],
+            ),
+          ),
+        ]),
         _Section(loc.settingsLanguage, [
           RadioGroup<LocaleChoice>(
             groupValue: ref.watch(localeChoiceProvider),
@@ -328,6 +348,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return loc.soundGentlePulse;
       default:
         return option.id;
+    }
+  }
+
+  String _dialStyleLabel(AppLocalizations loc, DialStyle style) {
+    switch (style) {
+      case DialStyle.ticks:
+        return loc.dialStyleTicks;
+      case DialStyle.arc:
+        return loc.dialStyleArc;
     }
   }
 }

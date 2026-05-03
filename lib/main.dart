@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tomatito/app.dart';
 import 'package:tomatito/core/app_lifecycle.dart';
 import 'package:tomatito/core/bootstrap_result.dart';
+import 'package:tomatito/core/dial/dial_style.dart';
 import 'package:tomatito/core/entitlements/always_free_entitlement_service.dart';
 import 'package:tomatito/core/entitlements/entitlement_service.dart';
 import 'package:tomatito/core/locale/locale_choice.dart';
@@ -71,6 +72,7 @@ Future<void> main() async {
   final oemTipShown = await settings.loadOemTipShown();
   final hasSeenOnboarding = await settings.loadHasSeenOnboarding();
   final localeChoice = await settings.loadLocaleChoice();
+  final dialStyle = await settings.loadDialStyle();
   final bootstrap = BootstrapResult(
     restoredFromCheckpoint: restoreResult.restored,
     // The OEM battery tip only makes sense on Android; on desktop the
@@ -143,6 +145,7 @@ Future<void> main() async {
         onboardingNeededProvider.overrideWith((ref) => !hasSeenOnboarding),
         alwaysOnTopProvider.overrideWith((ref) => alwaysOnTopInitial),
         localeChoiceProvider.overrideWith((ref) => localeChoice),
+        dialStyleProvider.overrideWith((ref) => dialStyle),
       ],
       child: const TomatitoApp(),
     ),

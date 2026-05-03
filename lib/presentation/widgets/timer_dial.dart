@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:tomatito/core/dial/dial_style.dart';
 import 'package:tomatito/core/motion/motion_durations.dart';
 import 'package:tomatito/core/theme/theme_tokens.dart';
 import 'package:tomatito/core/timer/timer_state.dart';
 import 'package:tomatito/presentation/widgets/animated_minute_text.dart';
+import 'package:tomatito/presentation/widgets/arc_painter.dart';
 import 'package:tomatito/presentation/widgets/tick_painter.dart';
 
-class TimerDial extends StatelessWidget {
+class TimerDial extends ConsumerWidget {
   const TimerDial({
     required this.state,
     required this.size,
@@ -41,7 +44,7 @@ class TimerDial extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final accent = activeColor ?? scheme.primary;
     final inactive = scheme.onSurface.withValues(
@@ -49,6 +52,7 @@ class TimerDial extends StatelessWidget {
     );
     final remaining = _remaining();
     final progress = _progress();
+    final dialStyle = ref.watch(dialStyleProvider);
 
     return SizedBox(
       width: size,
@@ -63,11 +67,18 @@ class TimerDial extends StatelessWidget {
               builder:
                   (ctx, value, _) => CustomPaint(
                     size: Size(size, size),
-                    painter: TickPainter(
-                      progress: value,
-                      activeColor: accent,
-                      inactiveColor: inactive,
-                    ),
+                    painter: switch (dialStyle) {
+                      DialStyle.ticks => TickPainter(
+                        progress: value,
+                        activeColor: accent,
+                        inactiveColor: inactive,
+                      ),
+                      DialStyle.arc => ArcPainter(
+                        progress: value,
+                        activeColor: accent,
+                        inactiveColor: inactive,
+                      ),
+                    },
                   ),
             ),
           ),

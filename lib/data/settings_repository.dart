@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tomatito/core/dial/dial_style.dart';
 import 'package:tomatito/core/locale/locale_choice.dart';
 import 'package:tomatito/core/theme/app_themes.dart';
 import 'package:tomatito/core/timer/session_config.dart';
@@ -35,9 +36,12 @@ abstract class SettingsRepository {
   Future<bool> loadTickEnabled();
   Future<void> saveTickEnabled({required bool value});
 
-  /// User locale preference (system / en / pt). System is the default.
   Future<LocaleChoice> loadLocaleChoice();
   Future<void> saveLocaleChoice(LocaleChoice choice);
+
+  /// User-facing dial style (ticks or arc).
+  Future<DialStyle> loadDialStyle();
+  Future<void> saveDialStyle(DialStyle style);
 
   /// Stream of changes so the UI can re-render without polling.
   Stream<void> get changes;

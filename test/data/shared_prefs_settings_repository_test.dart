@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:tomatito/core/dial/dial_style.dart';
 import 'package:tomatito/core/locale/locale_choice.dart';
 import 'package:tomatito/core/theme/app_themes.dart';
 import 'package:tomatito/core/timer/session_config.dart';
@@ -101,6 +102,16 @@ void main() {
 
     final fresh = await SharedPrefsSettingsRepository.create();
     expect(await fresh.loadLocaleChoice(), LocaleChoice.pt);
+  });
+
+  test('dial style round-trips and defaults to ticks', () async {
+    final repo = await SharedPrefsSettingsRepository.create();
+    expect(await repo.loadDialStyle(), DialStyle.ticks);
+    await repo.saveDialStyle(DialStyle.arc);
+    expect(await repo.loadDialStyle(), DialStyle.arc);
+
+    final fresh = await SharedPrefsSettingsRepository.create();
+    expect(await fresh.loadDialStyle(), DialStyle.arc);
   });
 
   test('chime id and volume round-trip with sensible defaults', () async {
