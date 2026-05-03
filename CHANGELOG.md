@@ -6,6 +6,16 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ### Added
 
+- Phase 3.x arc dial style + drop digit animation.
+- AnimatedMinuteText drops the AnimatedSwitcher; the MM:SS value just changes in place when the engine emits a new tick. `FontFeature.tabularFigures` keeps the digits from shifting horizontally.
+- New `DialStyle` enum (ticks / arc) + `dialStyleProvider` (StateProvider) + persistence in `SettingsRepository`. main loads and overrides the provider on boot.
+- New `ArcPainter`: the full ring sits in inactive colour as a guide; the "remaining" portion overlays in active colour starting at the current elapsed angle and sweeps clockwise back to the start. As time passes the active arc shrinks; at completion only the inactive ring remains.
+- TimerDial picks the painter via `ref.watch(dialStyleProvider)`.
+- Settings → Dial section ships the picker (Ticks / Arc) in en + pt.
+- Tests: dial-style round-trip in shared_prefs (90 total, all passing).
+
+### Earlier in [Unreleased]
+
 - Phase 0 scaffolding: project structure, very_good_analysis lint baseline, GitHub Actions CI for analyze + test, theme tokens, motion tokens, l10n infrastructure (en and pt_BR), and abstract interfaces for `TimerEngine`, `SettingsRepository`, `StatisticsRepository`, `NotificationService`, `WindowController`, `EntitlementService`.
 - Four `ColorScheme` definitions (Light, Dark, Black OLED, Tomatito) with WCAG AA contrast verification (`ContrastValidator`) covering surface, primary, secondary and error pairs.
 - `AlwaysFreeEntitlementService` v1 implementation (every feature unlocked).
