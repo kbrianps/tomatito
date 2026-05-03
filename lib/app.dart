@@ -10,6 +10,7 @@ import 'package:tomatito/core/timer/timer_engine.dart';
 import 'package:tomatito/core/timer/timer_state.dart';
 import 'package:tomatito/data/settings_repository.dart';
 import 'package:tomatito/l10n/app_localizations.dart';
+import 'package:tomatito/presentation/screens/onboarding_screen.dart';
 import 'package:tomatito/presentation/screens/root_shell.dart';
 
 /// Root Navigator key. Used by Esc keyboard shortcut to dismiss modal
@@ -31,7 +32,27 @@ class TomatitoApp extends ConsumerWidget {
       themeAnimationCurve: MotionCurves.standard,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const _ShortcutsScope(child: RootShell()),
+      home: const _ShortcutsScope(child: _RootRouter()),
+    );
+  }
+}
+
+/// Switches between the welcome tour and the main shell. The flag is
+/// `onboardingNeededProvider`, owned by `OnboardingScreen`.
+class _RootRouter extends ConsumerWidget {
+  const _RootRouter();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final showOnboarding = ref.watch(onboardingNeededProvider);
+    return AnimatedSwitcher(
+      duration: MotionDurations.long,
+      switchInCurve: MotionCurves.enter,
+      switchOutCurve: MotionCurves.exit,
+      child:
+          showOnboarding
+              ? const OnboardingScreen(key: ValueKey('onboarding'))
+              : const RootShell(key: ValueKey('root')),
     );
   }
 }

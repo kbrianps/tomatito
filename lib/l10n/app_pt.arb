@@ -74,5 +74,15 @@
   "aboutPrivacy": "Política de privacidade",
   "aboutTerms": "Termos de uso",
   "aboutSource": "Código-fonte",
-  "aboutSupport": "Apoiar o desenvolvimento"
+  "aboutSupport": "Apoiar o desenvolvimento",
+  "aboutShowWelcomeTour": "Ver o tour novamente",
+  "onboardingSkip": "Pular",
+  "onboardingNext": "Próximo",
+  "onboardingGetStarted": "Começar",
+  "onboardingGoalTitle": "Defina uma meta",
+  "onboardingGoalBody": "Escolha a duração da sessão. O Tomatito divide em períodos de foco com pausas entre eles.",
+  "onboardingFocusTitle": "Foque, então descanse",
+  "onboardingFocusBody": "Pausas de verdade ajudam mais. Levante, olhe pela janela, beba água. Não outra tela.",
+  "onboardingCustomizeTitle": "Personalize tudo",
+  "onboardingCustomizeBody": "Tente 50/10 ou 90/20 se 25/5 não é o seu ritmo. Escolha um som, tema, meta diária. Ache o que funciona."
 }

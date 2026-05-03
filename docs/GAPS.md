@@ -191,14 +191,16 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Plan: build a `CompactTimerScreen` and the route swap in Phase 3 alongside platform window integration.
 - Opened: 2026-05-02
 
-## [OPEN] Onboarding tour deferred
+## [CLOSED] Onboarding tour
 
 - Severity: low
 - Area: first-run
-- Description: spec describes a 3-screen optional welcome tour. Phase 1 ships sensible defaults so the user can press play immediately, but the tour is not implemented.
+- Description: spec described a 3-screen optional welcome tour. Phase 1 shipped sensible defaults so the user could press play immediately, but the tour was not implemented.
 - Impact: less hand-holding for first-time users.
 - Plan: build the 3-screen flow + "Show welcome tour again" entry in About in Phase 1.x.
+- Resolution: Phase 3.x. `OnboardingScreen` is a 4-page PageView (welcome + 3 tour pages: set a goal, focus then rest, customize anything) with Skip and Next buttons; the last page swaps Next for "Get started". Page indicator at the bottom. Persistence: `SettingsRepository.loadHasSeenOnboarding` / `saveHasSeenOnboarding`. Routing: `_RootRouter` in app.dart watches `onboardingNeededProvider` (StateProvider) and AnimatedSwitchers between OnboardingScreen and RootShell. About screen has a "Show welcome tour again" tile that resets the flag and pops back to root. en + pt strings.
 - Opened: 2026-05-02
+- Closed: 2026-05-02
 
 ## [CLOSED] SessionCheckpoint and resume-after-kill
 
@@ -307,14 +309,16 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Plan: build a `CompactTimerScreen`, wire window resize via window_manager, and surface the corner toggle from the `TimerScreen` header. Phase 3.x.
 - Opened: 2026-05-02
 
-## [OPEN] Window state persistence (size + position) deferred
+## [CLOSED] Window state persistence (size + position)
 
 - Severity: low
 - Area: desktop
-- Description: spec calls for window size + position to persist across launches. Phase 3 only persists the always-on-top flag; the window opens at the OS-default position every time.
-- Impact: minor; users on multi-monitor setups must reposition the window after each launch.
+- Description: spec called for window size + position to persist across launches. Phase 3 only persisted the always-on-top flag; the window opened at the OS-default position every time.
+- Impact: minor; users on multi-monitor setups had to reposition the window after each launch.
 - Plan: implement `persistWindowState` / `restoreWindowState` on `DesktopWindowController` (window_manager getBounds + setBounds) and call them on app start / dispose. Phase 3.x.
+- Resolution: Phase 3.x. `DesktopWindowController` accepts a `SharedPreferences`; persists / restores bounds JSON under `tomatito.window_bounds.v1`. main calls `restoreWindowState()` after `windowManager.ensureInitialized()` and registers a `_PersistOnMoveListener` (extends `WindowListener`) that saves on `onWindowResized` / `onWindowMoved`. SharedPreferences writes are async and quick; we accept the small chance of a partial write at process kill since the value is single-key atomic.
 - Opened: 2026-05-02
+- Closed: 2026-05-02
 
 ## [CLOSED] Android persistent timer notification + foreground service
 

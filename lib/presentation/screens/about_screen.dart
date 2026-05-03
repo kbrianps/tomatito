@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:tomatito/core/theme/theme_tokens.dart';
+import 'package:tomatito/data/settings_repository.dart';
 import 'package:tomatito/l10n/app_localizations.dart';
+import 'package:tomatito/presentation/screens/onboarding_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class AboutScreen extends StatelessWidget {
+class AboutScreen extends ConsumerWidget {
   const AboutScreen({super.key});
 
   static const _version = '0.1.0';
@@ -19,7 +22,7 @@ class AboutScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final loc = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return Scaffold(
@@ -87,6 +90,20 @@ class AboutScreen extends StatelessWidget {
             title: Text(loc.aboutSupport),
             trailing: const Icon(Icons.favorite_border),
             onTap: () => _open(_supportUrl),
+          ),
+          const Divider(),
+          ListTile(
+            title: Text(loc.aboutShowWelcomeTour),
+            trailing: const Icon(Icons.replay_outlined),
+            onTap: () async {
+              await ref
+                  .read(settingsRepositoryProvider)
+                  .saveHasSeenOnboarding(value: false);
+              ref.read(onboardingNeededProvider.notifier).state = true;
+              if (context.mounted) {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              }
+            },
           ),
         ],
       ),

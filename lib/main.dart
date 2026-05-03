@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:tomatito/app.dart';
 import 'package:tomatito/core/bootstrap_result.dart';
@@ -26,6 +28,7 @@ import 'package:tomatito/data/shared_prefs_settings_repository.dart';
 import 'package:tomatito/data/statistics_repository.dart';
 import 'package:tomatito/platform/android/android_notification_service.dart';
 import 'package:tomatito/platform/desktop/desktop_window_controller.dart';
+import 'package:tomatito/presentation/screens/onboarding_screen.dart';
 import 'package:window_manager/window_manager.dart';
 
 bool get _isDesktop =>
@@ -41,28 +44,31 @@ Future<void> main() async {
 
   await initializeDateFormatting();
 
-  final settings = await SharedPrefsSettingsRepository.create();
+  final prefs = await SharedPreferences.getInstance();
+  final settings = SharedPrefsSettingsRepository(prefs);
   final stats = await JsonStatisticsRepository.create();
   final checkpointStore = await CheckpointStore.create();
   final engine = RealTimerEngine(checkpointStore: checkpointStore);
 
-  // Restore an interrupted session if the checkpoint is fresh (< 30 min);
-  // detect a stale checkpoint to drive the OEM battery tip.
   final config = await settings.loadSessionConfig();
   final restoreResult = await engine.restoreFromCheckpointIfFresh(config);
   final oemTipShown = await settings.loadOemTipShown();
+  final hasSeenOnboarding = await settings.loadHasSeenOnboarding();
   final bootstrap = BootstrapResult(
     restoredFromCheckpoint: restoreResult.restored,
     shouldShowOemTip: restoreResult.staleDiscarded && !oemTipShown,
   );
 
-  final windowController = _buildWindowController();
+  final windowController =
+      _isDesktop ? DesktopWindowController(prefs) : NoOpWindowController();
   final notificationService = _buildNotificationService();
   final soundPlayer = _buildSoundPlayer();
 
   if (_isDesktop) {
+    await windowController.restoreWindowState();
     final alwaysOnTop = await settings.loadAlwaysOnTop();
     await windowController.setAlwaysOnTop(value: alwaysOnTop);
+    windowManager.addListener(_PersistOnMoveListener(windowController));
   }
 
   final statsRecorder = StatsRecorder(
@@ -83,8 +89,6 @@ Future<void> main() async {
   );
   await persistentRecorder.start();
 
-  // Recorders are intentionally tied to app lifetime; nothing currently
-  // disposes them. Replaced by an explicit lifecycle owner in a follow-up.
   _keepAlive(statsRecorder, chimeRecorder, persistentRecorder);
 
   runApp(
@@ -100,14 +104,12 @@ Future<void> main() async {
         ),
         soundPlayerProvider.overrideWithValue(soundPlayer),
         bootstrapResultProvider.overrideWithValue(bootstrap),
+        onboardingNeededProvider.overrideWith((ref) => !hasSeenOnboarding),
       ],
       child: const TomatitoApp(),
     ),
   );
 }
-
-WindowController _buildWindowController() =>
-    _isDesktop ? DesktopWindowController() : NoOpWindowController();
 
 NotificationService _buildNotificationService() =>
     _isAndroid ? AndroidNotificationService() : NoOpNotificationService();
@@ -125,3 +127,22 @@ void _keepAlive(
   ChimeRecorder c,
   PersistentNotificationRecorder p,
 ) {}
+
+/// Saves the window bounds whenever the user moves or resizes the window.
+/// Writes are async and quick; we accept the small chance of a partial
+/// write at process kill since SharedPreferences is single-key atomic.
+class _PersistOnMoveListener extends WindowListener {
+  _PersistOnMoveListener(this._controller);
+
+  final WindowController _controller;
+
+  @override
+  void onWindowResized() {
+    unawaited(_controller.persistWindowState());
+  }
+
+  @override
+  void onWindowMoved() {
+    unawaited(_controller.persistWindowState());
+  }
+}

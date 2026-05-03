@@ -72,6 +72,16 @@ void main() {
     expect(await fresh.loadOemTipShown(), isTrue);
   });
 
+  test('has-seen-onboarding round-trips and defaults to false', () async {
+    final repo = await SharedPrefsSettingsRepository.create();
+    expect(await repo.loadHasSeenOnboarding(), isFalse);
+    await repo.saveHasSeenOnboarding(value: true);
+    expect(await repo.loadHasSeenOnboarding(), isTrue);
+
+    final fresh = await SharedPrefsSettingsRepository.create();
+    expect(await fresh.loadHasSeenOnboarding(), isTrue);
+  });
+
   test('chime id and volume round-trip with sensible defaults', () async {
     final repo = await SharedPrefsSettingsRepository.create();
     expect(await repo.loadChimeId(), isNotEmpty);

@@ -71,3 +71,9 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 - `soundPlayerProvider` exposes the platform-appropriate SoundPlayer. SettingsScreen adds a play icon on each chime tile that previews at the current volume.
 - main calls `initializeDateFormatting()`. StatisticsScreen weekday labels render via `DateFormat('E', Localizations.localeOf(context).toString())`; pt now shows "seg, ter, qua, ..." instead of "Mon, Tue, ...".
 - Tests: 86 total, all passing.
+- Phase 3.x window state persistence + onboarding tour (closes two more OPEN GAPS entries).
+- `DesktopWindowController` now accepts a `SharedPreferences`; persists and restores window bounds via `tomatito.window_bounds.v1`. main calls `restoreWindowState()` after `windowManager.ensureInitialized()` and registers a `_PersistOnMoveListener` that saves on every resize / move.
+- `OnboardingScreen`: 4-page PageView (welcome + 3 tour pages) with Skip / Next, page indicator, and "Get started" on the last page. Persists `has_seen_onboarding` in SharedPreferences.
+- `_RootRouter` in app.dart watches `onboardingNeededProvider` (StateProvider) and AnimatedSwitchers between OnboardingScreen and RootShell. About screen has "Show welcome tour again" tile that resets the flag.
+- `SettingsRepository` extended with `loadHasSeenOnboarding` / `saveHasSeenOnboarding`; both repos updated; round-trip test added.
+- Tests: 87 total, all passing.

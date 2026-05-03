@@ -25,11 +25,15 @@ abstract class SettingsRepository {
   Future<bool> loadPersistentNotification();
   Future<void> savePersistentNotification({required bool value});
 
-  /// One-time OEM-battery-management tip: set true once the user dismisses
-  /// the banner explaining that Android may pause the timer. Used to gate
-  /// the banner so it does not nag the user repeatedly.
   Future<bool> loadOemTipShown();
   Future<void> saveOemTipShown({required bool value});
+
+  /// Whether the user has already gone through (or skipped) the welcome
+  /// tour. False on first launch; set true by the OnboardingScreen on
+  /// "Get started" or "Skip", and reset to false from About when the user
+  /// chooses "Show welcome tour again".
+  Future<bool> loadHasSeenOnboarding();
+  Future<void> saveHasSeenOnboarding({required bool value});
 
   /// Stream of changes so the UI can re-render without polling.
   Stream<void> get changes;

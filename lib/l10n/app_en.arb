@@ -96,5 +96,15 @@
   "aboutPrivacy": "Privacy policy",
   "aboutTerms": "Terms of use",
   "aboutSource": "Source code",
-  "aboutSupport": "Support development"
+  "aboutSupport": "Support development",
+  "aboutShowWelcomeTour": "Show welcome tour again",
+  "onboardingSkip": "Skip",
+  "onboardingNext": "Next",
+  "onboardingGetStarted": "Get started",
+  "onboardingGoalTitle": "Set a goal",
+  "onboardingGoalBody": "Pick a session length. Tomatito divides it into focus periods with breaks between them.",
+  "onboardingFocusTitle": "Focus, then rest",
+  "onboardingFocusBody": "Real breaks help most. Stand up, look out a window, get water. Not another screen.",
+  "onboardingCustomizeTitle": "Customize anything",
+  "onboardingCustomizeBody": "Try 50/10 or 90/20 if 25/5 is not your rhythm. Pick a chime, theme, daily goal. Find what works."
 }
