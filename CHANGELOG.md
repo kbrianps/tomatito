@@ -8,6 +8,7 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 - Phase 3.x dial colour cross-fade on period transitions.
 - Each `PeriodKind` now has a distinct dial accent: focus = `scheme.primary`, shortBreak = `scheme.tertiary`, longBreak = `scheme.secondary`. `TimerDial` wraps the active colour in a 600 ms `ColorTween` (curve: easeOutCubic) so Focus -> Break visibly cross-fades the dial instead of snapping. New `TimerDial.accentFor(scheme, kind)` static helper exposes the mapping. The downstream `TweenAnimationBuilder<double>` for tick progress is preserved unchanged.
+- Each `ColorScheme` (Light / Dark / Black OLED / Tomatito) now declares its own `tertiary` (and `onTertiary`) colour, distinct from `secondary`, so short and long breaks render in different hues on every theme. New contrast test asserts each theme's `tertiary` passes the 3:1 graphical-accent threshold against its surface.
 - Closes part of the open "Period-transition animations" gap (severity downgraded from medium to low; the tick-sweep + final-tick celebration are still pending).
 
 ### Fixed

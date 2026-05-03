@@ -94,6 +94,18 @@ void main() {
           reason: 'ratio = $r',
         );
       });
+
+      test('$id: tertiary on surface (break-period dial accent >= 3:1)', () {
+        final r = ContrastValidator.ratio(scheme.tertiary, scheme.surface);
+        expect(
+          ContrastValidator.passesLargeOrGraphical(
+            scheme.tertiary,
+            scheme.surface,
+          ),
+          isTrue,
+          reason: 'ratio = $r',
+        );
+      });
     }
   });
 }
