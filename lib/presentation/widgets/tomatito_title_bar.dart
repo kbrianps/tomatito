@@ -61,9 +61,11 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
   bool _wantCompactAfterSettings = false;
 
   static const Size _compactSize = Size(240, 320);
-  // Shape theme uses a square window so the round tomato PNG fits with
-  // BoxFit.cover and the dial sits cleanly over the body.
-  static const Size _shapeCompactSize = Size(300, 300);
+  // Shape theme uses a roomier window: 360 wide x 396 tall keeps a
+  // square 360x360 body below the 36px title bar, so the round tomato
+  // PNG fits with BoxFit.contain and the dial + controls cluster has
+  // breathing room over the body.
+  static const Size _shapeCompactSize = Size(360, 396);
   static const Size _defaultRestoreSize = Size(420, 720);
   static const Size _maxRememberedSize = Size(560, 900);
 

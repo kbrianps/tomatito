@@ -178,21 +178,21 @@ class _ShapedTimerView extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // PNG fills the whole window (BoxFit.cover). The shape window
-          // is forced square (300x300) by the title bar so the round
-          // tomato fills cleanly without distortion.
+          // BoxFit.contain keeps the whole tomato visible (no cropping);
+          // the transparent margins of the PNG show through to the
+          // desktop because the GTK window is also transparent.
           Image.asset(
             'assets/themes/tomatito_window.png',
-            fit: BoxFit.cover,
+            fit: BoxFit.contain,
           ),
-          // Dial + controls centred on the body. The PNG's stem occupies
-          // the top ~10% of the image so the body centre sits a hair
-          // below the geometric centre.
+          // Dial + controls centred on the body. The PNG's bbox is
+          // ~79% wide x 82% tall and centred, so a tiny vertical bias
+          // keeps the cluster off the stem.
           Align(
-            alignment: const Alignment(0, 0.05),
+            alignment: const Alignment(0, 0.08),
             child: LayoutBuilder(
               builder: (ctx, c) {
-                final dialSize = c.maxWidth * 0.42;
+                final dialSize = c.maxWidth * 0.32;
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -203,7 +203,7 @@ class _ShapedTimerView extends StatelessWidget {
                     ),
                     const SizedBox(height: ThemeTokens.space1),
                     Transform.scale(
-                      scale: 0.8,
+                      scale: 0.7,
                       child: ControlButtons(
                         state: state,
                         onPlayPause: _togglePlayPause,
