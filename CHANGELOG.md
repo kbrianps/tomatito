@@ -4,6 +4,11 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Changed
+
+- Autostart is now cross-platform via `launch_at_startup`. The previous Linux-only `AutostartManager` (which wrote a hand-rolled `~/.config/autostart/*.desktop` file) was replaced by a thin wrapper around the package, which writes the platform-correct entry on Linux (.desktop), macOS (LaunchAgent plist) and Windows (HKCU\Software\Microsoft\Windows\CurrentVersion\Run). The Settings -> Window -> "Launch on login" toggle is now shown on every desktop OS instead of Linux only. The boot-time reconcile in `main()` runs on all desktop platforms.
+- Title-bar `ref.listenManual` subscription that snaps the window back into compact after the user leaves Settings is now stored and closed in `dispose()` so it does not leak across hot reloads.
+
 ### Added
 
 - Phase 3.x minimize-to-tray (with first-time prompt) and Linux autostart.

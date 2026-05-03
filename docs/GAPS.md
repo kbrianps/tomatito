@@ -6,14 +6,17 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 
 ---
 
-## [DEFERRED] System tray and minimize-to-tray on desktop
+## [CLOSED] System tray and minimize-to-tray on desktop
 
 - Severity: low
 - Area: desktop integration
-- Description: `tray_manager` not yet integrated; the timer window can only be minimised, not hidden to a tray icon.
-- Impact: desktop power users cannot keep Tomatito running invisibly.
+- Description: `tray_manager` not yet integrated; the timer window could only be minimised, not hidden to a tray icon.
+- Impact: desktop power users could not keep Tomatito running invisibly.
 - Plan: target v1.1.
+- Resolution: Phase 3.x. Integrated `tray_manager` via new `TrayController` with bundled 64x64 PNG icon and Show / Quit menu. Title-bar minimize button consults `SettingsRepository.loadMinimizeToTray()`; first-time use shows a Tray / Taskbar dialog and persists the choice. Settings -> Window has a "When I minimize" tile (Ask each time / Send to system tray / Send to taskbar) so the user can change the default. Cross-platform via tray_manager (Linux / macOS / Windows).
+- Also Phase 3.x: Linux + macOS + Windows autostart via `launch_at_startup`. `AutostartManager` is now cross-platform; Settings -> Window -> "Launch on login" toggle works on every desktop OS.
 - Opened: 2026-05-02
+- Closed: 2026-05-03
 
 ## [DEFERRED] Data export (CSV / JSON) of statistics
 
@@ -197,14 +200,16 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Opened: 2026-05-02
 - Closed: 2026-05-02
 
-## [OPEN] Compact-mode UI not built
+## [CLOSED] Compact-mode UI not built (Phase 1 entry)
 
 - Severity: low
 - Area: desktop
-- Description: spec describes a compact window with just dial + play/pause. Phase 1 wires the abstract `WindowController` but the compact UI route is unimplemented.
-- Impact: desktop power users cannot collapse the timer to a small overlay.
-- Plan: build a `CompactTimerScreen` and the route swap in Phase 3 alongside platform window integration.
+- Description: spec describes a compact window with just dial + play/pause. Phase 1 wired the abstract `WindowController` but the compact UI route was unimplemented.
+- Impact: desktop power users could not collapse the timer to a small overlay.
+- Plan: build a `CompactTimerScreen` and the route swap.
+- Resolution: see the Phase 3 entry "Compact-mode UI not built" further down for details. (This is the older Phase-1 duplicate of the same gap; both close in Phase 3.x.)
 - Opened: 2026-05-02
+- Closed: 2026-05-03
 
 ## [CLOSED] Onboarding tour
 
@@ -319,14 +324,16 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Opened: 2026-05-02
 - Closed: 2026-05-02
 
-## [OPEN] Compact-mode UI not built
+## [CLOSED] Compact-mode UI not built
 
 - Severity: low
 - Area: desktop
-- Description: spec describes a 220x260 compact window with just dial + play/pause and a corner toggle to switch back. Phase 3 wires the abstract `WindowController.setCompactMode` to a no-op; the route + UI are pending.
-- Impact: desktop users cannot collapse the timer to a small overlay.
-- Plan: build a `CompactTimerScreen`, wire window resize via window_manager, and surface the corner toggle from the `TimerScreen` header. Phase 3.x.
+- Description: spec describes a 220x260 compact window with just dial + play/pause and a corner toggle to switch back. Phase 3 wired the abstract `WindowController.setCompactMode` to a no-op; the route + UI were pending.
+- Impact: desktop users could not collapse the timer to a small overlay.
+- Plan: build a `CompactTimerScreen`, wire window resize via window_manager, and surface the corner toggle from the `TimerScreen` header.
+- Resolution: Phase 3.x. No separate `CompactTimerScreen` was needed; `TimerScreen` reads `compactModeProvider` (StateProvider, set by the compact toggle in `TomatitoTitleBar`) and shrinks in place: drops the period header, reduces card padding, dial fills 70% of the card width, font scales with the dial via `AnimatedMinuteText.fontSize`. `RootShell` hides the bottom NavigationBar / NavigationRail when compact. The window resizes to 240x320 (vs the spec's 220x260, slightly larger to fit the controls + dot row); `windowManager.setMinimumSize/setMaximumSize` clamp the layout. Title bar in compact trims to drag area + Settings + Pin + Compact-toggle + Close (Minimize hidden). Settings opened from compact expands the window temporarily and snaps back on tab leave (`ref.listenManual` on `navigationIndexProvider`).
 - Opened: 2026-05-02
+- Closed: 2026-05-03
 
 ## [CLOSED] Window state persistence (size + position)
 

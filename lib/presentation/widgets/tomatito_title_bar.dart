@@ -28,10 +28,13 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
   /// the user back to fullscreen on expand.
   Size? _preCompactSize;
 
+  ProviderSubscription<int>? _navSub;
+
   @override
   void initState() {
     super.initState();
-    ref.listenManual<int>(navigationIndexProvider, (prev, next) async {
+    _navSub = ref.listenManual<int>(navigationIndexProvider,
+        (prev, next) async {
       // When the user leaves the Settings tab and the compact toggle is
       // still meant to be on (we expanded only to show Settings), pop
       // back into compact mode.
@@ -42,6 +45,12 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
         }
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _navSub?.close();
+    super.dispose();
   }
 
   /// True when the user opened Settings from compact mode; the title bar

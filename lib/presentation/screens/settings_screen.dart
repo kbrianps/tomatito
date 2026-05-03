@@ -24,7 +24,6 @@ import 'package:tomatito/presentation/screens/about_screen.dart';
 bool get _isDesktop =>
     !kIsWeb && (Platform.isLinux || Platform.isMacOS || Platform.isWindows);
 bool get _isAndroid => !kIsWeb && Platform.isAndroid;
-bool get _isLinux => !kIsWeb && Platform.isLinux;
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -371,15 +370,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               value: aot,
               onChanged: (v) => _updateAlwaysOnTop(value: v),
             ),
-            if (_isLinux)
-              SwitchListTile(
-                title: Text(loc.settingsAutostart),
-                subtitle: Text(loc.settingsAutostartSubtitle),
-                value: _autostart ?? false,
-                onChanged: _autostart == null
-                    ? null
-                    : (v) => _updateAutostart(value: v),
-              ),
+            SwitchListTile(
+              title: Text(loc.settingsAutostart),
+              subtitle: Text(loc.settingsAutostartSubtitle),
+              value: _autostart ?? false,
+              onChanged: _autostart == null
+                  ? null
+                  : (v) => _updateAutostart(value: v),
+            ),
             if (_minimizeLoaded)
               ListTile(
                 title: Text(loc.settingsMinimize),

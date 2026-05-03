@@ -23,6 +23,7 @@ dependencies:
   flutter_riverpod: ^2.5.1
   intl: any
   just_audio: ^0.9.40
+  launch_at_startup: ^0.5.1
   meta: ^1.16.0
   path: ^1.9.0
   path_provider: ^2.1.4

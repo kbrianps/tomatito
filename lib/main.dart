@@ -46,7 +46,7 @@ final trayControllerProvider = Provider<TrayController?>((ref) => null);
 /// Provider for the autostart helper. Always non-null; the helper itself
 /// no-ops on platforms where autostart is unsupported.
 final autostartManagerProvider =
-    Provider<AutostartManager>((ref) => const AutostartManager());
+    Provider<AutostartManager>((ref) => AutostartManager());
 
 bool get _isDesktop =>
     !kIsWeb && (Platform.isLinux || Platform.isMacOS || Platform.isWindows);
@@ -114,12 +114,13 @@ Future<void> main() async {
     tray = TrayController();
     await tray.install();
   }
-  // Reconcile the autostart .desktop entry with the saved preference so a
-  // user who toggled it off elsewhere (deleted the file by hand, restored
-  // from backup, etc.) lands on a consistent state at boot.
-  if (_isLinux) {
+  // Reconcile the autostart entry with the saved preference so a user
+  // who toggled it off elsewhere (deleted the .desktop / launch agent /
+  // registry key by hand, restored from backup, etc.) lands on a
+  // consistent state at boot. Cross-platform via launch_at_startup.
+  if (_isDesktop) {
     final wantAutostart = await settings.loadAutostart();
-    const autostart = AutostartManager();
+    final autostart = AutostartManager();
     final actuallyEnabled = await autostart.isEnabled();
     if (wantAutostart && !actuallyEnabled) {
       await autostart.enable();
