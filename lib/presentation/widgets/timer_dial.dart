@@ -5,6 +5,7 @@ import 'package:tomatito/core/dial/dial_style.dart';
 import 'package:tomatito/core/motion/motion_durations.dart';
 import 'package:tomatito/core/theme/theme_tokens.dart';
 import 'package:tomatito/core/timer/period_kind.dart';
+import 'package:tomatito/core/timer/session_config.dart';
 import 'package:tomatito/core/timer/timer_state.dart';
 import 'package:tomatito/presentation/widgets/animated_minute_text.dart';
 import 'package:tomatito/presentation/widgets/arc_painter.dart';
@@ -15,12 +16,18 @@ class TimerDial extends ConsumerWidget {
     required this.state,
     required this.size,
     this.activeColor,
+    this.idleConfig,
     super.key,
   });
 
   final TimerState state;
   final double size;
   final Color? activeColor;
+
+  /// When the engine is idle, display the configured focus duration in
+  /// the centre of the dial instead of leaving it blank. Null falls back
+  /// to no centre text (engine never started, no settings loaded yet).
+  final SessionConfig? idleConfig;
 
   double _progress() {
     final s = state;
@@ -41,6 +48,7 @@ class TimerDial extends ConsumerWidget {
     final s = state;
     if (s is TimerRunning) return s.remaining;
     if (s is TimerPaused) return s.remaining;
+    if (s is TimerIdle && idleConfig != null) return idleConfig!.focus;
     return null;
   }
 
@@ -49,6 +57,7 @@ class TimerDial extends ConsumerWidget {
     if (s is TimerRunning) return s.kind;
     if (s is TimerPaused) return s.kind;
     if (s is TimerPeriodComplete) return s.next ?? s.completed;
+    if (s is TimerIdle) return PeriodKind.focus;
     return null;
   }
 

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tomatito/core/bootstrap_result.dart';
 import 'package:tomatito/core/theme/theme_tokens.dart';
 import 'package:tomatito/core/timer/period_kind.dart';
+import 'package:tomatito/core/timer/session_config.dart';
 import 'package:tomatito/core/timer/timer_engine.dart';
 import 'package:tomatito/core/timer/timer_state.dart';
 import 'package:tomatito/core/window/window_state.dart';
@@ -25,11 +26,23 @@ class TimerScreen extends ConsumerStatefulWidget {
 
 class _TimerScreenState extends ConsumerState<TimerScreen> {
   bool _bootstrapHandled = false;
+  SessionConfig? _idleConfig;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _handleBootstrap());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _handleBootstrap();
+      await _loadIdleConfig();
+    });
+  }
+
+  Future<void> _loadIdleConfig() async {
+    if (!mounted) return;
+    final cfg =
+        await ref.read(settingsRepositoryProvider).loadSessionConfig();
+    if (!mounted) return;
+    setState(() => _idleConfig = cfg);
   }
 
   Future<void> _handleBootstrap() async {
@@ -137,6 +150,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
                   engine: engine,
                   ref: ref,
                   compact: compact,
+                  idleConfig: _idleConfig,
                 ),
               ),
             ),
@@ -153,12 +167,14 @@ class _TimerCard extends StatelessWidget {
     required this.engine,
     required this.ref,
     required this.compact,
+    required this.idleConfig,
   });
 
   final TimerState state;
   final TimerEngine engine;
   final WidgetRef ref;
   final bool compact;
+  final SessionConfig? idleConfig;
 
   @override
   Widget build(BuildContext context) {
@@ -170,14 +186,18 @@ class _TimerCard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (!compact) ...[
-              _Header(state: state),
-              const SizedBox(height: ThemeTokens.space5),
-            ],
+            _Header(state: state, idleConfig: idleConfig, compact: compact),
+            SizedBox(
+              height: compact ? ThemeTokens.space3 : ThemeTokens.space5,
+            ),
             LayoutBuilder(
               builder: (ctx, c) {
                 final dialSize = c.maxWidth * dialFraction;
-                return TimerDial(state: state, size: dialSize);
+                return TimerDial(
+                  state: state,
+                  size: dialSize,
+                  idleConfig: idleConfig,
+                );
               },
             ),
             SizedBox(
@@ -216,8 +236,14 @@ class _TimerCard extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.state});
+  const _Header({
+    required this.state,
+    required this.idleConfig,
+    required this.compact,
+  });
   final TimerState state;
+  final SessionConfig? idleConfig;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -229,16 +255,30 @@ class _Header extends StatelessWidget {
       text = _headerFor(loc, s.kind, s.cycle, s.totalCycles);
     } else if (s is TimerPaused) {
       text = _headerFor(loc, s.kind, s.cycle, s.totalCycles);
+    } else if (idleConfig != null) {
+      // Show the upcoming period title even before the user starts so the
+      // header is never blank.
+      text =
+          loc.focusPeriodOfTotal(1, idleConfig!.cyclesBeforeLongBreak);
     } else {
       text = loc.ready;
     }
+    final style = compact
+        ? theme.textTheme.bodySmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+          )
+        : theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          );
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: compact ? Alignment.center : Alignment.centerLeft,
       child: Text(
         text,
-        style: theme.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
+        textAlign: compact ? TextAlign.center : TextAlign.left,
+        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
+        style: style,
       ),
     );
   }
