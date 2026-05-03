@@ -57,6 +57,13 @@ Future<void> main() async {
     // window edges fall back to the OS default and the user still sees
     // the rounded inner content.
     await windowManager.setBackgroundColor(const Color(0x00000000));
+    // Constrain how far the user can drag-resize the window. Below the
+    // minimum the dial collides with the controls; above the maximum the
+    // single-column layout looks lonely and the dial font would race the
+    // 80px cap. Compact mode lives inside this min so resize handles
+    // remain usable in the small window.
+    await windowManager.setMinimumSize(const Size(280, 340));
+    await windowManager.setMaximumSize(const Size(900, 1300));
   }
 
   await initializeDateFormatting();

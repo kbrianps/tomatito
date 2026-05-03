@@ -6,6 +6,7 @@ import 'package:tomatito/core/window/window_controller.dart';
 import 'package:tomatito/core/window/window_state.dart';
 import 'package:tomatito/data/settings_repository.dart';
 import 'package:tomatito/l10n/app_localizations.dart';
+import 'package:tomatito/presentation/screens/root_shell.dart';
 import 'package:window_manager/window_manager.dart';
 
 /// Custom desktop title bar. Theme-coloured (uses `colorScheme.surface`)
@@ -77,6 +78,16 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
     await ref.read(windowControllerProvider).setAlwaysOnTop(value: next);
   }
 
+  Future<void> _openSettings({required bool currentlyCompact}) async {
+    // If the user is in compact mode, expand back to a normal window
+    // first so the Settings list has room to breathe; then jump to the
+    // Settings tab.
+    if (currentlyCompact) {
+      await _toggleCompact(currentlyCompact: true);
+    }
+    ref.read(navigationIndexProvider.notifier).state = 2;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -100,17 +111,26 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
                   ),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(
-                      loc.appName,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface.withValues(alpha: 0.85),
-                      ),
-                    ),
+                    // Compact mode hides the app name so the dial gets more
+                    // visual room; the drag area still works (whole row).
+                    child: compact
+                        ? const SizedBox.shrink()
+                        : Text(
+                            loc.appName,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onSurface.withValues(alpha: 0.85),
+                            ),
+                          ),
                   ),
                 ),
               ),
             ),
+          ),
+          _CaptionButton(
+            tooltip: loc.navSettings,
+            icon: Icons.tune,
+            onPressed: () => _openSettings(currentlyCompact: compact),
           ),
           _CaptionButton(
             tooltip: pinned ? loc.titleBarUnpin : loc.titleBarPin,
@@ -121,11 +141,15 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
                     : scheme.onSurface.withValues(alpha: 0.85),
             onPressed: () => _togglePin(currentlyPinned: pinned),
           ),
-          _CaptionButton(
-            tooltip: loc.titleBarMinimize,
-            icon: Icons.remove,
-            onPressed: windowManager.minimize,
-          ),
+          // Minimize is hidden in compact mode (the small window is
+          // already a focused micro-dock; the user wants close + expand
+          // only in that mode).
+          if (!compact)
+            _CaptionButton(
+              tooltip: loc.titleBarMinimize,
+              icon: Icons.remove,
+              onPressed: windowManager.minimize,
+            ),
           _CaptionButton(
             tooltip: compact ? loc.titleBarExpand : loc.titleBarCompact,
             icon: compact ? Icons.open_in_full : Icons.aspect_ratio_outlined,

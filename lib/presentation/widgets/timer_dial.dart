@@ -121,7 +121,15 @@ class TimerDial extends ConsumerWidget {
               },
             ),
           ),
-          if (remaining != null) AnimatedMinuteText(remaining: remaining),
+          if (remaining != null)
+            AnimatedMinuteText(
+              remaining: remaining,
+              // Scale the digits to roughly 22% of the dial; the smallest
+              // compact dial (~260 px) ends up ~57 px, the largest (~360 px)
+              // ~80 px. Caps at the original Phase 1 token so a giant
+              // window does not produce a giant clock face.
+              fontSize: (size * 0.22).clamp(36, ThemeTokens.typeMinutesSmall),
+            ),
         ],
       ),
     );

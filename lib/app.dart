@@ -21,8 +21,6 @@ import 'package:tomatito/presentation/widgets/tomatito_title_bar.dart';
 bool get _isDesktop =>
     !kIsWeb && (Platform.isLinux || Platform.isMacOS || Platform.isWindows);
 
-bool get _isLinux => !kIsWeb && Platform.isLinux;
-
 /// Root Navigator key. Used by Esc keyboard shortcut to dismiss modal
 /// routes (license page, About screen, etc.) without needing a BuildContext.
 final tomatitoNavigatorKey = GlobalKey<NavigatorState>();
@@ -57,12 +55,12 @@ class TomatitoApp extends ConsumerWidget {
   }
 }
 
-/// Wraps the app body with the custom desktop title bar. On macOS and
-/// Windows the wrapper also clips the outer corners to a soft rounded
-/// rectangle since DWM and Quartz honour the transparent window
-/// background set in main(). On Linux the rounding is dropped because
-/// most GTK compositors paint solid black behind a transparent window
-/// region, which produced an ugly halo around the rounded corners.
+/// Wraps the app body with the custom desktop title bar AND clips the
+/// outer corners to a soft rounded rectangle. On Linux the GTK runner
+/// (linux/runner/my_application.cc) enables an RGBA visual + transparent
+/// FlView background so the corners actually look rounded against the
+/// desktop instead of a black halo. macOS (Quartz) and Windows (DWM)
+/// honour the transparent background set in main() out of the box.
 /// Android / web platforms get a no-op wrapper; both the title bar and
 /// the rounded shell are desktop-only.
 class _DesktopFrame extends StatelessWidget {
@@ -75,13 +73,11 @@ class _DesktopFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!_isDesktop) return child;
-    final body = Column(
-      children: [const TomatitoTitleBar(), Expanded(child: child)],
-    );
-    if (_isLinux) return body;
     return ClipRRect(
       borderRadius: const BorderRadius.all(Radius.circular(_windowRadius)),
-      child: body,
+      child: Column(
+        children: [const TomatitoTitleBar(), Expanded(child: child)],
+      ),
     );
   }
 }

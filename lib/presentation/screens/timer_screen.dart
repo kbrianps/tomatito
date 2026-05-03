@@ -49,36 +49,12 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
     if (_bootstrapHandled) return;
     _bootstrapHandled = true;
     final bootstrap = ref.read(bootstrapResultProvider);
-    if (bootstrap.restoredFromCheckpoint) {
-      await _showResumeDialog();
-    } else if (bootstrap.shouldShowOemTip) {
+    // Resume-from-checkpoint is silent: the engine has already restored
+    // the previous period in a paused state, so the user just sees the
+    // dial where they left off. The earlier "Resume / Start fresh"
+    // dialog was removed because the user always wanted to resume.
+    if (bootstrap.shouldShowOemTip) {
       await _showOemTip();
-    }
-  }
-
-  Future<void> _showResumeDialog() async {
-    if (!mounted) return;
-    final loc = AppLocalizations.of(context);
-    final result = await showDialog<bool>(
-      context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: Text(loc.resumeDialogTitle),
-            content: Text(loc.resumeDialogBody),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: Text(loc.resumeDialogStartFresh),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: Text(loc.resumeDialogResume),
-              ),
-            ],
-          ),
-    );
-    if (result == false && mounted) {
-      ref.read(timerEngineProvider).reset();
     }
   }
 
@@ -207,8 +183,10 @@ class _TimerCard extends StatelessWidget {
               state: state,
               onPlayPause: _togglePlayPause,
               onReset: engine.reset,
-              onSkip: engine.skip,
+              onSkip: _onSkip,
             ),
+            const SizedBox(height: ThemeTokens.space3),
+            _SessionProgressDots(state: state, idleConfig: idleConfig),
             if (!compact) ...[
               const SizedBox(height: ThemeTokens.space3),
               _StatusText(state: state),
@@ -232,6 +210,102 @@ class _TimerCard extends StatelessWidget {
     } else if (s is TimerPeriodComplete) {
       engine.skip();
     }
+  }
+
+  Future<void> _onSkip() async {
+    if (state is TimerIdle) {
+      // Skip-from-idle: load the user's config, start the cycle, and
+      // immediately skip to the next period. The engine then sits paused
+      // at the next period (short break) so the user can press play
+      // when they are ready.
+      final config =
+          await ref.read(settingsRepositoryProvider).loadSessionConfig();
+      engine.start(config);
+    }
+    engine.skip();
+  }
+}
+
+class _SessionProgressDots extends StatelessWidget {
+  const _SessionProgressDots({required this.state, required this.idleConfig});
+
+  final TimerState state;
+  final SessionConfig? idleConfig;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final s = state;
+
+    int total;
+    int doneCount;
+    int currentIdx;
+    bool currentIsFocus;
+
+    if (s is TimerRunning) {
+      total = s.totalCycles;
+      currentIsFocus = s.kind == PeriodKind.focus;
+      doneCount = currentIsFocus ? s.cycle - 1 : s.cycle;
+      currentIdx = s.cycle - 1;
+    } else if (s is TimerPaused) {
+      total = s.totalCycles;
+      currentIsFocus = s.kind == PeriodKind.focus;
+      doneCount = currentIsFocus ? s.cycle - 1 : s.cycle;
+      currentIdx = s.cycle - 1;
+    } else if (idleConfig != null) {
+      total = idleConfig!.cyclesBeforeLongBreak;
+      doneCount = 0;
+      currentIdx = 0;
+      currentIsFocus = true;
+    } else {
+      return const SizedBox.shrink();
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (var i = 0; i < total; i++) ...[
+          if (i > 0) const SizedBox(width: 6),
+          _ProgressDot(
+            filled: i < doneCount,
+            current: i == currentIdx && currentIsFocus,
+            color: scheme.primary,
+            inactiveColor: scheme.onSurface.withValues(alpha: 0.18),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ProgressDot extends StatelessWidget {
+  const _ProgressDot({
+    required this.filled,
+    required this.current,
+    required this.color,
+    required this.inactiveColor,
+  });
+
+  final bool filled;
+  final bool current;
+  final Color color;
+  final Color inactiveColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = current ? 9.0 : 7.0;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: filled || current ? color : Colors.transparent,
+        border: filled || current
+            ? null
+            : Border.all(color: inactiveColor, width: 1.2),
+      ),
+    );
   }
 }
 
