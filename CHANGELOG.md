@@ -88,3 +88,8 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 - New `MarkdownDocScreen` (generic Scaffold + FutureBuilder + Markdown widget). About tiles route to it.
 - New `AppLifecycle` class owns Stats / Chime / Persistent / Tick recorders with a real `dispose()` (replaces the no-op `_keepAlive`).
 - New OPEN GAPS entry: flutter_markdown is discontinued by the Flutter team; track for swap to markdown_widget or hand-rolled rendering.
+- Phase 3.x CI builds for Android debug + Linux desktop (partial close on the CI platform-builds GAPS entry).
+- New `build-android` job: JDK 17 + flutter build apk --debug; uploads `tomatito-debug-apk` as a CI artifact.
+- New `build-linux` job: installs clang, cmake, ninja-build, pkg-config, libgtk-3-dev, liblzma-dev, libstdc++-12-dev; enables Linux desktop; flutter build linux --release; uploads `tomatito-linux-x64` bundle as a CI artifact.
+- Both new jobs gated on `analyze-and-test` so they only run when the analyze + test pipeline is green.
+- The Windows build job (`windows-latest` + VS Build Tools) stays deferred for now; tracked in the same downgraded GAPS entry.

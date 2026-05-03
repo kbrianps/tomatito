@@ -106,13 +106,14 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Plan: add `android_intent_plus` (or use `url_launcher` with package URI) and wire an action button on the MaterialBanner that fires `IGNORE_BATTERY_OPTIMIZATION_SETTINGS` or `APPLICATION_DETAILS_SETTINGS`. Phase 3.x follow-up.
 - Opened: 2026-05-02
 
-## [OPEN] CI does not yet build platform binaries
+## [OPEN] CI does not yet build the Windows binary
 
-- Severity: medium
+- Severity: low (downgraded from medium after Phase 3.x partial close)
 - Area: CI
-- Description: Phase 0 CI runs analyze + test on Ubuntu only. Android, Linux and Windows builds are not yet wired.
-- Impact: pubspec changes that break a platform compile may slip past CI.
-- Plan: extend CI in Phase 3 once platform integration code lands.
+- Description: Phase 0 CI ran analyze + test on Ubuntu only. Phase 3.x adds android-debug and linux-release jobs (both ubuntu-latest, downstream from analyze-and-test). The Windows build still requires a windows-latest runner and is not yet wired.
+- Impact: pubspec or platform-code changes that break the Windows compile may slip past CI.
+- Plan: add a `build-windows` job on `windows-latest` runner with VS Build Tools step. Skipped for now to keep CI cost low and because the user-facing Windows build path is identical to Linux from Flutter's perspective. Phase 4 release prep.
+- Resolution (partial, Phase 3.x): `build-android` job runs `flutter build apk --debug` with JDK 17; uploads the APK as a CI artifact. `build-linux` job installs `clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev`, enables Linux desktop, and runs `flutter build linux --release`; uploads the bundle as a CI artifact. Both gated on `analyze-and-test` so they only run when the analyze + test pipeline is green.
 - Opened: 2026-05-02
 
 ## [OPEN] Tomatito accent darker than spec for AA compliance
