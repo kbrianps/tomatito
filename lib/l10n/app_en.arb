@@ -69,6 +69,12 @@
   "dialStyleArc": "Arc",
   "settingsWindow": "Window",
   "settingsAlwaysOnTop": "Always on top",
+  "settingsAutostart": "Launch on login",
+  "settingsAutostartSubtitle": "Tomatito starts automatically when you sign in.",
+  "minimizeDialogTitle": "Where should minimize go?",
+  "minimizeDialogBody": "Minimize to the system tray (out of sight, click the tray icon to bring back) or to the taskbar (regular minimize).",
+  "minimizeDialogTray": "Tray",
+  "minimizeDialogTaskbar": "Taskbar",
   "settingsAbout": "About",
 
   "themeLight": "Light",

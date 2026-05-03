@@ -88,6 +88,48 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
     ref.read(navigationIndexProvider.notifier).state = 2;
   }
 
+  Future<void> _onMinimize() async {
+    final settings = ref.read(settingsRepositoryProvider);
+    final pref = await settings.loadMinimizeToTray();
+    if (pref == null && mounted) {
+      final choice = await _askMinimizeDestination();
+      if (choice == null) return;
+      await settings.saveMinimizeToTray(value: choice);
+      await _applyMinimize(toTray: choice);
+    } else {
+      await _applyMinimize(toTray: pref ?? false);
+    }
+  }
+
+  Future<bool?> _askMinimizeDestination() async {
+    final loc = AppLocalizations.of(context);
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(loc.minimizeDialogTitle),
+        content: Text(loc.minimizeDialogBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(loc.minimizeDialogTaskbar),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(loc.minimizeDialogTray),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _applyMinimize({required bool toTray}) async {
+    if (toTray) {
+      await windowManager.hide();
+    } else {
+      await windowManager.minimize();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -152,7 +194,7 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
             _CaptionButton(
               tooltip: loc.titleBarMinimize,
               icon: Icons.remove,
-              onPressed: windowManager.minimize,
+              onPressed: _onMinimize,
             ),
           _CaptionButton(
             tooltip: compact ? loc.titleBarExpand : loc.titleBarCompact,

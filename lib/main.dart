@@ -32,10 +32,21 @@ import 'package:tomatito/data/settings_repository.dart';
 import 'package:tomatito/data/shared_prefs_settings_repository.dart';
 import 'package:tomatito/data/statistics_repository.dart';
 import 'package:tomatito/platform/android/android_notification_service.dart';
+import 'package:tomatito/platform/desktop/autostart_manager.dart';
 import 'package:tomatito/platform/desktop/desktop_window_controller.dart';
 import 'package:tomatito/platform/desktop/linux_notification_service.dart';
+import 'package:tomatito/platform/desktop/tray_controller.dart';
 import 'package:tomatito/presentation/screens/onboarding_screen.dart';
 import 'package:window_manager/window_manager.dart';
+
+/// Provider for the optional system tray controller (desktop only). Null
+/// outside desktop / when initialisation failed.
+final trayControllerProvider = Provider<TrayController?>((ref) => null);
+
+/// Provider for the autostart helper. Always non-null; the helper itself
+/// no-ops on platforms where autostart is unsupported.
+final autostartManagerProvider =
+    Provider<AutostartManager>((ref) => const AutostartManager());
 
 bool get _isDesktop =>
     !kIsWeb && (Platform.isLinux || Platform.isMacOS || Platform.isWindows);
@@ -95,10 +106,26 @@ Future<void> main() async {
   final soundPlayer = _buildSoundPlayer();
 
   final alwaysOnTopInitial = await settings.loadAlwaysOnTop();
+  TrayController? tray;
   if (_isDesktop) {
     await windowController.restoreWindowState();
     await windowController.setAlwaysOnTop(value: alwaysOnTopInitial);
     windowManager.addListener(_PersistOnMoveListener(windowController));
+    tray = TrayController();
+    await tray.install();
+  }
+  // Reconcile the autostart .desktop entry with the saved preference so a
+  // user who toggled it off elsewhere (deleted the file by hand, restored
+  // from backup, etc.) lands on a consistent state at boot.
+  if (_isLinux) {
+    final wantAutostart = await settings.loadAutostart();
+    const autostart = AutostartManager();
+    final actuallyEnabled = await autostart.isEnabled();
+    if (wantAutostart && !actuallyEnabled) {
+      await autostart.enable();
+    } else if (!wantAutostart && actuallyEnabled) {
+      await autostart.disable();
+    }
   }
 
   final statsRecorder = StatsRecorder(
@@ -148,6 +175,7 @@ Future<void> main() async {
           AlwaysFreeEntitlementService(),
         ),
         soundPlayerProvider.overrideWithValue(soundPlayer),
+        if (tray != null) trayControllerProvider.overrideWithValue(tray),
         bootstrapResultProvider.overrideWithValue(bootstrap),
         onboardingNeededProvider.overrideWith((ref) => !hasSeenOnboarding),
         alwaysOnTopProvider.overrideWith((ref) => alwaysOnTopInitial),

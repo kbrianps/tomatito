@@ -18,11 +18,13 @@ import 'package:tomatito/core/window/window_controller.dart';
 import 'package:tomatito/core/window/window_state.dart';
 import 'package:tomatito/data/settings_repository.dart';
 import 'package:tomatito/l10n/app_localizations.dart';
+import 'package:tomatito/main.dart' show autostartManagerProvider;
 import 'package:tomatito/presentation/screens/about_screen.dart';
 
 bool get _isDesktop =>
     !kIsWeb && (Platform.isLinux || Platform.isMacOS || Platform.isWindows);
 bool get _isAndroid => !kIsWeb && Platform.isAndroid;
+bool get _isLinux => !kIsWeb && Platform.isLinux;
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -38,6 +40,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   double? _chimeVolume;
   bool? _persistentNotification;
   bool? _tickEnabled;
+  bool? _autostart;
 
   @override
   void initState() {
@@ -53,6 +56,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final volume = await repo.loadChimeVolume();
     final persistent = await repo.loadPersistentNotification();
     final tick = await repo.loadTickEnabled();
+    final autostart = await repo.loadAutostart();
     if (!mounted) return;
     setState(() {
       _config = cfg;
@@ -61,6 +65,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _chimeVolume = volume;
       _persistentNotification = persistent;
       _tickEnabled = tick;
+      _autostart = autostart;
     });
   }
 
@@ -134,6 +139,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void _updateTickEnabled({required bool value}) {
     setState(() => _tickEnabled = value);
     ref.read(settingsRepositoryProvider).saveTickEnabled(value: value);
+  }
+
+  Future<void> _updateAutostart({required bool value}) async {
+    setState(() => _autostart = value);
+    final repo = ref.read(settingsRepositoryProvider);
+    await repo.saveAutostart(value: value);
+    final autostart = ref.read(autostartManagerProvider);
+    if (value) {
+      await autostart.enable();
+    } else {
+      await autostart.disable();
+    }
   }
 
   @override
@@ -338,6 +355,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               value: aot,
               onChanged: (v) => _updateAlwaysOnTop(value: v),
             ),
+            if (_isLinux)
+              SwitchListTile(
+                title: Text(loc.settingsAutostart),
+                subtitle: Text(loc.settingsAutostartSubtitle),
+                value: _autostart ?? false,
+                onChanged: _autostart == null
+                    ? null
+                    : (v) => _updateAutostart(value: v),
+              ),
           ]),
         if (_isAndroid)
           _Section(loc.settingsNotifications, [

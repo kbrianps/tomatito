@@ -160,5 +160,26 @@ class FakeSettingsRepository implements SettingsRepository {
     _changes.add(null);
   }
 
+  bool? _minimizeToTray;
+  bool _autostart = false;
+
+  @override
+  Future<bool?> loadMinimizeToTray() async => _minimizeToTray;
+
+  @override
+  Future<void> saveMinimizeToTray({required bool? value}) async {
+    _minimizeToTray = value;
+    _changes.add(null);
+  }
+
+  @override
+  Future<bool> loadAutostart() async => _autostart;
+
+  @override
+  Future<void> saveAutostart({required bool value}) async {
+    _autostart = value;
+    _changes.add(null);
+  }
+
   Future<void> close() => _changes.close();
 }

@@ -33,6 +33,8 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   static const String _keyTickEnabled = 'tomatito.tick_enabled.v1';
   static const String _keyLocaleChoice = 'tomatito.locale_choice.v1';
   static const String _keyDialStyle = 'tomatito.dial_style.v1';
+  static const String _keyMinimizeToTray = 'tomatito.minimize_to_tray.v1';
+  static const String _keyAutostart = 'tomatito.autostart.v1';
 
   static Future<SharedPrefsSettingsRepository> create() async {
     final prefs = await SharedPreferences.getInstance();
@@ -200,6 +202,33 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   @override
   Future<void> saveDialStyle(DialStyle style) async {
     await _prefs.setString(_keyDialStyle, style.name);
+    _changes.add(null);
+  }
+
+  @override
+  Future<bool?> loadMinimizeToTray() async {
+    if (!_prefs.containsKey(_keyMinimizeToTray)) return null;
+    return _prefs.getBool(_keyMinimizeToTray);
+  }
+
+  @override
+  Future<void> saveMinimizeToTray({required bool? value}) async {
+    if (value == null) {
+      await _prefs.remove(_keyMinimizeToTray);
+    } else {
+      await _prefs.setBool(_keyMinimizeToTray, value);
+    }
+    _changes.add(null);
+  }
+
+  @override
+  Future<bool> loadAutostart() async {
+    return _prefs.getBool(_keyAutostart) ?? false;
+  }
+
+  @override
+  Future<void> saveAutostart({required bool value}) async {
+    await _prefs.setBool(_keyAutostart, value);
     _changes.add(null);
   }
 

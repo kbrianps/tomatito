@@ -43,6 +43,18 @@ abstract class SettingsRepository {
   Future<DialStyle> loadDialStyle();
   Future<void> saveDialStyle(DialStyle style);
 
+  /// Where the system "minimize" button should send the window:
+  /// `null` => the user has not chosen yet (we should ask the first
+  /// time), `true` => hide to system tray, `false` => normal taskbar
+  /// minimize.
+  Future<bool?> loadMinimizeToTray();
+  Future<void> saveMinimizeToTray({required bool? value});
+
+  /// Whether Tomatito should launch with the OS. Linux-only for now;
+  /// other platforms ignore reads/writes.
+  Future<bool> loadAutostart();
+  Future<void> saveAutostart({required bool value});
+
   /// Stream of changes so the UI can re-render without polling.
   Stream<void> get changes;
 }

@@ -4,6 +4,15 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Added
+
+- Phase 3.x minimize-to-tray (with first-time prompt) and Linux autostart.
+- New `TrayController` (wraps `tray_manager`) installs a tray icon with a "Show Tomatito" / "Quit" menu when the desktop hosts a system tray. Constructed in `main()` and exposed via `trayControllerProvider`. Bundled icon at `assets/icon/tray_icon.png` (64x64 generated red tomato). Failure to install a tray (no StatusNotifier host on the desktop) is swallowed so the app still works.
+- Title-bar minimize button now consults `SettingsRepository.loadMinimizeToTray()`. When the user has not chosen yet (`null`), it shows a one-time dialog with `Tray` / `Taskbar` actions; the choice is persisted and re-used on every subsequent minimize. Tray sends to `windowManager.hide()`; Taskbar uses the regular `windowManager.minimize()`.
+- New `AutostartManager` (Linux only) writes / removes `~/.config/autostart/tomatito.desktop` so the app starts with the user's session. `main()` reconciles the on-disk state with the saved preference at boot. Settings UI gets a "Launch on login" switch in the Window section (Linux only).
+- New repository keys: `loadMinimizeToTray() / saveMinimizeToTray()` (nullable bool, `null` means "ask"); `loadAutostart() / saveAutostart()`.
+- en + pt strings for the minimize-destination dialog and the autostart toggle.
+
 ### Fixed
 
 - Sound preview button works on Linux. `just_audio` ships no native Linux implementation, so calls silently no-op (the soft-bell preview button did nothing). New `AudioplayersSoundPlayer` wraps `audioplayers` (GStreamer-backed on Linux); `_buildSoundPlayer()` picks it on Linux and keeps `JustAudioSoundPlayer` for every other platform. Same `SoundPlayer` interface, no other code paths change.

@@ -28,6 +28,7 @@ dependencies:
   path_provider: ^2.1.4
   shared_preferences: ^2.3.0
   sqlite3_flutter_libs: ^0.5.20
+  tray_manager: ^0.5.0
   url_launcher: ^6.3.1
   window_manager: ^0.4.0
 
@@ -45,6 +46,7 @@ flutter:
   uses-material-design: true
   generate: true
   assets:
+    - assets/icon/
     - assets/sounds/
     - docs/FAQ.md
     - docs/FAQ.pt.md

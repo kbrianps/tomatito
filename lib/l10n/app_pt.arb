@@ -63,6 +63,12 @@
   "dialStyleArc": "Arco",
   "settingsWindow": "Janela",
   "settingsAlwaysOnTop": "Sempre no topo",
+  "settingsAutostart": "Iniciar com o sistema",
+  "settingsAutostartSubtitle": "O Tomatito abre automaticamente quando você loga.",
+  "minimizeDialogTitle": "Pra onde minimizar?",
+  "minimizeDialogBody": "Minimizar pra bandeja do sistema (some, clique no ícone da bandeja para voltar) ou pra barra de tarefas (minimização normal).",
+  "minimizeDialogTray": "Bandeja",
+  "minimizeDialogTaskbar": "Barra de tarefas",
   "settingsAbout": "Sobre",
 
   "themeLight": "Claro",
