@@ -10,6 +10,7 @@ import 'package:tomatito/core/entitlements/entitlement_service.dart';
 import 'package:tomatito/core/notifications/chime_recorder.dart';
 import 'package:tomatito/core/notifications/no_op_notification_service.dart';
 import 'package:tomatito/core/notifications/notification_service.dart';
+import 'package:tomatito/core/notifications/persistent_notification_recorder.dart';
 import 'package:tomatito/core/sound/sound_player.dart';
 import 'package:tomatito/core/statistics/stats_recorder.dart';
 import 'package:tomatito/core/timer/checkpoint_store.dart';
@@ -67,11 +68,17 @@ Future<void> main() async {
     soundPlayer: soundPlayer,
     settings: settings,
   )..start();
+  final persistentRecorder = PersistentNotificationRecorder(
+    engine: engine,
+    notifications: notificationService,
+    settings: settings,
+  );
+  await persistentRecorder.start();
 
   // Recorders are intentionally tied to app lifetime; nothing currently
-  // disposes them. Replaced by an explicit lifecycle owner in Phase 3.x
-  // alongside the foreground service.
-  _keepAlive(statsRecorder, chimeRecorder);
+  // disposes them. Replaced by an explicit lifecycle owner in a follow-up
+  // session.
+  _keepAlive(statsRecorder, chimeRecorder, persistentRecorder);
 
   runApp(
     ProviderScope(
@@ -104,4 +111,8 @@ SoundPlayer _buildSoundPlayer() {
   }
 }
 
-void _keepAlive(StatsRecorder s, ChimeRecorder c) {}
+void _keepAlive(
+  StatsRecorder s,
+  ChimeRecorder c,
+  PersistentNotificationRecorder p,
+) {}

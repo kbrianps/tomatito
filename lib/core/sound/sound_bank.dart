@@ -16,8 +16,7 @@ class SoundOption {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is SoundOption && other.id == id;
+      identical(this, other) || other is SoundOption && other.id == id;
 
   @override
   int get hashCode => id.hashCode;
@@ -52,9 +51,6 @@ final class SoundBank {
   static SoundOption defaultOption = softBell;
 
   static SoundOption byId(String id) {
-    return all.firstWhere(
-      (o) => o.id == id,
-      orElse: () => defaultOption,
-    );
+    return all.firstWhere((o) => o.id == id, orElse: () => defaultOption);
   }
 }

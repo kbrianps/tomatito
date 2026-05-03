@@ -53,6 +53,10 @@
   "themeDark": "Dark",
   "themeBlackOled": "Black OLED",
   "themeTomatito": "Tomatito",
+  "themeSystem": "Follow system",
+  "settingsNotifications": "Notifications",
+  "settingsPersistentNotification": "Persistent timer notification",
+  "settingsPersistentNotificationSubtitle": "Keeps the timer accurate when the screen is off.",
 
   "minutesValue": "{n} min",
   "@minutesValue": {

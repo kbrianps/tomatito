@@ -2,11 +2,21 @@ import 'package:flutter/material.dart';
 
 import 'package:tomatito/core/theme/theme_tokens.dart';
 import 'package:tomatito/l10n/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
 
   static const _version = '0.1.0';
+  static const _sourceUrl = 'https://github.com/kbrianps/tomatito';
+  static const _supportUrl = 'https://github.com/sponsors/kbrianps';
+
+  Future<void> _open(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,12 +81,12 @@ class AboutScreen extends StatelessWidget {
           ListTile(
             title: Text(loc.aboutSource),
             trailing: const Icon(Icons.open_in_new),
-            enabled: false,
+            onTap: () => _open(_sourceUrl),
           ),
           ListTile(
             title: Text(loc.aboutSupport),
             trailing: const Icon(Icons.favorite_border),
-            enabled: false,
+            onTap: () => _open(_supportUrl),
           ),
         ],
       ),

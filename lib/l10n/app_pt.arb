@@ -47,6 +47,10 @@
   "themeDark": "Escuro",
   "themeBlackOled": "Preto OLED",
   "themeTomatito": "Tomatito",
+  "themeSystem": "Seguir sistema",
+  "settingsNotifications": "Notificações",
+  "settingsPersistentNotification": "Notificação persistente do timer",
+  "settingsPersistentNotificationSubtitle": "Mantém o timer preciso quando a tela está apagada.",
 
   "minutesValue": "{n} min",
 

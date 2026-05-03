@@ -40,8 +40,8 @@ void main() {
     });
   });
 
-  group('All four themes pass WCAG AA for the colour pairs the UI uses', () {
-    for (final id in AppThemeId.values) {
+  group('All fixed themes pass WCAG AA for the colour pairs the UI uses', () {
+    for (final id in AppThemes.validatedSchemes) {
       final scheme = AppThemes.schemeFor(id);
 
       test('$id: onSurface on surface (body text >= 4.5:1)', () {

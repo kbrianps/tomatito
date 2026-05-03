@@ -52,6 +52,26 @@ void main() {
     expect(await fresh.loadAlwaysOnTop(), isTrue);
   });
 
+  test('persistent notification round-trips and defaults to false', () async {
+    final repo = await SharedPrefsSettingsRepository.create();
+    expect(await repo.loadPersistentNotification(), isFalse);
+    await repo.savePersistentNotification(value: true);
+    expect(await repo.loadPersistentNotification(), isTrue);
+
+    final fresh = await SharedPrefsSettingsRepository.create();
+    expect(await fresh.loadPersistentNotification(), isTrue);
+  });
+
+  test('chime id and volume round-trip with sensible defaults', () async {
+    final repo = await SharedPrefsSettingsRepository.create();
+    expect(await repo.loadChimeId(), isNotEmpty);
+    expect(await repo.loadChimeVolume(), closeTo(0.6, 0.001));
+    await repo.saveChimeId('wood_block');
+    await repo.saveChimeVolume(0.85);
+    expect(await repo.loadChimeId(), 'wood_block');
+    expect(await repo.loadChimeVolume(), closeTo(0.85, 0.001));
+  });
+
   test('corrupt JSON falls back to defaults', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'tomatito.session_config.v1': 'this is not json',

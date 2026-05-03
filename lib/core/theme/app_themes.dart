@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:tomatito/core/theme/theme_tokens.dart';
 
-/// The four themes shipped in v1. Each is a hand-tuned ColorScheme that
-/// passes WCAG AA for the text / surface combinations the app uses; verified
-/// programmatically by `test/core/theme/contrast_validator_test.dart`.
-enum AppThemeId { light, dark, blackOled, tomatito }
+/// The themes shipped in v1. Each fixed scheme is a hand-tuned ColorScheme
+/// that passes WCAG AA for the text / surface combinations the app uses;
+/// verified programmatically by `test/core/theme/contrast_validator_test.dart`.
+///
+/// `system` is a sentinel that picks `light` or `dark` at runtime based on
+/// `MediaQuery.platformBrightness`; it has no fixed scheme of its own.
+enum AppThemeId { light, dark, blackOled, tomatito, system }
 
 final class AppThemes {
   const AppThemes._();
@@ -19,6 +22,16 @@ final class AppThemes {
   static const Color _tomatitoLeaf = Color(0xFF3F7330);
   static const Color _tomatitoSurface = Color(0xFFFAF6F1);
   static const Color _tomatitoOnSurface = Color(0xFF2A1A14);
+
+  /// Fixed-scheme themes that participate in the contrast validator test.
+  /// `system` is excluded because it resolves to `light` or `dark` and its
+  /// schemes are validated separately by virtue of being in this list.
+  static const List<AppThemeId> validatedSchemes = [
+    AppThemeId.light,
+    AppThemeId.dark,
+    AppThemeId.blackOled,
+    AppThemeId.tomatito,
+  ];
 
   static const ColorScheme lightScheme = ColorScheme(
     brightness: Brightness.light,
@@ -68,15 +81,29 @@ final class AppThemes {
     onError: Color(0xFFFFFFFF),
   );
 
-  static ColorScheme schemeFor(AppThemeId id) => switch (id) {
-    AppThemeId.light => lightScheme,
-    AppThemeId.dark => darkScheme,
-    AppThemeId.blackOled => blackOledScheme,
-    AppThemeId.tomatito => tomatitoScheme,
-  };
+  /// Resolve the ColorScheme for [id]. For `AppThemeId.system`,
+  /// [platformBrightness] picks between `lightScheme` and `darkScheme`;
+  /// callers who pass null get `lightScheme` as a safe default.
+  static ColorScheme schemeFor(
+    AppThemeId id, {
+    Brightness? platformBrightness,
+  }) {
+    switch (id) {
+      case AppThemeId.light:
+        return lightScheme;
+      case AppThemeId.dark:
+        return darkScheme;
+      case AppThemeId.blackOled:
+        return blackOledScheme;
+      case AppThemeId.tomatito:
+        return tomatitoScheme;
+      case AppThemeId.system:
+        return platformBrightness == Brightness.dark ? darkScheme : lightScheme;
+    }
+  }
 
-  static ThemeData themeFor(AppThemeId id) {
-    final scheme = schemeFor(id);
+  static ThemeData themeFor(AppThemeId id, {Brightness? platformBrightness}) {
+    final scheme = schemeFor(id, platformBrightness: platformBrightness);
     return ThemeData(
       colorScheme: scheme,
       useMaterial3: true,

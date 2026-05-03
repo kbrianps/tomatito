@@ -27,6 +27,11 @@ abstract class SettingsRepository {
   Future<double> loadChimeVolume();
   Future<void> saveChimeVolume(double volume);
 
+  /// Whether the persistent timer notification + Android foreground service
+  /// is enabled. Off by default per spec.
+  Future<bool> loadPersistentNotification();
+  Future<void> savePersistentNotification({required bool value});
+
   /// Stream of changes so the UI can re-render without polling.
   Stream<void> get changes;
 }

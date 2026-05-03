@@ -53,3 +53,12 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 - SettingsScreen Sound section: chime picker (RadioGroup) + volume slider (0..100%); en + pt strings.
 - Test: SoundBank id uniqueness, asset path discipline, byId lookup + default fallback, SoundOption equality (82 tests, all passing).
 - New OPEN GAPS entries: tick-during-focus toggle, chime preview button.
+- Phase 3.x Android persistent timer foreground service + Follow-system theme + url_launcher About links (closes the high-severity Android foreground service GAPS entry).
+- `flutter_foreground_task` wired with a minimal TaskHandler entrypoint (`tomatitoForegroundTaskEntrypoint`, `@pragma('vm:entry-point')`); `AndroidNotificationService.updatePersistentTimer` / `clearPersistentTimer` start, update and stop the service.
+- `PersistentNotificationRecorder` bridges the engine and the service, throttles notification updates to minute boundaries (no hundreds of cross-isolate calls per session), reacts to the Settings toggle, and requests POST_NOTIFICATIONS just-in-time on first enable.
+- Settings → Notifications section (Android only) with Persistent timer notification toggle, persisted via SharedPreferences.
+- Manifest declares FOREGROUND_SERVICE + FOREGROUND_SERVICE_DATA_SYNC + WAKE_LOCK.
+- `AppThemeId.system` resolves to lightScheme / darkScheme via `MediaQuery.platformBrightnessOf` in `app.dart`. `AppThemes.schemeFor` and `themeFor` take an optional `Brightness`. Settings picker exposes the option (en + pt). `AppThemes.validatedSchemes` excludes `system` from contrast iteration tests.
+- About screen: source-code and support-development tiles open external URLs via `url_launcher` (LaunchMode.externalApplication). Privacy + terms remain disabled pending hosted URLs or in-app markdown rendering.
+- New tests: `loadPersistentNotification` / `saveChimeId` / `loadChimeVolume` round-trips in shared_prefs (84 tests, all passing).
+- New OPEN GAPS entry: persistent notification action buttons (play/pause/skip from lock screen) deferred. Closed: Follow-system theme; downgraded to low: AboutScreen external links (privacy + terms only).

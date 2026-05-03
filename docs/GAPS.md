@@ -141,13 +141,13 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Plan: wire `initializeDateFormatting` in `main()` and use `DateFormat('E', locale)` in Phase 1.x.
 - Opened: 2026-05-02
 
-## [OPEN] AboutScreen external links are inert
+## [OPEN] AboutScreen privacy + terms tiles inert (source / support working)
 
-- Severity: medium
+- Severity: low
 - Area: about screen
-- Description: privacy / terms / source / support tiles render as disabled. `url_launcher` not yet added; in-app docs viewer also not built.
-- Impact: users cannot reach the privacy policy or source code from inside the app.
-- Plan: add `url_launcher` and either deep-link to hosted policy URLs or render the markdown locally. Phase 1.x.
+- Description: Phase 3.x wired `url_launcher` and enabled the source-code (GitHub repo) and support-development (GitHub Sponsors) tiles. Privacy + terms remain disabled until either hosted URLs exist (GitHub Pages) or an in-app markdown viewer renders the local docs.
+- Impact: users cannot reach the privacy policy or terms from inside the app yet.
+- Plan: pick one of (a) host docs/PRIVACY_POLICY.md + docs/TERMS.md on GitHub Pages and launch URLs, or (b) add `flutter_markdown` and render in-app screens. (a) is simpler; chase before Play Store submission. Phase 4 release prep.
 - Opened: 2026-05-02
 
 ## [OPEN] Period-transition animations not yet built
@@ -159,14 +159,16 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Plan: drive the `TimerPeriodComplete` state through a longer animation controller and tween the dial colours; Phase 1.x or Phase 2.
 - Opened: 2026-05-02
 
-## [OPEN] "Follow system" theme option deferred
+## [CLOSED] "Follow system" theme option
 
 - Severity: low
 - Area: theming
-- Description: spec mentions a "Follow system" option pairing Light/Dark with `MediaQuery.platformBrightness`. Phase 1 ships only the four named themes.
-- Impact: users who switch system theme do not see Tomatito follow.
+- Description: spec mentions a "Follow system" option pairing Light/Dark with `MediaQuery.platformBrightness`. Phase 1 shipped only the four named themes.
+- Impact: users who switched system theme did not see Tomatito follow.
 - Plan: add `AppThemeId.system` value or a separate themeMode setting; resolve at app build time. Phase 1.x.
+- Resolution: Phase 3.x. Added `AppThemeId.system` enum case; `schemeFor` accepts an optional `Brightness` and routes system to `lightScheme` / `darkScheme`. `app.dart` watches `MediaQuery.platformBrightnessOf`. Settings picker shows the option. `AppThemes.validatedSchemes` is the new constant for tests that iterate fixed schemes (system is excluded since it has no fixed scheme of its own).
 - Opened: 2026-05-02
+- Closed: 2026-05-02
 
 ## [OPEN] Compact-mode UI not built
 
@@ -298,13 +300,24 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Plan: implement `persistWindowState` / `restoreWindowState` on `DesktopWindowController` (window_manager getBounds + setBounds) and call them on app start / dispose. Phase 3.x.
 - Opened: 2026-05-02
 
-## [OPEN] Android persistent timer notification + foreground service deferred
+## [CLOSED] Android persistent timer notification + foreground service
 
 - Severity: high
 - Area: Android background reliability
-- Description: spec wires `flutter_foreground_task` to a persistent live-updating notification with play/pause/skip actions, kept alive by a foreground service. Phase 3 ships only the end-of-period chime; the persistent notification toggle is not yet exposed in Settings.
-- Impact: when the screen is off, the timer relies on Dart isolate scheduling, which Android may pause; long focus sessions may drift or stop on aggressive OEMs (compounds with the existing OEM battery management OPEN).
+- Description: spec wires `flutter_foreground_task` to a persistent live-updating notification with play/pause/skip actions, kept alive by a foreground service. Phase 3 shipped only the end-of-period chime; the persistent notification toggle was not yet exposed in Settings.
+- Impact: when the screen was off, the timer relied on Dart isolate scheduling, which Android may pause; long focus sessions could drift or stop on aggressive OEMs.
 - Plan: integrate `flutter_foreground_task` with a TaskHandler that mirrors the engine state, expose the toggle in Settings (with just-in-time POST_NOTIFICATIONS request on API 33+), and add the FOREGROUND_SERVICE / FOREGROUND_SERVICE_DATA_SYNC manifest entries. Phase 3.x.
+- Resolution: Phase 3.x. flutter_foreground_task wired with a minimal TaskHandler entrypoint (`tomatitoForegroundTaskEntrypoint` in `lib/platform/android/foreground_task_handler.dart`, marked `@pragma('vm:entry-point')`). `AndroidNotificationService.updatePersistentTimer` / `clearPersistentTimer` start, update and stop the service via `FlutterForegroundTask`. New `PersistentNotificationRecorder` bridges the engine, throttles updates to minute boundaries (avoids hundreds of cross-isolate calls per session), reacts to the Settings toggle, and requests POST_NOTIFICATIONS just-in-time when the user enables the toggle. Settings → Notifications section (Android only) ships the toggle. Manifest declares FOREGROUND_SERVICE + FOREGROUND_SERVICE_DATA_SYNC + WAKE_LOCK. Open follow-up: notification action buttons (play/pause/skip from the lock screen) deferred, see new entry below.
+- Opened: 2026-05-02
+- Closed: 2026-05-02
+
+## [OPEN] Persistent notification action buttons deferred
+
+- Severity: low
+- Area: Android background reliability
+- Description: spec calls for play/pause/skip action buttons on the persistent timer notification. Phase 3.x foreground service ships only the live remaining-time + title; user has to open the app to pause/skip.
+- Impact: extra friction; lock-screen control is one of the spec's nice-to-haves.
+- Plan: wire `FlutterForegroundTask.notificationButtonHandler` with three buttons and dispatch each to the right engine call via a SendPort from the TaskHandler isolate to the main isolate. Phase 3.x follow-up once the service is observed in production.
 - Opened: 2026-05-02
 
 ## [OPEN] Linux desktop notifications deferred

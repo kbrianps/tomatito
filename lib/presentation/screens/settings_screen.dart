@@ -16,6 +16,7 @@ import 'package:tomatito/presentation/screens/about_screen.dart';
 
 bool get _isDesktop =>
     !kIsWeb && (Platform.isLinux || Platform.isMacOS || Platform.isWindows);
+bool get _isAndroid => !kIsWeb && Platform.isAndroid;
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -30,6 +31,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool? _alwaysOnTop;
   String? _chimeId;
   double? _chimeVolume;
+  bool? _persistentNotification;
 
   @override
   void initState() {
@@ -44,6 +46,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final aot = await repo.loadAlwaysOnTop();
     final chime = await repo.loadChimeId();
     final volume = await repo.loadChimeVolume();
+    final persistent = await repo.loadPersistentNotification();
     if (!mounted) return;
     setState(() {
       _config = cfg;
@@ -51,6 +54,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _alwaysOnTop = aot;
       _chimeId = chime;
       _chimeVolume = volume;
+      _persistentNotification = persistent;
     });
   }
 
@@ -80,6 +84,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ref.read(settingsRepositoryProvider).saveChimeVolume(volume);
   }
 
+  void _updatePersistentNotification({required bool value}) {
+    setState(() => _persistentNotification = value);
+    ref
+        .read(settingsRepositoryProvider)
+        .savePersistentNotification(value: value);
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
@@ -88,13 +99,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final aot = _alwaysOnTop;
     final chime = _chimeId;
     final volume = _chimeVolume;
+    final persistent = _persistentNotification;
     final themeId = ref.watch(themeControllerProvider);
 
     if (cfg == null ||
         goal == null ||
         aot == null ||
         chime == null ||
-        volume == null) {
+        volume == null ||
+        persistent == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -131,8 +144,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             value: cfg.cyclesBeforeLongBreak,
             min: 2,
             max: 8,
-            onChanged: (v) =>
-                _updateConfig(cfg.copyWith(cyclesBeforeLongBreak: v)),
+            onChanged:
+                (v) => _updateConfig(cfg.copyWith(cyclesBeforeLongBreak: v)),
           ),
           SwitchListTile(
             title: Text(loc.settingsAutoStartBreaks),
@@ -214,13 +227,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onChanged: (v) => _updateAlwaysOnTop(value: v),
             ),
           ]),
+        if (_isAndroid)
+          _Section(loc.settingsNotifications, [
+            SwitchListTile(
+              title: Text(loc.settingsPersistentNotification),
+              subtitle: Text(loc.settingsPersistentNotificationSubtitle),
+              value: persistent,
+              onChanged: (v) => _updatePersistentNotification(value: v),
+            ),
+          ]),
         _Section(loc.settingsAbout, [
           ListTile(
             title: Text(loc.settingsAbout),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const AboutScreen()),
-            ),
+            onTap:
+                () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const AboutScreen()),
+                ),
           ),
         ]),
       ],
@@ -237,6 +260,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return loc.themeBlackOled;
       case AppThemeId.tomatito:
         return loc.themeTomatito;
+      case AppThemeId.system:
+        return loc.themeSystem;
     }
   }
 

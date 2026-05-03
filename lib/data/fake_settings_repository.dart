@@ -6,8 +6,6 @@ import 'package:tomatito/core/timer/session_config.dart';
 import 'package:tomatito/data/settings_repository.dart';
 
 /// In-memory settings store used during Phase 1 development and in tests.
-/// Round-trips changes synchronously (modulo the async signature) and
-/// notifies via the `changes` stream.
 class FakeSettingsRepository implements SettingsRepository {
   FakeSettingsRepository({
     SessionConfig? initialConfig,
@@ -16,12 +14,14 @@ class FakeSettingsRepository implements SettingsRepository {
     bool initialAlwaysOnTop = false,
     String? initialChimeId,
     double initialChimeVolume = 0.6,
+    bool initialPersistentNotification = false,
   }) : _config = initialConfig ?? SessionConfig.pomodoroDefault,
        _theme = initialTheme,
        _dailyGoal = initialDailyGoalMinutes,
        _alwaysOnTop = initialAlwaysOnTop,
        _chimeId = initialChimeId ?? SoundBank.defaultOption.id,
-       _chimeVolume = initialChimeVolume;
+       _chimeVolume = initialChimeVolume,
+       _persistentNotification = initialPersistentNotification;
 
   SessionConfig _config;
   AppThemeId _theme;
@@ -29,6 +29,7 @@ class FakeSettingsRepository implements SettingsRepository {
   bool _alwaysOnTop;
   String _chimeId;
   double _chimeVolume;
+  bool _persistentNotification;
   final StreamController<void> _changes = StreamController<void>.broadcast();
 
   @override
@@ -85,6 +86,15 @@ class FakeSettingsRepository implements SettingsRepository {
   @override
   Future<void> saveChimeVolume(double volume) async {
     _chimeVolume = volume.clamp(0.0, 1.0);
+    _changes.add(null);
+  }
+
+  @override
+  Future<bool> loadPersistentNotification() async => _persistentNotification;
+
+  @override
+  Future<void> savePersistentNotification({required bool value}) async {
+    _persistentNotification = value;
     _changes.add(null);
   }
 

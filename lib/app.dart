@@ -18,9 +18,10 @@ class TomatitoApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeId = ref.watch(themeControllerProvider);
+    final brightness = MediaQuery.platformBrightnessOf(context);
     return MaterialApp(
       onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appName,
-      theme: AppThemes.themeFor(themeId),
+      theme: AppThemes.themeFor(themeId, platformBrightness: brightness),
       themeAnimationDuration: MotionDurations.long,
       themeAnimationCurve: MotionCurves.standard,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
