@@ -153,13 +153,24 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Opened: 2026-05-02
 - Closed: 2026-05-02
 
-## [OPEN] AboutScreen privacy + terms tiles inert (source / support working)
+## [CLOSED] AboutScreen privacy + terms in-app screens
 
 - Severity: low
 - Area: about screen
-- Description: Phase 3.x wired `url_launcher` and enabled the source-code (GitHub repo) and support-development (GitHub Sponsors) tiles. Privacy + terms remain disabled until either hosted URLs exist (GitHub Pages) or an in-app markdown viewer renders the local docs.
-- Impact: users cannot reach the privacy policy or terms from inside the app yet.
+- Description: Phase 3.x wired `url_launcher` and enabled the source-code + support-development tiles. Privacy + terms remained disabled until either hosted URLs existed (GitHub Pages) or an in-app markdown viewer rendered the local docs.
+- Impact: users could not reach the privacy policy or terms from inside the app.
 - Plan: pick one of (a) host docs/PRIVACY_POLICY.md + docs/TERMS.md on GitHub Pages and launch URLs, or (b) add `flutter_markdown` and render in-app screens. (a) is simpler; chase before Play Store submission. Phase 4 release prep.
+- Resolution: Phase 3.x. Picked (b). Added `flutter_markdown ^0.7.0` to dependencies. `MarkdownDocScreen` is a generic Scaffold + FutureBuilder + Markdown widget. About tiles route to it with the appropriate asset path. The .md files live under `docs/` and are bundled directly via the pubspec assets section, so the source tree and the in-app version stay identical (no duplication). See new OPEN entry for the discontinued status of `flutter_markdown`.
+- Opened: 2026-05-02
+- Closed: 2026-05-02
+
+## [OPEN] flutter_markdown is discontinued
+
+- Severity: low
+- Area: about screen
+- Description: `flutter_markdown` (the dependency that renders Privacy and Terms in-app) was marked discontinued by the Flutter team during Phase 3.x integration. The package still works for now; the official guidance is to switch to `markdown_widget` or render markdown manually.
+- Impact: future Flutter upgrades may drop the package without a stable replacement; one PR will need to swap the import.
+- Plan: monitor upstream; swap to `markdown_widget` (or hand-rolled markdown rendering for our limited subset) when a Flutter version drops support. Phase 4 release prep.
 - Opened: 2026-05-02
 
 ## [OPEN] Period-transition animations not yet built
@@ -293,14 +304,16 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Plan: implement `LocalCrashLogger` with file rotation, wire global error handlers in `main()`, enable the existing About list tile. Phase 2.x.
 - Opened: 2026-05-02
 
-## [OPEN] StatsRecorder lifecycle is implicit
+## [CLOSED] Recorder lifecycle is implicit
 
 - Severity: low
 - Area: architecture
-- Description: `main()` constructs `StatsRecorder`, calls `start()`, then holds a reference via `_keepAlive(...)` so the GC does not collect it. Works but is a smell.
-- Impact: when notifications and the foreground service land in Phase 3, the recorder will need a real owner that can hand off the engine and stats refs across process boundaries.
+- Description: `main()` constructed each recorder, called `start()`, then held references via a no-op `_keepAlive(...)` so the GC did not collect them. Worked but was a smell.
+- Impact: when notifications and the foreground service landed in Phase 3, the recorders needed a real owner that could hand off the engine and stats refs across process boundaries.
 - Plan: introduce an explicit lifecycle coordinator in Phase 3 alongside the foreground service. Until then, the recorder lives for the duration of the app process.
+- Resolution: Phase 3.x. New `AppLifecycle` class in `lib/core/app_lifecycle.dart` owns the four recorders (Stats, Chime, Persistent, Tick) and exposes `dispose()` that cancels every subscription in turn. main constructs it in place of the old `_keepAlive`; for now nothing calls dispose because the recorders outlive every other reference, but the contract is now explicit so a future foreground-service coordinator can swap in cleanly.
 - Opened: 2026-05-02
+- Closed: 2026-05-02
 
 ## [OPEN] Compact-mode UI not built
 

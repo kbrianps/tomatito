@@ -8,6 +8,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:tomatito/app.dart';
+import 'package:tomatito/core/app_lifecycle.dart';
 import 'package:tomatito/core/bootstrap_result.dart';
 import 'package:tomatito/core/entitlements/always_free_entitlement_service.dart';
 import 'package:tomatito/core/entitlements/entitlement_service.dart';
@@ -98,7 +99,16 @@ Future<void> main() async {
   );
   await tickRecorder.start();
 
-  _keepAlive(statsRecorder, chimeRecorder, persistentRecorder, tickRecorder);
+  // Holds the recorders for the lifetime of the app. A future
+  // foreground-service coordinator will own this and call dispose; for now
+  // the recorders simply outlive every other reference.
+  // ignore: unused_local_variable
+  final lifecycle = AppLifecycle(
+    stats: statsRecorder,
+    chime: chimeRecorder,
+    persistent: persistentRecorder,
+    tick: tickRecorder,
+  );
 
   runApp(
     ProviderScope(
@@ -133,13 +143,6 @@ SoundPlayer _buildSoundPlayer() {
     return NoOpSoundPlayer();
   }
 }
-
-void _keepAlive(
-  StatsRecorder s,
-  ChimeRecorder c,
-  PersistentNotificationRecorder p,
-  TickRecorder t,
-) {}
 
 /// Saves the window bounds whenever the user moves or resizes the window.
 /// Writes are async and quick; we accept the small chance of a partial

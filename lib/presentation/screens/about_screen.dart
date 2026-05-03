@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tomatito/core/theme/theme_tokens.dart';
 import 'package:tomatito/data/settings_repository.dart';
 import 'package:tomatito/l10n/app_localizations.dart';
+import 'package:tomatito/presentation/screens/markdown_doc_screen.dart';
 import 'package:tomatito/presentation/screens/onboarding_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -74,12 +75,30 @@ class AboutScreen extends ConsumerWidget {
           ListTile(
             title: Text(loc.aboutPrivacy),
             trailing: const Icon(Icons.chevron_right),
-            enabled: false,
+            onTap:
+                () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder:
+                        (_) => MarkdownDocScreen(
+                          title: loc.aboutPrivacy,
+                          assetPath: 'docs/PRIVACY_POLICY.md',
+                        ),
+                  ),
+                ),
           ),
           ListTile(
             title: Text(loc.aboutTerms),
             trailing: const Icon(Icons.chevron_right),
-            enabled: false,
+            onTap:
+                () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder:
+                        (_) => MarkdownDocScreen(
+                          title: loc.aboutTerms,
+                          assetPath: 'docs/TERMS.md',
+                        ),
+                  ),
+                ),
           ),
           ListTile(
             title: Text(loc.aboutSource),

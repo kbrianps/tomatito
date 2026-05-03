@@ -83,3 +83,8 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 - `TickRecorder` plays the tick at low volume (0.3) once per second during `TimerRunning(focus)` when the user enables the toggle; cancels otherwise.
 - `SettingsRepository.loadTickEnabled` / `saveTickEnabled` (off by default). Settings Sound section gains a SwitchListTile with explanatory subtitle.
 - Tests: tick-enabled round-trip in shared_prefs (88 total, all passing).
+- Phase 3.x AboutScreen privacy + terms in-app + AppLifecycle owner (closes two more OPEN GAPS entries).
+- Added `flutter_markdown ^0.7.0` and bundled `docs/PRIVACY_POLICY.md` + `docs/TERMS.md` directly via pubspec assets: the source-tree and the in-app version stay identical with no duplication.
+- New `MarkdownDocScreen` (generic Scaffold + FutureBuilder + Markdown widget). About tiles route to it.
+- New `AppLifecycle` class owns Stats / Chime / Persistent / Tick recorders with a real `dispose()` (replaces the no-op `_keepAlive`).
+- New OPEN GAPS entry: flutter_markdown is discontinued by the Flutter team; track for swap to markdown_widget or hand-rolled rendering.
