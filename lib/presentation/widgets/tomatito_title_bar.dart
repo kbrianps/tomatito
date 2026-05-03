@@ -61,8 +61,17 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
   bool _wantCompactAfterSettings = false;
 
   static const Size _compactSize = Size(240, 320);
+  // Shape theme uses a square window so the round tomato PNG fits with
+  // BoxFit.cover and the dial sits cleanly over the body.
+  static const Size _shapeCompactSize = Size(300, 300);
   static const Size _defaultRestoreSize = Size(420, 720);
   static const Size _maxRememberedSize = Size(560, 900);
+
+  Size _resolveCompactSize() {
+    final isShape =
+        ref.read(themeControllerProvider) == AppThemeId.tomatitoShape;
+    return isShape ? _shapeCompactSize : _compactSize;
+  }
 
   Future<void> _toggleCompact({required bool currentlyCompact}) async {
     if (currentlyCompact) {
@@ -90,7 +99,7 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
       if (await windowManager.isMaximized()) {
         await windowManager.unmaximize();
       }
-      await windowManager.setSize(_compactSize);
+      await windowManager.setSize(_resolveCompactSize());
       ref.read(compactModeProvider.notifier).state = true;
     }
   }

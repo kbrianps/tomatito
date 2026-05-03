@@ -178,20 +178,21 @@ class _ShapedTimerView extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // PNG fills the whole window; non-tomato pixels are transparent,
-          // and the runner's RGBA visual lets the desktop show through.
+          // PNG fills the whole window (BoxFit.cover). The shape window
+          // is forced square (300x300) by the title bar so the round
+          // tomato fills cleanly without distortion.
           Image.asset(
             'assets/themes/tomatito_window.png',
-            fit: BoxFit.contain,
+            fit: BoxFit.cover,
           ),
-          // Dial + controls roughly centred on the body of the tomato.
-          // The tomato has a green stem at the top, so the centre of the
-          // visible body sits a bit below the geometric centre.
+          // Dial + controls centred on the body. The PNG's stem occupies
+          // the top ~10% of the image so the body centre sits a hair
+          // below the geometric centre.
           Align(
-            alignment: const Alignment(0, 0.15),
+            alignment: const Alignment(0, 0.05),
             child: LayoutBuilder(
               builder: (ctx, c) {
-                final dialSize = c.maxWidth * 0.55;
+                final dialSize = c.maxWidth * 0.42;
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -200,12 +201,15 @@ class _ShapedTimerView extends StatelessWidget {
                       size: dialSize,
                       idleConfig: idleConfig,
                     ),
-                    const SizedBox(height: ThemeTokens.space2),
-                    ControlButtons(
-                      state: state,
-                      onPlayPause: _togglePlayPause,
-                      onReset: engine.reset,
-                      onSkip: _onSkip,
+                    const SizedBox(height: ThemeTokens.space1),
+                    Transform.scale(
+                      scale: 0.8,
+                      child: ControlButtons(
+                        state: state,
+                        onPlayPause: _togglePlayPause,
+                        onReset: engine.reset,
+                        onSkip: _onSkip,
+                      ),
                     ),
                   ],
                 );
