@@ -12,6 +12,7 @@ import 'package:tomatito/core/theme/app_themes.dart';
 import 'package:tomatito/core/theme/theme_controller.dart';
 import 'package:tomatito/core/timer/timer_engine.dart';
 import 'package:tomatito/core/timer/timer_state.dart';
+import 'package:tomatito/core/window/window_state.dart';
 import 'package:tomatito/data/settings_repository.dart';
 import 'package:tomatito/l10n/app_localizations.dart';
 import 'package:tomatito/presentation/screens/onboarding_screen.dart';
@@ -67,7 +68,7 @@ class TomatitoApp extends ConsumerWidget {
 /// honour the transparent background set in main() out of the box.
 /// Android / web platforms get a no-op wrapper; both the title bar and
 /// the rounded shell are desktop-only.
-class _DesktopFrame extends StatelessWidget {
+class _DesktopFrame extends ConsumerWidget {
   const _DesktopFrame({required this.child});
 
   final Widget child;
@@ -75,8 +76,16 @@ class _DesktopFrame extends StatelessWidget {
   static const double _windowRadius = 12;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (!_isDesktop) return child;
+    final compact = ref.watch(compactModeProvider);
+    final isShape =
+        ref.watch(themeControllerProvider) == AppThemeId.tomatitoShape;
+    // Shape compact: skip the title bar entirely so the tomato is the
+    // window. _ShapedTimerView paints its own caption row inside the
+    // tomato body. The ClipRRect is also dropped because the PNG has
+    // its own rounded silhouette.
+    if (isShape && compact) return child;
     return ClipRRect(
       borderRadius: const BorderRadius.all(Radius.circular(_windowRadius)),
       child: Column(

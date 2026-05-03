@@ -4,7 +4,6 @@ import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:tomatito/core/bootstrap_result.dart';
 import 'package:tomatito/core/theme/app_themes.dart';
 import 'package:tomatito/core/theme/theme_controller.dart';
@@ -13,11 +12,13 @@ import 'package:tomatito/core/timer/period_kind.dart';
 import 'package:tomatito/core/timer/session_config.dart';
 import 'package:tomatito/core/timer/timer_engine.dart';
 import 'package:tomatito/core/timer/timer_state.dart';
+import 'package:tomatito/core/window/window_controller.dart';
 import 'package:tomatito/core/window/window_state.dart';
 import 'package:tomatito/data/settings_repository.dart';
 import 'package:tomatito/l10n/app_localizations.dart';
 import 'package:tomatito/presentation/widgets/control_buttons.dart';
 import 'package:tomatito/presentation/widgets/timer_dial.dart';
+import 'package:window_manager/window_manager.dart';
 
 class TimerScreen extends ConsumerStatefulWidget {
   const TimerScreen({super.key});
@@ -178,18 +179,20 @@ class _ShapedTimerView extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // BoxFit.contain keeps the whole tomato visible (no cropping);
-          // the transparent margins of the PNG show through to the
-          // desktop because the GTK window is also transparent.
-          Image.asset(
-            'assets/themes/tomatito_window.png',
-            fit: BoxFit.contain,
+          // The whole window drags from anywhere on the tomato. PNG sits
+          // below the drag layer; pointer events on the PNG bubble up to
+          // DragToMoveArea, but tap targets above (caption row + dial +
+          // controls) are added later in the Stack so they win hit-test.
+          DragToMoveArea(
+            child: Image.asset(
+              'assets/themes/tomatito_window.png',
+              fit: BoxFit.contain,
+            ),
           ),
-          // Dial + controls centred on the body. The PNG's bbox is
-          // ~79% wide x 82% tall and centred, so a tiny vertical bias
-          // keeps the cluster off the stem.
+          // Dial + controls centred on the body, slightly below the
+          // geometric centre to clear the stem.
           Align(
-            alignment: const Alignment(0, 0.08),
+            alignment: const Alignment(0, 0.12),
             child: LayoutBuilder(
               builder: (ctx, c) {
                 final dialSize = c.maxWidth * 0.32;
@@ -215,6 +218,12 @@ class _ShapedTimerView extends StatelessWidget {
                 );
               },
             ),
+          ),
+          // Mini caption cluster at the top, sitting just under the
+          // stem so it stays inside the tomato silhouette.
+          const Align(
+            alignment: Alignment(0, -0.62),
+            child: _ShapeCaptionRow(),
           ),
         ],
       ),
@@ -591,5 +600,103 @@ class _StatusText extends StatelessWidget {
       case PeriodKind.longBreak:
         return loc.longBreak;
     }
+  }
+}
+
+/// Mini caption row painted inside the tomato in shape compact mode.
+/// Pin / Expand-out-of-compact / Close. Settings + minimize are
+/// intentionally dropped: the tomato is a focused micro-dock, the
+/// expand button sends the user back to the regular layout where the
+/// full title bar (with everything) reappears.
+class _ShapeCaptionRow extends ConsumerWidget {
+  const _ShapeCaptionRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final pinned = ref.watch(alwaysOnTopProvider);
+    final iconColor = scheme.onPrimary.withValues(alpha: 0.85);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _MiniCaptionButton(
+          icon: pinned ? Icons.push_pin : Icons.push_pin_outlined,
+          color: pinned ? scheme.primary : iconColor,
+          onTap: () async {
+            final next = !pinned;
+            ref.read(alwaysOnTopProvider.notifier).state = next;
+            await ref
+                .read(settingsRepositoryProvider)
+                .saveAlwaysOnTop(value: next);
+            await ref
+                .read(windowControllerProvider)
+                .setAlwaysOnTop(value: next);
+          },
+        ),
+        _MiniCaptionButton(
+          icon: Icons.open_in_full,
+          color: iconColor,
+          onTap: () async {
+            // Leave compact: revert window size to the remembered one.
+            // The same logic lives on the title bar but is unreachable
+            // when the title bar is hidden, so duplicate it minimally.
+            if (await windowManager.isMaximized()) {
+              await windowManager.unmaximize();
+            }
+            await windowManager.setSize(const Size(420, 720));
+            ref.read(compactModeProvider.notifier).state = false;
+          },
+        ),
+        _MiniCaptionButton(
+          icon: Icons.close,
+          color: iconColor,
+          onTap: windowManager.close,
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniCaptionButton extends StatefulWidget {
+  const _MiniCaptionButton({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  State<_MiniCaptionButton> createState() => _MiniCaptionButtonState();
+}
+
+class _MiniCaptionButtonState extends State<_MiniCaptionButton> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: Container(
+          width: 22,
+          height: 22,
+          margin: const EdgeInsets.symmetric(horizontal: 1),
+          decoration: BoxDecoration(
+            color: _hover
+                ? Colors.black.withValues(alpha: 0.18)
+                : Colors.transparent,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(widget.icon, size: 13, color: widget.color),
+        ),
+      ),
+    );
   }
 }
