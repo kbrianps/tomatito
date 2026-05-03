@@ -87,12 +87,7 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
 
     return Container(
       height: 36,
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border(
-          bottom: BorderSide(color: scheme.onSurface.withValues(alpha: 0.06)),
-        ),
-      ),
+      color: scheme.surface,
       child: Row(
         children: [
           Expanded(

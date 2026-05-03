@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart' as ap;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -43,6 +44,39 @@ class JustAudioSoundPlayer implements SoundPlayer {
       // Intentionally swallowed: a missing or broken audio backend must not
       // crash the timer. End-of-period notification still fires via the
       // NotificationService path on Android.
+    }
+  }
+
+  @override
+  Future<void> dispose() => _player.dispose();
+}
+
+/// Sound player backed by `audioplayers`. Used on Linux where `just_audio`
+/// has no native implementation (calls silently no-op). `audioplayers`
+/// ships a GStreamer-backed Linux runner. The asset path is the same flat
+/// `assets/sounds/foo.ogg` string used everywhere; `audioplayers` strips
+/// the `assets/` prefix internally via `AssetSource`.
+class AudioplayersSoundPlayer implements SoundPlayer {
+  AudioplayersSoundPlayer();
+
+  final ap.AudioPlayer _player = ap.AudioPlayer();
+
+  @override
+  Future<void> play(SoundOption option, {double volume = 0.6}) async {
+    final clamped = volume.clamp(0.0, 1.0);
+    try {
+      await _player.setVolume(clamped);
+      // AssetSource expects the path relative to the assets root, without
+      // the leading `assets/` segment.
+      const prefix = 'assets/';
+      final assetPath = option.assetPath.startsWith(prefix)
+          ? option.assetPath.substring(prefix.length)
+          : option.assetPath;
+      await _player.stop();
+      await _player.play(ap.AssetSource(assetPath));
+    } on Object {
+      // Same swallow rationale as JustAudioSoundPlayer: missing GStreamer
+      // plugins on the host must not crash the timer.
     }
   }
 

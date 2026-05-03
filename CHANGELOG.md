@@ -6,6 +6,10 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ### Fixed
 
+- Sound preview button works on Linux. `just_audio` ships no native Linux implementation, so calls silently no-op (the soft-bell preview button did nothing). New `AudioplayersSoundPlayer` wraps `audioplayers` (GStreamer-backed on Linux); `_buildSoundPlayer()` picks it on Linux and keeps `JustAudioSoundPlayer` for every other platform. Same `SoundPlayer` interface, no other code paths change.
+- Settings and Statistics screens now show a screen title at the top (`Configurações` / `Estatísticas`) so they match the About screen instead of starting straight into content.
+- Title bar bottom border removed; the 1 px hairline between the caption row and the body looked like a tab divider on dark themes.
+
 - Idle Timer screen no longer feels empty. The dial centre shows the configured focus duration (loaded once on first frame from `SettingsRepository.loadSessionConfig`) instead of leaving the centre blank, and the header reads `Período de foco (1 de N)` from the start so the user knows which cycle is queued before pressing play.
 - Compact mode keeps the header visible (smaller `bodySmall` weight, centred, single line, ellipsised) so the user always sees `Período de foco (cycle of total)` even in the 280 dp window.
 

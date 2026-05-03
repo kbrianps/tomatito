@@ -84,6 +84,8 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
       child: ListView(
         padding: const EdgeInsets.all(ThemeTokens.space5),
         children: [
+          _ScreenTitle(loc.navStats),
+          const SizedBox(height: ThemeTokens.space4),
           _HeroGrid(loc: loc, summary: summary),
           const SizedBox(height: ThemeTokens.space5),
           _WeeklyBars(loc: loc, summary: summary),
@@ -639,4 +641,20 @@ class _AchievementTile extends StatelessWidget {
         AchievementId.weekendWarrior => loc.achievementWeekendWarriorBody,
         AchievementId.marathonDay => loc.achievementMarathonDayBody,
       };
+}
+
+class _ScreenTitle extends StatelessWidget {
+  const _ScreenTitle(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Text(
+      text,
+      style: theme.textTheme.headlineSmall?.copyWith(
+        fontWeight: FontWeight.w700,
+      ),
+    );
+  }
 }

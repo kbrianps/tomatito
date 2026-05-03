@@ -160,6 +160,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: ThemeTokens.space3),
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            ThemeTokens.space5,
+            ThemeTokens.space2,
+            ThemeTokens.space5,
+            ThemeTokens.space3,
+          ),
+          child: Text(
+            loc.navSettings,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
         _Section(loc.settingsTimer, [
           _DurationRow(
             label: loc.settingsFocusDuration,

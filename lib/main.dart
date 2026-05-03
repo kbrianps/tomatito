@@ -160,6 +160,9 @@ NotificationService _buildNotificationService() {
 
 SoundPlayer _buildSoundPlayer() {
   try {
+    // just_audio has no native Linux implementation (calls silently
+    // no-op); use audioplayers' GStreamer backend there instead.
+    if (_isLinux) return AudioplayersSoundPlayer();
     return JustAudioSoundPlayer();
   } on Object {
     return NoOpSoundPlayer();
