@@ -1,16 +1,18 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:tomatito/core/timer/period_kind.dart';
 import 'package:tomatito/data/statistics_repository.dart';
 
-/// In-memory stats store for Phase 1. Optionally seeds a week of sample data
-/// so the StatisticsScreen has something visible during UI work.
+/// In-memory stats store for Phase 1. Optionally seeds a few weeks of sample
+/// data so the StatisticsScreen panel has charts, distributions, and
+/// achievements visible during UI work.
 class FakeStatisticsRepository implements StatisticsRepository {
   FakeStatisticsRepository({bool seedSampleData = true}) {
     if (seedSampleData) _seed();
   }
 
-  final List<_Completion> _completions = [];
+  final List<CompletionRecord> _completions = [];
   final StreamController<void> _changes = StreamController<void>.broadcast();
 
   @override
@@ -22,7 +24,13 @@ class FakeStatisticsRepository implements StatisticsRepository {
     required Duration duration,
     required DateTime endedAtLocal,
   }) async {
-    _completions.add(_Completion(kind, duration, endedAtLocal));
+    _completions.add(
+      CompletionRecord(
+        kind: kind,
+        duration: duration,
+        endedAt: endedAtLocal,
+      ),
+    );
     _changes.add(null);
   }
 
@@ -55,27 +63,32 @@ class FakeStatisticsRepository implements StatisticsRepository {
     return result;
   }
 
+  @override
+  Future<List<CompletionRecord>> loadAllCompletions() async =>
+      List.unmodifiable(_completions);
+
   void _seed() {
     final now = DateTime.now();
-    const minutesPerDay = [60, 90, 75, 120, 45, 100, 80];
-    for (var i = 0; i < 7; i++) {
-      final day = now.subtract(Duration(days: 6 - i));
-      _completions.add(
-        _Completion(
-          PeriodKind.focus,
-          Duration(minutes: minutesPerDay[i]),
-          DateTime(day.year, day.month, day.day, 14, 30),
-        ),
-      );
+    final rng = math.Random(42);
+    // Spread sample focus sessions across the last 28 days so the heatmap
+    // and day-of-week charts have texture.
+    for (var dayOffset = 27; dayOffset >= 0; dayOffset--) {
+      final base = now.subtract(Duration(days: dayOffset));
+      final day = DateTime(base.year, base.month, base.day);
+      final sessions = rng.nextInt(5);
+      for (var s = 0; s < sessions; s++) {
+        final hour = 8 + rng.nextInt(13);
+        final minute = rng.nextInt(60);
+        _completions.add(
+          CompletionRecord(
+            kind: PeriodKind.focus,
+            duration: const Duration(minutes: 25),
+            endedAt: DateTime(day.year, day.month, day.day, hour, minute),
+          ),
+        );
+      }
     }
   }
 
   Future<void> close() => _changes.close();
-}
-
-class _Completion {
-  const _Completion(this.kind, this.duration, this.endedAt);
-  final PeriodKind kind;
-  final Duration duration;
-  final DateTime endedAt;
 }

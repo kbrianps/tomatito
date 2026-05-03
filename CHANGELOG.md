@@ -6,6 +6,15 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ### Added
 
+- Phase 3.x rich Statistics panel with achievements.
+- New `CompletionRecord` value class + `StatisticsRepository.loadAllCompletions()` so the panel can group raw history by day-of-week, hour, etc.
+- New `StatsAggregator` (pure Dart) computes hero metrics (today / week / total / sessions / current and longest streak / active days / best day / peak hour), a 7-day rolling chart, day-of-week distribution, and 24-bar hour-of-day distribution from the raw completion stream.
+- New `Achievement` catalogue + `AchievementChecker`: 16 achievements covering session counts (1, 10, 50, 100, 500), accumulated focus (1h, 10h, 50h, 100h), streaks (3, 7, 30 days), and behavioural badges (early bird, night owl, weekend warrior, marathon day). Each entry tracks progress towards its target so locked tiles still show how close the user is.
+- Redesigned `StatisticsScreen`: responsive hero grid (2/3/4 columns), weekly bar chart, day-of-week distribution chart, hour-of-day strip, and an achievements grid that highlights unlocked tiles and shows progress bars on locked ones. Pull-to-refresh recomputes from the repository.
+- `FakeStatisticsRepository` seed expanded from 7 days to 28 with randomised hour-of-day so the panel has texture during UI work.
+- New en + pt strings for every hero metric, chart heading, and the 16 achievement title/body pairs.
+- Tests: 8 new `StatsAggregator` cases (empty, break filtering, dow/hour distribution, best day, rolling 7-day window, current and longest streak under different scenarios) + 7 new `AchievementChecker` cases (locked/unlocked transitions, marathon day boundary, early bird, night owl, weekend warrior weekday filtering, progress clamping). 105 total, all passing.
+
 - Phase 3.x arc dial style + drop digit animation.
 - AnimatedMinuteText drops the AnimatedSwitcher; the MM:SS value just changes in place when the engine emits a new tick. `FontFeature.tabularFigures` keeps the digits from shifting horizontally.
 - New `DialStyle` enum (ticks / arc) + `dialStyleProvider` (StateProvider) + persistence in `SettingsRepository`. main loads and overrides the provider on boot.

@@ -47,7 +47,7 @@ class JsonStatisticsRepository implements StatisticsRepository {
 
   @override
   Future<int> minutesFocusedOn(DateTime localDay) async {
-    final all = await _loadAll();
+    final all = await loadAllCompletions();
     final dayStart = DateTime(localDay.year, localDay.month, localDay.day);
     final dayEnd = dayStart.add(const Duration(days: 1));
     return all
@@ -65,7 +65,7 @@ class JsonStatisticsRepository implements StatisticsRepository {
     required DateTime fromLocalDay,
     required DateTime toLocalDay,
   }) async {
-    final all = await _loadAll();
+    final all = await loadAllCompletions();
     final result = <DailyMinutes>[];
     var day = DateTime(fromLocalDay.year, fromLocalDay.month, fromLocalDay.day);
     final end = DateTime(toLocalDay.year, toLocalDay.month, toLocalDay.day);
@@ -85,16 +85,17 @@ class JsonStatisticsRepository implements StatisticsRepository {
     return result;
   }
 
-  Future<List<_Completion>> _loadAll() async {
+  @override
+  Future<List<CompletionRecord>> loadAllCompletions() async {
     if (!_file.existsSync()) return const [];
     final lines = await _file.readAsLines();
-    final out = <_Completion>[];
+    final out = <CompletionRecord>[];
     for (final line in lines) {
       if (line.trim().isEmpty) continue;
       try {
         final json = jsonDecode(line) as Map<String, dynamic>;
         out.add(
-          _Completion(
+          CompletionRecord(
             kind: PeriodKind.values.firstWhere(
               (k) => k.name == json['kind'],
               orElse: () => PeriodKind.focus,
@@ -112,15 +113,4 @@ class JsonStatisticsRepository implements StatisticsRepository {
   }
 
   Future<void> close() => _changes.close();
-}
-
-class _Completion {
-  const _Completion({
-    required this.kind,
-    required this.duration,
-    required this.endedAt,
-  });
-  final PeriodKind kind;
-  final Duration duration;
-  final DateTime endedAt;
 }

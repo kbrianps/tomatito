@@ -98,6 +98,90 @@
   "statsToday": "Today",
   "statsThisWeek": "This week",
   "statsEmpty": "Complete your first session to see your stats here.",
+  "statsTotalFocus": "Total focus",
+  "statsTotalSessions": "Sessions",
+  "statsCurrentStreak": "Current streak",
+  "statsLongestStreak": "Best streak",
+  "statsActiveDays": "Active days",
+  "statsBestDay": "Best day",
+  "statsBestHour": "Peak hour",
+  "statsBestDayValue": "{minutes} min on {date}",
+  "@statsBestDayValue": {
+    "placeholders": {
+      "minutes": {"type": "int"},
+      "date": {"type": "String"}
+    }
+  },
+  "statsBestHourValue": "{hour} ({minutes} min)",
+  "@statsBestHourValue": {
+    "placeholders": {
+      "hour": {"type": "String"},
+      "minutes": {"type": "int"}
+    }
+  },
+  "statsHoursValue": "{h}h {m}m",
+  "@statsHoursValue": {
+    "placeholders": {
+      "h": {"type": "int"},
+      "m": {"type": "int"}
+    }
+  },
+  "statsDaysValue": "{n, plural, one{1 day} other{{n} days}}",
+  "@statsDaysValue": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "statsByWeekday": "By day of week",
+  "statsByHour": "By hour of day",
+  "statsAchievements": "Achievements",
+  "statsAchievementsUnlocked": "{n} of {total} unlocked",
+  "@statsAchievementsUnlocked": {
+    "placeholders": {
+      "n": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "statsAchievementProgress": "{progress}/{target}",
+  "@statsAchievementProgress": {
+    "placeholders": {
+      "progress": {"type": "int"},
+      "target": {"type": "int"}
+    }
+  },
+
+  "achievementFirstSessionTitle": "First focus",
+  "achievementFirstSessionBody": "Complete your first focus period.",
+  "achievementTenSessionsTitle": "Ten in",
+  "achievementTenSessionsBody": "Finish 10 focus periods.",
+  "achievementFiftySessionsTitle": "Half a hundred",
+  "achievementFiftySessionsBody": "Finish 50 focus periods.",
+  "achievementHundredSessionsTitle": "Centurion",
+  "achievementHundredSessionsBody": "Finish 100 focus periods.",
+  "achievementFiveHundredSessionsTitle": "Quincentenary",
+  "achievementFiveHundredSessionsBody": "Finish 500 focus periods.",
+  "achievementOneHourTotalTitle": "First hour",
+  "achievementOneHourTotalBody": "Accumulate 1 hour of focus.",
+  "achievementTenHoursTotalTitle": "Ten hours deep",
+  "achievementTenHoursTotalBody": "Accumulate 10 hours of focus.",
+  "achievementFiftyHoursTotalTitle": "Practitioner",
+  "achievementFiftyHoursTotalBody": "Accumulate 50 hours of focus.",
+  "achievementHundredHoursTotalTitle": "Centennial focus",
+  "achievementHundredHoursTotalBody": "Accumulate 100 hours of focus.",
+  "achievementStreakThreeTitle": "Three-day spark",
+  "achievementStreakThreeBody": "Hit your daily goal 3 days in a row.",
+  "achievementStreakSevenTitle": "Weekly habit",
+  "achievementStreakSevenBody": "Hit your daily goal 7 days in a row.",
+  "achievementStreakThirtyTitle": "Monthly devotion",
+  "achievementStreakThirtyBody": "Hit your daily goal 30 days in a row.",
+  "achievementEarlyBirdTitle": "Early bird",
+  "achievementEarlyBirdBody": "Finish 5 focus sessions before 9 AM.",
+  "achievementNightOwlTitle": "Night owl",
+  "achievementNightOwlBody": "Finish 5 focus sessions after 9 PM.",
+  "achievementWeekendWarriorTitle": "Weekend warrior",
+  "achievementWeekendWarriorBody": "Finish 10 focus sessions on weekends.",
+  "achievementMarathonDayTitle": "Marathon day",
+  "achievementMarathonDayBody": "Focus for 4 hours in a single day.",
 
   "aboutVersion": "Version {v}",
   "@aboutVersion": {

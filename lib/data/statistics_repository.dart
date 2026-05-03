@@ -17,6 +17,10 @@ abstract class StatisticsRepository {
     required DateTime toLocalDay,
   });
 
+  /// Returns every recorded completion (focus + breaks). The rich stats
+  /// panel needs the raw stream so it can group by day-of-week, hour, etc.
+  Future<List<CompletionRecord>> loadAllCompletions();
+
   Stream<void> get changes;
 }
 
@@ -24,6 +28,18 @@ class DailyMinutes {
   const DailyMinutes({required this.day, required this.minutes});
   final DateTime day;
   final int minutes;
+}
+
+class CompletionRecord {
+  const CompletionRecord({
+    required this.kind,
+    required this.duration,
+    required this.endedAt,
+  });
+
+  final PeriodKind kind;
+  final Duration duration;
+  final DateTime endedAt;
 }
 
 final statisticsRepositoryProvider = Provider<StatisticsRepository>((ref) {
