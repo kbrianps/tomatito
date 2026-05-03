@@ -2,6 +2,12 @@
 
 Focus, with a pinch of science.
 
+> _For Bia, the most beautiful and productive woman in the world. The one who makes me productive and cheers me on in my projects._
+>
+> _Para Bia, a mulher mais linda e produtiva desse mundo. Quem me torna produtivo e me anima em meus projetos._
+
+**Forever free. Forever ad-free. Forever open source. No telemetry, no accounts, no monetisation — ever.** / **Sempre gratuito. Sempre sem anúncios. Sempre open source. Sem rastreamento, sem contas, sem monetização — nunca.**
+
 Tomatito is a lightweight, native-feeling Pomodoro timer for Linux, Windows, macOS, Android — and now also runs in the browser. The visual and functional north star is the Windows 11 Clock app's Focus Sessions widget, expanded to be cross-platform, fully customisable, scientifically honest and visibly more polished in motion.
 
 > **Status:** Phase 3.x. Timer engine, custom dial (ticks + arc styles), stats panel with achievements, themes (Light / Dark / Black OLED / Red / Follow system), system tray + minimize-to-tray, OS autostart, foreground service on Android, end-of-period chimes, full localisation (en + pt). Web target works with localStorage persistence.
