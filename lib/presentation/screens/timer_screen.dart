@@ -155,7 +155,10 @@ class _TimerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardPadding = compact ? ThemeTokens.space2 : ThemeTokens.space5;
-    final dialFraction = compact ? 1.0 : 0.85;
+    // Compact has to leave vertical room for the controls + dots in the
+    // 320 dp window. 0.7 keeps the dial visible without crowding the
+    // buttons; the font scaler caps at 36 px so the digits stay legible.
+    final dialFraction = compact ? 0.7 : 0.85;
     return Card(
       child: Padding(
         padding: EdgeInsets.all(cardPadding),

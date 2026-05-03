@@ -41,6 +41,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool? _persistentNotification;
   bool? _tickEnabled;
   bool? _autostart;
+  // Tri-state: null = ask each time, true = tray, false = taskbar.
+  // Wrapped in a single field with a sentinel because Dart doesn't have
+  // option types and we want to distinguish "loaded null" from "not yet
+  // loaded".
+  bool? _minimizeToTray;
+  bool _minimizeLoaded = false;
 
   @override
   void initState() {
@@ -57,6 +63,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final persistent = await repo.loadPersistentNotification();
     final tick = await repo.loadTickEnabled();
     final autostart = await repo.loadAutostart();
+    final minimize = await repo.loadMinimizeToTray();
     if (!mounted) return;
     setState(() {
       _config = cfg;
@@ -66,6 +73,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _persistentNotification = persistent;
       _tickEnabled = tick;
       _autostart = autostart;
+      _minimizeToTray = minimize;
+      _minimizeLoaded = true;
     });
   }
 
@@ -151,6 +160,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } else {
       await autostart.disable();
     }
+  }
+
+  Future<void> _updateMinimize(bool? value) async {
+    setState(() => _minimizeToTray = value);
+    await ref
+        .read(settingsRepositoryProvider)
+        .saveMinimizeToTray(value: value);
   }
 
   @override
@@ -364,6 +380,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ? null
                     : (v) => _updateAutostart(value: v),
               ),
+            if (_minimizeLoaded)
+              ListTile(
+                title: Text(loc.settingsMinimize),
+                subtitle: Text(_minimizeLabel(loc, _minimizeToTray)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _showMinimizePicker,
+              ),
           ]),
         if (_isAndroid)
           _Section(loc.settingsNotifications, [
@@ -435,7 +458,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return loc.dialStyleArc;
     }
   }
+
+  String _minimizeLabel(AppLocalizations loc, bool? value) {
+    if (value == null) return loc.settingsMinimizeAsk;
+    return value ? loc.settingsMinimizeTray : loc.settingsMinimizeTaskbar;
+  }
+
+  Future<void> _showMinimizePicker() async {
+    final loc = AppLocalizations.of(context);
+    final picked = await showModalBottomSheet<_MinimizeChoice>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.help_outline),
+              title: Text(loc.settingsMinimizeAsk),
+              onTap: () => Navigator.of(ctx).pop(_MinimizeChoice.ask),
+            ),
+            ListTile(
+              leading: const Icon(Icons.tab_unselected),
+              title: Text(loc.settingsMinimizeTray),
+              onTap: () => Navigator.of(ctx).pop(_MinimizeChoice.tray),
+            ),
+            ListTile(
+              leading: const Icon(Icons.minimize),
+              title: Text(loc.settingsMinimizeTaskbar),
+              onTap: () => Navigator.of(ctx).pop(_MinimizeChoice.taskbar),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null) return;
+    await _updateMinimize(switch (picked) {
+      _MinimizeChoice.ask => null,
+      _MinimizeChoice.tray => true,
+      _MinimizeChoice.taskbar => false,
+    });
+  }
 }
+
+enum _MinimizeChoice { ask, tray, taskbar }
 
 class _Section extends StatelessWidget {
   const _Section(this.title, this.children);

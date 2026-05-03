@@ -28,6 +28,27 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
   /// the user back to fullscreen on expand.
   Size? _preCompactSize;
 
+  @override
+  void initState() {
+    super.initState();
+    ref.listenManual<int>(navigationIndexProvider, (prev, next) async {
+      // When the user leaves the Settings tab and the compact toggle is
+      // still meant to be on (we expanded only to show Settings), pop
+      // back into compact mode.
+      if (prev == 2 && next != 2 && _wantCompactAfterSettings) {
+        _wantCompactAfterSettings = false;
+        if (!ref.read(compactModeProvider)) {
+          await _toggleCompact(currentlyCompact: false);
+        }
+      }
+    });
+  }
+
+  /// True when the user opened Settings from compact mode; the title bar
+  /// expanded the window to show the long settings list and should snap
+  /// back into compact when the user navigates away from Settings.
+  bool _wantCompactAfterSettings = false;
+
   static const Size _compactSize = Size(240, 320);
   static const Size _defaultRestoreSize = Size(420, 720);
   static const Size _maxRememberedSize = Size(560, 900);
@@ -81,9 +102,11 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
 
   Future<void> _openSettings({required bool currentlyCompact}) async {
     // If the user is in compact mode, expand back to a normal window
-    // first so the Settings list has room to breathe; then jump to the
-    // Settings tab.
+    // first so the Settings list has room to breathe; remember that we
+    // expanded just for Settings so we can snap back into compact when
+    // the user leaves the Settings tab.
     if (currentlyCompact) {
+      _wantCompactAfterSettings = true;
       await _toggleCompact(currentlyCompact: true);
     }
     ref.read(navigationIndexProvider.notifier).state = 2;
