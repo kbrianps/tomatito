@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:tomatito/core/locale/locale_choice.dart';
 import 'package:tomatito/core/motion/motion_curves.dart';
 import 'package:tomatito/core/motion/motion_durations.dart';
 import 'package:tomatito/core/theme/app_themes.dart';
@@ -31,12 +32,14 @@ class TomatitoApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeId = ref.watch(themeControllerProvider);
     final brightness = MediaQuery.platformBrightnessOf(context);
+    final localeChoice = ref.watch(localeChoiceProvider);
     return MaterialApp(
       navigatorKey: tomatitoNavigatorKey,
       onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appName,
       theme: AppThemes.themeFor(themeId, platformBrightness: brightness),
       themeAnimationDuration: MotionDurations.long,
       themeAnimationCurve: MotionCurves.standard,
+      locale: localeChoice.toLocale(),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: const _ShortcutsScope(child: _DesktopFrame(child: _RootRouter())),

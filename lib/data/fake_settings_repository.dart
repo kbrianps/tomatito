@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:tomatito/core/locale/locale_choice.dart';
 import 'package:tomatito/core/sound/sound_bank.dart';
 import 'package:tomatito/core/theme/app_themes.dart';
 import 'package:tomatito/core/timer/session_config.dart';
@@ -18,6 +19,7 @@ class FakeSettingsRepository implements SettingsRepository {
     bool initialOemTipShown = false,
     bool initialHasSeenOnboarding = false,
     bool initialTickEnabled = false,
+    LocaleChoice initialLocaleChoice = LocaleChoice.system,
   }) : _config = initialConfig ?? SessionConfig.pomodoroDefault,
        _theme = initialTheme,
        _dailyGoal = initialDailyGoalMinutes,
@@ -27,7 +29,8 @@ class FakeSettingsRepository implements SettingsRepository {
        _persistentNotification = initialPersistentNotification,
        _oemTipShown = initialOemTipShown,
        _hasSeenOnboarding = initialHasSeenOnboarding,
-       _tickEnabled = initialTickEnabled;
+       _tickEnabled = initialTickEnabled,
+       _localeChoice = initialLocaleChoice;
 
   SessionConfig _config;
   AppThemeId _theme;
@@ -39,6 +42,7 @@ class FakeSettingsRepository implements SettingsRepository {
   bool _oemTipShown;
   bool _hasSeenOnboarding;
   bool _tickEnabled;
+  LocaleChoice _localeChoice;
   final StreamController<void> _changes = StreamController<void>.broadcast();
 
   @override
@@ -131,6 +135,15 @@ class FakeSettingsRepository implements SettingsRepository {
   @override
   Future<void> saveTickEnabled({required bool value}) async {
     _tickEnabled = value;
+    _changes.add(null);
+  }
+
+  @override
+  Future<LocaleChoice> loadLocaleChoice() async => _localeChoice;
+
+  @override
+  Future<void> saveLocaleChoice(LocaleChoice choice) async {
+    _localeChoice = choice;
     _changes.add(null);
   }
 

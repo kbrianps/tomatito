@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:tomatito/core/locale/locale_choice.dart';
 import 'package:tomatito/core/theme/app_themes.dart';
 import 'package:tomatito/core/timer/session_config.dart';
 import 'package:tomatito/data/shared_prefs_settings_repository.dart';
@@ -90,6 +91,16 @@ void main() {
 
     final fresh = await SharedPrefsSettingsRepository.create();
     expect(await fresh.loadTickEnabled(), isTrue);
+  });
+
+  test('locale choice round-trips and defaults to system', () async {
+    final repo = await SharedPrefsSettingsRepository.create();
+    expect(await repo.loadLocaleChoice(), LocaleChoice.system);
+    await repo.saveLocaleChoice(LocaleChoice.pt);
+    expect(await repo.loadLocaleChoice(), LocaleChoice.pt);
+
+    final fresh = await SharedPrefsSettingsRepository.create();
+    expect(await fresh.loadLocaleChoice(), LocaleChoice.pt);
   });
 
   test('chime id and volume round-trip with sensible defaults', () async {

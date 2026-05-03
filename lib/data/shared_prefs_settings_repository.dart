@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:tomatito/core/locale/locale_choice.dart';
 import 'package:tomatito/core/sound/sound_bank.dart';
 import 'package:tomatito/core/theme/app_themes.dart';
 import 'package:tomatito/core/timer/session_config.dart';
@@ -29,6 +30,7 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   static const String _keyOemTipShown = 'tomatito.oem_tip_shown.v1';
   static const String _keyHasSeenOnboarding = 'tomatito.has_seen_onboarding.v1';
   static const String _keyTickEnabled = 'tomatito.tick_enabled.v1';
+  static const String _keyLocaleChoice = 'tomatito.locale_choice.v1';
 
   static Future<SharedPrefsSettingsRepository> create() async {
     final prefs = await SharedPreferences.getInstance();
@@ -174,6 +176,17 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   @override
   Future<void> saveTickEnabled({required bool value}) async {
     await _prefs.setBool(_keyTickEnabled, value);
+    _changes.add(null);
+  }
+
+  @override
+  Future<LocaleChoice> loadLocaleChoice() async {
+    return LocaleChoice.fromName(_prefs.getString(_keyLocaleChoice));
+  }
+
+  @override
+  Future<void> saveLocaleChoice(LocaleChoice choice) async {
+    await _prefs.setString(_keyLocaleChoice, choice.name);
     _changes.add(null);
   }
 

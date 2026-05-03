@@ -8,6 +8,7 @@ environment:
   flutter: ">=3.32.0"
 
 dependencies:
+  android_intent_plus: ^5.2.0
   cupertino_icons: ^1.0.8
   drift: ^2.20.0
   flutter:
@@ -45,4 +46,6 @@ flutter:
   assets:
     - assets/sounds/
     - docs/PRIVACY_POLICY.md
+    - docs/PRIVACY_POLICY.pt.md
     - docs/TERMS.md
+    - docs/TERMS.pt.md

@@ -97,14 +97,16 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Mitigation (Phase 3.x): when `restoreFromCheckpointIfFresh` reports `staleDiscarded`, the TimerScreen shows a one-time MaterialBanner with guidance ("Allow Tomatito to ignore battery optimisations"). The tip is gated by `oem_tip_shown` in SharedPreferences so it does not nag. The "Open battery settings" deep link is still pending; for now the tip is text-only. Track the deep link in a separate follow-up.
 - Opened: 2026-05-02
 
-## [OPEN] OEM tip "Open battery settings" deep link
+## [CLOSED] OEM tip "Open battery settings" deep link
 
 - Severity: low
 - Area: Android background reliability
-- Description: the Phase 3.x OEM battery tip is text-only. A "Open battery settings" button would jump to `Settings > Apps > Tomatito > Battery` for the user.
-- Impact: extra friction; users must navigate the system settings themselves.
+- Description: the Phase 3.x OEM battery tip was text-only. A "Open battery settings" button would jump to `Settings > Apps > Tomatito > Battery` for the user.
+- Impact: extra friction; users had to navigate the system settings themselves.
 - Plan: add `android_intent_plus` (or use `url_launcher` with package URI) and wire an action button on the MaterialBanner that fires `IGNORE_BATTERY_OPTIMIZATION_SETTINGS` or `APPLICATION_DETAILS_SETTINGS`. Phase 3.x follow-up.
+- Resolution: Phase 3.x. Added `android_intent_plus`. The OEM banner now has two actions: "Open battery settings" (fires `IGNORE_BATTERY_OPTIMIZATION_SETTINGS`, falls back to `APPLICATION_DETAILS_SETTINGS` with `package:dev.kbrianps.tomatito` if the optimisation intent is unhandled) and "Got it" (dismiss + persist `oem_tip_shown=true`). Also: the banner is now gated to Android only (was firing on desktop too when a stale checkpoint was found).
 - Opened: 2026-05-02
+- Closed: 2026-05-03
 
 ## [OPEN] CI does not yet build the Windows binary
 

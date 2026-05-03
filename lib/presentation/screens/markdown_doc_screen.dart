@@ -5,14 +5,30 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:tomatito/core/theme/theme_tokens.dart';
 
 /// Renders a bundled markdown asset in a plain Scaffold. Used for the
-/// in-app Privacy policy and Terms of use views; the same .md files live
-/// in `docs/` so the source-tree and the in-app version stay identical.
+/// in-app Privacy policy and Terms of use views.
+///
+/// Pick the asset path based on the current locale via the
+/// `forLocale` constructor: the caller passes both a base path (en) and
+/// a Portuguese variant; the screen uses whichever matches the active
+/// language code.
 class MarkdownDocScreen extends StatelessWidget {
   const MarkdownDocScreen({
     required this.title,
     required this.assetPath,
     super.key,
   });
+
+  /// Convenience constructor that picks the en or pt asset based on the
+  /// active locale's language code.
+  factory MarkdownDocScreen.forLocale({
+    required String title,
+    required String enAsset,
+    required String ptAsset,
+    required Locale locale,
+  }) {
+    final asset = locale.languageCode == 'pt' ? ptAsset : enAsset;
+    return MarkdownDocScreen(title: title, assetPath: asset);
+  }
 
   final String title;
   final String assetPath;

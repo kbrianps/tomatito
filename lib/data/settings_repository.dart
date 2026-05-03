@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tomatito/core/locale/locale_choice.dart';
 import 'package:tomatito/core/theme/app_themes.dart';
 import 'package:tomatito/core/timer/session_config.dart';
 
@@ -31,10 +32,12 @@ abstract class SettingsRepository {
   Future<bool> loadHasSeenOnboarding();
   Future<void> saveHasSeenOnboarding({required bool value});
 
-  /// Whether to play a soft tick once per second during a focus period.
-  /// Off by default per spec.
   Future<bool> loadTickEnabled();
   Future<void> saveTickEnabled({required bool value});
+
+  /// User locale preference (system / en / pt). System is the default.
+  Future<LocaleChoice> loadLocaleChoice();
+  Future<void> saveLocaleChoice(LocaleChoice choice);
 
   /// Stream of changes so the UI can re-render without polling.
   Stream<void> get changes;

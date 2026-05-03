@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:tomatito/core/locale/locale_choice.dart';
 import 'package:tomatito/core/sound/sound_bank.dart';
 import 'package:tomatito/core/sound/sound_player.dart';
 import 'package:tomatito/core/theme/app_themes.dart';
@@ -241,6 +242,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ]),
+        _Section(loc.settingsLanguage, [
+          RadioGroup<LocaleChoice>(
+            groupValue: ref.watch(localeChoiceProvider),
+            onChanged: (v) {
+              if (v == null) return;
+              ref.read(localeChoiceProvider.notifier).state = v;
+              ref.read(settingsRepositoryProvider).saveLocaleChoice(v);
+            },
+            child: Column(
+              children: [
+                for (final c in LocaleChoice.values)
+                  RadioListTile<LocaleChoice>(
+                    title: Text(_localeLabel(loc, c)),
+                    value: c,
+                  ),
+              ],
+            ),
+          ),
+        ]),
         if (_isDesktop)
           _Section(loc.settingsWindow, [
             SwitchListTile(
@@ -284,6 +304,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return loc.themeTomatito;
       case AppThemeId.system:
         return loc.themeSystem;
+    }
+  }
+
+  String _localeLabel(AppLocalizations loc, LocaleChoice choice) {
+    switch (choice) {
+      case LocaleChoice.system:
+        return loc.languageSystem;
+      case LocaleChoice.en:
+        return loc.languageEnglish;
+      case LocaleChoice.pt:
+        return loc.languagePortuguese;
     }
   }
 

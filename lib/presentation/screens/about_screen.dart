@@ -79,9 +79,11 @@ class AboutScreen extends ConsumerWidget {
                 () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder:
-                        (_) => MarkdownDocScreen(
+                        (_) => MarkdownDocScreen.forLocale(
                           title: loc.aboutPrivacy,
-                          assetPath: 'docs/PRIVACY_POLICY.md',
+                          enAsset: 'docs/PRIVACY_POLICY.md',
+                          ptAsset: 'docs/PRIVACY_POLICY.pt.md',
+                          locale: Localizations.localeOf(context),
                         ),
                   ),
                 ),
@@ -93,9 +95,11 @@ class AboutScreen extends ConsumerWidget {
                 () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder:
-                        (_) => MarkdownDocScreen(
+                        (_) => MarkdownDocScreen.forLocale(
                           title: loc.aboutTerms,
-                          assetPath: 'docs/TERMS.md',
+                          enAsset: 'docs/TERMS.md',
+                          ptAsset: 'docs/TERMS.pt.md',
+                          locale: Localizations.localeOf(context),
                         ),
                   ),
                 ),

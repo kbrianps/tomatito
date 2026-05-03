@@ -20,7 +20,10 @@ final class AppThemes {
   static const Color tomatitoBrand = Color(0xFFE74C3C);
 
   static const Color _tomatitoLeaf = Color(0xFF3F7330);
-  static const Color _tomatitoSurface = Color(0xFFFAF6F1);
+  // Pale-tomato surface so the Tomatito theme reads as red at a glance,
+  // while keeping the dark onSurface text comfortably above WCAG AA 4.5:1
+  // (verified by contrast_validator_test).
+  static const Color _tomatitoSurface = Color(0xFFFFE0D5);
   static const Color _tomatitoOnSurface = Color(0xFF2A1A14);
 
   /// Fixed-scheme themes that participate in the contrast validator test.

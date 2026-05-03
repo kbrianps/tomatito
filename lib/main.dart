@@ -12,6 +12,7 @@ import 'package:tomatito/core/app_lifecycle.dart';
 import 'package:tomatito/core/bootstrap_result.dart';
 import 'package:tomatito/core/entitlements/always_free_entitlement_service.dart';
 import 'package:tomatito/core/entitlements/entitlement_service.dart';
+import 'package:tomatito/core/locale/locale_choice.dart';
 import 'package:tomatito/core/notifications/chime_recorder.dart';
 import 'package:tomatito/core/notifications/no_op_notification_service.dart';
 import 'package:tomatito/core/notifications/notification_service.dart';
@@ -63,6 +64,7 @@ Future<void> main() async {
   final restoreResult = await engine.restoreFromCheckpointIfFresh(config);
   final oemTipShown = await settings.loadOemTipShown();
   final hasSeenOnboarding = await settings.loadHasSeenOnboarding();
+  final localeChoice = await settings.loadLocaleChoice();
   final bootstrap = BootstrapResult(
     restoredFromCheckpoint: restoreResult.restored,
     // The OEM battery tip only makes sense on Android; on desktop the
@@ -134,6 +136,7 @@ Future<void> main() async {
         bootstrapResultProvider.overrideWithValue(bootstrap),
         onboardingNeededProvider.overrideWith((ref) => !hasSeenOnboarding),
         alwaysOnTopProvider.overrideWith((ref) => alwaysOnTopInitial),
+        localeChoiceProvider.overrideWith((ref) => localeChoice),
       ],
       child: const TomatitoApp(),
     ),

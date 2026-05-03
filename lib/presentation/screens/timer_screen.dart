@@ -1,3 +1,7 @@
+import 'dart:io' show Platform;
+
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -74,6 +78,10 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
         leading: const Icon(Icons.battery_alert_outlined),
         actions: [
           TextButton(
+            onPressed: _openBatterySettings,
+            child: Text(loc.oemTipOpenSettings),
+          ),
+          TextButton(
             onPressed: () async {
               messenger.hideCurrentMaterialBanner();
               await ref
@@ -85,6 +93,25 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _openBatterySettings() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    // Best deep link for the OEM-kill problem: Android's whitelist for
+    // battery optimisations. Falls back to the app's general settings
+    // page if the device does not handle the optimisation intent.
+    try {
+      const intent = AndroidIntent(
+        action: 'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
+      );
+      await intent.launch();
+    } on Object {
+      const fallback = AndroidIntent(
+        action: 'android.settings.APPLICATION_DETAILS_SETTINGS',
+        data: 'package:dev.kbrianps.tomatito',
+      );
+      await fallback.launch();
+    }
   }
 
   @override

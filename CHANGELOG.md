@@ -99,3 +99,10 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 - Four caption buttons in order: pin (always-on-top), minimize, maximize / restore (icon swaps via WindowListener.onWindowMaximize / Unmaximize), close. The close button hovers Windows-style red. The pin tints with `colorScheme.primary` when active.
 - New `alwaysOnTopProvider` (StateProvider) keeps the title bar pin and the Settings toggle in sync without either reaching into the other's local state. main overrides with the value loaded from `SettingsRepository` on boot.
 - en + pt strings for the four button tooltips.
+- Phase 3.x Tomatito red surface + OEM action button + locale picker + privacy/terms in pt.
+- Tomatito ColorScheme.surface moved from `#FAF6F1` (warm off-white) to `#FFE0D5` (pale tomato) so the theme reads as red at a glance; contrast tests still pass for all colour pairs.
+- New `android_intent_plus` dep. OEM banner now has an "Open battery settings" action that fires `IGNORE_BATTERY_OPTIMIZATION_SETTINGS` (falls back to `APPLICATION_DETAILS_SETTINGS` with `package:dev.kbrianps.tomatito`) alongside the existing dismiss action. The banner itself is now gated to Android only (was firing on desktop too).
+- New `LocaleChoice` enum (system / en / pt) + `localeChoiceProvider`. main loads from `SettingsRepository.loadLocaleChoice` and overrides the provider; `MaterialApp.locale` watches it. Settings → Language section ships the picker (en + pt strings).
+- Privacy policy and terms now have pt translations (`docs/PRIVACY_POLICY.pt.md`, `docs/TERMS.pt.md`); `MarkdownDocScreen.forLocale` picks the asset based on the active language code so the in-app docs follow the user's chosen language.
+- Tests: locale-choice round-trip in shared_prefs (89 total, all passing).
+- Closes GAPS: OEM tip "Open battery settings" deep link.
