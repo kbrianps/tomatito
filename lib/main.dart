@@ -62,7 +62,7 @@ Future<void> main() async {
     // single-column layout looks lonely and the dial font would race the
     // 80px cap. Compact mode lives inside this min so resize handles
     // remain usable in the small window.
-    await windowManager.setMinimumSize(const Size(280, 340));
+    await windowManager.setMinimumSize(const Size(240, 320));
     await windowManager.setMaximumSize(const Size(900, 1300));
   }
 

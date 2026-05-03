@@ -27,7 +27,7 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
   /// the user back to fullscreen on expand.
   Size? _preCompactSize;
 
-  static const Size _compactSize = Size(280, 340);
+  static const Size _compactSize = Size(240, 320);
   static const Size _defaultRestoreSize = Size(420, 720);
   static const Size _maxRememberedSize = Size(560, 900);
 
@@ -127,11 +127,15 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
               ),
             ),
           ),
-          _CaptionButton(
-            tooltip: loc.navSettings,
-            icon: Icons.tune,
-            onPressed: () => _openSettings(currentlyCompact: compact),
-          ),
+          // Settings shortcut only in compact mode: the user already has
+          // the Settings tab in normal mode and asked for the title-bar
+          // entry to disappear when not in the small window.
+          if (compact)
+            _CaptionButton(
+              tooltip: loc.navSettings,
+              icon: Icons.tune,
+              onPressed: () => _openSettings(currentlyCompact: compact),
+            ),
           _CaptionButton(
             tooltip: pinned ? loc.titleBarUnpin : loc.titleBarPin,
             icon: pinned ? Icons.push_pin : Icons.push_pin_outlined,

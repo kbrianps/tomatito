@@ -119,7 +119,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
               constraints: const BoxConstraints(maxWidth: 420),
               child: Padding(
                 padding: EdgeInsets.all(
-                  compact ? ThemeTokens.space2 : ThemeTokens.space4,
+                  compact ? ThemeTokens.space1 : ThemeTokens.space4,
                 ),
                 child: _TimerCard(
                   state: state,
@@ -154,18 +154,21 @@ class _TimerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardPadding = compact ? ThemeTokens.space3 : ThemeTokens.space5;
-    final dialFraction = compact ? 0.95 : 0.85;
+    final cardPadding = compact ? ThemeTokens.space2 : ThemeTokens.space5;
+    final dialFraction = compact ? 1.0 : 0.85;
     return Card(
       child: Padding(
         padding: EdgeInsets.all(cardPadding),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _Header(state: state, idleConfig: idleConfig, compact: compact),
-            SizedBox(
-              height: compact ? ThemeTokens.space3 : ThemeTokens.space5,
-            ),
+            // Hide the period header entirely in compact mode: the dots
+            // below the controls already convey the cycle, and the small
+            // window has no vertical room to spare.
+            if (!compact) ...[
+              _Header(state: state, idleConfig: idleConfig, compact: false),
+              const SizedBox(height: ThemeTokens.space5),
+            ],
             LayoutBuilder(
               builder: (ctx, c) {
                 final dialSize = c.maxWidth * dialFraction;
@@ -226,6 +229,19 @@ class _TimerCard extends StatelessWidget {
   }
 }
 
+enum _SlotStatus { done, current, future }
+
+class _Slot {
+  const _Slot(this.kind, this.status);
+  final PeriodKind kind;
+  final _SlotStatus status;
+}
+
+/// Renders one dot per period slot in the full session (focus + short
+/// breaks + final long break). For a 4-cycle config that is 4 + 3 + 1 = 8
+/// dots. Focus dots are larger and primary-coloured; break dots are
+/// smaller and tertiary-coloured so the user reads "the big ones are
+/// what counts".
 class _SessionProgressDots extends StatelessWidget {
   const _SessionProgressDots({required this.state, required this.idleConfig});
 
@@ -235,75 +251,123 @@ class _SessionProgressDots extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final s = state;
-
-    int total;
-    int doneCount;
-    int currentIdx;
-    bool currentIsFocus;
-
-    if (s is TimerRunning) {
-      total = s.totalCycles;
-      currentIsFocus = s.kind == PeriodKind.focus;
-      doneCount = currentIsFocus ? s.cycle - 1 : s.cycle;
-      currentIdx = s.cycle - 1;
-    } else if (s is TimerPaused) {
-      total = s.totalCycles;
-      currentIsFocus = s.kind == PeriodKind.focus;
-      doneCount = currentIsFocus ? s.cycle - 1 : s.cycle;
-      currentIdx = s.cycle - 1;
-    } else if (idleConfig != null) {
-      total = idleConfig!.cyclesBeforeLongBreak;
-      doneCount = 0;
-      currentIdx = 0;
-      currentIsFocus = true;
-    } else {
-      return const SizedBox.shrink();
-    }
+    final slots = _buildSlots();
+    if (slots.isEmpty) return const SizedBox.shrink();
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        for (var i = 0; i < total; i++) ...[
-          if (i > 0) const SizedBox(width: 6),
+        for (var i = 0; i < slots.length; i++) ...[
+          if (i > 0) const SizedBox(width: 5),
           _ProgressDot(
-            filled: i < doneCount,
-            current: i == currentIdx && currentIsFocus,
-            color: scheme.primary,
-            inactiveColor: scheme.onSurface.withValues(alpha: 0.18),
+            slot: slots[i],
+            scheme: scheme,
           ),
         ],
       ],
     );
   }
+
+  List<_Slot> _buildSlots() {
+    final s = state;
+    int totalCycles;
+    int currentCycle;
+    PeriodKind? currentKind;
+
+    if (s is TimerRunning) {
+      totalCycles = s.totalCycles;
+      currentCycle = s.cycle;
+      currentKind = s.kind;
+    } else if (s is TimerPaused) {
+      totalCycles = s.totalCycles;
+      currentCycle = s.cycle;
+      currentKind = s.kind;
+    } else if (idleConfig != null) {
+      totalCycles = idleConfig!.cyclesBeforeLongBreak;
+      currentCycle = 1;
+      currentKind = null;
+    } else {
+      return const [];
+    }
+
+    final slots = <_Slot>[];
+    for (var i = 1; i <= totalCycles; i++) {
+      slots.add(_Slot(PeriodKind.focus,
+          _focusStatus(i, currentCycle, currentKind)));
+      if (i < totalCycles) {
+        slots.add(_Slot(PeriodKind.shortBreak,
+            _shortBreakStatus(i, currentCycle, currentKind)));
+      }
+    }
+    slots.add(_Slot(PeriodKind.longBreak, _longBreakStatus(currentKind)));
+    return slots;
+  }
+
+  // Focus i is past once we're on a later cycle, or on the same cycle
+  // but no longer on focus (we already moved into the break that follows).
+  _SlotStatus _focusStatus(int i, int currentCycle, PeriodKind? currentKind) {
+    if (currentKind == null) return _SlotStatus.future;
+    if (currentCycle > i) return _SlotStatus.done;
+    if (currentCycle == i) {
+      return currentKind == PeriodKind.focus
+          ? _SlotStatus.current
+          : _SlotStatus.done;
+    }
+    return _SlotStatus.future;
+  }
+
+  // The j-th short break sits between focus j and focus j+1. The engine
+  // increments cycle when the break finishes, so the break is done once
+  // currentCycle > j.
+  _SlotStatus _shortBreakStatus(
+    int j,
+    int currentCycle,
+    PeriodKind? currentKind,
+  ) {
+    if (currentKind == null) return _SlotStatus.future;
+    if (currentCycle > j) return _SlotStatus.done;
+    if (currentCycle == j && currentKind == PeriodKind.shortBreak) {
+      return _SlotStatus.current;
+    }
+    return _SlotStatus.future;
+  }
+
+  // Long break is the last slot. It is current when the engine is on it
+  // and never marked done (the engine returns to idle right after, which
+  // we render as a fresh session for the next round).
+  _SlotStatus _longBreakStatus(PeriodKind? currentKind) {
+    if (currentKind == PeriodKind.longBreak) return _SlotStatus.current;
+    return _SlotStatus.future;
+  }
 }
 
 class _ProgressDot extends StatelessWidget {
-  const _ProgressDot({
-    required this.filled,
-    required this.current,
-    required this.color,
-    required this.inactiveColor,
-  });
+  const _ProgressDot({required this.slot, required this.scheme});
 
-  final bool filled;
-  final bool current;
-  final Color color;
-  final Color inactiveColor;
+  final _Slot slot;
+  final ColorScheme scheme;
 
   @override
   Widget build(BuildContext context) {
-    final size = current ? 9.0 : 7.0;
+    final isFocus = slot.kind == PeriodKind.focus;
+    final color = switch (slot.kind) {
+      PeriodKind.focus => scheme.primary,
+      PeriodKind.shortBreak => scheme.tertiary,
+      PeriodKind.longBreak => scheme.secondary,
+    };
+    final inactive = scheme.onSurface.withValues(alpha: 0.18);
+    final baseSize = isFocus ? 8.0 : 5.0;
+    final size = slot.status == _SlotStatus.current ? baseSize + 2 : baseSize;
+    final filled =
+        slot.status == _SlotStatus.done || slot.status == _SlotStatus.current;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: filled || current ? color : Colors.transparent,
-        border: filled || current
-            ? null
-            : Border.all(color: inactiveColor, width: 1.2),
+        color: filled ? color : Colors.transparent,
+        border: filled ? null : Border.all(color: inactive, width: 1.2),
       ),
     );
   }
