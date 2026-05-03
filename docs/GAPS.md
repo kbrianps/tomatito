@@ -185,3 +185,66 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Impact: less hand-holding for first-time users.
 - Plan: build the 3-screen flow + "Show welcome tour again" entry in About in Phase 1.x.
 - Opened: 2026-05-02
+
+## [OPEN] SessionCheckpoint and resume-after-kill deferred
+
+- Severity: high
+- Area: resilience
+- Description: spec calls for a 5-second checkpoint to disk and a "Resume your interrupted focus period?" prompt on next launch when the saved state is < 30 minutes old. Phase 2 ships only the persistent settings + stats; the engine's running state is lost on app kill.
+- Impact: users whose app is killed mid-session lose their place in the cycle.
+- Plan: implement `SessionCheckpoint` (JSON file in app docs dir) with write-on-tick at 5 s intervals; add a startup prompt in the timer screen when a fresh checkpoint exists. Phase 2.x.
+- Opened: 2026-05-02
+
+## [DEFERRED] SessionPlanner auto-divide mode
+
+- Severity: low
+- Area: timer
+- Description: spec lets users pick a total session length (e.g., 90 min) and auto-calculates focus / break / cycle counts. Phase 2 ships only manual mode (set durations directly).
+- Impact: users wanting a "give me a 90-minute session" shortcut have to compute it themselves.
+- Plan: add a `SessionPlanner` pure-Dart class with thorough unit tests; wire a "session length" picker into the TimerScreen header. Phase 2.x.
+- Opened: 2026-05-02
+
+## [DEFERRED] Drift migration for statistics
+
+- Severity: low
+- Area: persistence
+- Description: spec lists Drift or Hive for stats. Phase 2 ships line-delimited JSON instead, since the query patterns (per-day sum, per-week range) are trivial scans on small data.
+- Impact: when stats grow past a year of records, scans become slower; queries that need joins or window functions are awkward.
+- Plan: migrate to Drift when query patterns warrant it (window aggregates, multi-month rollups, custom reports). Reader supports the existing JSON file as a one-shot migration source.
+- Opened: 2026-05-02
+
+## [OPEN] Sound bank and chime playback not wired
+
+- Severity: medium
+- Area: sound
+- Description: spec describes a soft bell, wood block and gentle pulse chime, plus an optional tick during focus. Phase 2 ships neither the bundled audio files nor the just_audio integration.
+- Impact: end-of-period notifications are silent until Phase 2.x.
+- Plan: source three CC0 chimes (under 50 KB each, OGG / AAC), add `SoundBank` + `SoundPlayer`, expose chime + tick controls in Settings. Phase 2.x.
+- Opened: 2026-05-02
+
+## [OPEN] Vibration on Android not wired
+
+- Severity: low
+- Area: sound / haptics
+- Description: spec lists vibration as an alternative to chime, off by default. Not yet implemented.
+- Impact: silent users have no haptic alternative.
+- Plan: add a Settings toggle and call `HapticFeedback.heavyImpact` (or a vibration plugin for longer patterns) on period completion. Phase 2.x.
+- Opened: 2026-05-02
+
+## [OPEN] LocalCrashLogger not built
+
+- Severity: low
+- Area: crash handling
+- Description: spec specifies a rolling local crash log (max 1 MB) caught from `FlutterError.onError` and `PlatformDispatcher.onError`, with an opt-in "Send crash log" link in About. Phase 2 ships nothing here; uncaught exceptions go to stderr only.
+- Impact: in-the-wild crashes leave no breadcrumb for the user to send.
+- Plan: implement `LocalCrashLogger` with file rotation, wire global error handlers in `main()`, enable the existing About list tile. Phase 2.x.
+- Opened: 2026-05-02
+
+## [OPEN] StatsRecorder lifecycle is implicit
+
+- Severity: low
+- Area: architecture
+- Description: `main()` constructs `StatsRecorder`, calls `start()`, then holds a reference via `_keepAlive(...)` so the GC does not collect it. Works but is a smell.
+- Impact: when notifications and the foreground service land in Phase 3, the recorder will need a real owner that can hand off the engine and stats refs across process boundaries.
+- Plan: introduce an explicit lifecycle coordinator in Phase 3 alongside the foreground service. Until then, the recorder lives for the duration of the app process.
+- Opened: 2026-05-02

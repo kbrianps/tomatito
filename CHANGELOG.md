@@ -19,3 +19,12 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 - Adaptive navigation shell: `NavigationBar` on narrow viewports, `NavigationRail` at >= 720 dp.
 - Extended l10n with full UI strings for en and pt.
 - Tests: `FakeTimerEngine` unit tests (start, reset, pause+resume, strict mode, skip, long-break end), `TickPainter` widget + paint tests, navigation smoke test.
+- Phase 2 real engine + persistence.
+- `RealTimerEngine`: Stopwatch-tracked elapsed across pauses (immune to Timer drift), Timer.periodic only as the tick beat for UI emissions.
+- `SharedPrefsSettingsRepository`: JSON-encoded SessionConfig + theme id + daily goal in SharedPreferences; falls back to defaults on missing or corrupt data.
+- `JsonStatisticsRepository`: line-delimited JSON file in app docs dir; per-line append, corrupt-line tolerant on read. Drift migration deferred to Phase 2.x.
+- `StreakCalculator` real implementation: today does not break the streak when not yet hit; DST-safe day arithmetic via the DateTime constructor.
+- `StatsRecorder`: bridge that subscribes to the engine and records each completed focus period.
+- `main()` becomes async, wires real implementations behind the same Riverpod provider overrides; UI is unchanged.
+- Tests: `RealTimerEngine` state machine, `StreakCalculator` (empty, today-hit, today-missed, multi-day chain, gap, DST fall-back, same-day sum), `SharedPrefsSettingsRepository` (round-trip, corrupt fallback, change notifications), `JsonStatisticsRepository` (record / query / range / corrupt-line tolerance). 62 tests total, all passing.
+- GAPS extended with deferred items: SessionCheckpoint, SessionPlanner, Drift migration, sound bank, vibration, LocalCrashLogger, StatsRecorder lifecycle.
