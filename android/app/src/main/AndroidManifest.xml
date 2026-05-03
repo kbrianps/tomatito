@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required by flutter_local_notifications on API 33+ to post the
+         end-of-period chime; runtime-requested only when the user enables
+         notifications. The persistent timer notification + foreground
+         service permissions land in Phase 3.x. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:label="tomatito"
         android:name="${applicationName}"

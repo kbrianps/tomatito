@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,9 +8,13 @@ import 'package:tomatito/core/theme/app_themes.dart';
 import 'package:tomatito/core/theme/theme_controller.dart';
 import 'package:tomatito/core/theme/theme_tokens.dart';
 import 'package:tomatito/core/timer/session_config.dart';
+import 'package:tomatito/core/window/window_controller.dart';
 import 'package:tomatito/data/settings_repository.dart';
 import 'package:tomatito/l10n/app_localizations.dart';
 import 'package:tomatito/presentation/screens/about_screen.dart';
+
+bool get _isDesktop =>
+    !kIsWeb && (Platform.isLinux || Platform.isMacOS || Platform.isWindows);
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -19,6 +26,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   SessionConfig? _config;
   int? _dailyGoal;
+  bool? _alwaysOnTop;
 
   @override
   void initState() {
@@ -30,10 +38,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final repo = ref.read(settingsRepositoryProvider);
     final cfg = await repo.loadSessionConfig();
     final goal = await repo.loadDailyGoalMinutes();
+    final aot = await repo.loadAlwaysOnTop();
     if (!mounted) return;
     setState(() {
       _config = cfg;
       _dailyGoal = goal;
+      _alwaysOnTop = aot;
     });
   }
 
@@ -47,14 +57,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ref.read(settingsRepositoryProvider).saveDailyGoalMinutes(minutes);
   }
 
+  Future<void> _updateAlwaysOnTop({required bool value}) async {
+    setState(() => _alwaysOnTop = value);
+    await ref.read(settingsRepositoryProvider).saveAlwaysOnTop(value: value);
+    await ref.read(windowControllerProvider).setAlwaysOnTop(value: value);
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
     final cfg = _config;
     final goal = _dailyGoal;
+    final aot = _alwaysOnTop;
     final themeId = ref.watch(themeControllerProvider);
 
-    if (cfg == null || goal == null) {
+    if (cfg == null || goal == null || aot == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -140,6 +157,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ]),
+        if (_isDesktop)
+          _Section(loc.settingsWindow, [
+            SwitchListTile(
+              title: Text(loc.settingsAlwaysOnTop),
+              value: aot,
+              onChanged: (v) => _updateAlwaysOnTop(value: v),
+            ),
+          ]),
         _Section(loc.settingsAbout, [
           ListTile(
             title: Text(loc.settingsAbout),

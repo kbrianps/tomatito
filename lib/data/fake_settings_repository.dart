@@ -4,20 +4,24 @@ import 'package:tomatito/core/theme/app_themes.dart';
 import 'package:tomatito/core/timer/session_config.dart';
 import 'package:tomatito/data/settings_repository.dart';
 
-/// In-memory settings store for Phase 1. Round-trips changes synchronously
-/// (modulo the async signature) and notifies via the `changes` stream.
+/// In-memory settings store used during Phase 1 development and in tests.
+/// Round-trips changes synchronously (modulo the async signature) and
+/// notifies via the `changes` stream.
 class FakeSettingsRepository implements SettingsRepository {
   FakeSettingsRepository({
     SessionConfig? initialConfig,
     AppThemeId initialTheme = AppThemeId.tomatito,
     int initialDailyGoalMinutes = 120,
+    bool initialAlwaysOnTop = false,
   }) : _config = initialConfig ?? SessionConfig.pomodoroDefault,
        _theme = initialTheme,
-       _dailyGoal = initialDailyGoalMinutes;
+       _dailyGoal = initialDailyGoalMinutes,
+       _alwaysOnTop = initialAlwaysOnTop;
 
   SessionConfig _config;
   AppThemeId _theme;
   int _dailyGoal;
+  bool _alwaysOnTop;
   final StreamController<void> _changes = StreamController<void>.broadcast();
 
   @override
@@ -47,6 +51,15 @@ class FakeSettingsRepository implements SettingsRepository {
   @override
   Future<void> saveDailyGoalMinutes(int minutes) async {
     _dailyGoal = minutes;
+    _changes.add(null);
+  }
+
+  @override
+  Future<bool> loadAlwaysOnTop() async => _alwaysOnTop;
+
+  @override
+  Future<void> saveAlwaysOnTop({required bool value}) async {
+    _alwaysOnTop = value;
     _changes.add(null);
   }
 

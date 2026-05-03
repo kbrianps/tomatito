@@ -248,3 +248,48 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Impact: when notifications and the foreground service land in Phase 3, the recorder will need a real owner that can hand off the engine and stats refs across process boundaries.
 - Plan: introduce an explicit lifecycle coordinator in Phase 3 alongside the foreground service. Until then, the recorder lives for the duration of the app process.
 - Opened: 2026-05-02
+
+## [OPEN] Compact-mode UI not built
+
+- Severity: low
+- Area: desktop
+- Description: spec describes a 220x260 compact window with just dial + play/pause and a corner toggle to switch back. Phase 3 wires the abstract `WindowController.setCompactMode` to a no-op; the route + UI are pending.
+- Impact: desktop users cannot collapse the timer to a small overlay.
+- Plan: build a `CompactTimerScreen`, wire window resize via window_manager, and surface the corner toggle from the `TimerScreen` header. Phase 3.x.
+- Opened: 2026-05-02
+
+## [OPEN] Window state persistence (size + position) deferred
+
+- Severity: low
+- Area: desktop
+- Description: spec calls for window size + position to persist across launches. Phase 3 only persists the always-on-top flag; the window opens at the OS-default position every time.
+- Impact: minor; users on multi-monitor setups must reposition the window after each launch.
+- Plan: implement `persistWindowState` / `restoreWindowState` on `DesktopWindowController` (window_manager getBounds + setBounds) and call them on app start / dispose. Phase 3.x.
+- Opened: 2026-05-02
+
+## [OPEN] Android persistent timer notification + foreground service deferred
+
+- Severity: high
+- Area: Android background reliability
+- Description: spec wires `flutter_foreground_task` to a persistent live-updating notification with play/pause/skip actions, kept alive by a foreground service. Phase 3 ships only the end-of-period chime; the persistent notification toggle is not yet exposed in Settings.
+- Impact: when the screen is off, the timer relies on Dart isolate scheduling, which Android may pause; long focus sessions may drift or stop on aggressive OEMs (compounds with the existing OEM battery management OPEN).
+- Plan: integrate `flutter_foreground_task` with a TaskHandler that mirrors the engine state, expose the toggle in Settings (with just-in-time POST_NOTIFICATIONS request on API 33+), and add the FOREGROUND_SERVICE / FOREGROUND_SERVICE_DATA_SYNC manifest entries. Phase 3.x.
+- Opened: 2026-05-02
+
+## [OPEN] Linux desktop notifications deferred
+
+- Severity: low
+- Area: desktop notifications
+- Description: `flutter_local_notifications` supports Linux via libnotify, but Phase 3 wires the notification path only on Android. Desktop runs through `NoOpNotificationService`, so end-of-period chimes are silent on Linux.
+- Impact: desktop users hear nothing when a period ends.
+- Plan: add a `LinuxNotificationService` (libnotify) and switch `_buildNotificationService()` to pick it on Linux. Phase 3.x or together with the sound-bank integration.
+- Opened: 2026-05-02
+
+## [OPEN] Keyboard shortcuts: Ctrl+, and Esc not yet wired
+
+- Severity: low
+- Area: keyboard
+- Description: spec lists Ctrl+, (open Settings) and Esc (close modal / leave compact mode) alongside Space/Ctrl+R/Ctrl+S. Phase 3 wires the latter three only.
+- Impact: spec parity gap; desktop power users miss two shortcuts.
+- Plan: thread Settings navigation + modal stack through the shortcuts scope and bind both keys. Phase 3.x.
+- Opened: 2026-05-02

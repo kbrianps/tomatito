@@ -39,6 +39,8 @@
   "settingsGoal": "Goal",
   "settingsDailyGoal": "Daily focus minutes",
   "settingsAppearance": "Appearance",
+  "settingsWindow": "Window",
+  "settingsAlwaysOnTop": "Always on top",
   "settingsAbout": "About",
 
   "themeLight": "Light",

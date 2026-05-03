@@ -33,6 +33,8 @@
   "settingsGoal": "Meta",
   "settingsDailyGoal": "Minutos de foco por dia",
   "settingsAppearance": "Aparência",
+  "settingsWindow": "Janela",
+  "settingsAlwaysOnTop": "Sempre no topo",
   "settingsAbout": "Sobre",
 
   "themeLight": "Claro",

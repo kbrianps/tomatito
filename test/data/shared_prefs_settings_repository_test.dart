@@ -42,6 +42,16 @@ void main() {
     expect(await repo.loadDailyGoalMinutes(), 180);
   });
 
+  test('always-on-top round-trips and defaults to false', () async {
+    final repo = await SharedPrefsSettingsRepository.create();
+    expect(await repo.loadAlwaysOnTop(), isFalse);
+    await repo.saveAlwaysOnTop(value: true);
+    expect(await repo.loadAlwaysOnTop(), isTrue);
+
+    final fresh = await SharedPrefsSettingsRepository.create();
+    expect(await fresh.loadAlwaysOnTop(), isTrue);
+  });
+
   test('corrupt JSON falls back to defaults', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'tomatito.session_config.v1': 'this is not json',

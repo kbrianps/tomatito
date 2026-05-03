@@ -28,3 +28,13 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 - `main()` becomes async, wires real implementations behind the same Riverpod provider overrides; UI is unchanged.
 - Tests: `RealTimerEngine` state machine, `StreakCalculator` (empty, today-hit, today-missed, multi-day chain, gap, DST fall-back, same-day sum), `SharedPrefsSettingsRepository` (round-trip, corrupt fallback, change notifications), `JsonStatisticsRepository` (record / query / range / corrupt-line tolerance). 62 tests total, all passing.
 - GAPS extended with deferred items: SessionCheckpoint, SessionPlanner, Drift migration, sound bank, vibration, LocalCrashLogger, StatsRecorder lifecycle.
+- Phase 3 platform integration (desktop windowing + Android notifications).
+- `DesktopWindowController` (Linux / macOS / Windows) backed by window_manager; `setAlwaysOnTop` wired, compact mode + state persistence stubbed for Phase 3.x.
+- `AndroidNotificationService` plays end-of-period chimes via flutter_local_notifications on a high-importance "period_complete" channel; persistent timer notification + foreground service stubbed for Phase 3.x.
+- `ChimeRecorder` bridges engine completions into the notification chime (mirrors `StatsRecorder`).
+- `main()` picks the right `WindowController` and `NotificationService` per platform; restores always-on-top on launch.
+- Keyboard shortcuts wrapper at the app level: Space toggles play/pause, Ctrl+R resets, Ctrl+S skips. Ctrl+, and Esc deferred to 3.x.
+- `SettingsScreen` gains a Window section (desktop only) with the Always-on-top toggle, persisted across launches and applied immediately.
+- `SettingsRepository` extended with `loadAlwaysOnTop` / `saveAlwaysOnTop`; both repos updated; round-trip test added.
+- Android manifest declares POST_NOTIFICATIONS for runtime request on API 33+.
+- GAPS extended with Phase 3.x deferrals: compact mode, window state persistence, Android persistent / foreground service notification, Linux desktop notifications, Ctrl+, and Esc shortcuts.
