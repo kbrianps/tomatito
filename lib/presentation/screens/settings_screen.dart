@@ -11,6 +11,7 @@ import 'package:tomatito/core/theme/theme_controller.dart';
 import 'package:tomatito/core/theme/theme_tokens.dart';
 import 'package:tomatito/core/timer/session_config.dart';
 import 'package:tomatito/core/window/window_controller.dart';
+import 'package:tomatito/core/window/window_state.dart';
 import 'package:tomatito/data/settings_repository.dart';
 import 'package:tomatito/l10n/app_localizations.dart';
 import 'package:tomatito/presentation/screens/about_screen.dart';
@@ -29,7 +30,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   SessionConfig? _config;
   int? _dailyGoal;
-  bool? _alwaysOnTop;
   String? _chimeId;
   double? _chimeVolume;
   bool? _persistentNotification;
@@ -45,7 +45,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final repo = ref.read(settingsRepositoryProvider);
     final cfg = await repo.loadSessionConfig();
     final goal = await repo.loadDailyGoalMinutes();
-    final aot = await repo.loadAlwaysOnTop();
     final chime = await repo.loadChimeId();
     final volume = await repo.loadChimeVolume();
     final persistent = await repo.loadPersistentNotification();
@@ -54,7 +53,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() {
       _config = cfg;
       _dailyGoal = goal;
-      _alwaysOnTop = aot;
       _chimeId = chime;
       _chimeVolume = volume;
       _persistentNotification = persistent;
@@ -73,7 +71,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _updateAlwaysOnTop({required bool value}) async {
-    setState(() => _alwaysOnTop = value);
+    ref.read(alwaysOnTopProvider.notifier).state = value;
     await ref.read(settingsRepositoryProvider).saveAlwaysOnTop(value: value);
     await ref.read(windowControllerProvider).setAlwaysOnTop(value: value);
   }
@@ -105,7 +103,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final loc = AppLocalizations.of(context);
     final cfg = _config;
     final goal = _dailyGoal;
-    final aot = _alwaysOnTop;
+    final aot = ref.watch(alwaysOnTopProvider);
     final chime = _chimeId;
     final volume = _chimeVolume;
     final persistent = _persistentNotification;
@@ -114,7 +112,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (cfg == null ||
         goal == null ||
-        aot == null ||
         chime == null ||
         volume == null ||
         persistent == null ||

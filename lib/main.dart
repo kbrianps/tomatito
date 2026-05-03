@@ -24,6 +24,7 @@ import 'package:tomatito/core/timer/real_timer_engine.dart';
 import 'package:tomatito/core/timer/timer_engine.dart';
 import 'package:tomatito/core/window/no_op_window_controller.dart';
 import 'package:tomatito/core/window/window_controller.dart';
+import 'package:tomatito/core/window/window_state.dart';
 import 'package:tomatito/data/json_statistics_repository.dart';
 import 'package:tomatito/data/settings_repository.dart';
 import 'package:tomatito/data/shared_prefs_settings_repository.dart';
@@ -44,6 +45,10 @@ Future<void> main() async {
 
   if (_isDesktop) {
     await windowManager.ensureInitialized();
+    await windowManager.setTitleBarStyle(
+      TitleBarStyle.hidden,
+      windowButtonVisibility: false,
+    );
   }
 
   await initializeDateFormatting();
@@ -68,10 +73,10 @@ Future<void> main() async {
   final notificationService = _buildNotificationService();
   final soundPlayer = _buildSoundPlayer();
 
+  final alwaysOnTopInitial = await settings.loadAlwaysOnTop();
   if (_isDesktop) {
     await windowController.restoreWindowState();
-    final alwaysOnTop = await settings.loadAlwaysOnTop();
-    await windowController.setAlwaysOnTop(value: alwaysOnTop);
+    await windowController.setAlwaysOnTop(value: alwaysOnTopInitial);
     windowManager.addListener(_PersistOnMoveListener(windowController));
   }
 
@@ -124,6 +129,7 @@ Future<void> main() async {
         soundPlayerProvider.overrideWithValue(soundPlayer),
         bootstrapResultProvider.overrideWithValue(bootstrap),
         onboardingNeededProvider.overrideWith((ref) => !hasSeenOnboarding),
+        alwaysOnTopProvider.overrideWith((ref) => alwaysOnTopInitial),
       ],
       child: const TomatitoApp(),
     ),

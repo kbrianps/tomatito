@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +15,10 @@ import 'package:tomatito/data/settings_repository.dart';
 import 'package:tomatito/l10n/app_localizations.dart';
 import 'package:tomatito/presentation/screens/onboarding_screen.dart';
 import 'package:tomatito/presentation/screens/root_shell.dart';
+import 'package:tomatito/presentation/widgets/tomatito_title_bar.dart';
+
+bool get _isDesktop =>
+    !kIsWeb && (Platform.isLinux || Platform.isMacOS || Platform.isWindows);
 
 /// Root Navigator key. Used by Esc keyboard shortcut to dismiss modal
 /// routes (license page, About screen, etc.) without needing a BuildContext.
@@ -32,8 +39,22 @@ class TomatitoApp extends ConsumerWidget {
       themeAnimationCurve: MotionCurves.standard,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const _ShortcutsScope(child: _RootRouter()),
+      home: const _ShortcutsScope(child: _DesktopFrame(child: _RootRouter())),
     );
+  }
+}
+
+/// Wraps the app body with the custom desktop title bar. On Android / web /
+/// other platforms the wrapper is a no-op; the title bar is desktop-only.
+class _DesktopFrame extends StatelessWidget {
+  const _DesktopFrame({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isDesktop) return child;
+    return Column(children: [const TomatitoTitleBar(), Expanded(child: child)]);
   }
 }
 

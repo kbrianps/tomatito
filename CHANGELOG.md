@@ -93,3 +93,9 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 - New `build-linux` job: installs clang, cmake, ninja-build, pkg-config, libgtk-3-dev, liblzma-dev, libstdc++-12-dev; enables Linux desktop; flutter build linux --release; uploads `tomatito-linux-x64` bundle as a CI artifact.
 - Both new jobs gated on `analyze-and-test` so they only run when the analyze + test pipeline is green.
 - The Windows build job (`windows-latest` + VS Build Tools) stays deferred for now; tracked in the same downgraded GAPS entry.
+- Phase 3.x custom desktop title bar.
+- main calls `windowManager.setTitleBarStyle(TitleBarStyle.hidden, windowButtonVisibility: false)` on Linux / macOS / Windows so Flutter owns the chrome.
+- New `TomatitoTitleBar` widget: theme-coloured (uses `colorScheme.surface` + a 6 % bottom border), `DragToMoveArea` covers the title text on the left, double-tap toggles maximize / restore.
+- Four caption buttons in order: pin (always-on-top), minimize, maximize / restore (icon swaps via WindowListener.onWindowMaximize / Unmaximize), close. The close button hovers Windows-style red. The pin tints with `colorScheme.primary` when active.
+- New `alwaysOnTopProvider` (StateProvider) keeps the title bar pin and the Settings toggle in sync without either reaching into the other's local state. main overrides with the value loaded from `SettingsRepository` on boot.
+- en + pt strings for the four button tooltips.
