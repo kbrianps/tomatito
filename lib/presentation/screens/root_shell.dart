@@ -1,39 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:tomatito/l10n/app_localizations.dart';
 import 'package:tomatito/presentation/screens/settings_screen.dart';
 import 'package:tomatito/presentation/screens/statistics_screen.dart';
 import 'package:tomatito/presentation/screens/timer_screen.dart';
 
-class RootShell extends StatefulWidget {
+/// Currently selected bottom-nav / rail index. Exposed via a provider so
+/// keyboard shortcuts (Ctrl+, jumps to Settings) can navigate without
+/// reaching into RootShell's local state.
+final navigationIndexProvider = StateProvider<int>((ref) => 0);
+
+class RootShell extends ConsumerWidget {
   const RootShell({super.key});
-
-  @override
-  State<RootShell> createState() => _RootShellState();
-}
-
-class _RootShellState extends State<RootShell> {
-  int _index = 0;
 
   static const _screens = [TimerScreen(), StatisticsScreen(), SettingsScreen()];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final loc = AppLocalizations.of(context);
     final isWide = MediaQuery.sizeOf(context).width >= 720;
+    final index = ref.watch(navigationIndexProvider);
     final destinations = [
       _Dest(Icons.timer_outlined, Icons.timer, loc.navTimer),
       _Dest(Icons.bar_chart_outlined, Icons.bar_chart, loc.navStats),
       _Dest(Icons.settings_outlined, Icons.settings, loc.navSettings),
     ];
 
+    void onTap(int i) => ref.read(navigationIndexProvider.notifier).state = i;
+
     if (isWide) {
       return Scaffold(
         body: Row(
           children: [
             NavigationRail(
-              selectedIndex: _index,
-              onDestinationSelected: (i) => setState(() => _index = i),
+              selectedIndex: index,
+              onDestinationSelected: onTap,
               labelType: NavigationRailLabelType.all,
               destinations: [
                 for (final d in destinations)
@@ -45,17 +47,17 @@ class _RootShellState extends State<RootShell> {
               ],
             ),
             const VerticalDivider(width: 1),
-            Expanded(child: _screens[_index]),
+            Expanded(child: _screens[index]),
           ],
         ),
       );
     }
 
     return Scaffold(
-      body: _screens[_index],
+      body: _screens[index],
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        selectedIndex: index,
+        onDestinationSelected: onTap,
         destinations: [
           for (final d in destinations)
             NavigationDestination(

@@ -26,6 +26,7 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   static const String _keyChimeVolume = 'tomatito.chime_volume.v1';
   static const String _keyPersistentNotification =
       'tomatito.persistent_notification.v1';
+  static const String _keyOemTipShown = 'tomatito.oem_tip_shown.v1';
 
   static Future<SharedPrefsSettingsRepository> create() async {
     final prefs = await SharedPreferences.getInstance();
@@ -138,6 +139,17 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   @override
   Future<void> savePersistentNotification({required bool value}) async {
     await _prefs.setBool(_keyPersistentNotification, value);
+    _changes.add(null);
+  }
+
+  @override
+  Future<bool> loadOemTipShown() async {
+    return _prefs.getBool(_keyOemTipShown) ?? false;
+  }
+
+  @override
+  Future<void> saveOemTipShown({required bool value}) async {
+    await _prefs.setBool(_keyOemTipShown, value);
     _changes.add(null);
   }
 

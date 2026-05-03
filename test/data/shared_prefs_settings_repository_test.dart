@@ -62,6 +62,16 @@ void main() {
     expect(await fresh.loadPersistentNotification(), isTrue);
   });
 
+  test('OEM tip shown round-trips and defaults to false', () async {
+    final repo = await SharedPrefsSettingsRepository.create();
+    expect(await repo.loadOemTipShown(), isFalse);
+    await repo.saveOemTipShown(value: true);
+    expect(await repo.loadOemTipShown(), isTrue);
+
+    final fresh = await SharedPrefsSettingsRepository.create();
+    expect(await fresh.loadOemTipShown(), isTrue);
+  });
+
   test('chime id and volume round-trip with sensible defaults', () async {
     final repo = await SharedPrefsSettingsRepository.create();
     expect(await repo.loadChimeId(), isNotEmpty);

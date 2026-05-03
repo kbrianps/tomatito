@@ -3,6 +3,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tomatito/core/timer/checkpoint_restore_result.dart';
 import 'package:tomatito/core/timer/checkpoint_store.dart';
 import 'package:tomatito/core/timer/period_kind.dart';
 import 'package:tomatito/core/timer/real_timer_engine.dart';
@@ -145,11 +146,12 @@ void main() {
       await store.save(fixture);
 
       final engine = RealTimerEngine(checkpointStore: store);
-      final restored = await engine.restoreFromCheckpointIfFresh(
+      final result = await engine.restoreFromCheckpointIfFresh(
         SessionConfig.pomodoroDefault,
       );
 
-      expect(restored, isTrue);
+      expect(result.restored, isTrue);
+      expect(result.staleDiscarded, isFalse);
       expect(engine.current, isA<TimerPaused>());
       final paused = engine.current as TimerPaused;
       expect(paused.kind, PeriodKind.focus);
@@ -158,30 +160,44 @@ void main() {
       await engine.dispose();
     });
 
-    test('stale checkpoint is cleared and not restored', () async {
-      final stale = SessionCheckpoint(
-        kind: PeriodKind.focus,
-        elapsed: const Duration(minutes: 4),
-        total: const Duration(minutes: 25),
-        cycle: 1,
-        totalCycles: 4,
-        focusSessionsCompleted: 0,
-        savedAt: DateTime.now().subtract(const Duration(hours: 2)),
-      );
-      await store.save(stale);
+    test(
+      'stale checkpoint is cleared and reported via staleDiscarded',
+      () async {
+        final stale = SessionCheckpoint(
+          kind: PeriodKind.focus,
+          elapsed: const Duration(minutes: 4),
+          total: const Duration(minutes: 25),
+          cycle: 1,
+          totalCycles: 4,
+          focusSessionsCompleted: 0,
+          savedAt: DateTime.now().subtract(const Duration(hours: 2)),
+        );
+        await store.save(stale);
 
+        final engine = RealTimerEngine(checkpointStore: store);
+        final result = await engine.restoreFromCheckpointIfFresh(
+          SessionConfig.pomodoroDefault,
+        );
+
+        expect(result.restored, isFalse);
+        expect(result.staleDiscarded, isTrue);
+        expect(engine.current, isA<TimerIdle>());
+        expect(
+          await store.load(),
+          isNull,
+          reason: 'Stale checkpoint should be cleared.',
+        );
+        await engine.dispose();
+      },
+    );
+
+    test('no checkpoint at all returns CheckpointRestoreResult.none', () async {
       final engine = RealTimerEngine(checkpointStore: store);
-      final restored = await engine.restoreFromCheckpointIfFresh(
+      final result = await engine.restoreFromCheckpointIfFresh(
         SessionConfig.pomodoroDefault,
       );
-
-      expect(restored, isFalse);
+      expect(result, CheckpointRestoreResult.none);
       expect(engine.current, isA<TimerIdle>());
-      expect(
-        await store.load(),
-        isNull,
-        reason: 'Stale checkpoint should be cleared.',
-      );
       await engine.dispose();
     });
   });

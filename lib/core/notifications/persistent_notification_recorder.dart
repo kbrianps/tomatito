@@ -63,10 +63,13 @@ class PersistentNotificationRecorder {
     required Duration remaining,
     required bool isPaused,
   }) async {
-    final minutesShown =
-        remaining.inSeconds < 60
-            ? '00:${remaining.inSeconds.clamp(0, 59).toString().padLeft(2, '0')}'
-            : '${(remaining.inSeconds / 60).ceil()}';
+    final String minutesShown;
+    if (remaining.inSeconds < 60) {
+      final s = remaining.inSeconds.clamp(0, 59).toString().padLeft(2, '0');
+      minutesShown = '00:$s';
+    } else {
+      minutesShown = '${(remaining.inSeconds / 60).ceil()}';
+    }
     final key = '${kind.name}|$minutesShown|$isPaused';
     if (key == _lastDisplayed) return;
     _lastDisplayed = key;

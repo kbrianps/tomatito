@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:tomatito/core/bootstrap_result.dart';
 import 'package:tomatito/core/theme/theme_tokens.dart';
 import 'package:tomatito/core/timer/period_kind.dart';
 import 'package:tomatito/core/timer/timer_engine.dart';
@@ -10,11 +11,84 @@ import 'package:tomatito/l10n/app_localizations.dart';
 import 'package:tomatito/presentation/widgets/control_buttons.dart';
 import 'package:tomatito/presentation/widgets/timer_dial.dart';
 
-class TimerScreen extends ConsumerWidget {
+class TimerScreen extends ConsumerStatefulWidget {
   const TimerScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TimerScreen> createState() => _TimerScreenState();
+}
+
+class _TimerScreenState extends ConsumerState<TimerScreen> {
+  bool _bootstrapHandled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _handleBootstrap());
+  }
+
+  Future<void> _handleBootstrap() async {
+    if (_bootstrapHandled) return;
+    _bootstrapHandled = true;
+    final bootstrap = ref.read(bootstrapResultProvider);
+    if (bootstrap.restoredFromCheckpoint) {
+      await _showResumeDialog();
+    } else if (bootstrap.shouldShowOemTip) {
+      await _showOemTip();
+    }
+  }
+
+  Future<void> _showResumeDialog() async {
+    if (!mounted) return;
+    final loc = AppLocalizations.of(context);
+    final result = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: Text(loc.resumeDialogTitle),
+            content: Text(loc.resumeDialogBody),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text(loc.resumeDialogStartFresh),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: Text(loc.resumeDialogResume),
+              ),
+            ],
+          ),
+    );
+    if (result == false && mounted) {
+      ref.read(timerEngineProvider).reset();
+    }
+  }
+
+  Future<void> _showOemTip() async {
+    if (!mounted) return;
+    final loc = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showMaterialBanner(
+      MaterialBanner(
+        content: Text(loc.oemTipBody),
+        leading: const Icon(Icons.battery_alert_outlined),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              messenger.hideCurrentMaterialBanner();
+              await ref
+                  .read(settingsRepositoryProvider)
+                  .saveOemTipShown(value: true);
+            },
+            child: Text(loc.oemTipDismiss),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final engine = ref.watch(timerEngineProvider);
     return StreamBuilder<TimerState>(
       stream: engine.stream,

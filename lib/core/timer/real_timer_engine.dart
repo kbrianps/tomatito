@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:tomatito/core/timer/checkpoint_restore_result.dart';
 import 'package:tomatito/core/timer/checkpoint_store.dart';
 import 'package:tomatito/core/timer/period_kind.dart';
 import 'package:tomatito/core/timer/session_checkpoint.dart';
@@ -214,16 +215,19 @@ class RealTimerEngine implements TimerEngine {
   }
 
   /// Restore the engine to a paused state from a previous checkpoint, if
-  /// one exists and is fresh (< 30 minutes per spec). Returns true if
-  /// restored, false otherwise. Stale checkpoints are cleared.
-  Future<bool> restoreFromCheckpointIfFresh(SessionConfig config) async {
+  /// one exists and is fresh (< 30 minutes per spec). Returns a result
+  /// describing the outcome: restored / stale-discarded / none. Stale
+  /// checkpoints are cleared here so the next call returns `none`.
+  Future<CheckpointRestoreResult> restoreFromCheckpointIfFresh(
+    SessionConfig config,
+  ) async {
     final store = _checkpointStore;
-    if (store == null) return false;
+    if (store == null) return CheckpointRestoreResult.none;
     final cp = await store.load();
-    if (cp == null) return false;
+    if (cp == null) return CheckpointRestoreResult.none;
     if (!cp.isFresh) {
       await store.clear();
-      return false;
+      return CheckpointRestoreResult.staleCleared;
     }
     _config = config;
     _currentKind = cp.kind;
@@ -235,7 +239,7 @@ class RealTimerEngine implements TimerEngine {
     _cycle = cp.cycle;
     _focusSessionsCompleted = cp.focusSessionsCompleted;
     _emit(_pausedState());
-    return true;
+    return CheckpointRestoreResult.restoredOk;
   }
 
   Future<void> _writeCheckpoint() async {

@@ -15,13 +15,15 @@ class FakeSettingsRepository implements SettingsRepository {
     String? initialChimeId,
     double initialChimeVolume = 0.6,
     bool initialPersistentNotification = false,
+    bool initialOemTipShown = false,
   }) : _config = initialConfig ?? SessionConfig.pomodoroDefault,
        _theme = initialTheme,
        _dailyGoal = initialDailyGoalMinutes,
        _alwaysOnTop = initialAlwaysOnTop,
        _chimeId = initialChimeId ?? SoundBank.defaultOption.id,
        _chimeVolume = initialChimeVolume,
-       _persistentNotification = initialPersistentNotification;
+       _persistentNotification = initialPersistentNotification,
+       _oemTipShown = initialOemTipShown;
 
   SessionConfig _config;
   AppThemeId _theme;
@@ -30,6 +32,7 @@ class FakeSettingsRepository implements SettingsRepository {
   String _chimeId;
   double _chimeVolume;
   bool _persistentNotification;
+  bool _oemTipShown;
   final StreamController<void> _changes = StreamController<void>.broadcast();
 
   @override
@@ -95,6 +98,15 @@ class FakeSettingsRepository implements SettingsRepository {
   @override
   Future<void> savePersistentNotification({required bool value}) async {
     _persistentNotification = value;
+    _changes.add(null);
+  }
+
+  @override
+  Future<bool> loadOemTipShown() async => _oemTipShown;
+
+  @override
+  Future<void> saveOemTipShown({required bool value}) async {
+    _oemTipShown = value;
     _changes.add(null);
   }
 

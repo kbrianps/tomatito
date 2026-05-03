@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:tomatito/core/sound/sound_bank.dart';
+import 'package:tomatito/core/sound/sound_player.dart';
 import 'package:tomatito/core/theme/app_themes.dart';
 import 'package:tomatito/core/theme/theme_controller.dart';
 import 'package:tomatito/core/theme/theme_tokens.dart';
@@ -189,6 +190,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       title: Text(_chimeLabel(loc, option)),
                       value: option.id,
                       dense: true,
+                      secondary: IconButton(
+                        tooltip: loc.soundPreview,
+                        icon: const Icon(Icons.play_arrow_outlined),
+                        onPressed:
+                            () => ref
+                                .read(soundPlayerProvider)
+                                .play(option, volume: volume),
+                      ),
                     ),
                 ],
               ),

@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
 import 'package:tomatito/core/sound/sound_bank.dart';
@@ -48,3 +49,10 @@ class JustAudioSoundPlayer implements SoundPlayer {
   @override
   Future<void> dispose() => _player.dispose();
 }
+
+/// Override in `main()` with the platform-appropriate implementation.
+final soundPlayerProvider = Provider<SoundPlayer>((ref) {
+  throw UnimplementedError(
+    'soundPlayerProvider has no binding. Override it in main().',
+  );
+});

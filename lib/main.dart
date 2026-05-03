@@ -3,8 +3,10 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:tomatito/app.dart';
+import 'package:tomatito/core/bootstrap_result.dart';
 import 'package:tomatito/core/entitlements/always_free_entitlement_service.dart';
 import 'package:tomatito/core/entitlements/entitlement_service.dart';
 import 'package:tomatito/core/notifications/chime_recorder.dart';
@@ -37,16 +39,22 @@ Future<void> main() async {
     await windowManager.ensureInitialized();
   }
 
+  await initializeDateFormatting();
+
   final settings = await SharedPrefsSettingsRepository.create();
   final stats = await JsonStatisticsRepository.create();
   final checkpointStore = await CheckpointStore.create();
   final engine = RealTimerEngine(checkpointStore: checkpointStore);
 
-  // Restore an interrupted session if the checkpoint is fresh (< 30 min).
-  // The engine emits TimerPaused on success; the user resumes from the
-  // dial. Stale checkpoints are silently cleared.
+  // Restore an interrupted session if the checkpoint is fresh (< 30 min);
+  // detect a stale checkpoint to drive the OEM battery tip.
   final config = await settings.loadSessionConfig();
-  await engine.restoreFromCheckpointIfFresh(config);
+  final restoreResult = await engine.restoreFromCheckpointIfFresh(config);
+  final oemTipShown = await settings.loadOemTipShown();
+  final bootstrap = BootstrapResult(
+    restoredFromCheckpoint: restoreResult.restored,
+    shouldShowOemTip: restoreResult.staleDiscarded && !oemTipShown,
+  );
 
   final windowController = _buildWindowController();
   final notificationService = _buildNotificationService();
@@ -76,8 +84,7 @@ Future<void> main() async {
   await persistentRecorder.start();
 
   // Recorders are intentionally tied to app lifetime; nothing currently
-  // disposes them. Replaced by an explicit lifecycle owner in a follow-up
-  // session.
+  // disposes them. Replaced by an explicit lifecycle owner in a follow-up.
   _keepAlive(statsRecorder, chimeRecorder, persistentRecorder);
 
   runApp(
@@ -91,6 +98,8 @@ Future<void> main() async {
         entitlementServiceProvider.overrideWithValue(
           AlwaysFreeEntitlementService(),
         ),
+        soundPlayerProvider.overrideWithValue(soundPlayer),
+        bootstrapResultProvider.overrideWithValue(bootstrap),
       ],
       child: const TomatitoApp(),
     ),

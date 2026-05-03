@@ -12,6 +12,10 @@ import 'package:tomatito/data/settings_repository.dart';
 import 'package:tomatito/l10n/app_localizations.dart';
 import 'package:tomatito/presentation/screens/root_shell.dart';
 
+/// Root Navigator key. Used by Esc keyboard shortcut to dismiss modal
+/// routes (license page, About screen, etc.) without needing a BuildContext.
+final tomatitoNavigatorKey = GlobalKey<NavigatorState>();
+
 class TomatitoApp extends ConsumerWidget {
   const TomatitoApp({super.key});
 
@@ -20,6 +24,7 @@ class TomatitoApp extends ConsumerWidget {
     final themeId = ref.watch(themeControllerProvider);
     final brightness = MediaQuery.platformBrightnessOf(context);
     return MaterialApp(
+      navigatorKey: tomatitoNavigatorKey,
       onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appName,
       theme: AppThemes.themeFor(themeId, platformBrightness: brightness),
       themeAnimationDuration: MotionDurations.long,
@@ -31,9 +36,13 @@ class TomatitoApp extends ConsumerWidget {
   }
 }
 
-/// Wraps the root with the spec's keyboard shortcuts. Space toggles
-/// play/pause; Ctrl+R resets; Ctrl+S skips. Settings (Ctrl+,) and Esc
-/// (close modal / leave compact mode) ship in Phase 3.x.
+/// Wraps the root with the spec's keyboard shortcuts.
+///
+/// * Space: play / pause
+/// * Ctrl+R: reset
+/// * Ctrl+S: skip current period
+/// * Ctrl+,: open Settings tab
+/// * Esc: pop the topmost modal route
 class _ShortcutsScope extends ConsumerWidget {
   const _ShortcutsScope({required this.child});
 
@@ -49,6 +58,10 @@ class _ShortcutsScope extends ConsumerWidget {
             () => ref.read(timerEngineProvider).reset(),
         const SingleActivator(LogicalKeyboardKey.keyS, control: true):
             () => ref.read(timerEngineProvider).skip(),
+        const SingleActivator(LogicalKeyboardKey.comma, control: true):
+            () => ref.read(navigationIndexProvider.notifier).state = 2,
+        const SingleActivator(LogicalKeyboardKey.escape):
+            () => tomatitoNavigatorKey.currentState?.maybePop(),
       },
       child: Focus(autofocus: true, child: child),
     );

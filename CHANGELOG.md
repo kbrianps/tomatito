@@ -62,3 +62,12 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 - About screen: source-code and support-development tiles open external URLs via `url_launcher` (LaunchMode.externalApplication). Privacy + terms remain disabled pending hosted URLs or in-app markdown rendering.
 - New tests: `loadPersistentNotification` / `saveChimeId` / `loadChimeVolume` round-trips in shared_prefs (84 tests, all passing).
 - New OPEN GAPS entry: persistent notification action buttons (play/pause/skip from lock screen) deferred. Closed: Follow-system theme; downgraded to low: AboutScreen external links (privacy + terms only).
+- Phase 3.x cleanup batch: closes five OPEN GAPS entries (resume dialog, Ctrl+, + Esc shortcuts, sound preview, stats weekday l10n, OEM battery mitigation) and downgrades the OEM entry to medium.
+- `CheckpointRestoreResult({restored, staleDiscarded})` replaces the bool return of `RealTimerEngine.restoreFromCheckpointIfFresh`. Tests updated; new test for the no-checkpoint path.
+- `BootstrapResult` value object + `bootstrapResultProvider`. main computes it from the restore result and the persisted OEM-tip-shown flag; TimerScreen reads it once on the first post-frame callback.
+- TimerScreen "Resume your interrupted focus period?" AlertDialog when a fresh checkpoint was restored: Resume keeps the engine paused as restored; Start fresh calls `engine.reset()`. Mutually exclusive with the OEM tip.
+- TimerScreen MaterialBanner OEM battery tip when a stale checkpoint was discarded: text-only ("Allow Tomatito to ignore battery optimisations"); dismiss persists `oem_tip_shown=true` so it never nags. The "Open battery settings" deep link is a separate follow-up.
+- `navigationIndexProvider` (StateProvider) drives RootShell. Ctrl+, sets it to 2 (Settings). Esc pops the topmost route via `tomatitoNavigatorKey`.
+- `soundPlayerProvider` exposes the platform-appropriate SoundPlayer. SettingsScreen adds a play icon on each chime tile that previews at the current volume.
+- main calls `initializeDateFormatting()`. StatisticsScreen weekday labels render via `DateFormat('E', Localizations.localeOf(context).toString())`; pt now shows "seg, ter, qua, ..." instead of "Mon, Tue, ...".
+- Tests: 86 total, all passing.

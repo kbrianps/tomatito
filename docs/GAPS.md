@@ -89,11 +89,21 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 
 ## [OPEN] Aggressive OEM battery management may kill the foreground service
 
-- Severity: high
+- Severity: medium (downgraded from high after Phase 3.x mitigation)
 - Area: Android background reliability
 - Description: Xiaomi MIUI, Huawei EMUI, OnePlus and similar OEMs apply aggressive task-killing that can stop the foreground service despite our best practices.
 - Impact: timer pauses mid-session on affected devices.
 - Plan: surface a one-time inline tip the first time a session is interrupted, with a link to system settings. No general fix is possible.
+- Mitigation (Phase 3.x): when `restoreFromCheckpointIfFresh` reports `staleDiscarded`, the TimerScreen shows a one-time MaterialBanner with guidance ("Allow Tomatito to ignore battery optimisations"). The tip is gated by `oem_tip_shown` in SharedPreferences so it does not nag. The "Open battery settings" deep link is still pending; for now the tip is text-only. Track the deep link in a separate follow-up.
+- Opened: 2026-05-02
+
+## [OPEN] OEM tip "Open battery settings" deep link
+
+- Severity: low
+- Area: Android background reliability
+- Description: the Phase 3.x OEM battery tip is text-only. A "Open battery settings" button would jump to `Settings > Apps > Tomatito > Battery` for the user.
+- Impact: extra friction; users must navigate the system settings themselves.
+- Plan: add `android_intent_plus` (or use `url_launcher` with package URI) and wire an action button on the MaterialBanner that fires `IGNORE_BATTERY_OPTIMIZATION_SETTINGS` or `APPLICATION_DETAILS_SETTINGS`. Phase 3.x follow-up.
 - Opened: 2026-05-02
 
 ## [OPEN] CI does not yet build platform binaries
@@ -132,14 +142,16 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Plan: add a golden per screen per theme (4 themes x 4 screens = 16) at the start of Phase 1.x, ideally on top of Alchemist.
 - Opened: 2026-05-02
 
-## [OPEN] StatisticsScreen weekday labels are English-only
+## [CLOSED] StatisticsScreen weekday labels are English-only
 
 - Severity: low
 - Area: l10n
-- Description: weekday labels (Mon, Tue, ...) on the weekly bar chart are hard-coded English. The intl package is in pubspec but `initializeDateFormatting` is not wired.
-- Impact: pt locale shows English weekday names on the stats chart.
+- Description: weekday labels (Mon, Tue, ...) on the weekly bar chart were hard-coded English. The intl package was in pubspec but `initializeDateFormatting` was not wired.
+- Impact: pt locale showed English weekday names on the stats chart.
 - Plan: wire `initializeDateFormatting` in `main()` and use `DateFormat('E', locale)` in Phase 1.x.
+- Resolution: Phase 3.x. main calls `await initializeDateFormatting()` (loads all locales). StatisticsScreen uses `DateFormat('E', Localizations.localeOf(context).toString())` for short weekday labels. pt locale renders "seg, ter, qua, qui, sex, sáb, dom".
 - Opened: 2026-05-02
+- Closed: 2026-05-02
 
 ## [OPEN] AboutScreen privacy + terms tiles inert (source / support working)
 
@@ -199,14 +211,16 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Opened: 2026-05-02
 - Closed: 2026-05-02
 
-## [OPEN] Resume-after-kill confirmation dialog
+## [CLOSED] Resume-after-kill confirmation dialog
 
 - Severity: low
 - Area: UX
-- Description: spec requires a "Resume your interrupted focus period?" prompt on launch when a fresh checkpoint exists. Phase 3.x ships silent restore-to-paused instead, which is faster for the user but skips the explicit choice.
-- Impact: a user who genuinely wanted to start fresh has to tap Reset once after launch instead of dismissing a dialog.
+- Description: spec required a "Resume your interrupted focus period?" prompt on launch when a fresh checkpoint exists. Phase 3.x first shipped silent restore-to-paused instead, which was faster for the user but skipped the explicit choice.
+- Impact: a user who genuinely wanted to start fresh had to tap Reset once after launch instead of dismissing a dialog.
 - Plan: add a one-shot dialog in the TimerScreen post-frame callback when a checkpoint was just restored, with Resume / Start fresh buttons. Phase 3.x follow-up.
+- Resolution: Phase 3.x. main constructs a `BootstrapResult({restoredFromCheckpoint, shouldShowOemTip})` and overrides `bootstrapResultProvider`. TimerScreen reads it on the first post-frame callback and shows an AlertDialog with Resume / Start fresh buttons (Resume is a no-op since the engine is already restored to paused; Start fresh calls `engine.reset()`). Mutually exclusive with the OEM tip banner (only one fires per launch).
 - Opened: 2026-05-02
+- Closed: 2026-05-02
 
 ## [DEFERRED] SessionPlanner auto-divide mode
 
@@ -246,14 +260,16 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Plan: bundle a short tick OGG (< 5 KB), add a separate `SoundPlayer` invocation on each Timer.periodic boundary while in TimerRunning + focus, gate by Settings toggle. Phase 3.x follow-up.
 - Opened: 2026-05-02
 
-## [OPEN] Sound preview button in Settings deferred
+## [CLOSED] Sound preview button in Settings
 
 - Severity: low
 - Area: sound
-- Description: spec calls for tapping a chime option to play it once at the configured volume, so users can audition before committing. Phase 3.x ships the picker + volume but no preview.
-- Impact: users have to wait for an actual period to end to hear the chime.
+- Description: spec called for tapping a chime option to play it once at the configured volume, so users can audition before committing.
+- Impact: users had to wait for an actual period to end to hear the chime.
 - Plan: add a "Play" trailing icon on each RadioListTile that calls SoundPlayer directly with the option + current volume. Phase 3.x follow-up.
+- Resolution: Phase 3.x. `soundPlayerProvider` exposes the `JustAudioSoundPlayer` (with `NoOpSoundPlayer` fallback). SettingsScreen adds an `IconButton(Icons.play_arrow_outlined)` as the `secondary` of each chime RadioListTile that calls `soundPlayer.play(option, volume: currentVolume)`. en + pt strings for the tooltip ("Preview" / "Tocar").
 - Opened: 2026-05-02
+- Closed: 2026-05-02
 
 ## [OPEN] Vibration on Android not wired
 
@@ -329,11 +345,13 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Plan: add a `LinuxNotificationService` (libnotify) and switch `_buildNotificationService()` to pick it on Linux. Phase 3.x or together with the sound-bank integration.
 - Opened: 2026-05-02
 
-## [OPEN] Keyboard shortcuts: Ctrl+, and Esc not yet wired
+## [CLOSED] Keyboard shortcuts: Ctrl+, and Esc
 
 - Severity: low
 - Area: keyboard
-- Description: spec lists Ctrl+, (open Settings) and Esc (close modal / leave compact mode) alongside Space/Ctrl+R/Ctrl+S. Phase 3 wires the latter three only.
-- Impact: spec parity gap; desktop power users miss two shortcuts.
+- Description: spec listed Ctrl+, (open Settings) and Esc (close modal / leave compact mode) alongside Space / Ctrl+R / Ctrl+S. Phase 3 wired the latter three only.
+- Impact: spec parity gap; desktop power users missed two shortcuts.
 - Plan: thread Settings navigation + modal stack through the shortcuts scope and bind both keys. Phase 3.x.
+- Resolution: Phase 3.x. RootShell now uses a `navigationIndexProvider` (StateProvider) so any callback can navigate. Ctrl+, sets the index to 2 (Settings). Esc calls `tomatitoNavigatorKey.currentState?.maybePop()` via a global navigator key on MaterialApp; pops modals (license page, About, dialogs) without needing a BuildContext.
 - Opened: 2026-05-02
+- Closed: 2026-05-02

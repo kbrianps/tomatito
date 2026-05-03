@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import 'package:tomatito/core/theme/theme_tokens.dart';
 import 'package:tomatito/data/statistics_repository.dart';
@@ -109,6 +110,8 @@ class _WeeklyBars extends StatelessWidget {
         .map((d) => d.minutes)
         .fold<int>(0, (a, b) => a > b ? a : b)
         .clamp(60, 1 << 30);
+    final locale = Localizations.localeOf(context).toString();
+    final dayFormat = DateFormat('E', locale);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(ThemeTokens.space4),
@@ -151,7 +154,7 @@ class _WeeklyBars extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              _dayLabel(d.day),
+                              dayFormat.format(d.day),
                               style: theme.textTheme.bodySmall,
                             ),
                           ],
@@ -165,10 +168,5 @@ class _WeeklyBars extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _dayLabel(DateTime day) {
-    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return labels[day.weekday - 1];
   }
 }
