@@ -387,3 +387,21 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Resolution: Phase 3.x. RootShell now uses a `navigationIndexProvider` (StateProvider) so any callback can navigate. Ctrl+, sets the index to 2 (Settings). Esc calls `tomatitoNavigatorKey.currentState?.maybePop()` via a global navigator key on MaterialApp; pops modals (license page, About, dialogs) without needing a BuildContext.
 - Opened: 2026-05-02
 - Closed: 2026-05-02
+
+## [OPEN] Picture-in-Picture (web) with controls
+
+- Severity: low
+- Area: web
+- Description: when running in the browser, the user wanted a small always-on-top PiP window showing the timer + play/pause/skip controls (so they can keep focusing on another tab and still see the dial). Chrome 116+ on desktop and Android exposes the Document Picture-in-Picture API for this; Safari iOS only allows PiP on `<video>` elements and would not get this feature.
+- Impact: web users have to keep the Tomatito tab visible; the timer cannot float over other apps.
+- Plan: feature-detect `documentPictureInPicture in window` and gate a "PiP" caption button on it. Use `dart:js_interop` to call `documentPictureInPicture.requestWindow({width: 240, height: 320})`, render a stripped-down dial + ControlButtons widget into the popup document, and bridge play/pause/skip callbacks back to the main app via shared engine state (the engine already lives in the same Dart isolate, so no IPC needed). About 80-120 LOC plus a small JS shim. Phase 3.x follow-up.
+- Opened: 2026-05-03
+
+## [OPEN] PWA polish (offline + installable)
+
+- Severity: low
+- Area: web
+- Description: Flutter web already generates a `manifest.json` (we polished it) and a basic service worker, so Tomatito is technically a PWA today: Chrome / Edge desktop show the install button in the address bar, and Android Chrome offers "Add to Home Screen". What is missing is intentional polish: an in-app "Install Tomatito" prompt that listens for `beforeinstallprompt` and surfaces a button, an `apple-touch-icon` set sized for iOS install, a verified offline cache (the user can complete sessions without a network round-trip), and a richer splash screen (the Flutter default is a blank surface flash).
+- Impact: discoverability of the install gesture is low; iOS home-screen icons fall back to a generic favicon; cold launch shows a blank surface for ~300 ms.
+- Plan: (1) add a tiny JS in `web/index.html` that captures `beforeinstallprompt` and exposes it to Dart via `window.tomatitoInstall`; gate a Settings -> Window -> "Install as app" tile on its presence. (2) Replace the placeholder Flutter icons with branded Tomatito red icons at all required sizes (192, 512, maskable, 180 for iOS). (3) Verify the generated service worker cache strategy covers all main.dart.js + assets and update its strategy to "offline first" if needed. (4) Add a CSS splash matching `theme_color` to `index.html`. Estimated 1-2h of focused work; technically straightforward because Flutter does most of the heavy lifting.
+- Opened: 2026-05-03
