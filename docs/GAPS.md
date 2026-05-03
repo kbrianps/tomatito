@@ -186,13 +186,24 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Plan: build the 3-screen flow + "Show welcome tour again" entry in About in Phase 1.x.
 - Opened: 2026-05-02
 
-## [OPEN] SessionCheckpoint and resume-after-kill deferred
+## [CLOSED] SessionCheckpoint and resume-after-kill
 
 - Severity: high
 - Area: resilience
-- Description: spec calls for a 5-second checkpoint to disk and a "Resume your interrupted focus period?" prompt on next launch when the saved state is < 30 minutes old. Phase 2 ships only the persistent settings + stats; the engine's running state is lost on app kill.
-- Impact: users whose app is killed mid-session lose their place in the cycle.
+- Description: spec calls for a 5-second checkpoint to disk and a "Resume your interrupted focus period?" prompt on next launch when the saved state is < 30 minutes old. Phase 2 shipped only the persistent settings + stats; the engine's running state was lost on app kill.
+- Impact: users whose app was killed mid-session lost their place in the cycle.
 - Plan: implement `SessionCheckpoint` (JSON file in app docs dir) with write-on-tick at 5 s intervals; add a startup prompt in the timer screen when a fresh checkpoint exists. Phase 2.x.
+- Resolution: Phase 3.x. `SessionCheckpoint` value object + `CheckpointStore` (per-app-instance JSON file), `RealTimerEngine` writes every 5 s during running periods and once on pause, clears on `start` / `reset`. `restoreFromCheckpointIfFresh(config)` puts the engine into a TimerPaused state on next launch when the checkpoint is < 30 min old; stale checkpoints are silently cleared. The "Resume your interrupted focus period?" dialog is a separate UX deferral and lands in a follow-up; the silent restore is the safer default in the meantime.
+- Opened: 2026-05-02
+- Closed: 2026-05-02
+
+## [OPEN] Resume-after-kill confirmation dialog
+
+- Severity: low
+- Area: UX
+- Description: spec requires a "Resume your interrupted focus period?" prompt on launch when a fresh checkpoint exists. Phase 3.x ships silent restore-to-paused instead, which is faster for the user but skips the explicit choice.
+- Impact: a user who genuinely wanted to start fresh has to tap Reset once after launch instead of dismissing a dialog.
+- Plan: add a one-shot dialog in the TimerScreen post-frame callback when a checkpoint was just restored, with Resume / Start fresh buttons. Phase 3.x follow-up.
 - Opened: 2026-05-02
 
 ## [DEFERRED] SessionPlanner auto-divide mode

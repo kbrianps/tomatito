@@ -38,3 +38,10 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 - `SettingsRepository` extended with `loadAlwaysOnTop` / `saveAlwaysOnTop`; both repos updated; round-trip test added.
 - Android manifest declares POST_NOTIFICATIONS for runtime request on API 33+.
 - GAPS extended with Phase 3.x deferrals: compact mode, window state persistence, Android persistent / foreground service notification, Linux desktop notifications, Ctrl+, and Esc shortcuts.
+- Phase 3.x SessionCheckpoint and resume-after-kill (closes the high-severity GAPS item).
+- `SessionCheckpoint` value object with JSON roundtrip and `isFreshAt(now)` (30 min spec window).
+- `CheckpointStore` wraps a single JSON file in app docs dir; tolerant of missing or corrupt files; idempotent clear.
+- `RealTimerEngine` accepts an optional `CheckpointStore` and writes the active state every 5 s during running periods, once on pause, clears on `start` / `reset`. New `restoreFromCheckpointIfFresh(config)` puts the engine into TimerPaused on next launch when the saved state is < 30 min old.
+- `main()` constructs the store, creates the engine with it, and calls the restore on boot before runApp.
+- Tests: SessionCheckpoint serialization + isFreshAt edges, CheckpointStore file roundtrip + corrupt + missing + idempotent clear, RealTimerEngine pause-writes-checkpoint / reset-clears / restore-paused / stale-cleared (77 tests total, all passing).
+- New OPEN GAPS entry: explicit "Resume your interrupted focus period?" dialog (silent restore is the Phase 3.x default).

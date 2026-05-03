@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:tomatito/core/timer/checkpoint_store.dart';
 import 'package:tomatito/core/timer/period_kind.dart';
+import 'package:tomatito/core/timer/session_checkpoint.dart';
 import 'package:tomatito/core/timer/session_config.dart';
 import 'package:tomatito/core/timer/timer_engine.dart';
 import 'package:tomatito/core/timer/timer_state.dart';
@@ -9,16 +11,26 @@ import 'package:tomatito/core/timer/timer_state.dart';
 /// across pauses (immune to Timer drift) and a `Timer.periodic` purely as a
 /// tick beat for emitting state updates to the UI.
 ///
-/// Checkpointing for resume-after-kill is deferred to Phase 2.x; see GAPS.
+/// If a `CheckpointStore` is supplied, the engine writes its current state
+/// to disk every [checkpointInterval] while a period is running, once on
+/// pause, and clears it on `start` / `reset`. Resume-after-kill is handled
+/// via [restoreFromCheckpointIfFresh].
 class RealTimerEngine implements TimerEngine {
-  RealTimerEngine({this.tickInterval = const Duration(milliseconds: 100)});
+  RealTimerEngine({
+    this.tickInterval = const Duration(milliseconds: 100),
+    this.checkpointInterval = const Duration(seconds: 5),
+    CheckpointStore? checkpointStore,
+  }) : _checkpointStore = checkpointStore;
 
   final Duration tickInterval;
+  final Duration checkpointInterval;
+  final CheckpointStore? _checkpointStore;
 
   final StreamController<TimerState> _controller =
       StreamController<TimerState>.broadcast();
   final Stopwatch _stopwatch = Stopwatch();
   Timer? _ticker;
+  Timer? _checkpointTimer;
 
   SessionConfig _config = SessionConfig.pomodoroDefault;
   TimerState _current = const TimerIdle();
@@ -41,6 +53,7 @@ class RealTimerEngine implements TimerEngine {
     _config = config;
     _focusSessionsCompleted = 0;
     _cycle = 1;
+    unawaited(_clearCheckpoint());
     _startPeriod(PeriodKind.focus);
   }
 
@@ -52,7 +65,7 @@ class RealTimerEngine implements TimerEngine {
       ..start();
     _periodTotal = _durationFor(kind);
     _emit(_runningState());
-    _scheduleTicker();
+    _scheduleTimers();
   }
 
   Duration _durationFor(PeriodKind kind) => switch (kind) {
@@ -77,9 +90,16 @@ class RealTimerEngine implements TimerEngine {
     totalCycles: _config.cyclesBeforeLongBreak,
   );
 
-  void _scheduleTicker() {
+  void _scheduleTimers() {
     _ticker?.cancel();
     _ticker = Timer.periodic(tickInterval, (_) => _tick());
+    _checkpointTimer?.cancel();
+    if (_checkpointStore != null) {
+      _checkpointTimer = Timer.periodic(
+        checkpointInterval,
+        (_) => unawaited(_writeCheckpoint()),
+      );
+    }
   }
 
   void _tick() {
@@ -87,6 +107,8 @@ class RealTimerEngine implements TimerEngine {
     if (_elapsed >= _periodTotal) {
       _ticker?.cancel();
       _ticker = null;
+      _checkpointTimer?.cancel();
+      _checkpointTimer = null;
       _stopwatch.stop();
       _onPeriodComplete();
       return;
@@ -118,6 +140,7 @@ class RealTimerEngine implements TimerEngine {
     if (next == null) {
       _currentKind = null;
       _emit(const TimerIdle());
+      unawaited(_clearCheckpoint());
       return;
     }
 
@@ -131,6 +154,7 @@ class RealTimerEngine implements TimerEngine {
         ..reset();
       _periodTotal = _durationFor(next);
       _emit(_pausedState());
+      unawaited(_writeCheckpoint());
     }
   }
 
@@ -146,7 +170,10 @@ class RealTimerEngine implements TimerEngine {
       ..reset();
     _ticker?.cancel();
     _ticker = null;
+    _checkpointTimer?.cancel();
+    _checkpointTimer = null;
     _emit(_pausedState());
+    unawaited(_writeCheckpoint());
   }
 
   @override
@@ -154,7 +181,7 @@ class RealTimerEngine implements TimerEngine {
     if (_currentKind == null) return;
     _stopwatch.start();
     _emit(_runningState());
-    _scheduleTicker();
+    _scheduleTimers();
   }
 
   @override
@@ -162,6 +189,8 @@ class RealTimerEngine implements TimerEngine {
     if (_currentKind == null) return;
     _ticker?.cancel();
     _ticker = null;
+    _checkpointTimer?.cancel();
+    _checkpointTimer = null;
     _stopwatch.stop();
     _onPeriodComplete();
   }
@@ -170,6 +199,8 @@ class RealTimerEngine implements TimerEngine {
   void reset() {
     _ticker?.cancel();
     _ticker = null;
+    _checkpointTimer?.cancel();
+    _checkpointTimer = null;
     _stopwatch
       ..stop()
       ..reset();
@@ -179,11 +210,60 @@ class RealTimerEngine implements TimerEngine {
     _cycle = 1;
     _focusSessionsCompleted = 0;
     _emit(const TimerIdle());
+    unawaited(_clearCheckpoint());
+  }
+
+  /// Restore the engine to a paused state from a previous checkpoint, if
+  /// one exists and is fresh (< 30 minutes per spec). Returns true if
+  /// restored, false otherwise. Stale checkpoints are cleared.
+  Future<bool> restoreFromCheckpointIfFresh(SessionConfig config) async {
+    final store = _checkpointStore;
+    if (store == null) return false;
+    final cp = await store.load();
+    if (cp == null) return false;
+    if (!cp.isFresh) {
+      await store.clear();
+      return false;
+    }
+    _config = config;
+    _currentKind = cp.kind;
+    _baseElapsed = cp.elapsed;
+    _stopwatch
+      ..stop()
+      ..reset();
+    _periodTotal = cp.total;
+    _cycle = cp.cycle;
+    _focusSessionsCompleted = cp.focusSessionsCompleted;
+    _emit(_pausedState());
+    return true;
+  }
+
+  Future<void> _writeCheckpoint() async {
+    final store = _checkpointStore;
+    final kind = _currentKind;
+    if (store == null || kind == null) return;
+    final checkpoint = SessionCheckpoint(
+      kind: kind,
+      elapsed: _elapsed,
+      total: _periodTotal,
+      cycle: _cycle,
+      totalCycles: _config.cyclesBeforeLongBreak,
+      focusSessionsCompleted: _focusSessionsCompleted,
+      savedAt: DateTime.now(),
+    );
+    await store.save(checkpoint);
+  }
+
+  Future<void> _clearCheckpoint() async {
+    final store = _checkpointStore;
+    if (store == null) return;
+    await store.clear();
   }
 
   @override
   Future<void> dispose() async {
     _ticker?.cancel();
+    _checkpointTimer?.cancel();
     _stopwatch.stop();
     await _controller.close();
   }

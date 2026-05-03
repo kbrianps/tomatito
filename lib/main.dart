@@ -11,6 +11,7 @@ import 'package:tomatito/core/notifications/chime_recorder.dart';
 import 'package:tomatito/core/notifications/no_op_notification_service.dart';
 import 'package:tomatito/core/notifications/notification_service.dart';
 import 'package:tomatito/core/statistics/stats_recorder.dart';
+import 'package:tomatito/core/timer/checkpoint_store.dart';
 import 'package:tomatito/core/timer/real_timer_engine.dart';
 import 'package:tomatito/core/timer/timer_engine.dart';
 import 'package:tomatito/core/window/no_op_window_controller.dart';
@@ -36,7 +37,14 @@ Future<void> main() async {
 
   final settings = await SharedPrefsSettingsRepository.create();
   final stats = await JsonStatisticsRepository.create();
-  final engine = RealTimerEngine();
+  final checkpointStore = await CheckpointStore.create();
+  final engine = RealTimerEngine(checkpointStore: checkpointStore);
+
+  // Restore an interrupted session if the checkpoint is fresh (< 30 min).
+  // The engine emits TimerPaused on success; the user resumes from the
+  // dial. Stale checkpoints are silently cleared.
+  final config = await settings.loadSessionConfig();
+  await engine.restoreFromCheckpointIfFresh(config);
 
   final windowController = _buildWindowController();
   final notificationService = _buildNotificationService();
