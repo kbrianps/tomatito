@@ -6,6 +6,10 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ### Added
 
+- Phase 3.x prettier markdown screens + expanded FAQ + reference links.
+- `MarkdownDocScreen` ships a custom `MarkdownStyleSheet`: themed headings, generous paragraph spacing, `1.55` line height for body text, primary-coloured underlined links, dim italic blockquotes with a left accent border, soft code blocks. Content is constrained to a 720 dp column on wide windows so lines stay readable, wrapped in `SelectionArea` so users can copy quotes, and `onTapLink` now opens external references via `url_launcher`.
+- FAQ in en + pt expanded with new sections: how to pick a focus length, caffeine (Smith 2002), music while focusing (Kämpfe 2011 meta-analysis), what strict mode is for, why your break feels unproductive, distraction handling via implementation intentions, do streaks help, sleep before tools. Every reference (Mark, Leroy, Berman, Buman, Gollwitzer, Trougakos, Albulescu, Costales, Lally, Smith, Kämpfe, Kaplan, Kleitman) is now a clickable link to a DOI or canonical source.
+
 - Phase 3.x rich Statistics panel with achievements.
 - New `CompletionRecord` value class + `StatisticsRepository.loadAllCompletions()` so the panel can group raw history by day-of-week, hour, etc.
 - New `StatsAggregator` (pure Dart) computes hero metrics (today / week / total / sessions / current and longest streak / active days / best day / peak hour), a 7-day rolling chart, day-of-week distribution, and 24-bar hour-of-day distribution from the raw completion stream.
