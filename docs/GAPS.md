@@ -178,11 +178,12 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 
 ## [OPEN] Period-transition animations not yet built
 
-- Severity: medium
+- Severity: low (downgraded from medium after Phase 3.x partial close)
 - Area: motion
-- Description: spec calls for a 600 ms colour-tween + tick-sweep when Focus -> Break, plus a final-tick celebration. Phase 1 ships only the per-tick TweenAnimationBuilder; period transitions appear as snaps.
-- Impact: misses one of the spec's signature motion moments.
-- Plan: drive the `TimerPeriodComplete` state through a longer animation controller and tween the dial colours; Phase 1.x or Phase 2.
+- Description: spec calls for a 600 ms colour-tween + tick-sweep when Focus -> Break, plus a final-tick celebration. Phase 1 shipped only the per-tick TweenAnimationBuilder; period transitions appeared as snaps.
+- Impact: misses two of the spec's signature motion moments (tick-sweep, final-tick celebration).
+- Plan: when the period changes, drive the active tick count along an `AnimationController` so the highlight sweeps round in ~600 ms instead of snapping; on the final 0:00 frame, briefly enlarge the dial or pulse the centre text.
+- Mitigation (Phase 3.x): each `PeriodKind` now has a distinct dial accent (focus = `scheme.primary`, shortBreak = `scheme.tertiary`, longBreak = `scheme.secondary`) and the dial wraps the active colour in a 600 ms `ColorTween`, so transitioning from Focus to Break visibly cross-fades. The tick-sweep and final-tick celebration are still pending.
 - Opened: 2026-05-02
 
 ## [CLOSED] "Follow system" theme option

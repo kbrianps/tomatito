@@ -4,6 +4,12 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Added
+
+- Phase 3.x dial colour cross-fade on period transitions.
+- Each `PeriodKind` now has a distinct dial accent: focus = `scheme.primary`, shortBreak = `scheme.tertiary`, longBreak = `scheme.secondary`. `TimerDial` wraps the active colour in a 600 ms `ColorTween` (curve: easeOutCubic) so Focus -> Break visibly cross-fades the dial instead of snapping. New `TimerDial.accentFor(scheme, kind)` static helper exposes the mapping. The downstream `TweenAnimationBuilder<double>` for tick progress is preserved unchanged.
+- Closes part of the open "Period-transition animations" gap (severity downgraded from medium to low; the tick-sweep + final-tick celebration are still pending).
+
 ### Fixed
 
 - StatisticsScreen now subscribes to `StatisticsRepository.changes` so the panel refreshes live when a focus period completes while the user is on the Stats tab (previously only re-fetched on tab switch). Subscription is cancelled in `dispose()`. Three widget tests cover empty state, populated state with the achievements grid, and the live-refresh path.
