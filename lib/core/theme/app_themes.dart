@@ -19,12 +19,17 @@ final class AppThemes {
   /// passes the 4.5:1 normal-text bar. See docs/GAPS.md for the rationale.
   static const Color tomatitoBrand = Color(0xFFE74C3C);
 
-  static const Color _tomatitoLeaf = Color(0xFF3F7330);
-  // Pale-tomato surface so the Tomatito theme reads as red at a glance,
-  // while keeping the dark onSurface text comfortably above WCAG AA 4.5:1
-  // (verified by contrast_validator_test).
-  static const Color _tomatitoSurface = Color(0xFFFFE0D5);
-  static const Color _tomatitoOnSurface = Color(0xFF2A1A14);
+  // Saturated tomato red surface with white text. The leafy-green
+  // secondary from earlier drafts went unreadable on a red surface, so the
+  // secondary became a warm yellow (`#FFD699`) that contrasts cleanly.
+  // The brand red `tomatitoBrand` (#E74C3C) stays available as a graphical
+  // constant for places that want the original spec hue.
+  static const Color _tomatitoSurface = Color(0xFFC0392B);
+  static const Color _tomatitoOnSurface = Color(0xFFFFFFFF);
+  static const Color _tomatitoPrimary = Color(0xFFFFCFB8);
+  static const Color _tomatitoOnPrimary = Color(0xFF3D1006);
+  static const Color _tomatitoSecondary = Color(0xFFFFD699);
+  static const Color _tomatitoError = Color(0xFFFFB0A0);
 
   /// Fixed-scheme themes that participate in the contrast validator test.
   /// `system` is excluded because it resolves to `light` or `dark` and its
@@ -73,15 +78,15 @@ final class AppThemes {
   );
 
   static const ColorScheme tomatitoScheme = ColorScheme(
-    brightness: Brightness.light,
-    primary: Color(0xFFC0392B),
-    onPrimary: Color(0xFFFFFFFF),
-    secondary: _tomatitoLeaf,
-    onSecondary: Color(0xFFFFFFFF),
+    brightness: Brightness.dark,
+    primary: _tomatitoPrimary,
+    onPrimary: _tomatitoOnPrimary,
+    secondary: _tomatitoSecondary,
+    onSecondary: _tomatitoOnPrimary,
     surface: _tomatitoSurface,
     onSurface: _tomatitoOnSurface,
-    error: Color(0xFF8B0000),
-    onError: Color(0xFFFFFFFF),
+    error: _tomatitoError,
+    onError: _tomatitoOnPrimary,
   );
 
   /// Resolve the ColorScheme for [id]. For `AppThemeId.system`,

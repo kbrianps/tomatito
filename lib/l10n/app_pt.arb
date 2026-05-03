@@ -78,6 +78,8 @@
   "aboutVersion": "Versão {v}",
   "aboutWhyTheseNumbers": "Por que esses números?",
   "aboutWhyTheseNumbersBody": "A divisão 25/5 não tem nada de mágico. Francesco Cirillo escolheu nos anos 1980 porque o timer de cozinha dele tinha forma de tomate. O que a pesquisa apoia é que foco cronometrado, seguido de descanso real, supera trabalho sem estrutura. As durações exatas importam menos que o ritmo.\n\nO que mais ajuda:\n\n• Pausas de verdade. Levante, olhe pela janela, beba água. Não outra tela.\n• Movimento. Até um minuto andando ajuda.\n• Fechar uma tarefa antes de começar a próxima; atenção residual atrapalha.\n• Escolher uma duração que você realmente vá cumprir, não a que parece disciplinada.\n\nO Tomatito vem com 25/5 porque é um ponto de partida razoável. Experimente 50/10 ou 90/20 se quiser blocos mais longos. Não existe número universalmente correto; encontre o seu.",
+  "aboutFaq": "F.A.Q. e a ciência",
+  "aboutFaqSubtitle": "O que funciona, o que não funciona, o que ainda não sabemos",
   "aboutLicenses": "Licenças open-source",
   "aboutPrivacy": "Política de privacidade",
   "aboutTerms": "Termos de uso",

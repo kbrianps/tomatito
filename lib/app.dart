@@ -47,17 +47,28 @@ class TomatitoApp extends ConsumerWidget {
   }
 }
 
-/// Wraps the app body with the custom desktop title bar. On Android / web /
-/// other platforms the wrapper is a no-op; the title bar is desktop-only.
+/// Wraps the app body with the custom desktop title bar AND clips the
+/// outer corners to a soft rounded rectangle. On Android / web / other
+/// platforms the wrapper is a no-op; the title bar and the rounded shell
+/// are desktop-only. The actual window background is set transparent in
+/// main() so the rounded corners can show through on compositors that
+/// honour it.
 class _DesktopFrame extends StatelessWidget {
   const _DesktopFrame({required this.child});
 
   final Widget child;
 
+  static const double _windowRadius = 12;
+
   @override
   Widget build(BuildContext context) {
     if (!_isDesktop) return child;
-    return Column(children: [const TomatitoTitleBar(), Expanded(child: child)]);
+    return ClipRRect(
+      borderRadius: const BorderRadius.all(Radius.circular(_windowRadius)),
+      child: Column(
+        children: [const TomatitoTitleBar(), Expanded(child: child)],
+      ),
+    );
   }
 }
 

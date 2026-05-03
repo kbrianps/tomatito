@@ -42,26 +42,24 @@ class AboutScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: ThemeTokens.space5),
-          Card(
-            child: ExpansionTile(
-              title: Text(loc.aboutWhyTheseNumbers),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    ThemeTokens.space4,
-                    0,
-                    ThemeTokens.space4,
-                    ThemeTokens.space4,
-                  ),
-                  child: Text(
-                    loc.aboutWhyTheseNumbersBody,
-                    style: theme.textTheme.bodyMedium,
+          ListTile(
+            title: Text(loc.aboutFaq),
+            subtitle: Text(loc.aboutFaqSubtitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap:
+                () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder:
+                        (_) => MarkdownDocScreen.forLocale(
+                          title: loc.aboutFaq,
+                          enAsset: 'docs/FAQ.md',
+                          ptAsset: 'docs/FAQ.pt.md',
+                          locale: Localizations.localeOf(context),
+                        ),
                   ),
                 ),
-              ],
-            ),
           ),
-          const SizedBox(height: ThemeTokens.space4),
+          const Divider(),
           ListTile(
             title: Text(loc.aboutLicenses),
             trailing: const Icon(Icons.chevron_right),

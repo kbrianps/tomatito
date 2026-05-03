@@ -50,6 +50,12 @@ Future<void> main() async {
       TitleBarStyle.hidden,
       windowButtonVisibility: false,
     );
+    // Best-effort transparent window background so the rounded ClipRRect
+    // around the app body shows actual rounded corners. On Linux this
+    // depends on the compositor; if transparency is not honoured the
+    // window edges fall back to the OS default and the user still sees
+    // the rounded inner content.
+    await windowManager.setBackgroundColor(const Color(0x00000000));
   }
 
   await initializeDateFormatting();

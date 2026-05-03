@@ -170,6 +170,7 @@ class _TimerCard extends StatelessWidget {
               state: state,
               onPlayPause: _togglePlayPause,
               onReset: engine.reset,
+              onSkip: engine.skip,
             ),
             const SizedBox(height: ThemeTokens.space3),
             _StatusText(state: state),

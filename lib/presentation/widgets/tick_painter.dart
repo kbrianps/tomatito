@@ -4,17 +4,20 @@ import 'package:flutter/material.dart';
 
 import 'package:tomatito/core/theme/theme_tokens.dart';
 
-/// Paints the dial: a ring of [tickCount] short radial marks, with
-/// [activeHighlightCount] adjacent marks in [activeColor] positioned at the
-/// current [progress] (0.0 .. 1.0). The active group sweeps continuously as
-/// progress changes; the painter only repaints when its inputs change.
+/// Paints the dial. Each of [tickCount] short radial marks represents an
+/// equal slice of the period. The marks "deplete" clockwise from the top
+/// (12 o'clock) as time passes: at the start every tick is highlighted in
+/// [activeColor]; as the period progresses the leading ticks fade to
+/// [inactiveColor]; at completion no tick is highlighted.
+///
+/// This makes the question "how much time is left?" answerable at a
+/// glance: the highlighted arc IS the remaining time.
 class TickPainter extends CustomPainter {
   TickPainter({
     required this.progress,
     required this.activeColor,
     required this.inactiveColor,
     this.tickCount = ThemeTokens.dialTickCount,
-    this.activeHighlightCount = ThemeTokens.dialActiveTickHighlight,
     this.tickLength = ThemeTokens.dialTickLength,
     this.strokeWidth = ThemeTokens.strokeTick,
   });
@@ -23,7 +26,6 @@ class TickPainter extends CustomPainter {
   final Color activeColor;
   final Color inactiveColor;
   final int tickCount;
-  final int activeHighlightCount;
   final double tickLength;
   final double strokeWidth;
 
@@ -33,7 +35,7 @@ class TickPainter extends CustomPainter {
     final outerRadius = math.min(size.width, size.height) / 2 - 2;
     final innerRadius = outerRadius - tickLength;
 
-    final activeStart = (progress * tickCount) - activeHighlightCount / 2;
+    final elapsedTicks = (progress.clamp(0.0, 1.0) * tickCount).round();
 
     final activePaint =
         Paint()
@@ -56,22 +58,15 @@ class TickPainter extends CustomPainter {
         center.dx + math.cos(angle) * innerRadius,
         center.dy + math.sin(angle) * innerRadius,
       );
-      final isActive = _isActive(
-        i,
-        activeStart,
-        activeHighlightCount,
-        tickCount,
+      // Tick i is highlighted while it is still "ahead" of the elapsed
+      // pointer; once the pointer has passed it, it dims.
+      final isHighlighted = i >= elapsedTicks;
+      canvas.drawLine(
+        outer,
+        inner,
+        isHighlighted ? activePaint : inactivePaint,
       );
-      canvas.drawLine(outer, inner, isActive ? activePaint : inactivePaint);
     }
-  }
-
-  bool _isActive(int index, double startFloat, int count, int total) {
-    for (var k = 0; k < count; k++) {
-      final t = (startFloat + k).floor() % total;
-      if (t == index) return true;
-    }
-    return false;
   }
 
   @override

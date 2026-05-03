@@ -9,14 +9,14 @@ class ControlButtons extends StatelessWidget {
     required this.state,
     required this.onPlayPause,
     required this.onReset,
-    this.onMore,
+    required this.onSkip,
     super.key,
   });
 
   final TimerState state;
   final VoidCallback onPlayPause;
   final VoidCallback onReset;
-  final VoidCallback? onMore;
+  final VoidCallback onSkip;
 
   bool get _isPlaying => state is TimerRunning;
 
@@ -49,10 +49,10 @@ class ControlButtons extends StatelessWidget {
           ),
         ),
         const SizedBox(width: ThemeTokens.space5),
-        IconButton(
-          tooltip: loc.more,
-          onPressed: onMore,
-          icon: const Icon(Icons.more_horiz),
+        IconButton.outlined(
+          tooltip: loc.skip,
+          onPressed: onSkip,
+          icon: const Icon(Icons.skip_next),
         ),
       ],
     );

@@ -100,6 +100,8 @@
   },
   "aboutWhyTheseNumbers": "Why these numbers?",
   "aboutWhyTheseNumbersBody": "The 25/5 split is not magic. Francesco Cirillo picked it in the 1980s because his kitchen timer was shaped like a tomato. What research does support is that timed focus, followed by genuine rest, beats unstructured work. The exact durations matter less than the rhythm.\n\nWhat helps the most:\n\n• Real breaks. Stand up, look out a window, get water. Not another screen.\n• Movement. Even a minute of walking helps.\n• Closing one task before starting the next; leftover attention slows you down.\n• Picking a duration you will actually do, not the one that sounds disciplined.\n\nTomatito ships with 25/5 because it is a fine starting point. Try 50/10 or 90/20 if you want longer focus blocks. There is no universally correct number; find yours.",
+  "aboutFaq": "F.A.Q. and the science",
+  "aboutFaqSubtitle": "What works, what doesn't, what we don't know",
   "aboutLicenses": "Open-source licences",
   "aboutPrivacy": "Privacy policy",
   "aboutTerms": "Terms of use",

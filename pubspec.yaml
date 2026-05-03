@@ -45,6 +45,8 @@ flutter:
   generate: true
   assets:
     - assets/sounds/
+    - docs/FAQ.md
+    - docs/FAQ.pt.md
     - docs/PRIVACY_POLICY.md
     - docs/PRIVACY_POLICY.pt.md
     - docs/TERMS.md
