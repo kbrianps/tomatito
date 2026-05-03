@@ -38,6 +38,8 @@ class RootShell extends ConsumerWidget {
       return Scaffold(body: _screens[index]);
     }
 
+    final scheme = Theme.of(context).colorScheme;
+
     if (isWide) {
       return Scaffold(
         body: Row(
@@ -46,6 +48,7 @@ class RootShell extends ConsumerWidget {
               selectedIndex: index,
               onDestinationSelected: onTap,
               labelType: NavigationRailLabelType.all,
+              backgroundColor: scheme.surface,
               destinations: [
                 for (final d in destinations)
                   NavigationRailDestination(
@@ -55,7 +58,6 @@ class RootShell extends ConsumerWidget {
                   ),
               ],
             ),
-            const VerticalDivider(width: 1),
             Expanded(child: _screens[index]),
           ],
         ),
@@ -67,6 +69,10 @@ class RootShell extends ConsumerWidget {
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: onTap,
+        backgroundColor: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        elevation: 0,
         destinations: [
           for (final d in destinations)
             NavigationDestination(
