@@ -4,6 +4,14 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Added
+
+- Phase 3.x web target.
+- New `SharedPrefsStatisticsRepository` mirrors the JSONL-on-disk store but writes the full completion list to a single SharedPreferences key (`localStorage` on web). main() picks it on `kIsWeb`, so refreshing the page no longer wipes the focus history. Other platforms keep `JsonStatisticsRepository` (cheaper append-only writes). 7 unit tests cover the new repo.
+- main() skips the desktop / Android-only init paths on web: no `windowManager.ensureInitialized`, no tray, no autostart reconcile, no on-disk checkpoint store. The shortcuts scope (`Focus(autofocus: true)`) is also skipped on web because it tripped a Flutter focus-engine assertion at initial canvas focus.
+- `web/index.html` and `web/manifest.json` updated with the proper Tomatito title, brand-coloured `theme_color` (#C0392B), surface background, and a real description.
+- README rewritten to reflect Phase 3.x reality: highlights, install matrix including the web target, web persistence note, links to FAQ + GAPS + CHANGELOG.
+
 ### Changed
 
 - Autostart is now cross-platform via `launch_at_startup`. The previous Linux-only `AutostartManager` (which wrote a hand-rolled `~/.config/autostart/*.desktop` file) was replaced by a thin wrapper around the package, which writes the platform-correct entry on Linux (.desktop), macOS (LaunchAgent plist) and Windows (HKCU\Software\Microsoft\Windows\CurrentVersion\Run). The Settings -> Window -> "Launch on login" toggle is now shown on every desktop OS instead of Linux only. The boot-time reconcile in `main()` runs on all desktop platforms.

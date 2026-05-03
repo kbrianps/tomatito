@@ -30,6 +30,7 @@ import 'package:tomatito/core/window/window_state.dart';
 import 'package:tomatito/data/json_statistics_repository.dart';
 import 'package:tomatito/data/settings_repository.dart';
 import 'package:tomatito/data/shared_prefs_settings_repository.dart';
+import 'package:tomatito/data/shared_prefs_statistics_repository.dart';
 import 'package:tomatito/data/statistics_repository.dart';
 import 'package:tomatito/platform/android/android_notification_service.dart';
 import 'package:tomatito/platform/desktop/autostart_manager.dart';
@@ -81,8 +82,14 @@ Future<void> main() async {
 
   final prefs = await SharedPreferences.getInstance();
   final settings = SharedPrefsSettingsRepository(prefs);
-  final stats = await JsonStatisticsRepository.create();
-  final checkpointStore = await CheckpointStore.create();
+  // Web has no real filesystem (path_provider is unavailable). Use a
+  // SharedPreferences-backed (localStorage on web) stats repo so the
+  // history survives page refresh, and skip the on-disk checkpoint.
+  final stats = kIsWeb
+      ? await SharedPrefsStatisticsRepository.create()
+            as StatisticsRepository
+      : await JsonStatisticsRepository.create();
+  final checkpointStore = kIsWeb ? null : await CheckpointStore.create();
   final engine = RealTimerEngine(checkpointStore: checkpointStore);
 
   final config = await settings.loadSessionConfig();

@@ -46,9 +46,13 @@ class TomatitoApp extends ConsumerWidget {
       // Navigator so they remain visible when routes are pushed (About,
       // licence page, dialogs, ...). The Navigator is the `child`.
       builder: (context, child) {
-        return _ShortcutsScope(
-          child: _DesktopFrame(child: child ?? const SizedBox.shrink()),
-        );
+        // The shortcuts scope is desktop-only: on web the browser steals
+        // Ctrl+R / Esc / Space-in-input anyway, AND the Focus widget the
+        // scope installs trips a Flutter focus-engine assertion on
+        // initial canvas focus before layout finishes.
+        final body = _DesktopFrame(child: child ?? const SizedBox.shrink());
+        if (kIsWeb) return body;
+        return _ShortcutsScope(child: body);
       },
       home: const _RootRouter(),
     );
@@ -129,7 +133,11 @@ class _ShortcutsScope extends ConsumerWidget {
         const SingleActivator(LogicalKeyboardKey.escape):
             () => tomatitoNavigatorKey.currentState?.maybePop(),
       },
-      child: Focus(autofocus: true, child: child),
+      // autofocus is desktop-only: on web it can fire focus traversal
+      // before initial layout finishes and trip a "RenderBox was not
+      // laid out" assertion. The user clicks the canvas anyway, which
+      // gives the Focus widget keyboard input on web too.
+      child: Focus(autofocus: !kIsWeb, child: child),
     );
   }
 
