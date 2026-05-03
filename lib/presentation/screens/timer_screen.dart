@@ -1,0 +1,181 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:tomatito/core/theme/theme_tokens.dart';
+import 'package:tomatito/core/timer/period_kind.dart';
+import 'package:tomatito/core/timer/timer_engine.dart';
+import 'package:tomatito/core/timer/timer_state.dart';
+import 'package:tomatito/data/settings_repository.dart';
+import 'package:tomatito/l10n/app_localizations.dart';
+import 'package:tomatito/presentation/widgets/control_buttons.dart';
+import 'package:tomatito/presentation/widgets/timer_dial.dart';
+
+class TimerScreen extends ConsumerWidget {
+  const TimerScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final engine = ref.watch(timerEngineProvider);
+    return StreamBuilder<TimerState>(
+      stream: engine.stream,
+      initialData: engine.current,
+      builder: (context, snapshot) {
+        final state = snapshot.data ?? const TimerIdle();
+        return SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Padding(
+                padding: const EdgeInsets.all(ThemeTokens.space4),
+                child: _TimerCard(state: state, engine: engine, ref: ref),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _TimerCard extends StatelessWidget {
+  const _TimerCard({
+    required this.state,
+    required this.engine,
+    required this.ref,
+  });
+
+  final TimerState state;
+  final TimerEngine engine;
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(ThemeTokens.space5),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _Header(state: state),
+            const SizedBox(height: ThemeTokens.space5),
+            LayoutBuilder(
+              builder: (ctx, c) {
+                final dialSize = c.maxWidth * 0.85;
+                return TimerDial(state: state, size: dialSize);
+              },
+            ),
+            const SizedBox(height: ThemeTokens.space5),
+            ControlButtons(
+              state: state,
+              onPlayPause: _togglePlayPause,
+              onReset: engine.reset,
+            ),
+            const SizedBox(height: ThemeTokens.space3),
+            _StatusText(state: state),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _togglePlayPause() async {
+    final s = state;
+    if (s is TimerIdle) {
+      final config =
+          await ref.read(settingsRepositoryProvider).loadSessionConfig();
+      engine.start(config);
+    } else if (s is TimerRunning) {
+      engine.pause();
+    } else if (s is TimerPaused) {
+      engine.resume();
+    } else if (s is TimerPeriodComplete) {
+      engine.skip();
+    }
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({required this.state});
+  final TimerState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final s = state;
+    String text;
+    if (s is TimerRunning) {
+      text = _headerFor(loc, s.kind, s.cycle, s.totalCycles);
+    } else if (s is TimerPaused) {
+      text = _headerFor(loc, s.kind, s.cycle, s.totalCycles);
+    } else {
+      text = loc.ready;
+    }
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  String _headerFor(
+    AppLocalizations loc,
+    PeriodKind kind,
+    int cycle,
+    int totalCycles,
+  ) {
+    switch (kind) {
+      case PeriodKind.focus:
+        return loc.focusPeriodOfTotal(cycle, totalCycles);
+      case PeriodKind.shortBreak:
+        return loc.shortBreak;
+      case PeriodKind.longBreak:
+        return loc.longBreak;
+    }
+  }
+}
+
+class _StatusText extends StatelessWidget {
+  const _StatusText({required this.state});
+  final TimerState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final s = state;
+    String text;
+    if (s is TimerRunning) {
+      text = _statusFor(loc, s.kind);
+    } else if (s is TimerPaused) {
+      text = loc.paused;
+    } else {
+      text = loc.ready;
+    }
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: Text(
+        text,
+        key: ValueKey(text),
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+        ),
+      ),
+    );
+  }
+
+  String _statusFor(AppLocalizations loc, PeriodKind kind) {
+    switch (kind) {
+      case PeriodKind.focus:
+        return loc.focusing;
+      case PeriodKind.shortBreak:
+        return loc.shortBreak;
+      case PeriodKind.longBreak:
+        return loc.longBreak;
+    }
+  }
+}

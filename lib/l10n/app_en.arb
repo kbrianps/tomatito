@@ -1,35 +1,81 @@
 {
   "@@locale": "en",
   "appName": "Tomatito",
-  "@appName": {
-    "description": "App name."
-  },
   "tagline": "Focus, with a pinch of science.",
-  "@tagline": {
-    "description": "App tagline shown on welcome screen and About."
-  },
+
   "play": "Play",
-  "@play": {},
   "pause": "Pause",
-  "@pause": {},
   "reset": "Reset",
-  "@reset": {},
   "skip": "Skip",
-  "@skip": {},
+  "more": "More options",
+
+  "ready": "Ready",
   "focusing": "Focusing",
-  "@focusing": {},
   "paused": "Paused",
-  "@paused": {},
   "shortBreak": "Short break",
-  "@shortBreak": {},
   "longBreak": "Long break",
-  "@longBreak": {},
   "minutesShort": "min",
-  "@minutesShort": {
-    "description": "Suffix after the minutes number on the dial."
+
+  "focusPeriodOfTotal": "Focus period ({cycle} of {total})",
+  "@focusPeriodOfTotal": {
+    "placeholders": {
+      "cycle": {"type": "int"},
+      "total": {"type": "int"}
+    }
   },
-  "scaffoldPlaceholder": "Phase 0 scaffold. UI lands in Phase 1.",
-  "@scaffoldPlaceholder": {
-    "description": "Temporary placeholder shown while UI is unimplemented."
-  }
+
+  "navTimer": "Timer",
+  "navStats": "Stats",
+  "navSettings": "Settings",
+
+  "settingsTimer": "Timer",
+  "settingsFocusDuration": "Focus duration",
+  "settingsShortBreakDuration": "Short break",
+  "settingsLongBreakDuration": "Long break",
+  "settingsCyclesBeforeLongBreak": "Cycles before long break",
+  "settingsAutoStartBreaks": "Auto-start breaks",
+  "settingsAutoStartFocus": "Auto-start next focus",
+  "settingsStrictMode": "Strict mode (no pause during focus)",
+  "settingsGoal": "Goal",
+  "settingsDailyGoal": "Daily focus minutes",
+  "settingsAppearance": "Appearance",
+  "settingsAbout": "About",
+
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeBlackOled": "Black OLED",
+  "themeTomatito": "Tomatito",
+
+  "minutesValue": "{n} min",
+  "@minutesValue": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+
+  "dailyGoalProgress": "{done}/{goal} min today",
+  "@dailyGoalProgress": {
+    "placeholders": {
+      "done": {"type": "int"},
+      "goal": {"type": "int"}
+    }
+  },
+
+  "statsToday": "Today",
+  "statsThisWeek": "This week",
+  "statsEmpty": "Complete your first session to see your stats here.",
+
+  "aboutVersion": "Version {v}",
+  "@aboutVersion": {
+    "placeholders": {
+      "v": {"type": "String"}
+    }
+  },
+  "aboutWhyTheseNumbers": "Why these numbers?",
+  "aboutWhyTheseNumbersBody": "The 25/5 split is not magic. Francesco Cirillo picked it in the 1980s because his kitchen timer was shaped like a tomato. What research does support is that timed focus, followed by genuine rest, beats unstructured work. The exact durations matter less than the rhythm.\n\nWhat helps the most:\n\n• Real breaks. Stand up, look out a window, get water. Not another screen.\n• Movement. Even a minute of walking helps.\n• Closing one task before starting the next; leftover attention slows you down.\n• Picking a duration you will actually do, not the one that sounds disciplined.\n\nTomatito ships with 25/5 because it is a fine starting point. Try 50/10 or 90/20 if you want longer focus blocks. There is no universally correct number; find yours.",
+  "aboutLicenses": "Open-source licences",
+  "aboutPrivacy": "Privacy policy",
+  "aboutTerms": "Terms of use",
+  "aboutSource": "Source code",
+  "aboutSupport": "Support development"
 }

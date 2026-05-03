@@ -122,3 +122,66 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Impact: golden coverage is per-screen-per-theme manual until Phase 1 wires Alchemist.
 - Plan: add `alchemist` to dev_dependencies at the start of Phase 1, port any Phase 0 goldens to its API.
 - Opened: 2026-05-02
+
+## [OPEN] Phase 1 ships without per-screen goldens
+
+- Severity: medium
+- Area: testing
+- Description: Phase 1 lands every screen but no `matchesGoldenFile` snapshots are committed yet. Smoke tests confirm widgets build; visual regression coverage is manual.
+- Impact: a careless theme tweak could change visuals without test failure.
+- Plan: add a golden per screen per theme (4 themes x 4 screens = 16) at the start of Phase 1.x, ideally on top of Alchemist.
+- Opened: 2026-05-02
+
+## [OPEN] StatisticsScreen weekday labels are English-only
+
+- Severity: low
+- Area: l10n
+- Description: weekday labels (Mon, Tue, ...) on the weekly bar chart are hard-coded English. The intl package is in pubspec but `initializeDateFormatting` is not wired.
+- Impact: pt locale shows English weekday names on the stats chart.
+- Plan: wire `initializeDateFormatting` in `main()` and use `DateFormat('E', locale)` in Phase 1.x.
+- Opened: 2026-05-02
+
+## [OPEN] AboutScreen external links are inert
+
+- Severity: medium
+- Area: about screen
+- Description: privacy / terms / source / support tiles render as disabled. `url_launcher` not yet added; in-app docs viewer also not built.
+- Impact: users cannot reach the privacy policy or source code from inside the app.
+- Plan: add `url_launcher` and either deep-link to hosted policy URLs or render the markdown locally. Phase 1.x.
+- Opened: 2026-05-02
+
+## [OPEN] Period-transition animations not yet built
+
+- Severity: medium
+- Area: motion
+- Description: spec calls for a 600 ms colour-tween + tick-sweep when Focus -> Break, plus a final-tick celebration. Phase 1 ships only the per-tick TweenAnimationBuilder; period transitions appear as snaps.
+- Impact: misses one of the spec's signature motion moments.
+- Plan: drive the `TimerPeriodComplete` state through a longer animation controller and tween the dial colours; Phase 1.x or Phase 2.
+- Opened: 2026-05-02
+
+## [OPEN] "Follow system" theme option deferred
+
+- Severity: low
+- Area: theming
+- Description: spec mentions a "Follow system" option pairing Light/Dark with `MediaQuery.platformBrightness`. Phase 1 ships only the four named themes.
+- Impact: users who switch system theme do not see Tomatito follow.
+- Plan: add `AppThemeId.system` value or a separate themeMode setting; resolve at app build time. Phase 1.x.
+- Opened: 2026-05-02
+
+## [OPEN] Compact-mode UI not built
+
+- Severity: low
+- Area: desktop
+- Description: spec describes a compact window with just dial + play/pause. Phase 1 wires the abstract `WindowController` but the compact UI route is unimplemented.
+- Impact: desktop power users cannot collapse the timer to a small overlay.
+- Plan: build a `CompactTimerScreen` and the route swap in Phase 3 alongside platform window integration.
+- Opened: 2026-05-02
+
+## [OPEN] Onboarding tour deferred
+
+- Severity: low
+- Area: first-run
+- Description: spec describes a 3-screen optional welcome tour. Phase 1 ships sensible defaults so the user can press play immediately, but the tour is not implemented.
+- Impact: less hand-holding for first-time users.
+- Plan: build the 3-screen flow + "Show welcome tour again" entry in About in Phase 1.x.
+- Opened: 2026-05-02

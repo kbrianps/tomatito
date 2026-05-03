@@ -1,47 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:tomatito/core/theme/app_themes.dart';
-import 'package:tomatito/l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class TomatitoApp extends StatelessWidget {
+import 'package:tomatito/core/motion/motion_curves.dart';
+import 'package:tomatito/core/motion/motion_durations.dart';
+import 'package:tomatito/core/theme/app_themes.dart';
+import 'package:tomatito/core/theme/theme_controller.dart';
+import 'package:tomatito/l10n/app_localizations.dart';
+import 'package:tomatito/presentation/screens/root_shell.dart';
+
+class TomatitoApp extends ConsumerWidget {
   const TomatitoApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeId = ref.watch(themeControllerProvider);
     return MaterialApp(
       onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appName,
-      theme: AppThemes.themeFor(AppThemeId.tomatito),
+      theme: AppThemes.themeFor(themeId),
+      themeAnimationDuration: MotionDurations.long,
+      themeAnimationCurve: MotionCurves.standard,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const _Phase0Placeholder(),
-    );
-  }
-}
-
-class _Phase0Placeholder extends StatelessWidget {
-  const _Phase0Placeholder();
-
-  @override
-  Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(loc.appName, style: theme.textTheme.headlineLarge),
-            const SizedBox(height: 8),
-            Text(
-              loc.tagline,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-            const SizedBox(height: 32),
-            Text(loc.scaffoldPlaceholder, style: theme.textTheme.bodyMedium),
-          ],
-        ),
-      ),
+      home: const RootShell(),
     );
   }
 }
