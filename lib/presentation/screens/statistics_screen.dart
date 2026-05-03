@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -21,11 +23,22 @@ class StatisticsScreen extends ConsumerStatefulWidget {
 class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
   StatsSummary? _summary;
   List<AchievementProgress> _achievements = const [];
+  StreamSubscription<void>? _changesSub;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _changesSub = ref
+        .read(statisticsRepositoryProvider)
+        .changes
+        .listen((_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _changesSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {

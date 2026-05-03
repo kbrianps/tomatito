@@ -4,6 +4,10 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Fixed
+
+- StatisticsScreen now subscribes to `StatisticsRepository.changes` so the panel refreshes live when a focus period completes while the user is on the Stats tab (previously only re-fetched on tab switch). Subscription is cancelled in `dispose()`. Three widget tests cover empty state, populated state with the achievements grid, and the live-refresh path.
+
 ### Added
 
 - Phase 3.x prettier markdown screens + expanded FAQ + reference links.
