@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:tomatito/app.dart' show tomatitoNavigatorKey;
 import 'package:tomatito/core/theme/theme_tokens.dart';
 import 'package:tomatito/core/window/window_controller.dart';
 import 'package:tomatito/core/window/window_state.dart';
@@ -91,20 +92,25 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
   Future<void> _onMinimize() async {
     final settings = ref.read(settingsRepositoryProvider);
     final pref = await settings.loadMinimizeToTray();
-    if (pref == null && mounted) {
+    if (pref == null) {
       final choice = await _askMinimizeDestination();
       if (choice == null) return;
       await settings.saveMinimizeToTray(value: choice);
       await _applyMinimize(toTray: choice);
     } else {
-      await _applyMinimize(toTray: pref ?? false);
+      await _applyMinimize(toTray: pref);
     }
   }
 
   Future<bool?> _askMinimizeDestination() async {
-    final loc = AppLocalizations.of(context);
+    // The title bar lives above the Navigator (MaterialApp.builder), so
+    // its own context has no Navigator ancestor. Route through the
+    // global navigator key instead.
+    final navContext = tomatitoNavigatorKey.currentContext;
+    if (navContext == null) return null;
+    final loc = AppLocalizations.of(navContext);
     return showDialog<bool>(
-      context: context,
+      context: navContext,
       builder: (ctx) => AlertDialog(
         title: Text(loc.minimizeDialogTitle),
         content: Text(loc.minimizeDialogBody),
