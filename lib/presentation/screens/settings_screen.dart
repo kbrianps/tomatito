@@ -33,6 +33,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String? _chimeId;
   double? _chimeVolume;
   bool? _persistentNotification;
+  bool? _tickEnabled;
 
   @override
   void initState() {
@@ -48,6 +49,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final chime = await repo.loadChimeId();
     final volume = await repo.loadChimeVolume();
     final persistent = await repo.loadPersistentNotification();
+    final tick = await repo.loadTickEnabled();
     if (!mounted) return;
     setState(() {
       _config = cfg;
@@ -56,6 +58,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _chimeId = chime;
       _chimeVolume = volume;
       _persistentNotification = persistent;
+      _tickEnabled = tick;
     });
   }
 
@@ -92,6 +95,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         .savePersistentNotification(value: value);
   }
 
+  void _updateTickEnabled({required bool value}) {
+    setState(() => _tickEnabled = value);
+    ref.read(settingsRepositoryProvider).saveTickEnabled(value: value);
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
@@ -101,6 +109,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final chime = _chimeId;
     final volume = _chimeVolume;
     final persistent = _persistentNotification;
+    final tick = _tickEnabled;
     final themeId = ref.watch(themeControllerProvider);
 
     if (cfg == null ||
@@ -108,7 +117,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         aot == null ||
         chime == null ||
         volume == null ||
-        persistent == null) {
+        persistent == null ||
+        tick == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -207,6 +217,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             label: loc.settingsVolume,
             value: volume,
             onChanged: _updateChimeVolume,
+          ),
+          SwitchListTile(
+            title: Text(loc.settingsTick),
+            subtitle: Text(loc.settingsTickSubtitle),
+            value: tick,
+            onChanged: (v) => _updateTickEnabled(value: v),
           ),
         ]),
         _Section(loc.settingsAppearance, [

@@ -77,3 +77,9 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 - `_RootRouter` in app.dart watches `onboardingNeededProvider` (StateProvider) and AnimatedSwitchers between OnboardingScreen and RootShell. About screen has "Show welcome tour again" tile that resets the flag.
 - `SettingsRepository` extended with `loadHasSeenOnboarding` / `saveHasSeenOnboarding`; both repos updated; round-trip test added.
 - Tests: 87 total, all passing.
+- Phase 3.x Linux desktop notifications + tick sound during focus (closes two more OPEN GAPS entries).
+- `LinuxNotificationService` (flutter_local_notifications via libnotify) shipping in `lib/platform/desktop/`. `showPeriodComplete` fires a libnotify notification; persistent / permission methods are no-ops since Linux has no foreground-service equivalent. main picks it via `_isLinux`.
+- New `assets/sounds/tick_soft.ogg` (3.6 KB OGG Vorbis, 320 Hz, ~40 ms) generated with ffmpeg + libvorbis. `SoundBank.focusTick` constant (not in the chime picker).
+- `TickRecorder` plays the tick at low volume (0.3) once per second during `TimerRunning(focus)` when the user enables the toggle; cancels otherwise.
+- `SettingsRepository.loadTickEnabled` / `saveTickEnabled` (off by default). Settings Sound section gains a SwitchListTile with explanatory subtitle.
+- Tests: tick-enabled round-trip in shared_prefs (88 total, all passing).

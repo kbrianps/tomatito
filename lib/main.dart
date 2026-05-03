@@ -15,6 +15,7 @@ import 'package:tomatito/core/notifications/chime_recorder.dart';
 import 'package:tomatito/core/notifications/no_op_notification_service.dart';
 import 'package:tomatito/core/notifications/notification_service.dart';
 import 'package:tomatito/core/notifications/persistent_notification_recorder.dart';
+import 'package:tomatito/core/notifications/tick_recorder.dart';
 import 'package:tomatito/core/sound/sound_player.dart';
 import 'package:tomatito/core/statistics/stats_recorder.dart';
 import 'package:tomatito/core/timer/checkpoint_store.dart';
@@ -28,12 +29,14 @@ import 'package:tomatito/data/shared_prefs_settings_repository.dart';
 import 'package:tomatito/data/statistics_repository.dart';
 import 'package:tomatito/platform/android/android_notification_service.dart';
 import 'package:tomatito/platform/desktop/desktop_window_controller.dart';
+import 'package:tomatito/platform/desktop/linux_notification_service.dart';
 import 'package:tomatito/presentation/screens/onboarding_screen.dart';
 import 'package:window_manager/window_manager.dart';
 
 bool get _isDesktop =>
     !kIsWeb && (Platform.isLinux || Platform.isMacOS || Platform.isWindows);
 bool get _isAndroid => !kIsWeb && Platform.isAndroid;
+bool get _isLinux => !kIsWeb && Platform.isLinux;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -88,8 +91,14 @@ Future<void> main() async {
     settings: settings,
   );
   await persistentRecorder.start();
+  final tickRecorder = TickRecorder(
+    engine: engine,
+    soundPlayer: soundPlayer,
+    settings: settings,
+  );
+  await tickRecorder.start();
 
-  _keepAlive(statsRecorder, chimeRecorder, persistentRecorder);
+  _keepAlive(statsRecorder, chimeRecorder, persistentRecorder, tickRecorder);
 
   runApp(
     ProviderScope(
@@ -111,8 +120,11 @@ Future<void> main() async {
   );
 }
 
-NotificationService _buildNotificationService() =>
-    _isAndroid ? AndroidNotificationService() : NoOpNotificationService();
+NotificationService _buildNotificationService() {
+  if (_isAndroid) return AndroidNotificationService();
+  if (_isLinux) return LinuxNotificationService();
+  return NoOpNotificationService();
+}
 
 SoundPlayer _buildSoundPlayer() {
   try {
@@ -126,6 +138,7 @@ void _keepAlive(
   StatsRecorder s,
   ChimeRecorder c,
   PersistentNotificationRecorder p,
+  TickRecorder t,
 ) {}
 
 /// Saves the window bounds whenever the user moves or resizes the window.

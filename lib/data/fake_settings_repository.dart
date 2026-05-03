@@ -17,6 +17,7 @@ class FakeSettingsRepository implements SettingsRepository {
     bool initialPersistentNotification = false,
     bool initialOemTipShown = false,
     bool initialHasSeenOnboarding = false,
+    bool initialTickEnabled = false,
   }) : _config = initialConfig ?? SessionConfig.pomodoroDefault,
        _theme = initialTheme,
        _dailyGoal = initialDailyGoalMinutes,
@@ -25,7 +26,8 @@ class FakeSettingsRepository implements SettingsRepository {
        _chimeVolume = initialChimeVolume,
        _persistentNotification = initialPersistentNotification,
        _oemTipShown = initialOemTipShown,
-       _hasSeenOnboarding = initialHasSeenOnboarding;
+       _hasSeenOnboarding = initialHasSeenOnboarding,
+       _tickEnabled = initialTickEnabled;
 
   SessionConfig _config;
   AppThemeId _theme;
@@ -36,6 +38,7 @@ class FakeSettingsRepository implements SettingsRepository {
   bool _persistentNotification;
   bool _oemTipShown;
   bool _hasSeenOnboarding;
+  bool _tickEnabled;
   final StreamController<void> _changes = StreamController<void>.broadcast();
 
   @override
@@ -119,6 +122,15 @@ class FakeSettingsRepository implements SettingsRepository {
   @override
   Future<void> saveHasSeenOnboarding({required bool value}) async {
     _hasSeenOnboarding = value;
+    _changes.add(null);
+  }
+
+  @override
+  Future<bool> loadTickEnabled() async => _tickEnabled;
+
+  @override
+  Future<void> saveTickEnabled({required bool value}) async {
+    _tickEnabled = value;
     _changes.add(null);
   }
 

@@ -253,14 +253,16 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Opened: 2026-05-02
 - Closed: 2026-05-02
 
-## [OPEN] Optional tick sound during focus deferred
+## [CLOSED] Optional tick sound during focus
 
 - Severity: low
 - Area: sound
-- Description: spec describes a faint, low-frequency tick during focus periods, off by default. Phase 3.x ships only end-of-period chimes.
-- Impact: users wanting a metronome-style focus aid have to bring their own.
+- Description: spec described a faint, low-frequency tick during focus periods, off by default.
+- Impact: users wanting a metronome-style focus aid had to bring their own.
 - Plan: bundle a short tick OGG (< 5 KB), add a separate `SoundPlayer` invocation on each Timer.periodic boundary while in TimerRunning + focus, gate by Settings toggle. Phase 3.x follow-up.
+- Resolution: Phase 3.x. New `assets/sounds/tick_soft.ogg` (3.6 KB OGG Vorbis, 320 Hz, ~40 ms). `SoundBank.focusTick` registers it (not in the chime picker). `TickRecorder` subscribes to engine + settings; starts a Timer.periodic(1s) that plays the tick at low volume (0.3) while `TimerRunning(focus)`, cancels otherwise. `SettingsRepository.loadTickEnabled / saveTickEnabled` (off by default). Settings UI: SwitchListTile in the Sound section.
 - Opened: 2026-05-02
+- Closed: 2026-05-02
 
 ## [CLOSED] Sound preview button in Settings
 
@@ -340,14 +342,16 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Plan: wire `FlutterForegroundTask.notificationButtonHandler` with three buttons and dispatch each to the right engine call via a SendPort from the TaskHandler isolate to the main isolate. Phase 3.x follow-up once the service is observed in production.
 - Opened: 2026-05-02
 
-## [OPEN] Linux desktop notifications deferred
+## [CLOSED] Linux desktop notifications
 
 - Severity: low
 - Area: desktop notifications
-- Description: `flutter_local_notifications` supports Linux via libnotify, but Phase 3 wires the notification path only on Android. Desktop runs through `NoOpNotificationService`, so end-of-period chimes are silent on Linux.
-- Impact: desktop users hear nothing when a period ends.
+- Description: `flutter_local_notifications` supports Linux via libnotify, but Phase 3 wired the notification path only on Android. Desktop ran through `NoOpNotificationService`, so end-of-period chimes were silent on Linux.
+- Impact: desktop users heard nothing when a period ended.
 - Plan: add a `LinuxNotificationService` (libnotify) and switch `_buildNotificationService()` to pick it on Linux. Phase 3.x or together with the sound-bank integration.
+- Resolution: Phase 3.x. `LinuxNotificationService` ships in `lib/platform/desktop/`. `showPeriodComplete` fires a libnotify notification. `updatePersistentTimer` / `clearPersistentTimer` are no-ops because Linux has no equivalent of Android's foreground service. main picks it via the new `_isLinux` guard.
 - Opened: 2026-05-02
+- Closed: 2026-05-02
 
 ## [CLOSED] Keyboard shortcuts: Ctrl+, and Esc
 

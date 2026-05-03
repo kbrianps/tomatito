@@ -82,6 +82,16 @@ void main() {
     expect(await fresh.loadHasSeenOnboarding(), isTrue);
   });
 
+  test('tick enabled round-trips and defaults to false', () async {
+    final repo = await SharedPrefsSettingsRepository.create();
+    expect(await repo.loadTickEnabled(), isFalse);
+    await repo.saveTickEnabled(value: true);
+    expect(await repo.loadTickEnabled(), isTrue);
+
+    final fresh = await SharedPrefsSettingsRepository.create();
+    expect(await fresh.loadTickEnabled(), isTrue);
+  });
+
   test('chime id and volume round-trip with sensible defaults', () async {
     final repo = await SharedPrefsSettingsRepository.create();
     expect(await repo.loadChimeId(), isNotEmpty);

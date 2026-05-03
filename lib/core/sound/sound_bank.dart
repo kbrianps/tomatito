@@ -46,6 +46,15 @@ final class SoundBank {
     nameKey: 'soundGentlePulse',
   );
 
+  /// Short low-frequency tick used during focus when the user enables the
+  /// optional metronome-style tick. Not part of the chime picker; played
+  /// once per second by `TickRecorder`.
+  static const SoundOption focusTick = SoundOption(
+    id: 'focus_tick',
+    assetPath: 'assets/sounds/tick_soft.ogg',
+    nameKey: 'soundFocusTick',
+  );
+
   static const List<SoundOption> all = [softBell, woodBlock, gentlePulse];
 
   static SoundOption defaultOption = softBell;

@@ -28,12 +28,13 @@ abstract class SettingsRepository {
   Future<bool> loadOemTipShown();
   Future<void> saveOemTipShown({required bool value});
 
-  /// Whether the user has already gone through (or skipped) the welcome
-  /// tour. False on first launch; set true by the OnboardingScreen on
-  /// "Get started" or "Skip", and reset to false from About when the user
-  /// chooses "Show welcome tour again".
   Future<bool> loadHasSeenOnboarding();
   Future<void> saveHasSeenOnboarding({required bool value});
+
+  /// Whether to play a soft tick once per second during a focus period.
+  /// Off by default per spec.
+  Future<bool> loadTickEnabled();
+  Future<void> saveTickEnabled({required bool value});
 
   /// Stream of changes so the UI can re-render without polling.
   Stream<void> get changes;
