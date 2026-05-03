@@ -10,6 +10,7 @@ import 'package:tomatito/core/theme/theme_tokens.dart';
 import 'package:tomatito/core/timer/period_kind.dart';
 import 'package:tomatito/core/timer/timer_engine.dart';
 import 'package:tomatito/core/timer/timer_state.dart';
+import 'package:tomatito/core/window/window_state.dart';
 import 'package:tomatito/data/settings_repository.dart';
 import 'package:tomatito/l10n/app_localizations.dart';
 import 'package:tomatito/presentation/widgets/control_buttons.dart';
@@ -117,6 +118,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
   @override
   Widget build(BuildContext context) {
     final engine = ref.watch(timerEngineProvider);
+    final compact = ref.watch(compactModeProvider);
     return StreamBuilder<TimerState>(
       stream: engine.stream,
       initialData: engine.current,
@@ -127,8 +129,15 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Padding(
-                padding: const EdgeInsets.all(ThemeTokens.space4),
-                child: _TimerCard(state: state, engine: engine, ref: ref),
+                padding: EdgeInsets.all(
+                  compact ? ThemeTokens.space2 : ThemeTokens.space4,
+                ),
+                child: _TimerCard(
+                  state: state,
+                  engine: engine,
+                  ref: ref,
+                  compact: compact,
+                ),
               ),
             ),
           ),
@@ -143,37 +152,47 @@ class _TimerCard extends StatelessWidget {
     required this.state,
     required this.engine,
     required this.ref,
+    required this.compact,
   });
 
   final TimerState state;
   final TimerEngine engine;
   final WidgetRef ref;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final cardPadding = compact ? ThemeTokens.space3 : ThemeTokens.space5;
+    final dialFraction = compact ? 0.95 : 0.85;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(ThemeTokens.space5),
+        padding: EdgeInsets.all(cardPadding),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _Header(state: state),
-            const SizedBox(height: ThemeTokens.space5),
+            if (!compact) ...[
+              _Header(state: state),
+              const SizedBox(height: ThemeTokens.space5),
+            ],
             LayoutBuilder(
               builder: (ctx, c) {
-                final dialSize = c.maxWidth * 0.85;
+                final dialSize = c.maxWidth * dialFraction;
                 return TimerDial(state: state, size: dialSize);
               },
             ),
-            const SizedBox(height: ThemeTokens.space5),
+            SizedBox(
+              height: compact ? ThemeTokens.space3 : ThemeTokens.space5,
+            ),
             ControlButtons(
               state: state,
               onPlayPause: _togglePlayPause,
               onReset: engine.reset,
               onSkip: engine.skip,
             ),
-            const SizedBox(height: ThemeTokens.space3),
-            _StatusText(state: state),
+            if (!compact) ...[
+              const SizedBox(height: ThemeTokens.space3),
+              _StatusText(state: state),
+            ],
           ],
         ),
       ),

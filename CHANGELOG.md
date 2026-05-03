@@ -4,6 +4,12 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Fixed
+
+- Linux: drop the rounded `ClipRRect` around the desktop frame. Most GTK compositors paint solid black behind a transparent window region, which produced an ugly halo around the rounded corners. The window is now a sharp rectangle on Linux; macOS / Windows keep the soft 12 dp corners (DWM and Quartz honour the transparent background).
+- Compact mode: when active, `RootShell` now hides the bottom NavigationBar / NavigationRail and forces the Timer view (the 280-wide window had no room for either). `TimerScreen` shrinks: smaller outer + card padding, dial fills 95% of the card width, header (`Período de foco (cycle of total)`) and status caption are hidden so only the dial + control buttons remain.
+- Compact toggle: expanding no longer brings a maximised window back to fullscreen. The pre-compact size is now clamped to a phone-portrait box (max 560 x 900); if the window was maximised when entering compact, the title bar calls `unmaximize()` before resizing both ways so compositors that retain the maximise state cannot reapply it.
+
 ### Added
 
 - Phase 3.x dial colour cross-fade on period transitions.

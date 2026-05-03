@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:tomatito/core/window/window_state.dart';
 import 'package:tomatito/l10n/app_localizations.dart';
 import 'package:tomatito/presentation/screens/settings_screen.dart';
 import 'package:tomatito/presentation/screens/statistics_screen.dart';
@@ -20,7 +21,11 @@ class RootShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = AppLocalizations.of(context);
     final isWide = MediaQuery.sizeOf(context).width >= 720;
-    final index = ref.watch(navigationIndexProvider);
+    final compact = ref.watch(compactModeProvider);
+    final indexRaw = ref.watch(navigationIndexProvider);
+    // Compact mode is timer-only: rail and bottom nav are hidden so the
+    // 280-wide window has room for the dial. Force the Timer view.
+    final index = compact ? 0 : indexRaw;
     final destinations = [
       _Dest(Icons.timer_outlined, Icons.timer, loc.navTimer),
       _Dest(Icons.bar_chart_outlined, Icons.bar_chart, loc.navStats),
@@ -28,6 +33,10 @@ class RootShell extends ConsumerWidget {
     ];
 
     void onTap(int i) => ref.read(navigationIndexProvider.notifier).state = i;
+
+    if (compact) {
+      return Scaffold(body: _screens[index]);
+    }
 
     if (isWide) {
       return Scaffold(

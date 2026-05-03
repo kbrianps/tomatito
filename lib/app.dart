@@ -21,6 +21,8 @@ import 'package:tomatito/presentation/widgets/tomatito_title_bar.dart';
 bool get _isDesktop =>
     !kIsWeb && (Platform.isLinux || Platform.isMacOS || Platform.isWindows);
 
+bool get _isLinux => !kIsWeb && Platform.isLinux;
+
 /// Root Navigator key. Used by Esc keyboard shortcut to dismiss modal
 /// routes (license page, About screen, etc.) without needing a BuildContext.
 final tomatitoNavigatorKey = GlobalKey<NavigatorState>();
@@ -55,12 +57,14 @@ class TomatitoApp extends ConsumerWidget {
   }
 }
 
-/// Wraps the app body with the custom desktop title bar AND clips the
-/// outer corners to a soft rounded rectangle. On Android / web / other
-/// platforms the wrapper is a no-op; the title bar and the rounded shell
-/// are desktop-only. The actual window background is set transparent in
-/// main() so the rounded corners can show through on compositors that
-/// honour it.
+/// Wraps the app body with the custom desktop title bar. On macOS and
+/// Windows the wrapper also clips the outer corners to a soft rounded
+/// rectangle since DWM and Quartz honour the transparent window
+/// background set in main(). On Linux the rounding is dropped because
+/// most GTK compositors paint solid black behind a transparent window
+/// region, which produced an ugly halo around the rounded corners.
+/// Android / web platforms get a no-op wrapper; both the title bar and
+/// the rounded shell are desktop-only.
 class _DesktopFrame extends StatelessWidget {
   const _DesktopFrame({required this.child});
 
@@ -71,11 +75,13 @@ class _DesktopFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!_isDesktop) return child;
+    final body = Column(
+      children: [const TomatitoTitleBar(), Expanded(child: child)],
+    );
+    if (_isLinux) return body;
     return ClipRRect(
       borderRadius: const BorderRadius.all(Radius.circular(_windowRadius)),
-      child: Column(
-        children: [const TomatitoTitleBar(), Expanded(child: child)],
-      ),
+      child: body,
     );
   }
 }

@@ -22,21 +22,52 @@ class TomatitoTitleBar extends ConsumerStatefulWidget {
 
 class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
   /// Bounds remembered before entering compact mode, restored on exit.
+  /// Capped to `_maxRememberedSize` so a maximised window does not bring
+  /// the user back to fullscreen on expand.
   Size? _preCompactSize;
 
   static const Size _compactSize = Size(280, 340);
+  static const Size _defaultRestoreSize = Size(420, 720);
+  static const Size _maxRememberedSize = Size(560, 900);
 
   Future<void> _toggleCompact({required bool currentlyCompact}) async {
     if (currentlyCompact) {
-      final restore = _preCompactSize ?? const Size(420, 640);
+      final restore = _preCompactSize ?? _defaultRestoreSize;
+      // Some compositors keep "maximised" state even after a setSize; clear
+      // it explicitly so the next setSize lands a normal-sized window.
+      if (await windowManager.isMaximized()) {
+        await windowManager.unmaximize();
+      }
       await windowManager.setSize(restore);
       _preCompactSize = null;
       ref.read(compactModeProvider.notifier).state = false;
     } else {
-      _preCompactSize = await windowManager.getSize();
+      // If the user is currently maximised, remembering that size would
+      // bring them back to fullscreen on expand. Cap the remembered size
+      // to a phone-portrait shape; if the cap fires (or fetch fails),
+      // fall back to the default restore size.
+      Size? observed;
+      try {
+        observed = await windowManager.getSize();
+      } on Object {
+        observed = null;
+      }
+      _preCompactSize = _clampRestoreSize(observed);
+      if (await windowManager.isMaximized()) {
+        await windowManager.unmaximize();
+      }
       await windowManager.setSize(_compactSize);
       ref.read(compactModeProvider.notifier).state = true;
     }
+  }
+
+  Size _clampRestoreSize(Size? observed) {
+    if (observed == null) return _defaultRestoreSize;
+    final w = observed.width
+        .clamp(_compactSize.width, _maxRememberedSize.width);
+    final h = observed.height
+        .clamp(_compactSize.height, _maxRememberedSize.height);
+    return Size(w, h);
   }
 
   Future<void> _togglePin({required bool currentlyPinned}) async {
