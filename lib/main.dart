@@ -65,7 +65,11 @@ Future<void> main() async {
   final hasSeenOnboarding = await settings.loadHasSeenOnboarding();
   final bootstrap = BootstrapResult(
     restoredFromCheckpoint: restoreResult.restored,
-    shouldShowOemTip: restoreResult.staleDiscarded && !oemTipShown,
+    // The OEM battery tip only makes sense on Android; on desktop the
+    // foreground service does not exist and the user has no battery
+    // optimisation to disable.
+    shouldShowOemTip:
+        _isAndroid && restoreResult.staleDiscarded && !oemTipShown,
   );
 
   final windowController =
