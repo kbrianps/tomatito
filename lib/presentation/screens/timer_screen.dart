@@ -191,9 +191,12 @@ class _TimerCard extends StatelessWidget {
               onReset: engine.reset,
               onSkip: _onSkip,
             ),
-            const SizedBox(height: ThemeTokens.space3),
-            _SessionProgressDots(state: state, idleConfig: idleConfig),
+            // Compact mode shows nothing below the controls: no dot row,
+            // no status caption, no trailing spacer. Keeps the 240x320
+            // window from wasting any pixel below the buttons.
             if (!compact) ...[
+              const SizedBox(height: ThemeTokens.space3),
+              _SessionProgressDots(state: state, idleConfig: idleConfig),
               const SizedBox(height: ThemeTokens.space3),
               _StatusText(state: state),
             ],
