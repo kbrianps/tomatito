@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:tomatito/core/sound/sound_bank.dart';
 import 'package:tomatito/core/theme/app_themes.dart';
 import 'package:tomatito/core/timer/session_config.dart';
 import 'package:tomatito/data/settings_repository.dart';
@@ -13,15 +14,21 @@ class FakeSettingsRepository implements SettingsRepository {
     AppThemeId initialTheme = AppThemeId.tomatito,
     int initialDailyGoalMinutes = 120,
     bool initialAlwaysOnTop = false,
+    String? initialChimeId,
+    double initialChimeVolume = 0.6,
   }) : _config = initialConfig ?? SessionConfig.pomodoroDefault,
        _theme = initialTheme,
        _dailyGoal = initialDailyGoalMinutes,
-       _alwaysOnTop = initialAlwaysOnTop;
+       _alwaysOnTop = initialAlwaysOnTop,
+       _chimeId = initialChimeId ?? SoundBank.defaultOption.id,
+       _chimeVolume = initialChimeVolume;
 
   SessionConfig _config;
   AppThemeId _theme;
   int _dailyGoal;
   bool _alwaysOnTop;
+  String _chimeId;
+  double _chimeVolume;
   final StreamController<void> _changes = StreamController<void>.broadcast();
 
   @override
@@ -60,6 +67,24 @@ class FakeSettingsRepository implements SettingsRepository {
   @override
   Future<void> saveAlwaysOnTop({required bool value}) async {
     _alwaysOnTop = value;
+    _changes.add(null);
+  }
+
+  @override
+  Future<String> loadChimeId() async => _chimeId;
+
+  @override
+  Future<void> saveChimeId(String id) async {
+    _chimeId = id;
+    _changes.add(null);
+  }
+
+  @override
+  Future<double> loadChimeVolume() async => _chimeVolume;
+
+  @override
+  Future<void> saveChimeVolume(double volume) async {
+    _chimeVolume = volume.clamp(0.0, 1.0);
     _changes.add(null);
   }
 

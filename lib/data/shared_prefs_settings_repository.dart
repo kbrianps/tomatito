@@ -3,14 +3,15 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:tomatito/core/sound/sound_bank.dart';
 import 'package:tomatito/core/theme/app_themes.dart';
 import 'package:tomatito/core/timer/session_config.dart';
 import 'package:tomatito/data/settings_repository.dart';
 
 /// Production settings store. Encodes `SessionConfig` as JSON; the theme,
-/// daily goal and always-on-top flag live in their own keys for cheap reads.
-/// Falls back to defaults on missing or corrupt data and writes a fresh value
-/// on next save.
+/// daily goal, always-on-top flag, chime id and chime volume live in their
+/// own keys for cheap reads. Falls back to defaults on missing or corrupt
+/// data and writes a fresh value on next save.
 class SharedPrefsSettingsRepository implements SettingsRepository {
   SharedPrefsSettingsRepository(this._prefs);
 
@@ -21,6 +22,8 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   static const String _keyTheme = 'tomatito.theme_id.v1';
   static const String _keyGoal = 'tomatito.daily_goal_minutes.v1';
   static const String _keyAlwaysOnTop = 'tomatito.always_on_top.v1';
+  static const String _keyChimeId = 'tomatito.chime_id.v1';
+  static const String _keyChimeVolume = 'tomatito.chime_volume.v1';
 
   static Future<SharedPrefsSettingsRepository> create() async {
     final prefs = await SharedPreferences.getInstance();
@@ -100,6 +103,28 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   @override
   Future<void> saveAlwaysOnTop({required bool value}) async {
     await _prefs.setBool(_keyAlwaysOnTop, value);
+    _changes.add(null);
+  }
+
+  @override
+  Future<String> loadChimeId() async {
+    return _prefs.getString(_keyChimeId) ?? SoundBank.defaultOption.id;
+  }
+
+  @override
+  Future<void> saveChimeId(String id) async {
+    await _prefs.setString(_keyChimeId, id);
+    _changes.add(null);
+  }
+
+  @override
+  Future<double> loadChimeVolume() async {
+    return _prefs.getDouble(_keyChimeVolume) ?? 0.6;
+  }
+
+  @override
+  Future<void> saveChimeVolume(double volume) async {
+    await _prefs.setDouble(_keyChimeVolume, volume.clamp(0.0, 1.0));
     _changes.add(null);
   }
 

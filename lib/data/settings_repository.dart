@@ -3,7 +3,7 @@ import 'package:tomatito/core/theme/app_themes.dart';
 import 'package:tomatito/core/timer/session_config.dart';
 
 /// Persists user preferences (timer durations, theme, sound choices, etc.).
-/// Phase 2 ships `SharedPreferencesSettingsRepository`; tests use a
+/// Production uses `SharedPreferencesSettingsRepository`; tests use a
 /// `FakeSettingsRepository` that round-trips in memory.
 abstract class SettingsRepository {
   Future<SessionConfig> loadSessionConfig();
@@ -16,10 +16,16 @@ abstract class SettingsRepository {
   Future<void> saveDailyGoalMinutes(int minutes);
 
   /// Whether the desktop window should stay on top of other windows.
-  /// Stored here for cross-launch persistence; applied by the WindowController
-  /// in `main()` and toggled from Settings.
   Future<bool> loadAlwaysOnTop();
   Future<void> saveAlwaysOnTop({required bool value});
+
+  /// SoundBank id of the chime to play on period completion.
+  Future<String> loadChimeId();
+  Future<void> saveChimeId(String id);
+
+  /// Volume of the chime, in [0.0 .. 1.0].
+  Future<double> loadChimeVolume();
+  Future<void> saveChimeVolume(double volume);
 
   /// Stream of changes so the UI can re-render without polling.
   Stream<void> get changes;

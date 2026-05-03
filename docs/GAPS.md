@@ -224,13 +224,33 @@ Statuses: `OPEN` (work pending), `CLOSED` (resolved, kept for history), `DEFERRE
 - Plan: migrate to Drift when query patterns warrant it (window aggregates, multi-month rollups, custom reports). Reader supports the existing JSON file as a one-shot migration source.
 - Opened: 2026-05-02
 
-## [OPEN] Sound bank and chime playback not wired
+## [CLOSED] Sound bank and chime playback
 
 - Severity: medium
 - Area: sound
-- Description: spec describes a soft bell, wood block and gentle pulse chime, plus an optional tick during focus. Phase 2 ships neither the bundled audio files nor the just_audio integration.
-- Impact: end-of-period notifications are silent until Phase 2.x.
+- Description: spec describes a soft bell, wood block and gentle pulse chime, plus an optional tick during focus. Phase 2 shipped neither the bundled audio files nor the just_audio integration.
+- Impact: end-of-period notifications were silent until Phase 2.x.
 - Plan: source three CC0 chimes (under 50 KB each, OGG / AAC), add `SoundBank` + `SoundPlayer`, expose chime + tick controls in Settings. Phase 2.x.
+- Resolution: Phase 3.x. Three chimes generated with ffmpeg + libvorbis (soft_bell 7 KB, wood_block 5 KB, gentle_pulse 6 KB), all under the 50 KB spec cap. `SoundBank` registry + `SoundPlayer` abstract + `JustAudioSoundPlayer` (production, swallows backend errors silently) + `NoOpSoundPlayer` (tests / unsupported platforms). `ChimeRecorder` plays the configured chime at the configured volume on every TimerPeriodComplete. SettingsScreen Sound section: chime picker (RadioGroup over SoundBank.all) + volume slider 0..100%. Persistence: `SettingsRepository.loadChimeId` / `loadChimeVolume`. The optional tick-during-focus stays deferred (see new entry below).
+- Opened: 2026-05-02
+- Closed: 2026-05-02
+
+## [OPEN] Optional tick sound during focus deferred
+
+- Severity: low
+- Area: sound
+- Description: spec describes a faint, low-frequency tick during focus periods, off by default. Phase 3.x ships only end-of-period chimes.
+- Impact: users wanting a metronome-style focus aid have to bring their own.
+- Plan: bundle a short tick OGG (< 5 KB), add a separate `SoundPlayer` invocation on each Timer.periodic boundary while in TimerRunning + focus, gate by Settings toggle. Phase 3.x follow-up.
+- Opened: 2026-05-02
+
+## [OPEN] Sound preview button in Settings deferred
+
+- Severity: low
+- Area: sound
+- Description: spec calls for tapping a chime option to play it once at the configured volume, so users can audition before committing. Phase 3.x ships the picker + volume but no preview.
+- Impact: users have to wait for an actual period to end to hear the chime.
+- Plan: add a "Play" trailing icon on each RadioListTile that calls SoundPlayer directly with the option + current volume. Phase 3.x follow-up.
 - Opened: 2026-05-02
 
 ## [OPEN] Vibration on Android not wired

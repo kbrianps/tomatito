@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:tomatito/core/sound/sound_bank.dart';
 import 'package:tomatito/core/theme/app_themes.dart';
 import 'package:tomatito/core/theme/theme_controller.dart';
 import 'package:tomatito/core/theme/theme_tokens.dart';
@@ -27,6 +28,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   SessionConfig? _config;
   int? _dailyGoal;
   bool? _alwaysOnTop;
+  String? _chimeId;
+  double? _chimeVolume;
 
   @override
   void initState() {
@@ -39,11 +42,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final cfg = await repo.loadSessionConfig();
     final goal = await repo.loadDailyGoalMinutes();
     final aot = await repo.loadAlwaysOnTop();
+    final chime = await repo.loadChimeId();
+    final volume = await repo.loadChimeVolume();
     if (!mounted) return;
     setState(() {
       _config = cfg;
       _dailyGoal = goal;
       _alwaysOnTop = aot;
+      _chimeId = chime;
+      _chimeVolume = volume;
     });
   }
 
@@ -63,15 +70,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await ref.read(windowControllerProvider).setAlwaysOnTop(value: value);
   }
 
+  void _updateChimeId(String id) {
+    setState(() => _chimeId = id);
+    ref.read(settingsRepositoryProvider).saveChimeId(id);
+  }
+
+  void _updateChimeVolume(double volume) {
+    setState(() => _chimeVolume = volume);
+    ref.read(settingsRepositoryProvider).saveChimeVolume(volume);
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
     final cfg = _config;
     final goal = _dailyGoal;
     final aot = _alwaysOnTop;
+    final chime = _chimeId;
+    final volume = _chimeVolume;
     final themeId = ref.watch(themeControllerProvider);
 
-    if (cfg == null || goal == null || aot == null) {
+    if (cfg == null ||
+        goal == null ||
+        aot == null ||
+        chime == null ||
+        volume == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -108,8 +131,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             value: cfg.cyclesBeforeLongBreak,
             min: 2,
             max: 8,
-            onChanged:
-                (v) => _updateConfig(cfg.copyWith(cyclesBeforeLongBreak: v)),
+            onChanged: (v) =>
+                _updateConfig(cfg.copyWith(cyclesBeforeLongBreak: v)),
           ),
           SwitchListTile(
             title: Text(loc.settingsAutoStartBreaks),
@@ -136,6 +159,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             step: 30,
             valueFormatter: loc.minutesValue,
             onChanged: _updateGoal,
+          ),
+        ]),
+        _Section(loc.settingsSound, [
+          ListTile(
+            title: Text(loc.settingsChime),
+            subtitle: RadioGroup<String>(
+              groupValue: chime,
+              onChanged: (v) {
+                if (v != null) _updateChimeId(v);
+              },
+              child: Column(
+                children: [
+                  for (final option in SoundBank.all)
+                    RadioListTile<String>(
+                      title: Text(_chimeLabel(loc, option)),
+                      value: option.id,
+                      dense: true,
+                    ),
+                ],
+              ),
+            ),
+          ),
+          _VolumeRow(
+            label: loc.settingsVolume,
+            value: volume,
+            onChanged: _updateChimeVolume,
           ),
         ]),
         _Section(loc.settingsAppearance, [
@@ -169,10 +218,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ListTile(
             title: Text(loc.settingsAbout),
             trailing: const Icon(Icons.chevron_right),
-            onTap:
-                () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const AboutScreen()),
-                ),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const AboutScreen()),
+            ),
           ),
         ]),
       ],
@@ -189,6 +237,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return loc.themeBlackOled;
       case AppThemeId.tomatito:
         return loc.themeTomatito;
+    }
+  }
+
+  String _chimeLabel(AppLocalizations loc, SoundOption option) {
+    switch (option.id) {
+      case 'soft_bell':
+        return loc.soundSoftBell;
+      case 'wood_block':
+        return loc.soundWoodBlock;
+      case 'gentle_pulse':
+        return loc.soundGentlePulse;
+      default:
+        return option.id;
     }
   }
 }
@@ -295,6 +356,33 @@ class _IntRow extends StatelessWidget {
         onChanged: (v) => onChanged(v.round()),
       ),
       trailing: Text(formatted),
+    );
+  }
+}
+
+class _VolumeRow extends StatelessWidget {
+  const _VolumeRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final double value;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final percent = (value * 100).round();
+    return ListTile(
+      title: Text(label),
+      subtitle: Slider(
+        value: value.clamp(0.0, 1.0),
+        divisions: 20,
+        label: '$percent%',
+        onChanged: onChanged,
+      ),
+      trailing: Text('$percent%'),
     );
   }
 }

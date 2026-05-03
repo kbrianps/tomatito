@@ -10,6 +10,7 @@ import 'package:tomatito/core/entitlements/entitlement_service.dart';
 import 'package:tomatito/core/notifications/chime_recorder.dart';
 import 'package:tomatito/core/notifications/no_op_notification_service.dart';
 import 'package:tomatito/core/notifications/notification_service.dart';
+import 'package:tomatito/core/sound/sound_player.dart';
 import 'package:tomatito/core/statistics/stats_recorder.dart';
 import 'package:tomatito/core/timer/checkpoint_store.dart';
 import 'package:tomatito/core/timer/real_timer_engine.dart';
@@ -48,6 +49,7 @@ Future<void> main() async {
 
   final windowController = _buildWindowController();
   final notificationService = _buildNotificationService();
+  final soundPlayer = _buildSoundPlayer();
 
   if (_isDesktop) {
     final alwaysOnTop = await settings.loadAlwaysOnTop();
@@ -62,6 +64,8 @@ Future<void> main() async {
   final chimeRecorder = ChimeRecorder(
     engine: engine,
     notifications: notificationService,
+    soundPlayer: soundPlayer,
+    settings: settings,
   )..start();
 
   // Recorders are intentionally tied to app lifetime; nothing currently
@@ -91,5 +95,13 @@ WindowController _buildWindowController() =>
 
 NotificationService _buildNotificationService() =>
     _isAndroid ? AndroidNotificationService() : NoOpNotificationService();
+
+SoundPlayer _buildSoundPlayer() {
+  try {
+    return JustAudioSoundPlayer();
+  } on Object {
+    return NoOpSoundPlayer();
+  }
+}
 
 void _keepAlive(StatsRecorder s, ChimeRecorder c) {}

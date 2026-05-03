@@ -45,3 +45,11 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 - `main()` constructs the store, creates the engine with it, and calls the restore on boot before runApp.
 - Tests: SessionCheckpoint serialization + isFreshAt edges, CheckpointStore file roundtrip + corrupt + missing + idempotent clear, RealTimerEngine pause-writes-checkpoint / reset-clears / restore-paused / stale-cleared (77 tests total, all passing).
 - New OPEN GAPS entry: explicit "Resume your interrupted focus period?" dialog (silent restore is the Phase 3.x default).
+- Phase 3.x sound bank and chime playback (closes the medium-severity GAPS item).
+- Three chimes bundled in `assets/sounds/` as small OGG Vorbis (soft_bell 7 KB, wood_block 5 KB, gentle_pulse 6 KB), generated locally with ffmpeg + libvorbis (recipes in DEVELOPMENT once recorded).
+- `SoundBank` registry + `SoundPlayer` abstract with `JustAudioSoundPlayer` (production, swallows backend errors silently) and `NoOpSoundPlayer` (tests, unsupported platforms).
+- `ChimeRecorder` plays the configured chime at the configured volume on every `TimerPeriodComplete`, alongside the platform notification.
+- `SettingsRepository` extended with `loadChimeId` / `saveChimeId`, `loadChimeVolume` / `saveChimeVolume`; both repositories updated.
+- SettingsScreen Sound section: chime picker (RadioGroup) + volume slider (0..100%); en + pt strings.
+- Test: SoundBank id uniqueness, asset path discipline, byId lookup + default fallback, SoundOption equality (82 tests, all passing).
+- New OPEN GAPS entries: tick-during-focus toggle, chime preview button.
