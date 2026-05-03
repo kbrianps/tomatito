@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -17,6 +18,12 @@ import 'package:tomatito/data/statistics_repository.dart';
 
 void main() {
   testWidgets('App boots and renders the navigation shell', (tester) async {
+    // Use a comfortable surface; the desktop title bar (rendered because
+    // the test host is Linux) needs room for its drag area + four caption
+    // buttons.
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -38,7 +45,7 @@ void main() {
         child: const TomatitoApp(),
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('Timer'), findsOneWidget);
     expect(find.text('Stats'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);

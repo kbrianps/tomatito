@@ -12,6 +12,8 @@ import 'package:tomatito/core/theme/app_themes.dart';
 import 'package:tomatito/core/theme/theme_controller.dart';
 import 'package:tomatito/core/theme/theme_tokens.dart';
 import 'package:tomatito/core/timer/session_config.dart';
+import 'package:tomatito/core/timer/timer_engine.dart';
+import 'package:tomatito/core/timer/timer_state.dart';
 import 'package:tomatito/core/window/window_controller.dart';
 import 'package:tomatito/core/window/window_state.dart';
 import 'package:tomatito/data/settings_repository.dart';
@@ -62,9 +64,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
   }
 
-  void _updateConfig(SessionConfig newConfig) {
+  Future<void> _updateConfig(SessionConfig newConfig) async {
+    final oldConfig = _config;
     setState(() => _config = newConfig);
-    ref.read(settingsRepositoryProvider).saveSessionConfig(newConfig);
+    await ref.read(settingsRepositoryProvider).saveSessionConfig(newConfig);
+    if (!mounted) return;
+    final engine = ref.read(timerEngineProvider);
+    final state = engine.current;
+    final isMid = state is TimerRunning || state is TimerPaused;
+    final durationChanged =
+        oldConfig != null &&
+        (oldConfig.focus != newConfig.focus ||
+            oldConfig.shortBreak != newConfig.shortBreak ||
+            oldConfig.longBreak != newConfig.longBreak);
+    if (!isMid || !durationChanged) {
+      engine.updateConfig(newConfig);
+      return;
+    }
+    final loc = AppLocalizations.of(context);
+    final applyNow = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: Text(loc.applyNowDialogTitle),
+            content: Text(loc.applyNowDialogBody),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text(loc.applyNowDialogNext),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: Text(loc.applyNowDialogNow),
+              ),
+            ],
+          ),
+    );
+    engine.updateConfig(newConfig, applyToCurrent: applyNow ?? false);
   }
 
   void _updateGoal(int minutes) {
@@ -394,7 +430,10 @@ class _Section extends StatelessWidget {
   }
 }
 
-class _DurationRow extends StatelessWidget {
+/// Drag previews live; the parent only learns about the new value when
+/// the user releases the slider, so the apply-now dialog does not pop
+/// on every mid-drag tick.
+class _DurationRow extends StatefulWidget {
   const _DurationRow({
     required this.label,
     required this.duration,
@@ -412,25 +451,41 @@ class _DurationRow extends StatelessWidget {
   final ValueChanged<Duration> onChanged;
 
   @override
+  State<_DurationRow> createState() => _DurationRowState();
+}
+
+class _DurationRowState extends State<_DurationRow> {
+  late double _liveMinutes = widget.duration.inMinutes.toDouble();
+
+  @override
+  void didUpdateWidget(covariant _DurationRow old) {
+    super.didUpdateWidget(old);
+    if (old.duration.inMinutes != widget.duration.inMinutes) {
+      _liveMinutes = widget.duration.inMinutes.toDouble();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
-    final minutes = duration.inMinutes;
+    final minutes = _liveMinutes.round();
     return ListTile(
-      title: Text(label),
+      title: Text(widget.label),
       subtitle: Slider(
-        value: minutes.toDouble().clamp(min.toDouble(), max.toDouble()),
-        min: min.toDouble(),
-        max: max.toDouble(),
-        divisions: (max - min) ~/ step,
+        value: _liveMinutes.clamp(widget.min.toDouble(), widget.max.toDouble()),
+        min: widget.min.toDouble(),
+        max: widget.max.toDouble(),
+        divisions: (widget.max - widget.min) ~/ widget.step,
         label: loc.minutesValue(minutes),
-        onChanged: (v) => onChanged(Duration(minutes: v.round())),
+        onChanged: (v) => setState(() => _liveMinutes = v),
+        onChangeEnd: (v) => widget.onChanged(Duration(minutes: v.round())),
       ),
       trailing: Text(loc.minutesValue(minutes)),
     );
   }
 }
 
-class _IntRow extends StatelessWidget {
+class _IntRow extends StatefulWidget {
   const _IntRow({
     required this.label,
     required this.value,
@@ -450,17 +505,34 @@ class _IntRow extends StatelessWidget {
   final ValueChanged<int> onChanged;
 
   @override
+  State<_IntRow> createState() => _IntRowState();
+}
+
+class _IntRowState extends State<_IntRow> {
+  late double _live = widget.value.toDouble();
+
+  @override
+  void didUpdateWidget(covariant _IntRow old) {
+    super.didUpdateWidget(old);
+    if (old.value != widget.value) {
+      _live = widget.value.toDouble();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final formatted = valueFormatter?.call(value) ?? value.toString();
+    final shown = _live.round();
+    final formatted = widget.valueFormatter?.call(shown) ?? shown.toString();
     return ListTile(
-      title: Text(label),
+      title: Text(widget.label),
       subtitle: Slider(
-        value: value.toDouble().clamp(min.toDouble(), max.toDouble()),
-        min: min.toDouble(),
-        max: max.toDouble(),
-        divisions: (max - min) ~/ step,
+        value: _live.clamp(widget.min.toDouble(), widget.max.toDouble()),
+        min: widget.min.toDouble(),
+        max: widget.max.toDouble(),
+        divisions: (widget.max - widget.min) ~/ widget.step,
         label: formatted,
-        onChanged: (v) => onChanged(v.round()),
+        onChanged: (v) => setState(() => _live = v),
+        onChangeEnd: (v) => widget.onChanged(v.round()),
       ),
       trailing: Text(formatted),
     );

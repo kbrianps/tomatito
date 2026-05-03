@@ -169,6 +169,24 @@ class FakeTimerEngine implements TimerEngine {
   }
 
   @override
+  void updateConfig(SessionConfig newConfig, {bool applyToCurrent = false}) {
+    _config = newConfig;
+    if (!applyToCurrent || _currentKind == null) return;
+    _periodTotal = _durationFor(_currentKind!);
+    if (_elapsed >= _periodTotal) {
+      _ticker?.cancel();
+      _ticker = null;
+      _onPeriodComplete();
+      return;
+    }
+    if (_ticker != null) {
+      _emit(_runningState());
+    } else {
+      _emit(_pausedState());
+    }
+  }
+
+  @override
   Future<void> dispose() async {
     _ticker?.cancel();
     await _controller.close();

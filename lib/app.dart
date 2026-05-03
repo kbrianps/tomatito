@@ -42,7 +42,15 @@ class TomatitoApp extends ConsumerWidget {
       locale: localeChoice.toLocale(),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const _ShortcutsScope(child: _DesktopFrame(child: _RootRouter())),
+      // The shortcuts scope and the desktop title bar live OUTSIDE the
+      // Navigator so they remain visible when routes are pushed (About,
+      // licence page, dialogs, ...). The Navigator is the `child`.
+      builder: (context, child) {
+        return _ShortcutsScope(
+          child: _DesktopFrame(child: child ?? const SizedBox.shrink()),
+        );
+      },
+      home: const _RootRouter(),
     );
   }
 }

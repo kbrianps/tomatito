@@ -214,6 +214,27 @@ class RealTimerEngine implements TimerEngine {
     unawaited(_clearCheckpoint());
   }
 
+  @override
+  void updateConfig(SessionConfig newConfig, {bool applyToCurrent = false}) {
+    _config = newConfig;
+    if (!applyToCurrent || _currentKind == null) return;
+    _periodTotal = _durationFor(_currentKind!);
+    if (_elapsed >= _periodTotal) {
+      _ticker?.cancel();
+      _ticker = null;
+      _checkpointTimer?.cancel();
+      _checkpointTimer = null;
+      _stopwatch.stop();
+      _onPeriodComplete();
+      return;
+    }
+    if (_ticker != null) {
+      _emit(_runningState());
+    } else {
+      _emit(_pausedState());
+    }
+  }
+
   /// Restore the engine to a paused state from a previous checkpoint, if
   /// one exists and is fresh (< 30 minutes per spec). Returns a result
   /// describing the outcome: restored / stale-discarded / none. Stale

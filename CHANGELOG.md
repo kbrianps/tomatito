@@ -14,6 +14,15 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 - Settings → Dial section ships the picker (Ticks / Arc) in en + pt.
 - Tests: dial-style round-trip in shared_prefs (90 total, all passing).
 
+- Phase 3.x apply-now dialog + compact mode + title-bar persistence fix.
+- `TimerEngine.updateConfig(SessionConfig, {applyToCurrent})` replaces the active config; if `applyToCurrent` and a period is in progress, the period's total duration is recomputed (and the period completes immediately when the new total is at or below the elapsed time). Both engines implement.
+- SettingsScreen duration sliders commit on `Slider.onChangeEnd`; if a session is running/paused AND a duration changed, an "Apply to the current period?" dialog asks Apply now / Next period only. Internal slider previews still update live during drag.
+- Tomatito theme label is now "Red" / "Vermelho" (l10n only; enum value stays `tomatito` to avoid migrating SharedPreferences).
+- Maximize caption button replaced by a Compact-mode toggle (icon: `Icons.aspect_ratio_outlined` ↔ `Icons.open_in_full`). Click resizes the window between the saved bounds and a 280×340 compact size; double-tap on the title text does the same. New `compactModeProvider` (StateProvider) is session-only.
+- Title-bar visibility on pushed routes (About, licence page, …) fixed: `_DesktopFrame` is now wrapped via `MaterialApp.builder` so it sits above the Navigator instead of inside the home route.
+- Caption buttons drop `Tooltip` (which needs an Overlay ancestor that the new top-of-app position does not have) in favour of `Semantics(label:)` — visual hover state stays the same; screen readers still announce the action.
+- New en + pt strings for the apply-now dialog and the compact-mode tooltips.
+
 ### Earlier in [Unreleased]
 
 - Phase 0 scaffolding: project structure, very_good_analysis lint baseline, GitHub Actions CI for analyze + test, theme tokens, motion tokens, l10n infrastructure (en and pt_BR), and abstract interfaces for `TimerEngine`, `SettingsRepository`, `StatisticsRepository`, `NotificationService`, `WindowController`, `EntitlementService`.

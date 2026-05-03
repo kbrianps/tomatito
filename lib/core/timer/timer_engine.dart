@@ -27,6 +27,13 @@ abstract class TimerEngine {
   /// Reset to [TimerIdle], discarding the running session.
   void reset();
 
+  /// Replace the active session config. If [applyToCurrent] is true and
+  /// a period is currently running or paused, the period's total duration
+  /// is recomputed from [newConfig] for its kind; if the new total is at
+  /// or below the elapsed time, the period completes immediately. If
+  /// [applyToCurrent] is false, the change takes effect on the next period.
+  void updateConfig(SessionConfig newConfig, {bool applyToCurrent = false});
+
   Future<void> dispose();
 }
 

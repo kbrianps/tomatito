@@ -9,9 +9,10 @@ import 'package:tomatito/l10n/app_localizations.dart';
 import 'package:window_manager/window_manager.dart';
 
 /// Custom desktop title bar. Theme-coloured (uses `colorScheme.surface`)
-/// with four caption buttons: pin (always-on-top), minimize, maximize /
-/// restore, close. The title text on the left doubles as the drag area
-/// for moving the window; double-tapping it toggles maximize / restore.
+/// with four caption buttons: pin (always-on-top), minimize, compact-mode
+/// toggle (small focused window like Windows 11 Clock Focus), close. The
+/// title text on the left doubles as the drag area for moving the window;
+/// double-tapping it toggles compact mode.
 class TomatitoTitleBar extends ConsumerStatefulWidget {
   const TomatitoTitleBar({super.key});
 
@@ -19,40 +20,22 @@ class TomatitoTitleBar extends ConsumerStatefulWidget {
   ConsumerState<TomatitoTitleBar> createState() => _TomatitoTitleBarState();
 }
 
-class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar>
-    with WindowListener {
-  bool _isMaximized = false;
+class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
+  /// Bounds remembered before entering compact mode, restored on exit.
+  Size? _preCompactSize;
 
-  @override
-  void initState() {
-    super.initState();
-    windowManager.addListener(this);
-    _refreshMaximized();
-  }
+  static const Size _compactSize = Size(280, 340);
 
-  @override
-  void dispose() {
-    windowManager.removeListener(this);
-    super.dispose();
-  }
-
-  Future<void> _refreshMaximized() async {
-    final m = await windowManager.isMaximized();
-    if (!mounted) return;
-    setState(() => _isMaximized = m);
-  }
-
-  @override
-  void onWindowMaximize() => _refreshMaximized();
-
-  @override
-  void onWindowUnmaximize() => _refreshMaximized();
-
-  Future<void> _toggleMaximize() async {
-    if (_isMaximized) {
-      await windowManager.unmaximize();
+  Future<void> _toggleCompact({required bool currentlyCompact}) async {
+    if (currentlyCompact) {
+      final restore = _preCompactSize ?? const Size(420, 640);
+      await windowManager.setSize(restore);
+      _preCompactSize = null;
+      ref.read(compactModeProvider.notifier).state = false;
     } else {
-      await windowManager.maximize();
+      _preCompactSize = await windowManager.getSize();
+      await windowManager.setSize(_compactSize);
+      ref.read(compactModeProvider.notifier).state = true;
     }
   }
 
@@ -68,6 +51,7 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar>
     final theme = Theme.of(context);
     final loc = AppLocalizations.of(context);
     final pinned = ref.watch(alwaysOnTopProvider);
+    final compact = ref.watch(compactModeProvider);
     final scheme = theme.colorScheme;
 
     return Container(
@@ -83,7 +67,7 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar>
           Expanded(
             child: DragToMoveArea(
               child: GestureDetector(
-                onDoubleTap: _toggleMaximize,
+                onDoubleTap: () => _toggleCompact(currentlyCompact: compact),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: ThemeTokens.space4,
@@ -117,9 +101,9 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar>
             onPressed: windowManager.minimize,
           ),
           _CaptionButton(
-            tooltip: _isMaximized ? loc.titleBarRestore : loc.titleBarMaximize,
-            icon: _isMaximized ? Icons.filter_none_outlined : Icons.crop_square,
-            onPressed: _toggleMaximize,
+            tooltip: compact ? loc.titleBarExpand : loc.titleBarCompact,
+            icon: compact ? Icons.open_in_full : Icons.aspect_ratio_outlined,
+            onPressed: () => _toggleCompact(currentlyCompact: compact),
           ),
           _CaptionButton(
             tooltip: loc.titleBarClose,
@@ -161,16 +145,19 @@ class _CaptionButtonState extends State<_CaptionButton> {
     final scheme = theme.colorScheme;
     final hoverBg =
         widget.isClose
-            ? const Color(0xFFE81123) // Windows-style close-hover red
+            ? const Color(0xFFE81123)
             : scheme.onSurface.withValues(alpha: 0.08);
     final defaultIconColor =
         widget.iconColor ?? scheme.onSurface.withValues(alpha: 0.85);
     final iconColor =
         _hover && widget.isClose ? Colors.white : defaultIconColor;
 
-    return Tooltip(
-      message: widget.tooltip,
-      waitDuration: const Duration(milliseconds: 600),
+    // Semantics + the hover background do the work that a Tooltip would,
+    // without needing an Overlay ancestor (the title bar lives above the
+    // Navigator that provides one).
+    return Semantics(
+      button: true,
+      label: widget.tooltip,
       child: MouseRegion(
         onEnter: (_) => setState(() => _hover = true),
         onExit: (_) => setState(() => _hover = false),
