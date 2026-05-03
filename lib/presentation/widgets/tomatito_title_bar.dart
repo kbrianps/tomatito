@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:tomatito/app.dart' show tomatitoNavigatorKey;
+import 'package:tomatito/core/theme/app_themes.dart';
+import 'package:tomatito/core/theme/theme_controller.dart';
 import 'package:tomatito/core/theme/theme_tokens.dart';
 import 'package:tomatito/core/window/window_controller.dart';
 import 'package:tomatito/core/window/window_state.dart';
@@ -174,11 +176,15 @@ class _TomatitoTitleBarState extends ConsumerState<TomatitoTitleBar> {
     final loc = AppLocalizations.of(context);
     final pinned = ref.watch(alwaysOnTopProvider);
     final compact = ref.watch(compactModeProvider);
+    final themeId = ref.watch(themeControllerProvider);
+    final isShape = themeId == AppThemeId.tomatitoShape && compact;
     final scheme = theme.colorScheme;
 
     return Container(
       height: 36,
-      color: scheme.surface,
+      // Transparent strip in shape+compact so the bundled tomato PNG
+      // can show all the way to the top of the window.
+      color: isShape ? Colors.transparent : scheme.surface,
       child: Row(
         children: [
           Expanded(

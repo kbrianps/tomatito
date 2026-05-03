@@ -49,6 +49,7 @@ flutter:
   assets:
     - assets/icon/
     - assets/sounds/
+    - assets/themes/
     - docs/FAQ.md
     - docs/FAQ.pt.md
     - docs/PRIVACY_POLICY.md

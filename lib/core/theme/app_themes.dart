@@ -7,7 +7,7 @@ import 'package:tomatito/core/theme/theme_tokens.dart';
 ///
 /// `system` is a sentinel that picks `light` or `dark` at runtime based on
 /// `MediaQuery.platformBrightness`; it has no fixed scheme of its own.
-enum AppThemeId { light, dark, blackOled, tomatito, system }
+enum AppThemeId { light, dark, blackOled, tomatito, tomatitoShape, system }
 
 final class AppThemes {
   const AppThemes._();
@@ -113,6 +113,11 @@ final class AppThemes {
         return blackOledScheme;
       case AppThemeId.tomatito:
         return tomatitoScheme;
+      case AppThemeId.tomatitoShape:
+        // Outside compact mode this falls back to the regular tomatito
+        // palette; inside compact, TimerScreen swaps the chrome for the
+        // shaped PNG window so the surface is irrelevant there.
+        return tomatitoScheme;
       case AppThemeId.system:
         return platformBrightness == Brightness.dark ? darkScheme : lightScheme;
     }
@@ -120,10 +125,16 @@ final class AppThemes {
 
   static ThemeData themeFor(AppThemeId id, {Brightness? platformBrightness}) {
     final scheme = schemeFor(id, platformBrightness: platformBrightness);
+    // The shape theme paints its background via the bundled tomato PNG
+    // (drawn inside `_ShapedTimerView` in compact mode). The Scaffold
+    // therefore has to be transparent so the PNG can show through to the
+    // desktop. Outside compact this looks visually broken; users who
+    // pick this theme are expected to also enter compact.
+    final isShape = id == AppThemeId.tomatitoShape;
     return ThemeData(
       colorScheme: scheme,
       useMaterial3: true,
-      scaffoldBackgroundColor: scheme.surface,
+      scaffoldBackgroundColor: isShape ? Colors.transparent : scheme.surface,
       cardTheme: CardThemeData(
         color: scheme.surface,
         elevation: 0,

@@ -85,6 +85,7 @@
   "themeDark": "Dark",
   "themeBlackOled": "Black OLED",
   "themeTomatito": "Red",
+  "themeTomatitoShape": "Tomato (compact shape)",
   "themeSystem": "Follow system",
   "settingsNotifications": "Notifications",
   "settingsPersistentNotification": "Persistent timer notification",

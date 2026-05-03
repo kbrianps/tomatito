@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:tomatito/core/bootstrap_result.dart';
+import 'package:tomatito/core/theme/app_themes.dart';
+import 'package:tomatito/core/theme/theme_controller.dart';
 import 'package:tomatito/core/theme/theme_tokens.dart';
 import 'package:tomatito/core/timer/period_kind.dart';
 import 'package:tomatito/core/timer/session_config.dart';
@@ -108,11 +110,24 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
   Widget build(BuildContext context) {
     final engine = ref.watch(timerEngineProvider);
     final compact = ref.watch(compactModeProvider);
+    final themeId = ref.watch(themeControllerProvider);
+    // Shape theme only kicks in inside compact mode; the normal-sized
+    // window keeps the regular Card-based layout. Outside compact, the
+    // shape scheme is identical to the regular tomatito red.
+    final isShape = themeId == AppThemeId.tomatitoShape && compact;
     return StreamBuilder<TimerState>(
       stream: engine.stream,
       initialData: engine.current,
       builder: (context, snapshot) {
         final state = snapshot.data ?? const TimerIdle();
+        if (isShape) {
+          return _ShapedTimerView(
+            state: state,
+            engine: engine,
+            ref: ref,
+            idleConfig: _idleConfig,
+          );
+        }
         return SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -134,6 +149,96 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
         );
       },
     );
+  }
+
+}
+
+/// Shape mode: the entire compact window IS the bundled tomato PNG; the
+/// dial + control buttons sit centred over the body of the tomato. The
+/// title bar is still drawn above (so the user can pin / resize / close
+/// / leave compact); Linux runner already ships a transparent visual so
+/// the area outside the PNG stays see-through.
+class _ShapedTimerView extends StatelessWidget {
+  const _ShapedTimerView({
+    required this.state,
+    required this.engine,
+    required this.ref,
+    required this.idleConfig,
+  });
+
+  final TimerState state;
+  final TimerEngine engine;
+  final WidgetRef ref;
+  final SessionConfig? idleConfig;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Colors.transparent,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // PNG fills the whole window; non-tomato pixels are transparent,
+          // and the runner's RGBA visual lets the desktop show through.
+          Image.asset(
+            'assets/themes/tomatito_window.png',
+            fit: BoxFit.contain,
+          ),
+          // Dial + controls roughly centred on the body of the tomato.
+          // The tomato has a green stem at the top, so the centre of the
+          // visible body sits a bit below the geometric centre.
+          Align(
+            alignment: const Alignment(0, 0.15),
+            child: LayoutBuilder(
+              builder: (ctx, c) {
+                final dialSize = c.maxWidth * 0.55;
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TimerDial(
+                      state: state,
+                      size: dialSize,
+                      idleConfig: idleConfig,
+                    ),
+                    const SizedBox(height: ThemeTokens.space2),
+                    ControlButtons(
+                      state: state,
+                      onPlayPause: _togglePlayPause,
+                      onReset: engine.reset,
+                      onSkip: _onSkip,
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _togglePlayPause() async {
+    final s = state;
+    if (s is TimerIdle) {
+      final config =
+          await ref.read(settingsRepositoryProvider).loadSessionConfig();
+      engine.start(config);
+    } else if (s is TimerRunning) {
+      engine.pause();
+    } else if (s is TimerPaused) {
+      engine.resume();
+    } else if (s is TimerPeriodComplete) {
+      engine.skip();
+    }
+  }
+
+  Future<void> _onSkip() async {
+    if (state is TimerIdle) {
+      final config =
+          await ref.read(settingsRepositoryProvider).loadSessionConfig();
+      engine.start(config);
+    }
+    engine.skip();
   }
 }
 

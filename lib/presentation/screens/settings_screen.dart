@@ -317,10 +317,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Column(
               children: [
                 for (final id in AppThemeId.values)
-                  RadioListTile<AppThemeId>(
-                    title: Text(_themeLabel(loc, id)),
-                    value: id,
-                  ),
+                  // The shaped tomato window only makes sense on
+                  // standalone desktop (it relies on the runner's RGBA
+                  // visual + window_manager bounds). Hide on mobile / web.
+                  if (id != AppThemeId.tomatitoShape || _isDesktop)
+                    RadioListTile<AppThemeId>(
+                      title: Text(_themeLabel(loc, id)),
+                      value: id,
+                    ),
               ],
             ),
           ),
@@ -419,6 +423,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return loc.themeBlackOled;
       case AppThemeId.tomatito:
         return loc.themeTomatito;
+      case AppThemeId.tomatitoShape:
+        return loc.themeTomatitoShape;
       case AppThemeId.system:
         return loc.themeSystem;
     }
