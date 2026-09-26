@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tomatito</title>
+    <!-- Spike A (M04, branch spike/full): só o .stage do protótipo tomate-full.html.
+         Código descartável; o tomate de verdade é portado no M50. -->
+    <link rel="stylesheet" href="/src/styles/tomato.css" />
+  </head>
+  <body>
+    <div class="stage" id="stage" data-state="focus" data-tauri-drag-region="deep">
+      <svg class="art" viewBox="0 0 320 320" aria-hidden="true" focusable="false">
+        <defs>
+          <radialGradient id="g-body" class="body-fill" cx="0.36" cy="0.30" r="0.80">
+            <stop offset="0" class="body-hi" />
+            <stop offset="0.55" class="body-mid" />
+            <stop offset="1" class="body-lo" />
+          </radialGradient>
+          <linearGradient id="g-depth" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0.55" stop-color="#2a0000" stop-opacity="0" />
+            <stop offset="1" stop-color="#2a0000" stop-opacity="0.18" />
+          </linearGradient>
+          <filter id="f-shadow" x="-15%" y="-15%" width="130%" height="140%" color-interpolation-filters="sRGB">
+            <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#3a0d08" flood-opacity="0.28" />
+          </filter>
+          <path
+            id="body-shape"
+            d="M160 80 C190 64 236 62 268 86 C296 108 306 150 300 190 C293 252 236 298 160 298 C84 298 27 252 20 190 C14 150 24 108 52 86 C84 62 130 64 160 80 Z"
+          />
+        </defs>
+
+        <g class="shadowed" filter="url(#f-shadow)">
+          <use href="#body-shape" class="hit" fill="url(#g-body)" />
+        </g>
+        <use href="#body-shape" class="depth" fill="url(#g-depth)" pointer-events="none" />
+
+        <path
+          class="ring-track"
+          pathLength="100"
+          d="M160 88.4 C187.6 73.7 229.9 71.8 259.4 93.9 C285.1 114.2 294.3 152.8 288.8 189.6 C282.4 246.6 229.9 289 160 289 C90.1 289 37.6 246.6 31.2 189.6 C25.7 152.8 34.9 114.2 60.6 93.9 C90.1 71.8 132.4 73.7 160 88.4 Z"
+        />
+        <path
+          class="ring-progress"
+          id="ring"
+          pathLength="100"
+          d="M160 88.4 C187.6 73.7 229.9 71.8 259.4 93.9 C285.1 114.2 294.3 152.8 288.8 189.6 C282.4 246.6 229.9 289 160 289 C90.1 289 37.6 246.6 31.2 189.6 C25.7 152.8 34.9 114.2 60.6 93.9 C90.1 71.8 132.4 73.7 160 88.4 Z"
+        />
+
+        <path class="stem" d="M155.5 88 C155 74 157 60 160.5 47.5 Q163.5 43 169 45.5 C166 58 164.8 72 165.5 88 Z" />
+
+        <g class="calyx">
+          <path d="M166 83 Q190 66 216 77 Q192 92 164 91 Z" />
+          <path d="M154 83 Q130 66 104 77 Q128 92 156 91 Z" />
+          <path d="M155 90 Q148 100 147 113 Q158 105 165 91 Z" />
+          <path d="M165 82 Q176 64 192 60 Q186 76 168 87 Z" />
+          <path d="M155 82 Q140 64 126 62 Q134 76 152 87 Z" />
+          <ellipse cx="160" cy="86" rx="13" ry="6.5" />
+        </g>
+        <path class="calyx-vein" d="M170 85 Q190 79 210 78 M150 85 Q130 79 110 78" />
+      </svg>
+
+      <div class="face">
+        <p class="label" id="label">Foco</p>
+        <p class="time" id="time" role="timer" aria-live="off" aria-label="18 minutos e 42 segundos restantes">18:42</p>
+        <p class="count" id="count">Sessão 2 de 4</p>
+
+        <button class="btn pos-restore" type="button" data-acao="voltar" aria-label="Voltar ao modo normal" title="Voltar ao modo normal (Esc)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2.5" /><path d="M3.5 9.5h17" /></svg>
+        </button>
+        <button class="btn pos-settings" type="button" data-acao="configuracoes" aria-label="Configurações" title="Configurações (Ctrl+,)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.75" /><path d="M12 3.5v2.2M12 18.3v2.2M20.5 12h-2.2M5.7 12H3.5M18 6l-1.55 1.55M7.55 16.45 6 18M18 18l-1.55-1.55M7.55 7.55 6 6" /><circle cx="12" cy="12" r="6.3" /></svg>
+        </button>
+
+        <button class="btn pos-reset" type="button" data-acao="reiniciar" aria-label="Reiniciar sessão" title="Reiniciar sessão">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5.2 12.5A6.8 6.8 0 1 0 7.3 7.1" /><path d="M5.6 4.6v3.6h3.6" /></svg>
+        </button>
+        <button class="btn btn-primary pos-play" id="play" type="button" data-acao="iniciar-pausar" aria-label="Pausar" title="Pausar (Espaço)">
+          <svg id="icon-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6.5" y="5" width="3.6" height="14" rx="1.2" /><rect x="13.9" y="5" width="3.6" height="14" rx="1.2" /></svg>
+          <svg id="icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8.2 5.3c0-.9 1-1.4 1.7-.9l9.1 6.2c.7.5.7 1.4 0 1.9l-9.1 6.2c-.7.5-1.7 0-1.7-.9z" /></svg>
+        </button>
+        <button class="btn pos-skip" type="button" data-acao="pular" aria-label="Pular para o intervalo" title="Pular">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.6v10.8L14.6 12z" /><path d="M17.5 6.5v11" /></svg>
+        </button>
+      </div>
+
+      <p class="sr-only" aria-live="polite" id="announce"></p>
+    </div>
+    <script type="module" src="/src/tomato.js"></script>
+  </body>
+</html>

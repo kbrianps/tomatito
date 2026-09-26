@@ -10,6 +10,7 @@ const pkg = JSON.parse(ler('package.json'));
 const cargoApp = ler('src-tauri/Cargo.toml');
 const tauriConf = JSON.parse(ler('src-tauri/tauri.conf.json'));
 const indexHtml = ler('index.html');
+const tomatoHtml = ler('tomato.html');
 
 test('dependências npm com versão exata (sem ^, ~ nem faixas)', () => {
   const exata = /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/;
@@ -46,9 +47,11 @@ test('CSP da seção 3.8 no tauri.conf.json', () => {
 });
 
 test('HTML em pt-BR, sem <style> nem style="..." (senão o nonce anula o unsafe-inline)', () => {
-  assert.match(indexHtml, /<html lang="pt-BR">/);
-  assert.doesNotMatch(indexHtml, /<style[\s>]/i);
-  assert.doesNotMatch(indexHtml, /\sstyle\s*=/i);
+  for (const [arquivo, html] of Object.entries({ 'index.html': indexHtml, 'tomato.html': tomatoHtml })) {
+    assert.match(html, /<html lang="pt-BR">/, arquivo);
+    assert.doesNotMatch(html, /<style[\s>]/i, arquivo);
+    assert.doesNotMatch(html, /\sstyle\s*=/i, arquivo);
+  }
 });
 
 test('a palavra proibida não aparece no nome, na descrição, no README nem na interface', () => {
@@ -59,6 +62,7 @@ test('a palavra proibida não aparece no nome, na descrição, no README nem na 
     'src-tauri/tauri.conf.json': ler('src-tauri/tauri.conf.json'),
     'README.md': ler('README.md'),
     'index.html': indexHtml,
+    'tomato.html': tomatoHtml,
   };
   for (const arquivo of readdirSync(new URL('../src', import.meta.url), { recursive: true })) {
     if (/\.(js|html|css)$/.test(arquivo)) textos[`src/${arquivo}`] = ler(`src/${arquivo}`);
@@ -100,4 +104,14 @@ test('manifesto do Windows (Common Controls v6) que o build.rs passa ao linker',
   const build = ler('src-tauri/build.rs');
   assert.match(build, /WindowsAttributes::new_without_app_manifest\(\)/);
   assert.match(build, /\/MANIFESTINPUT:/);
+});
+
+test('spike A (M04): tomato.html é a segunda entrada do Vite e arrasta pelo .stage', async () => {
+  const { default: vite } = await import('../vite.config.js');
+  const entradas = Object.values(vite.build.rolldownOptions.input).map((c) => c.split(/[\\/]/).at(-1));
+  assert.deepEqual(entradas.sort(), ['index.html', 'tomato.html']);
+  assert.match(tomatoHtml, /<div class="stage"[^>]*data-tauri-drag-region="deep"/);
+  const cap = JSON.parse(ler('src-tauri/capabilities/tomato.json'));
+  assert.deepEqual(cap.windows, ['tomato']);
+  assert.ok(cap.permissions.includes('core:window:allow-start-dragging'), 'o arraste precisa de allow-start-dragging');
 });

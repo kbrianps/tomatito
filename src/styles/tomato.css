@@ -1,0 +1,271 @@
+/* Spike A (M04, branch spike/full): o .stage do protótipo tomate-full.html,
+   do jeito que ele está. Código descartável. A versão de verdade (M50) troca
+   as variáveis pelos tokens --tt-tomato-* (PLANO.md, 4.2 e 5.10). */
+
+:root {
+  --body-hi: #ce3e2f;
+  --body-mid: #c4342a;
+  --body-lo: #a1271e;
+  --ink: #ffffff;
+  --ink-2: rgba(255, 255, 255, 0.9);
+  --ring: #fff4ee;
+  --ring-track: rgba(255, 255, 255, 0.24);
+  --btn-bg: #fff6f1;
+  --btn-ink: #a3261c;
+  --calyx: #35603c;
+  --calyx-hi: #447a4b;
+  --stem: #56683a;
+  --shadow: #3a0d08;
+
+  --font-ui: 'Segoe UI Variable Text', 'Segoe UI', 'Adwaita Sans', Cantarell, Inter, system-ui, sans-serif;
+  --font-num: 'Segoe UI Variable Display', 'Segoe UI', 'Adwaita Sans', Cantarell, Inter, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* A janela é transparente: nada de fundo na página. O overflow escondido
+   evita barra de rolagem, que o WebKitGTK pintaria opaca. */
+html,
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.stage {
+  --size: 100vw;
+  width: var(--size);
+  aspect-ratio: 1;
+  position: relative;
+  container-type: size;
+  pointer-events: none; /* só o que é pintado recebe clique */
+  -webkit-user-select: none;
+  user-select: none;
+  font-family: var(--font-ui);
+  color: var(--ink);
+}
+
+.art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.art .hit,
+.art .calyx *,
+.art .stem {
+  pointer-events: visiblePainted;
+}
+.art .calyx,
+.art .stem {
+  cursor: grab;
+}
+.art .calyx:active,
+.art .stem:active {
+  cursor: grabbing;
+}
+
+.body-hi {
+  stop-color: var(--body-hi);
+}
+.body-mid {
+  stop-color: var(--body-mid);
+}
+.body-lo {
+  stop-color: var(--body-lo);
+}
+.calyx {
+  fill: var(--calyx);
+}
+.calyx-vein {
+  fill: none;
+  stroke: var(--calyx-hi);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.stem {
+  fill: var(--stem);
+}
+.ring-track,
+.ring-progress {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.ring-track {
+  stroke: var(--ring-track);
+  stroke-dasharray: 89 11;
+  stroke-dashoffset: -5.5;
+}
+.ring-progress {
+  stroke: var(--ring);
+  stroke-dasharray: 22 200;
+  stroke-dashoffset: -5.5;
+  transition:
+    stroke-dasharray 1s linear,
+    stroke 0.4s ease;
+}
+.body-fill stop {
+  transition: stop-color 0.4s ease;
+}
+
+.face {
+  position: absolute;
+  inset: 0;
+}
+.face > * {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+}
+
+.label {
+  top: 41.9%;
+  font-size: max(11px, 3.75cqw);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.time {
+  top: 53.75%;
+  font-family: var(--font-num);
+  font-size: 16.25cqw;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  white-space: nowrap;
+}
+.count {
+  top: 66.25%;
+  font-size: max(11px, 3.75cqw);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.btn {
+  pointer-events: auto;
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--ink-2);
+  background: transparent;
+  width: max(32px, 13.75cqw);
+  height: max(32px, 13.75cqw);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
+}
+.btn svg {
+  width: 50%;
+  height: 50%;
+}
+.btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--ink);
+}
+.btn:active {
+  background: rgba(255, 255, 255, 0.24);
+  transform: translate(-50%, -50%) scale(0.96);
+}
+.btn:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+  color: var(--ink);
+}
+
+.btn-primary {
+  width: max(40px, 16.25cqw);
+  height: max(40px, 16.25cqw);
+  background: var(--btn-bg);
+  color: var(--btn-ink);
+  box-shadow: 0 1px 2px rgba(58, 13, 8, 0.25);
+}
+.btn-primary svg {
+  width: 44%;
+  height: 44%;
+}
+.btn-primary:hover {
+  background: #ffffff;
+  color: var(--btn-ink);
+}
+.btn-primary:active {
+  background: #f6e9e4;
+}
+.btn-primary:focus-visible {
+  outline-offset: 3px;
+  color: var(--btn-ink);
+}
+.stage #icon-play {
+  display: none;
+}
+.stage[data-state='paused'] #icon-play {
+  display: block;
+}
+.stage[data-state='paused'] #icon-pause {
+  display: none;
+}
+
+/* posições (centro do botão, em % do lado; y do viewBox entre parênteses) */
+.pos-restore {
+  left: 27.5% !important;
+  top: 38.1%;
+} /* (88, 122) */
+.pos-settings {
+  left: 72.5% !important;
+  top: 38.1%;
+} /* (232, 122) */
+.pos-reset {
+  left: 33.1% !important;
+  top: 78.75%;
+} /* (106, 252) */
+.pos-play {
+  left: 50% !important;
+  top: 78.75%;
+} /* (160, 252) */
+.pos-skip {
+  left: 66.9% !important;
+  top: 78.75%;
+} /* (214, 252) */
+
+.stage[data-state='paused'] {
+  --body-hi: #a4534a;
+  --body-mid: #9c4a42;
+  --body-lo: #7e3a34;
+  --ring: rgba(255, 255, 255, 0.8);
+  --btn-ink: #7e3a34;
+}
+.stage[data-state='paused'] .time {
+  color: var(--ink-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring-progress,
+  .body-fill stop,
+  .btn {
+    transition: none;
+  }
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
