@@ -54,3 +54,31 @@ O "Pronto quando" (push verde no Linux e no Windows) depende de criar o reposit�
 3. [ ] Abra o job `windows-latest` e o passo **5. cargo test**. Ele lista `Running unittests src\lib.rs`, `src\main.rs` e o `tomatito-core`, todos com `test result: ok`. Se aparecer `exit code: 0xc0000139, STATUS_ENTRYPOINT_NOT_FOUND`, o manifesto não chegou ao binário de teste; se aparecer erro de link (`LNK` ou `CVT1100`), é o manifesto duplicado. Nos dois casos, veja `docs/decisoes.md`, M03, item 7.
 4. [ ] No job `ubuntu-24.04`, o passo **Pacotes do sistema (Linux)** termina sem erro do `apt`.
 5. [ ] No próximo push (por exemplo, com o commit do marco seguinte), o passo **Cache do Cargo** não diz mais `No cache found`, e a rodada fica bem mais curta.
+
+## M04. Spike A: janela-tomate transparente
+
+O código está na branch `spike/full`. O resultado completo, com os números, está em `docs/decisoes.md`, na seção "Spike do Full".
+
+### O que já foi conferido sem olhar a tela (26/09/2026)
+
+- **GNOME Shell 50.1 aninhado, sem tela** (`bash scripts/aninhado/rodar.sh`, na `spike/full`):
+  - os quatro cantos da janela são idênticos, pixel a pixel, ao fundo sem o tomate;
+  - arrastar pelo corpo, pelo cabinho e por uma sépala move a janela exatamente o que o ponteiro andou;
+  - os 5 botões escrevem no console, e clicar neles não move a janela;
+  - a captura é a `docs/capturas/spike-a.png`.
+- **Sessão real, por uns 10 s** (a janela abriu e foi fechada):
+  - a `tomato` usa buffers ARGB8888 e não declara região opaca;
+  - ela fica com 280×280 e a página desenhou;
+  - sem erro de protocolo, e a GPU usada é a Intel.
+
+### Passos para você (uns 3 minutos)
+
+1. [ ] Em `~/dev/tomatito`, rode `git checkout spike/full` e depois `npm run tauri dev`. Aparecem duas janelas: a branca "Tomatito", do template (esperado no spike), e o tomate de 280 px.
+2. [ ] Arraste o tomate para cima do papel de parede. Em volta do tomate aparece o que está atrás: nenhum quadrado, borda ou cantos pretos ou brancos. Repita em cima da janela branca e de uma janela escura (um terminal).
+3. [ ] Arraste o tomate de três jeitos: pelo corpo (à esquerda do tempo), pelo cabinho e por uma das folhinhas verdes. Nos três, a janela acompanha o mouse.
+4. [ ] Clique no botão redondo do meio. O tomate fica mais apagado, e o ícone vira ▶. Clique de novo: ele volta ao vermelho, com ‖.
+5. [ ] (Opcional) Para ver os outros quatro botões no console: clique no corpo do tomate e aperte Ctrl+Shift+I. Se o Web Inspector abrir, vá em Console e clique em cada botão do tomate. Cada clique escreve uma linha `[tomato] botão: …` (voltar, configuracoes, reiniciar, iniciar-pausar, pular). Se o atalho não abrir nada, pule este passo: o teste aninhado já conferiu os cliques.
+6. [ ] (Opcional, GPU) Na janela branca, clique com o botão direito e escolha **Inspecionar**. No Console, digite `location.href = 'webkit://gpu'`. A janela branca mostra a página de GPU do WebKit. A linha do renderizador deve citar a Intel (algo como "Mesa Intel(R) UHD Graphics"). Anote se aparecer NVIDIA ou `llvmpipe`.
+7. [ ] Encerre com Ctrl+C no terminal e volte para a `main` com `git checkout main`.
+
+Se algum passo falhar, anote o que viu em `docs/decisoes.md`, na seção do spike A. Cantos pretos ou brancos no passo 2 mudam o veredito para B3 (plano, 5.8).

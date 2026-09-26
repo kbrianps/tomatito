@@ -62,6 +62,50 @@ Conferido sem criar nada no GitHub (só leituras: `git ls-remote` e `gh repo vie
 
 O nome `kbrianps/tomatito` estava livre em 26/09/2026: `gh repo view kbrianps/tomatito` respondeu "Could not resolve to a Repository".
 
+### M04 (26/09/2026)
+
+| Item | Versão ou valor | Como foi conferido |
+|---|---|---|
+| GNOME Shell / Mutter | 50.1 / 50.1 | `gnome-shell --version`; o shell aninhado registra "using mutter 50.1" |
+| WebKitGTK (sistema) | 2.52.6 | sem mudança desde o M01 |
+| tao / wry | 0.37.1 / 0.57.0 | sem mudança desde o M01 |
+| GPU usada pelo app na sessão real | Intel Alder Lake-S UHD Graphics (i915), `/dev/dri/renderD128`, PCI 0000:00:02.0 | descritores abertos pelo `tomatito` e pelos dois `WebKitWebProcess` (`/proc/<pid>/fd`). A NVIDIA (`renderD129`, PCI 0000:01:00.0) não aparece |
+| Monitor da sessão | painel AUO 1920×1080, escala 1 | `wl_output.mode` e `wl_output.scale` no `WAYLAND_DEBUG` |
+| userAgent do WebKitGTK | `Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15` | sonda na janela `tomato` |
+| Renderizador WebGL informado | vendor "Apple Inc.", renderer "Apple GPU" (WebGL 2.0), mesmo com `WEBGL_debug_renderer_info` | sonda na janela `tomato`; ver o achado 3 do spike A |
+
+## Spike do Full (M04–M05)
+
+Seção 5.8 do plano. O código do spike está na branch `spike/full`; a `main` recebe só este registro e as capturas.
+
+### Spike A: janela-tomate transparente (M04, 26/09/2026)
+
+**Resultado: a transparência funciona** no GNOME 50.1 Wayland desta máquina, com a Intel. O veredito B3 fica descartado aqui (a menos que a conferência na tela, em `docs/verificacao-manual.md`, mostre o contrário). A escolha entre A e B1 depende da região de entrada e sai no M05.
+
+**Como foi conferido sem olhar a tela.** Duas frentes:
+
+1. **GNOME Shell 50.1 aninhado, sem tela** (`scripts/aninhado/rodar.sh`, na branch `spike/full`). É o mesmo Mutter da sessão, rodando headless num monitor virtual de 1920×1080 e isolado da sessão de verdade (detalhes no desvio 5 do M04). O app de debug conecta nele, e um roteiro dentro do próprio shell tira capturas e usa um ponteiro virtual. O `rodar.sh` roda tudo e imprime as conferências. Resultado da rodada final:
+
+   | Item do "Pronto quando" | Resultado |
+   |---|---|
+   | Os quatro cantos mostram a área de trabalho | Nos quatro cantos, o bloco de 24×24 px é idêntico, pixel a pixel, à captura do fundo sem o tomate: diferença máxima 0 e nenhum pixel preto ou branco novo. Na caixa de 280×280, 38,8% dos pixels são iguais ao fundo; o resto é o tomate com a sombra. |
+   | Arrastar pelo corpo e pelo cálice | A janela andou exatamente o que o ponteiro andou. Pelo corpo (alvo `use.hit`): (150, 40). Pelo cabinho (`path.stem`): (−160, 60). Por uma sépala do cálice, fora do corpo (`path` em `g.calyx`): (−120, −80). |
+   | Os 5 botões respondem | As 5 linhas `[tomato] botão: voltar / configuracoes / reiniciar / iniciar-pausar / pular` chegaram do console, e a janela não se mexeu com os cliques. |
+   | Captura | `docs/capturas/spike-a.png`, tirada no shell aninhado (o fundo é o papel de parede padrão dele). |
+
+2. **Sessão real, por uns 10 s**, com a sonda na página e `WAYLAND_DEBUG=client`:
+   - a superfície da `tomato` recebe buffers ARGB8888: `wl_shm` formato 0 no primeiro quadro e, depois, dmabuf `AR24` (875713089) do EGL da Mesa;
+   - a `tomato` nunca chama `set_opaque_region`, ao contrário da `main`. Então o Mutter faz a mistura pelo alfa;
+   - a geometria é `0, 0, 280, 280`, a página desenhou (`html` e `body` com `rgba(0, 0, 0, 0)`, 280×280, `devicePixelRatio` 1) e não houve erro de protocolo;
+   - a GPU é a Intel (tabela de versões acima);
+   - o shell aninhado mostrou os mesmos pedidos ao compositor (mesmos formatos, sem região opaca), então a captura do item 1 vale para o caminho da sessão real.
+
+**Achados:**
+1. **`visible(true)` no builder deixa a janela errada, na maioria das vezes.** O tao chama `set_visible` antes de `set_decorated(false)` e do `set_titlebar`. No Wayland, o GTK então mapeia a janela ainda decorada: o `xdg_toplevel` nasce com `set_min_size(112, 37)` da barra padrão. Em 11 de 15 rodadas no shell aninhado, a janela ficou com 332×369: a barra de título vazia de 37 px mais a margem de sombra do CSD, de 26 px de cada lado. Nessas rodadas, a página também parou de desenhar (o `requestAnimationFrame` não voltou em 30 s). Com `visible(false)` e `show()` logo depois, foram 15 de 15 rodadas certas: `set_min_size(280, 280)` e geometria `0, 0, 280, 280`. É o que a seção 5.3 e o M05 já pedem (a janela nasce escondida e só aparece no `show()`). Ver o desvio 1.
+2. **Sem região, a caixa inteira é da janela.** O GTK define a região de entrada como a janela toda mais 10 px de folga (`set_input_region` com `-10, -10, 300, 300`). Um clique a 4 px do canto chegou à página, no `body`. É o ponto de partida do M05.
+3. **O WebKitGTK mascara o renderizador WebGL.** Mesmo com `WEBGL_debug_renderer_info`, a página vê só "Apple Inc." e "Apple GPU". A chave `fullValidated` (3.3, 5.7 e 5.9) usa "userAgent + renderizador WebGL" para saber se a combinação já foi validada, e assim ela não distingue a Intel da NVIDIA nem uma troca de driver. **A decidir no M51:** trocar essa chave, por exemplo, pela versão do WebKitGTK mais a GPU lida no Rust (o nó DRM ou o `GL_RENDERER` de um contexto EGL próprio). O `webkit://gpu` mostra o renderizador de verdade, mas é uma página interna, fora do alcance do JS do app.
+4. **`always_on_top(true)` não tem efeito no Wayland,** como previsto (3.8): o Mutter informa `is_above() = false`.
+
 ## Desvios do plano
 
 ### M01
@@ -116,3 +160,26 @@ O nome `kbrianps/tomatito` estava livre em 26/09/2026: `gh repo view kbrianps/to
    Conferido daqui: `cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings` passa; a saída do build script para esse alvo tem as duas linhas `rustc-link-arg` do manifesto; e o `resource.rc` gerado não traz mais o manifesto (o do build anterior trazia), então o `.exe` recebe o manifesto uma vez só, sem o erro de recurso duplicado. Não há `link.exe` nesta máquina, então quem confere o link de verdade é o passo 5 do CI no `windows-latest`. **Se o Windows falhar com erro de link** (LNK ou CVT1100), volte o `build.rs` para `tauri_build::build()` e anote aqui.
 8. **Dois testes novos no `npm test`** (`scripts/regras-do-repo.test.mjs`): um confere que o `ci.yml` roda em todo push, na matriz `ubuntu-24.04` e `windows-latest`, com as três actions da seção 10 e os seis passos na ordem do plano (os três do Cargo com `working-directory: src-tauri`); o outro confere o manifesto e o `build.rs`. Conferidos por mutação: trocar a ordem do clippy e do test, ou trocar `windows-latest` por `windows-2022`, faz o teste falhar.
 9. **Conferência do `npm ci` do Windows sem Windows.** Numa cópia limpa, `npm ci --os=win32 --cpu=x64 --ignore-scripts` instalou `@tauri-apps/cli-win32-x64-msvc`, `@rolldown/binding-win32-x64-msvc` e `lightningcss-win32-x64-msvc`: o `package-lock.json` gerado no Linux já traz os binários nativos do Windows.
+
+### M04
+
+1. **`visible(false)` seguido de `show()`, em vez de "visível" no builder.** O M04 pede a `tomato` "como na seção 5.3, mas visível e sem região". Com `visible(true)` no `WebviewWindowBuilder`, a janela saiu errada em 11 de 15 rodadas (achado 1 do spike A). O `window/tomato.rs` constrói com `visible(false)` e chama `show()` logo em seguida, ainda no `setup`. Para quem olha, dá no mesmo: a janela aparece na hora e sem região. O M05 continua igual, com a região aplicada entre o `build()` e o `show()`.
+2. **Vite 8: a opção é `build.rolldownOptions.input`.** A seção 3.7 deixou "a confirmar". No Vite 8.3.1, `rollupOptions` ainda funciona, mas é um apelido obsoleto de `rolldownOptions` (`@deprecated Use rolldownOptions instead` no `index.d.ts`). O build gera `dist/index.html` e `dist/tomato.html`.
+3. **Dois commits do M04, um em cada branch.** Seguindo a 5.8, o código ficou na branch `spike/full`, no commit "M04: spike A, janela-tomate transparente (código)". A `main` recebeu só este registro, a verificação manual, as pendências e a captura, no commit "M04: spike A, janela-tomate transparente". Depois, a `spike/full` foi rebaseada sobre a `main`, e agora é a `main` mais o commit de código. O M05 continua na `spike/full`. Tudo é local: sem remote e sem push.
+4. **A captura veio do GNOME Shell aninhado, não da tela de verdade.** Capturar a tela da sessão pede permissão interativa ao portal, e a captura mostraria o que você estivesse fazendo. O shell aninhado é o mesmo Mutter 50.1, e o app faz os mesmos pedidos ao compositor nas duas sessões (spike A, "Como foi conferido", item 2). A conferência na tela de verdade ficou em `docs/verificacao-manual.md` (M04).
+5. **Teste num GNOME Shell aninhado (`scripts/aninhado/`, fora do plano, na branch `spike/full`).** É ferramenta de teste, e não código do app: nada disso entra no bundle.
+   - O `rodar.sh` sobe o `gnome-shell --headless --wayland --no-x11 --virtual-monitor 1920x1080` com `--automation-script`. É o modo de roteiros de desempenho do próprio GNOME Shell, que roda um módulo JS dentro do shell e sai no fim.
+   - O roteiro (`auto.js`) acha as janelas, move a `main` para longe e compara os pixels da caixa do tomate com a captura do fundo (via `GdkPixbuf`). Também arrasta e clica com um ponteiro virtual do Clutter e grava `resultado.json`.
+   - A sonda (`sonda.js`, servida só pelo `sonda.config.mjs`) manda o console e os eventos de mouse da página para um arquivo.
+   - O `resumo.mjs` junta o resultado com o que o app pediu ao compositor (`WAYLAND_DEBUG`) e sai com código 1 se algo falhar.
+   - **Isolamento:** tudo roda num escopo do systemd do usuário, que é parado no fim. O teste usa `XDG_*` próprios, GSettings em memória (o dconf não é tocado), um barramento de sessão novo e um barramento de sistema falso. Sem logind e sem GDM, o shell aninhado não registra nada na sessão de verdade. O `XDG_RUNTIME_DIR` fica num diretório curto em `/tmp`, porque o caminho do socket Wayland tem limite de 108 bytes, e é apagado no fim. Depois de cada rodada, conferi que não sobrou processo, escopo nem diretório.
+   - **Limites:** o monitor é virtual (sem KMS nem scanout direto); o EGL do shell e do app fica na Mesa (Intel), via `__EGL_VENDOR_LIBRARY_FILENAMES`; o ponteiro é virtual. O canto ativo e os avisos do shell são desligados dentro do roteiro, porque o ponteiro virtual nasce em (0, 0) e abriria a visão geral.
+6. **O que o spike deixa de fora, de propósito:**
+   - as preferências (`tomatoSize`, `tomatoOnTop`, `fullMode`), que viram constantes (280 px e `true`);
+   - o `initialization_script` com `__TT_PREF__` e companhia, a região (M05) e o Windows (M55);
+   - os tokens `--tt-tomato-*` (as variáveis continuam as do protótipo, `--body-*` e afins) e o catálogo de textos ("Sessão 2 de 4" continua como no protótipo; o texto é decidido no M50);
+   - a `main` do template, que continua abrindo junto com a `tomato`.
+
+   Tudo isso é do M50 em diante.
+7. **Regras do repositório na `spike/full`.** O `scripts/regras-do-repo.test.mjs` passou a conferir também a `tomato.html`: `lang="pt-BR"`, sem `<style>` nem `style="..."` e sem a palavra proibida. Um teste novo confere as duas entradas do Vite, o `data-tauri-drag-region="deep"` no `.stage` e o `allow-start-dragging` na `capabilities/tomato.json`. Conferido por mutação: sem o `="deep"`, o teste falha.
+8. **Checagem cruzada do Windows.** O `#[cfg(windows)] no_redirection_bitmap(true)` da 5.3 entrou e passa em `cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings`, com o `llvm-rc` como no M01. O Windows de verdade continua no M55.

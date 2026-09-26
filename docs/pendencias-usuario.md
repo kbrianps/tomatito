@@ -22,6 +22,7 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 3. **Testes em Windows de verdade** (plano 1.2, item 6). Hoje só existe a checagem cruzada `cargo check --target x86_64-pc-windows-msvc` (ver `docs/decisoes.md`, M01, item 8). Bloqueia o M47a em diante.
 4. **Decisões do plano ainda abertas**, sem pressa: nome definitivo do "Tomatito Suave" (1.2, item 3; antes do M24), tempo na bandeja ligado por padrão no GNOME (1.2, item 7; M36) e o que fazer com `~/Documentos/tomatito_stats.jsonl`, `~/Documentos/tomatito_checkpoint.json` e `~/Android/Sdk` (1.2, item 8).
 5. **Nome no `LICENSE`** (desde o M02, opcional). Está "Copyright (c) 2026 kbrianps", como o `authors` do `Cargo.toml`. Se quiser o nome completo, troque a linha. Não bloqueia nada.
+6. **Conferir o spike A na tela** (desde o M04). Uns 3 minutos, com os passos em `docs/verificacao-manual.md`, seção M04. O teste automático (num GNOME Shell aninhado, com o mesmo Mutter 50.1) e uma abertura rápida na sessão real já conferiram transparência, arraste e botões. O que falta é o seu olho na tela de verdade. Não bloqueia o M05; cantos pretos ou brancos mudariam o veredito para B3.
 
 ## Resolvidas
 
