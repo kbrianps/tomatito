@@ -67,3 +67,37 @@ test('a palavra proibida não aparece no nome, na descrição, no README nem na 
     assert.doesNotMatch(texto, proibida, arquivo);
   }
 });
+
+test('CI do M03: Linux e Windows, com os seis passos na ordem do plano', () => {
+  const ci = ler('.github/workflows/ci.yml');
+  assert.match(ci, /^on:\s*\n\s+push:/m, 'o CI roda em todo push');
+  assert.match(ci, /os: \[ubuntu-24\.04, windows-latest\]/);
+  assert.doesNotMatch(ci, /ubuntu-22\.04\b(?! fica de fora)/, 'ubuntu-22.04 está sendo descontinuado');
+  for (const acao of ['actions/checkout@v7', 'actions/setup-node@v7', 'Swatinem/rust-cache@v2']) {
+    assert.ok(ci.includes(`uses: ${acao}\n`), `usa ${acao}`);
+  }
+  assert.ok(ci.includes("workspaces: 'src-tauri -> target'"));
+  const passos = [
+    'run: npm ci',
+    'run: npm run build',
+    'run: cargo fmt --all --check',
+    'run: cargo clippy --workspace -- -D warnings',
+    'run: cargo test --workspace',
+    'run: npm test',
+  ];
+  const posicoes = passos.map((p) => ci.indexOf(p));
+  posicoes.forEach((pos, i) => assert.notEqual(pos, -1, `falta "${passos[i]}"`));
+  assert.deepEqual([...posicoes].sort((a, b) => a - b), posicoes, 'passos fora da ordem');
+  for (const p of passos.slice(2, 5)) {
+    const antes = ci.slice(0, ci.indexOf(p)).trimEnd().split('\n').at(-1);
+    assert.match(antes, /working-directory: src-tauri$/, `"${p}" roda em src-tauri`);
+  }
+});
+
+test('manifesto do Windows (Common Controls v6) que o build.rs passa ao linker', () => {
+  const manifesto = ler('src-tauri/windows-app-manifest.xml');
+  assert.match(manifesto, /name="Microsoft\.Windows\.Common-Controls"\s+version="6\.0\.0\.0"/);
+  const build = ler('src-tauri/build.rs');
+  assert.match(build, /WindowsAttributes::new_without_app_manifest\(\)/);
+  assert.match(build, /\/MANIFESTINPUT:/);
+});

@@ -1,0 +1,10 @@
+# Finais de linha LF em todos os sistemas (o checkout do Windows no CI usaria CRLF).
+* text=auto eol=lf
+
+# Binários: nunca converter.
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
+*.wav binary
+*.woff2 binary

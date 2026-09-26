@@ -26,6 +26,8 @@ npm test                                       # testes do JS (node --test)
 cd src-tauri && cargo test -p tomatito-core    # testes do motor, sem compilar o Tauri
 ```
 
+O CI (`.github/workflows/ci.yml`) roda o build, os testes, o `cargo fmt` e o `cargo clippy` no Linux e no Windows a cada push.
+
 Estrutura:
 
 - `src/`: interface (Vite, JS puro e Fluent UI Web Components);

@@ -1,0 +1,88 @@
+# CI do Tomatito (PLANO.md, M03): roda em todo push, no Linux e no Windows.
+# Os seis passos seguem a ordem do plano. Para repetir no Linux, sem o GitHub:
+#   npm ci && npm run build
+#   cd src-tauri && cargo fmt --all --check && cargo clippy --workspace -- -D warnings && cargo test --workspace
+#   cd .. && npm test
+name: CI
+
+on:
+  push:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+defaults:
+  run:
+    # Git Bash no Windows: o mesmo shell e os mesmos comandos nos dois sistemas.
+    shell: bash
+
+jobs:
+  ci:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # ubuntu-22.04 fica de fora: descontinuado desde 17/09/2026 (runner-images #14254).
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+
+    steps:
+      - name: Código
+        uses: actions/checkout@v7
+
+      - name: Pacotes do sistema (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl wget file libssl-dev libxdo-dev \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
+            libasound2-dev patchelf
+
+      - name: Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Rust (rustfmt e clippy)
+        run: |
+          rustup component add rustfmt clippy
+          rustc --version
+          cargo --version
+          node --version
+          npm --version
+
+      - name: Cache do Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: 'src-tauri -> target'
+
+      - name: 1. npm ci
+        run: npm ci
+
+      # O generate_context! do Tauri falha se o dist/ não existir.
+      - name: 2. npm run build
+        run: npm run build
+
+      - name: 3. cargo fmt
+        working-directory: src-tauri
+        run: cargo fmt --all --check
+
+      - name: 4. cargo clippy
+        working-directory: src-tauri
+        run: cargo clippy --workspace -- -D warnings
+
+      - name: 5. cargo test
+        working-directory: src-tauri
+        run: cargo test --workspace
+
+      - name: 6. npm test
+        run: npm test

@@ -47,6 +47,21 @@ Versões fixadas conforme a seção 3.6. Todas as entradas do `package.json` est
 | @fontsource-variable/inter | 5.3.0 | `dependencies` (novo; usado no M06) |
 | tomatito-core | 0.1.0 | membro do workspace em `src-tauri/tomatito-core` |
 
+### M03 (26/09/2026)
+
+Conferido sem criar nada no GitHub (só leituras: `git ls-remote` e `gh repo view`).
+
+| Item | Versão | Como foi conferido |
+|---|---|---|
+| actions/checkout | v7 (aponta para a v7.0.1) | `git ls-remote --tags https://github.com/actions/checkout` |
+| actions/setup-node | v7 (aponta para a v7.0.0) | idem |
+| Swatinem/rust-cache | v2 (última: v2.9.2) | idem |
+| actionlint (só para validar o `ci.yml`, fora do repositório) | 1.7.12 | binário da release oficial, baixado no scratchpad da sessão |
+| Node no CI | 22 (a última 22.x do runner) | `setup-node` com `node-version: 22` |
+| Rust no CI | a stable do runner (sem fixar) | o passo "Rust" imprime `rustc --version` |
+
+O nome `kbrianps/tomatito` estava livre em 26/09/2026: `gh repo view kbrianps/tomatito` respondeu "Could not resolve to a Repository".
+
 ## Desvios do plano
 
 ### M01
@@ -84,3 +99,20 @@ Versões fixadas conforme a seção 3.6. Todas as entradas do `package.json` est
 8. **Titular no `LICENSE`:** "kbrianps", o mesmo nome do `authors` do `Cargo.toml`. O `git config user.name` é outro; se preferir o nome completo, basta trocar a linha do copyright.
 9. **`docs/depois.md` começa com a lista da seção 2.2** (o estacionamento do plano), mais uma seção "Novas" para o que surgir nos marcos.
 10. **CSP.** Está no `tauri.conf.json` e passou pelo `generate_context!` (o `cargo clippy --workspace` recompilou o app com ela). O efeito no WebView só aparece no build e fica para o M08, como no plano.
+
+### M03
+
+1. **O repositório no GitHub não foi criado, e o push não foi feito.** O pré-requisito do marco (plano 1.2, item 4) continua sendo decisão sua, e criar repositório, adicionar remote e dar push estavam fora do que eu podia fazer nesta rodada. Ficou pronto tudo o que é local: o `.github/workflows/ci.yml`, validado com o `actionlint`, e os seis passos rodados em sequência, no Linux, numa cópia limpa do que foi para o commit. O `gh repo create`, o `gh repo edit` e o "Pronto quando" (push verde nos dois sistemas) estão em `docs/pendencias-usuario.md`, com os comandos exatos.
+2. **`shell: bash` em todos os passos** (fora do plano). No Windows, o padrão do Actions é o PowerShell; com o Git Bash, os comandos são os mesmos nos dois sistemas, e nada depende de como o PowerShell trata o `--` do `cargo clippy --workspace -- -D warnings`.
+3. **`fail-fast: false`, `concurrency` e `permissions: contents: read`** (fora do plano). Sem o `fail-fast: false`, uma falha no Linux cancelaria o Windows, e o "verde nos dois" precisa ver os dois. O `concurrency` cancela a rodada anterior quando chega outro push no mesmo ramo. O token do CI fica só com leitura.
+4. **Rust sem versão fixada no CI.** O plano não fixa a toolchain; o CI usa a stable que vem no runner (hoje pode ser mais nova que a 1.95.0 local) e roda `rustup component add rustfmt clippy`, que não faz nada se os componentes já estiverem lá. Se um lint novo do clippy quebrar o CI, a correção é no código. Fixar com `rust-toolchain.toml` só se isso virar rotina.
+5. **Pacotes do apt: a lista inteira da seção 6.2**, inclusive o `patchelf`, que só o AppImage usa. Assim a lista do CI e a da máquina não divergem.
+6. **`.gitattributes` com `* text=auto eol=lf`** (fora do plano). O runner do Windows faz o checkout com `core.autocrlf=true`, o que trocaria os finais de linha para CRLF. Com LF em todo lugar, o `rustfmt`, o `include_str!` do teste do núcleo e os testes de regras veem os mesmos bytes nos dois sistemas. PNG, JPG, ICO, ICNS, WAV e WOFF2 ficam marcados como binários. O `git add --renormalize .` não mudou nenhum arquivo (todos já estavam em LF).
+7. **Manifesto do Windows pelo linker, no `build.rs`** (fora do plano). O `tauri-build` põe o manifesto do Common Controls v6 só no `.exe` do app, como recurso (`rustc-link-arg-bins`). Os binários de teste do `cargo test` ficam sem ele e, como importam funções que só existem no comctl32 v6 (o `TaskDialogIndirect`, por exemplo, que o `tauri-runtime-wry` e o `muda` usam com a feature padrão `common-controls-v6`), o Windows os recusa ao carregar, com `STATUS_ENTRYPOINT_NOT_FOUND` (0xc0000139). É um problema conhecido: o `build.rs` do próprio crate `tauri` 2.12.0 tem o mesmo contorno para os testes dele ("workaround needed to prevent `STATUS_ENTRYPOINT_NOT_FOUND` error in tests"), e há a issue tauri-apps/tauri#13419 e a discussão tauri-apps #11179. O contorno:
+   - só quando o alvo é Windows MSVC (lido de `CARGO_CFG_TARGET_OS` e `CARGO_CFG_TARGET_ENV`, porque o build script roda no host), o `build.rs` usa `WindowsAttributes::new_without_app_manifest()` e passa o manifesto ao linker com `/MANIFEST:EMBED` e `/MANIFESTINPUT:src-tauri/windows-app-manifest.xml`, que vale para o app, a cdylib e os testes;
+   - o `windows-app-manifest.xml` é cópia literal do padrão do `tauri-build` 2.7.0;
+   - no Linux nada muda: o caminho antigo (`tauri_build::build()`) era `try_build` com os atributos padrão, e é o que continua rodando.
+
+   Conferido daqui: `cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings` passa; a saída do build script para esse alvo tem as duas linhas `rustc-link-arg` do manifesto; e o `resource.rc` gerado não traz mais o manifesto (o do build anterior trazia), então o `.exe` recebe o manifesto uma vez só, sem o erro de recurso duplicado. Não há `link.exe` nesta máquina, então quem confere o link de verdade é o passo 5 do CI no `windows-latest`. **Se o Windows falhar com erro de link** (LNK ou CVT1100), volte o `build.rs` para `tauri_build::build()` e anote aqui.
+8. **Dois testes novos no `npm test`** (`scripts/regras-do-repo.test.mjs`): um confere que o `ci.yml` roda em todo push, na matriz `ubuntu-24.04` e `windows-latest`, com as três actions da seção 10 e os seis passos na ordem do plano (os três do Cargo com `working-directory: src-tauri`); o outro confere o manifesto e o `build.rs`. Conferidos por mutação: trocar a ordem do clippy e do test, ou trocar `windows-latest` por `windows-2022`, faz o teste falhar.
+9. **Conferência do `npm ci` do Windows sem Windows.** Numa cópia limpa, `npm ci --os=win32 --cpu=x64 --ignore-scripts` instalou `@tauri-apps/cli-win32-x64-msvc`, `@rolldown/binding-win32-x64-msvc` e `lightningcss-win32-x64-msvc`: o `package-lock.json` gerado no Linux já traz os binários nativos do Windows.
