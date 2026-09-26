@@ -1,6 +1,7 @@
 // Vite do teste aninhado: estende o vite.config.js do app, injeta a sonda
-// (/@sonda.js) só na tomato.html e grava o que a página manda em $SONDA_LOG,
-// uma linha JSON por evento. Nada disto entra no build de produção.
+// (/@sonda.js) nas duas páginas (tomato.html e index.html, da main) e grava o
+// que elas mandam em $SONDA_LOG, uma linha JSON por evento. Nada disto entra
+// no build de produção.
 import { appendFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import base from '../../vite.config.js';
@@ -37,8 +38,7 @@ export default {
           next();
         });
       },
-      transformIndexHtml(html, ctx) {
-        if (!ctx.path.includes('tomato')) return undefined;
+      transformIndexHtml() {
         return [{ tag: 'script', attrs: { type: 'module', src: '/@sonda.js' }, injectTo: 'head-prepend' }];
       },
     },

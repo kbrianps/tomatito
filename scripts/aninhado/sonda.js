@@ -1,9 +1,11 @@
-// Sonda do teste aninhado: roda dentro da janela tomato (WebKitGTK real) e
-// manda para o Vite (sonda.config.mjs) o console, os eventos de mouse e dados
-// do ambiente. Só existe no servidor do teste; o app nunca a importa.
+// Sonda do teste aninhado: roda dentro das janelas tomato e main (WebKitGTK
+// real) e manda para o Vite (sonda.config.mjs) o console, os eventos de mouse
+// e dados do ambiente, marcados com o rótulo da janela. Só existe no servidor
+// do teste; o app nunca a importa.
 const t0 = performance.now();
+const janela = window.__TAURI_INTERNALS__?.metadata?.currentWindow?.label ?? '?';
 const enviar = (tipo, dados) =>
-  fetch('/__sonda', { method: 'POST', body: JSON.stringify({ ms: Math.round(performance.now() - t0), tipo, dados }) }).catch(() => {});
+  fetch('/__sonda', { method: 'POST', body: JSON.stringify({ ms: Math.round(performance.now() - t0), janela, tipo, dados }) }).catch(() => {});
 const origLog = console.log.bind(console);
 console.log = (...a) => { origLog(...a); enviar('log', a.map(String).join(' ')); };
 addEventListener('error', (e) => enviar('erro', String(e.message)));
@@ -38,7 +40,7 @@ addEventListener('load', () =>
       enviar('info', {
         ua: navigator.userAgent,
         webgl: webgl(),
-        label: window.__TAURI_INTERNALS__?.metadata?.currentWindow?.label,
+        label: janela,
         inner: [innerWidth, innerHeight],
         dpr: devicePixelRatio,
         bgHtml: getComputedStyle(document.documentElement).backgroundColor,

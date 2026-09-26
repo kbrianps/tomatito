@@ -115,3 +115,30 @@ test('spike A (M04): tomato.html é a segunda entrada do Vite e arrasta pelo .st
   assert.deepEqual(cap.windows, ['tomato']);
   assert.ok(cap.permissions.includes('core:window:allow-start-dragging'), 'o arraste precisa de allow-start-dragging');
 });
+
+test('spike B (M05): gtk 0.18 só no Linux, e a região entre o build() e o show()', () => {
+  const secoes = cargoApp.split(/^\[/m);
+  const linux = secoes.find((b) => b.startsWith(`target.'cfg(target_os = "linux")'.dependencies]`));
+  assert.ok(linux, 'falta a seção [target.\'cfg(target_os = "linux")\'.dependencies]');
+  assert.match(linux, /^gtk = "0\.18"$/m);
+  for (const b of secoes.filter((b) => b !== linux)) assert.doesNotMatch(b, /^gtk\s*=/m, 'gtk fora da seção do Linux');
+
+  const tomato = ler('src-tauri/src/window/tomato.rs');
+  assert.match(tomato, /\.visible\(false\)/);
+  const [build, regiao, show] = ['builder.build()', 'apply_region(&window', 'window.show()'].map((t) => tomato.indexOf(t));
+  assert.ok(build >= 0 && build < regiao && regiao < show, 'a região vai depois do build() e antes do show()');
+
+  // Região no GtkWidget; nunca na GdkWindow (PLANO.md, 5.6).
+  const linuxRs = ler('src-tauri/src/window/region_linux.rs');
+  assert.match(linuxRs, /gw\.input_shape_combine_region\(/);
+  assert.doesNotMatch(linuxRs, /\.window\(\)/);
+});
+
+test('ninguém chama setIgnoreCursorEvents (apaga a região no Linux; PLANO.md, 5.3)', () => {
+  const pastas = { 'src-tauri/src': /set_ignore_cursor_events/, src: /setIgnoreCursorEvents/ };
+  for (const [pasta, proibido] of Object.entries(pastas)) {
+    for (const arquivo of readdirSync(new URL(`../${pasta}`, import.meta.url), { recursive: true })) {
+      if (/\.(rs|js)$/.test(arquivo)) assert.doesNotMatch(ler(`${pasta}/${arquivo}`), proibido, `${pasta}/${arquivo}`);
+    }
+  }
+});

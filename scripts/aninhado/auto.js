@@ -1,11 +1,14 @@
 // Roteiro de automação do GNOME Shell aninhado (headless), carregado com
 // `gnome-shell --automation-script` pelo dentro.sh. Roda dentro do próprio
 // shell: acha as janelas do Tomatito, tira capturas, compara os pixels da caixa
-// do tomate com o fundo, arrasta e clica com um ponteiro virtual e grava tudo
-// em $TT_OUT/resultado.json. Quando termina, o shell sai sozinho.
+// do tomate com o fundo, arrasta e clica com um ponteiro virtual, confere se o
+// clique fora da região de entrada atravessa para a janela de trás (spike B,
+// M05) e grava tudo em $TT_OUT/resultado.json. Quando termina, o shell sai
+// sozinho.
 //
 // $TT_SO_TAMANHO=1 para depois de medir a janela (usado para repetir muitas
 // vezes a conferência do tamanho).
+import Cairo from 'cairo';
 import Clutter from 'gi://Clutter';
 import GdkPixbuf from 'gi://GdkPixbuf';
 import Gio from 'gi://Gio';
@@ -69,6 +72,16 @@ function sonda() {
   } catch {
     return [];
   }
+}
+
+// Eventos da sonda de uma janela só ('tomato' ou 'main').
+const daJanela = (lista, janela) => lista.filter((e) => e.janela === janela);
+
+// Região que o app calculou (linha "[tomato] região: ..." do stderr, só no debug).
+function regiaoDoApp() {
+  const [, bytes] = GLib.file_get_contents(`${OUT}/app.log`);
+  const m = new TextDecoder().decode(bytes).match(/\[tomato\] regi\S+: \d+ ret\S+ em \d+ px: (\[.*\])/);
+  return m ? JSON.parse(m[1]) : null;
 }
 
 async function esperar(fn, ms, oque) {
@@ -172,7 +185,7 @@ async function arrastar(nome, vx, vy, dx, dy) {
     pedido: [dx, dy],
     delta,
     moveu: Math.abs(delta[0] - dx) <= 3 && Math.abs(delta[1] - dy) <= 3,
-    alvo: sonda().slice(n0).find((e) => e.tipo === 'mousedown')?.dados.alvo ?? null,
+    alvo: daJanela(sonda().slice(n0), 'tomato').find((e) => e.tipo === 'mousedown')?.dados.alvo ?? null,
   };
   passo(`arraste ${nome}: delta ${delta}`);
 }
@@ -209,8 +222,8 @@ async function principal() {
   passo('janelas encontradas');
 
   try {
-    await esperar(() => sonda().some((e) => e.tipo === 'info'), 30000, 'sonda');
-    R.pagina = sonda().find((e) => e.tipo === 'info').dados;
+    await esperar(() => daJanela(sonda(), 'tomato').some((e) => e.tipo === 'info'), 30000, 'sonda');
+    R.pagina = daJanela(sonda(), 'tomato').find((e) => e.tipo === 'info').dados;
   } catch {
     R.pagina = null; // a página não chegou a desenhar dois quadros
   }
@@ -251,7 +264,7 @@ async function principal() {
     passo(`clique ${nome}`);
   }
   await sleep(600);
-  const logs = sonda().slice(n0).filter((e) => e.tipo === 'log').map((e) => e.dados);
+  const logs = daJanela(sonda().slice(n0), 'tomato').filter((e) => e.tipo === 'log').map((e) => e.dados);
   R.botoes = {
     logs,
     todos: Object.keys(botoes).every((n) => logs.includes(`[tomato] botão: ${n}`)),
@@ -259,11 +272,87 @@ async function principal() {
   };
   await captura('depois-dos-cliques.png', { x: r0.x - 80, y: r0.y - 70, w: r0.w + 160, h: r0.h + 140 });
 
-  // Informativo para o M05: sem região de entrada, o canto transparente é da janela.
-  const n1 = sonda().length;
-  await clicar(r0.x + 4, r0.y + 4);
-  R.canto_transparente = sonda().slice(n1).find((e) => e.tipo === 'mousedown')?.dados.alvo ?? 'nenhum evento na página';
+  // Spike B (M05): arraste pelo "ombro" (dentro do corpo, fora da elipse da
+  // região, coberto só pelo retângulo dos ombros).
+  await arrastar('ombro', 34, 120, 130, 50);
+  await moverJanela(TOMATO, B.x, B.y);
+
+  // Clique atravessando: a main (branca) fica atrás de toda a caixa do tomate.
+  await moverJanela(MAIN, B.x - 100, B.y - 100);
+  Main.activateWindow(TOMATO);
+  await sleep(800);
+  await captura('spike-b-base.png', { x: B.x - 80, y: B.y - 70, w: B.w + 160, h: B.h + 140 });
+  desenharRegiao('spike-b-base.png', 'spike-b-regiao.png', 80, 70);
+  // Pontos em px da janela. Os seis primeiros ficam fora da região e devem ir
+  // para a main; o último fica na zona morta (dentro do retângulo dos ombros,
+  // mas fora do desenho) e deve ficar no tomate.
+  const fora = {
+    canto_sup_esq: [4, 4],
+    canto_sup_dir: [LADO - 5, 4],
+    canto_inf_esq: [4, LADO - 5],
+    canto_inf_dir: [LADO - 5, LADO - 5],
+    lado_esq: [8 * K, 200 * K],
+    acima_do_cabinho: [160 * K, 20 * K],
+    sombra_embaixo: [160 * K, 312 * K],
+  };
+  const dentro = { zona_morta_ombro: [22 * K, 70 * K] };
+  R.atravessa = {};
+  for (const [nome, [x, y]] of Object.entries({ ...fora, ...dentro })) {
+    Main.activateWindow(TOMATO);
+    await sleep(600);
+    const r = rect(TOMATO);
+    const focoAntes = global.display.focus_window;
+    const n = sonda().length;
+    await clicar(r.x + x, r.y + y);
+    await sleep(300);
+    const foco = global.display.focus_window;
+    const eventos = sonda().slice(n).filter((e) => e.tipo === 'mousedown');
+    const esperado = nome in fora ? 'main' : 'tomato';
+    R.atravessa[nome] = {
+      px: [Math.round(x), Math.round(y)],
+      esperado,
+      foco_antes: focoAntes === TOMATO ? 'tomato' : focoAntes === MAIN ? 'main' : '-',
+      foco_depois: foco === TOMATO ? 'tomato' : foco === MAIN ? 'main' : '-',
+      mousedown: eventos.map((e) => `${e.janela} (${e.dados.x}, ${e.dados.y}) ${e.dados.alvo}`),
+    };
+    const a = R.atravessa[nome];
+    a.ok =
+      a.foco_antes === 'tomato' &&
+      a.foco_depois === esperado &&
+      eventos.length > 0 &&
+      eventos.every((e) => e.janela === esperado);
+    passo(`clique em ${nome}: foi para ${a.foco_depois}`);
+  }
   passo('fim');
+}
+
+// Desenha a região de entrada por cima de uma captura e grava outro PNG:
+// dentro do contorno azul, o tomate recebe o clique; fora, o clique atravessa.
+// A região do spike tem uma faixa por grupo de linhas, então o contorno sai
+// ligando as pontas de cada faixa às da seguinte.
+function desenharRegiao(base, destino, ox, oy) {
+  const faixas = regiaoDoApp();
+  if (!faixas) {
+    passo('aviso: região do app não encontrada no app.log');
+    return;
+  }
+  faixas.sort((a, b) => a[1] - b[1]);
+  const sup = Cairo.ImageSurface.createFromPNG(`${OUT}/${base}`);
+  const cr = new Cairo.Context(sup);
+  cr.setSourceRGBA(0.0, 0.47, 0.83, 0.16);
+  for (const [x, y, w, h] of faixas) cr.rectangle(ox + x, oy + y, w, h);
+  cr.fill();
+  const [x0, y0] = faixas[0];
+  cr.moveTo(ox + x0, oy + y0);
+  for (const [x, y, w, h] of faixas) cr.lineTo(ox + x + w, oy + y), cr.lineTo(ox + x + w, oy + y + h);
+  for (const [x, y, , h] of [...faixas].reverse()) cr.lineTo(ox + x, oy + y + h), cr.lineTo(ox + x, oy + y);
+  cr.closePath();
+  cr.setSourceRGBA(0.0, 0.35, 0.72, 0.95);
+  cr.setLineWidth(1.5);
+  cr.stroke();
+  cr.$dispose();
+  sup.writeToPNG(`${OUT}/${destino}`);
+  passo(`captura ${destino}`);
 }
 
 export async function run() {

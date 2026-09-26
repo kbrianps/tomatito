@@ -1,10 +1,12 @@
 #!/bin/bash
-# Teste do Tomatito Full num GNOME Shell aninhado, sem tela (spike, M04).
+# Teste do Tomatito Full num GNOME Shell aninhado, sem tela (spike, M04 e M05).
 #
 # Sobe um GNOME Shell 50 headless (o mesmo Mutter da sessão), com monitor
 # virtual de 1920x1080, e roda o app de debug nele. O roteiro auto.js confere a
 # transparência pelos pixels, arrasta a janela e clica nos botões com um
-# ponteiro virtual. Nada aparece na tela da sessão de verdade.
+# ponteiro virtual, e confere se o clique fora da região de entrada atravessa
+# para a janela de trás (M05). O resumo.mjs confere a região que o app mandou
+# ao compositor. Nada aparece na tela da sessão de verdade.
 #
 #   bash scripts/aninhado/rodar.sh                # teste completo
 #   TT_SO_TAMANHO=1 bash scripts/aninhado/rodar.sh # só mede a janela
