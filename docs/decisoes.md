@@ -74,6 +74,16 @@ O nome `kbrianps/tomatito` estava livre em 26/09/2026: `gh repo view kbrianps/to
 | userAgent do WebKitGTK | `Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15` | sonda na janela `tomato` |
 | Renderizador WebGL informado | vendor "Apple Inc.", renderer "Apple GPU" (WebGL 2.0), mesmo com `WEBGL_debug_renderer_info` | sonda na janela `tomato`; ver o achado 3 do spike A |
 
+### M05 (26/09/2026)
+
+| Item | Versão ou valor | Como foi conferido |
+|---|---|---|
+| gtk (crate) | 0.18.2, agora também dependência direta, só no Linux (`gtk = "0.18"`) | `cargo tree -i gtk`: a mesma instância que o `tao`, o `wry` e o `tauri` usam; o `Cargo.lock` só ganhou a aresta `tomatito → gtk` |
+| cairo-rs (via `gtk::cairo`) | 0.18.5 | `Cargo.lock` |
+| WebKitGTK / GNOME Shell / Mutter | 2.52.6 / 50.1 / 50.1 | sem mudança desde o M04 |
+| tao / wry | 0.37.1 / 0.57.0 | sem mudança desde o M04 |
+| GPU | Intel Alder Lake-S UHD Graphics | a mesma do M04 (descritores do processo); não foi relida no M05 |
+
 ## Spike do Full (M04–M05)
 
 Seção 5.8 do plano. O código do spike está na branch `spike/full`; a `main` recebe só este registro e as capturas.
@@ -105,6 +115,51 @@ Seção 5.8 do plano. O código do spike está na branch `spike/full`; a `main` 
 2. **Sem região, a caixa inteira é da janela.** O GTK define a região de entrada como a janela toda mais 10 px de folga (`set_input_region` com `-10, -10, 300, 300`). Um clique a 4 px do canto chegou à página, no `body`. É o ponto de partida do M05.
 3. **O WebKitGTK mascara o renderizador WebGL.** Mesmo com `WEBGL_debug_renderer_info`, a página vê só "Apple Inc." e "Apple GPU". A chave `fullValidated` (3.3, 5.7 e 5.9) usa "userAgent + renderizador WebGL" para saber se a combinação já foi validada, e assim ela não distingue a Intel da NVIDIA nem uma troca de driver. **A decidir no M51:** trocar essa chave, por exemplo, pela versão do WebKitGTK mais a GPU lida no Rust (o nó DRM ou o `GL_RENDERER` de um contexto EGL próprio). O `webkit://gpu` mostra o renderizador de verdade, mas é uma página interna, fora do alcance do JS do app.
 4. **`always_on_top(true)` não tem efeito no Wayland,** como previsto (3.8): o Mutter informa `is_above() = false`.
+
+### Spike B: região de entrada e veredito (M05, 26/09/2026)
+
+**Veredito: A.** A transparência (spike A) e a região de entrada funcionam no GNOME 50.1 Wayland desta máquina, com WebKitGTK 2.52.6 e a GPU Intel. Pela tabela da seção 5.8, os marcos M50 a M57 seguem como estão. A conferência na tela de verdade (`docs/verificacao-manual.md`, M05) e o monitor externo na NVIDIA (opcional) continuam com você; se o clique não atravessar lá, o veredito cai para B1.
+
+**O que entrou** (branch `spike/full`):
+- `gtk = "0.18"` só no Linux e o `apply_region` da seção 5.6 em `src-tauri/src/window/region_linux.rs`: a região vai no `GtkWidget` (`gtk_window().input_shape_combine_region`), dentro de `run_on_main_thread`;
+- a região aproximada do M05 em `src-tauri/src/window/region_approx.rs`: a elipse do corpo (centro (160,185), raios 141,5 × 115, mais 2 px), o retângulo do cálice e do cabinho (x 100–220, y 40–115) e o dos ombros (x 16–304, y 64–190), escalados por `size/320`. Cada linha de pixels vira a união das três formas, e linhas seguidas iguais viram um retângulo só;
+- a `tomato` nasce com `visible(false)`, recebe a região e só então faz `show()`.
+
+**Como foi conferido:**
+
+1. **Testes do Rust** (`cargo test --workspace`): os contornos do desenho (corpo, cabinho, as cinco sépalas, a elipse da base e as nervuras, com o traço) são amostrados com passo bem menor que 0,05 px, e todo pixel que o contorno toca precisa estar na região.
+
+   | Tamanho | Retângulos | Folga horizontal mínima | Cantos da janela |
+   |---|---|---|---|
+   | 240 px | 59 | 1 px | fora da região |
+   | 280 px | 67 | 2 px | fora da região |
+   | 320 px | 76 | 2 px | fora da região |
+
+   Cada linha tem uma faixa só, então cobrir o contorno cobre o miolo. Conferido por mutação: com o cálice começando em y 50 (em vez de 40), o cabinho fica de fora e o teste falha; sem o retângulo dos ombros, também. Tirar os 2 px da elipse não quebra a cobertura (o retângulo dos ombros cobre a parte de cima, e embaixo a elipse já passa do corpo); os 2 px ficaram como folga, como o plano pede.
+
+2. **GNOME Shell 50.1 aninhado, sem tela** (`bash scripts/aninhado/rodar.sh`, na `spike/full`), quatro rodadas seguidas, todas com as 22 conferências certas. A janela de trás é a `main` do template (branca, 800×600), posta atrás de toda a caixa do tomate; antes de cada clique, o tomate é ativado.
+
+   | Item do "Pronto quando" | Resultado |
+   |---|---|
+   | `set_input_region` depois do show | O primeiro `wl_surface.set_input_region` da `tomato` vem depois do `get_toplevel` (o show) e no mesmo `commit` do primeiro quadro: não há instante em que a caixa inteira capture o clique. Os 67 retângulos são exatamente os calculados no Rust. O GTK reenvia a região a cada `configure` (foco, arraste), cerca de 100 vezes por rodada, sempre igual. |
+   | Clicar num canto transparente ativa a janela de trás | Nos quatro cantos (a 4 px da borda), à esquerda do corpo (7, 175), acima do cabinho (140, 18) e na sombra embaixo do corpo (140, 273), o foco foi para a `main`, o `mousedown` chegou à página da `main`, e a `tomato` não recebeu nada. |
+   | Arrastar, inclusive pelos ombros | Pelo corpo, pelo cabinho, por uma sépala e pelo ombro (ponto (34, 120) do viewBox, fora da elipse e coberto só pelo retângulo dos ombros), a janela andou exatamente o que o ponteiro andou. |
+   | Clicar nos botões | As 5 linhas `[tomato] botão: …` chegaram, e a janela não se mexeu. |
+   | Transparência (do spike A, repetida) | Os quatro cantos seguem idênticos ao fundo, pixel a pixel. |
+
+   Controle: um clique na zona morta do ombro (19, 61), dentro do retângulo e fora do desenho, fica no tomate, como previsto para a região aproximada. No M04, sem região, o clique a 4 px do canto chegava à página do tomate; agora atravessa.
+
+3. **Sessão real, com o comando do "Pronto quando"** (`WAYLAND_DEBUG=client npm run tauri dev 2>&1 | grep set_input_region`, com o log completo salvo à parte e lido pelo `node scripts/aninhado/regiao.mjs`): a `tomato` (`wl_surface#48`) recebeu `set_input_region` depois do `get_toplevel` e no commit do primeiro quadro, com os mesmos 67 retângulos calculados; a geometria é `0, 0, 280, 280`, sem região opaca e sem erro de protocolo. As outras linhas do `grep` são da `main`, cuja região o próprio GTK define por causa do CSD. As duas janelas ficaram abertas uns 3 min, e não uns 10 s como no M04 (o roteiro esperava a saída do `grep`, que só chega no fim por causa do buffer); foram fechadas, e não sobrou processo nem porta.
+
+**Capturas** (do shell aninhado, com o tomate sobre a `main` branca):
+- `docs/capturas/spike-b.png`: o tomate como aparece;
+- `docs/capturas/spike-b-regiao.png`: a mesma cena com a região por cima. Dentro do contorno azul, o tomate recebe o clique; fora, o clique atravessa. A região ocupa 63% da caixa de 280×280.
+
+**Achados** (para o M53 e o M54):
+1. **A região no widget funciona como a 5.6 descreve.** O GTK guarda a região do widget, cruza com a do CSD e manda no mapeamento. Ela sobrevive ao arraste, à troca de foco e aos `configure`, sem código a mais. Ainda falta ver a troca de tamanho (P/M/G), que é do M54.
+2. **A região aproximada tem zonas mortas pequenas:** os cantos de cima do retângulo dos ombros (entre o corpo e o cálice) e até uns 2 px em volta do corpo. Para o dia a dia, isso é aceitável; a região exata do M53 tira essas zonas.
+3. **A sombra fica fora da região,** como a 5.6 pede: o clique na sombra embaixo do corpo atravessa.
+4. **O Windows não recebe região no spike:** lá o `apply_region` não faz nada (seção 5.5; M55).
 
 ## Desvios do plano
 
@@ -183,3 +238,14 @@ Seção 5.8 do plano. O código do spike está na branch `spike/full`; a `main` 
    Tudo isso é do M50 em diante.
 7. **Regras do repositório na `spike/full`.** O `scripts/regras-do-repo.test.mjs` passou a conferir também a `tomato.html`: `lang="pt-BR"`, sem `<style>` nem `style="..."` e sem a palavra proibida. Um teste novo confere as duas entradas do Vite, o `data-tauri-drag-region="deep"` no `.stage` e o `allow-start-dragging` na `capabilities/tomato.json`. Conferido por mutação: sem o `="deep"`, o teste falha.
 8. **Checagem cruzada do Windows.** O `#[cfg(windows)] no_redirection_bitmap(true)` da 5.3 entrou e passa em `cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings`, com o `llvm-rc` como no M01. O Windows de verdade continua no M55.
+
+### M05
+
+1. **Dois commits do M05, um em cada branch,** como no M04 (seção 5.8): o código em "M05: spike B, região de entrada e veredito (código)", na `spike/full`, e este registro, a verificação manual, as pendências e as capturas em "M05: spike B, região de entrada e veredito", na `main`. Depois, a `spike/full` foi rebaseada de novo sobre a `main`. Tudo local: sem remote e sem push.
+2. **`apply_region` sem efeito fora do Linux.** O M05 só pede o Linux. Para o código compilar no Windows, um `#[cfg(not(target_os = "linux"))]` no `window/tomato.rs` devolve `Ok(())`; a região do Windows (`SetWindowRgn`, seção 5.5) é do M55. Conferido com `cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings` (com o `llvm-rc`, como no M01).
+3. **Nomes dos arquivos.** O `region_linux.rs` segue a árvore da seção 3.7. O cálculo aproximado ficou num arquivo próprio, `window/region_approx.rs`, que não está na árvore: é do spike e sai quando a região em JS (5.4) entrar no M53.
+4. **Uma linha de log a mais, só no build de debug.** A `tomato` escreve no stderr `[tomato] região: N retângulos em 280 px: [...]`, para o teste aninhado e o `regiao.mjs` compararem com o que o GTK mandou ao compositor. Está sob `#[cfg(debug_assertions)]` e sai com o spike.
+5. **A janela de trás no teste aninhado é a `main` do template, e não um terminal.** O "Pronto quando" cita um terminal "por exemplo"; o que importa é a janela de trás receber o clique e o foco. A conferência com um terminal de verdade está em `docs/verificacao-manual.md`, M05.
+6. **Teste aninhado ampliado** (na `spike/full`; fora do plano, como no M04): a sonda agora roda nas duas páginas e marca cada evento com o rótulo da janela; o `auto.js` arrasta pelo ombro, clica em sete pontos fora da região e em um dentro dela, e desenha a região sobre a captura (Cairo, dentro do shell); o `regiao.mjs` lê a região no log do `WAYLAND_DEBUG` e serve também para a sessão real.
+7. **Dois testes novos no `npm test`** (na `spike/full`): um confere o `gtk = "0.18"` só na seção do Linux, o `visible(false)`, a ordem `build()` → `apply_region` → `show()` e a região no widget, nunca na `GdkWindow`; o outro proíbe `set_ignore_cursor_events` e `setIgnoreCursorEvents` (seção 5.3). Conferidos por mutação: com `gtk = "0.19"`, ou com o `show()` antes do `apply_region`, o teste falha.
+8. **O opcional do monitor externo (HDMI, na NVIDIA) não foi feito:** pede o monitor ligado e alguém olhando. Ficou em `docs/verificacao-manual.md` e em `docs/pendencias-usuario.md`.

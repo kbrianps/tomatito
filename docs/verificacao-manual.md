@@ -82,3 +82,38 @@ O código está na branch `spike/full`. O resultado completo, com os números, e
 7. [ ] Encerre com Ctrl+C no terminal e volte para a `main` com `git checkout main`.
 
 Se algum passo falhar, anote o que viu em `docs/decisoes.md`, na seção do spike A. Cantos pretos ou brancos no passo 2 mudam o veredito para B3 (plano, 5.8).
+
+## M05. Spike B: região de entrada e veredito
+
+O código está na branch `spike/full`. O resultado completo e o veredito (A) estão em `docs/decisoes.md`, na seção "Spike do Full".
+
+### O que já foi conferido sem olhar a tela (26/09/2026)
+
+- **Testes do Rust:** em 240, 280 e 320 px, a região cobre todo o contorno do desenho, e os quatro cantos da janela ficam fora dela.
+- **GNOME Shell 50.1 aninhado, sem tela** (`bash scripts/aninhado/rodar.sh`, na `spike/full`), em quatro rodadas:
+  - a região chega ao compositor depois do show e já no primeiro quadro, igual à calculada no Rust;
+  - com a `main` atrás do tomate, os cliques nos quatro cantos, ao lado do corpo, acima do cabinho e na sombra ativam a `main`, e a `tomato` não recebe nada;
+  - arrastar pelo corpo, pelo cabinho, por uma sépala e pelo ombro move a janela; os 5 botões respondem;
+  - as capturas são a `docs/capturas/spike-b.png` e a `docs/capturas/spike-b-regiao.png` (a região em azul).
+- **Sessão real:** o comando do "Pronto quando" mostrou o `set_input_region` da `tomato` depois do show, com a mesma região, sem erro de protocolo. As janelas foram fechadas depois.
+
+### Passos para você (uns 4 minutos)
+
+A "caixa" do tomate é o quadrado invisível de 280 px em volta dele. Os cantos da caixa são os vazios em diagonal, fora do desenho.
+
+1. [ ] Em `~/dev/tomatito`, rode `git checkout spike/full` e depois:
+
+   ```bash
+   WAYLAND_DEBUG=client npm run tauri dev 2>&1 | tee /tmp/tt.log | grep set_input_region
+   ```
+
+   Aparecem a janela branca "Tomatito" (do template, esperada no spike) e o tomate. No terminal, surgem linhas `-> wl_surface#N.set_input_region(wl_region#M)`: umas da janela branca e, quando o tomate aparece, as dele.
+2. [ ] Abra outro terminal e arraste o tomate para cima dele, de modo que o terminal fique atrás da caixa inteira. Clique no corpo do tomate (ele vem para a frente).
+3. [ ] Clique no vazio em diagonal abaixo e à esquerda do corpo: o canto inferior esquerdo da caixa, a meio caminho entre a curva do corpo e o ponto onde ficaria o vértice do quadrado. O terminal de trás fica ativo (a barra de título dele deixa de ficar apagada), e dá para digitar nele. Clique no corpo do tomate de novo para trazê-lo à frente.
+4. [ ] Repita o passo 3 nos outros três cantos e na sombra logo abaixo do tomate. Em todos, o clique ativa o terminal. Evite os dois cantinhos acima dos "ombros", entre o corpo e as folhas: ali a região aproximada ainda pega o clique (zona morta; some no M53).
+5. [ ] Arraste o tomate pelo "ombro" (a parte de cima do corpo, à esquerda do ícone de janela), pelo corpo, pelo cabinho e por uma folhinha. Nos quatro, a janela acompanha o mouse.
+6. [ ] Clique no botão redondo do meio: o tomate fica mais apagado, e o ícone vira ▶. Clique de novo: volta.
+7. [ ] Encerre com Ctrl+C no terminal do `tauri dev`. Rode `node scripts/aninhado/regiao.mjs /tmp/tt.log`: as quatro linhas terminam em `ok`. Depois, `rm /tmp/tt.log` e `git checkout main`.
+8. [ ] (Opcional, NVIDIA) Com o monitor externo na HDMI, que está na NVIDIA: repita o passo 1, arraste o tomate para o monitor externo e repita os passos 3 a 5 lá. Anote em `docs/decisoes.md`, no spike B, se aparecerem cantos pretos, se o clique não atravessar ou se o app cair com `Error 71 (Protocol error) dispatching to Wayland display` no terminal (risco #10702).
+
+Se nos passos 3 e 4 o clique ficar no tomate (o terminal não fica ativo), o veredito cai para B1 (plano, 5.8): anote em `docs/decisoes.md`, no spike B.
