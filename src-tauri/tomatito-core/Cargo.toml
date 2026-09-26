@@ -1,0 +1,14 @@
+[package]
+name = "tomatito-core"
+version = "0.1.0"
+description = "Motor do Tomatito (plano da sessão, relógio e estados), sem Tauri"
+authors = ["kbrianps"]
+license = "MIT"
+edition = "2024"
+rust-version = "1.90"
+publish = false
+
+# Regra de isolamento (PLANO.md, 3.2): nada de tauri, wry, tao, gtk ou webkit2gtk
+# aqui, nem direta nem indiretamente. `cargo test -p tomatito-core` compila só o
+# núcleo. O teste em src/lib.rs confere as dependências diretas.
+[dependencies]

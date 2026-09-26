@@ -8,6 +8,7 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 2. **Repositório no GitHub** (plano 1.2, item 4). Decidir quando criar `kbrianps/tomatito` e se será público ou privado. Nada foi criado: não há remote, push nem tag. Bloqueia o M03 (CI), que pode ser pulado até o M45.
 3. **Testes em Windows de verdade** (plano 1.2, item 6). Hoje só existe a checagem cruzada `cargo check --target x86_64-pc-windows-msvc` (ver `docs/decisoes.md`, M01, item 8). Bloqueia o M47a em diante.
 4. **Decisões do plano ainda abertas**, sem pressa: nome definitivo do "Tomatito Suave" (1.2, item 3; antes do M24), tempo na bandeja ligado por padrão no GNOME (1.2, item 7; M36) e o que fazer com `~/Documentos/tomatito_stats.jsonl`, `~/Documentos/tomatito_checkpoint.json` e `~/Android/Sdk` (1.2, item 8).
+5. **Nome no `LICENSE`** (desde o M02, opcional). Está "Copyright (c) 2026 kbrianps", como o `authors` do `Cargo.toml`. Se quiser o nome completo, troque a linha. Não bloqueia nada.
 
 ## Resolvidas
 

@@ -34,6 +34,19 @@ Ambiente no M01 (seção 6.4 do plano):
 - `target-dir` em `/opt/cargo-target/tomatito` (3,0 GB depois do primeiro build de debug e do clippy). `src-tauri/target/` não existe.
 - Na janela real, o WebKitGTK informa o userAgent `Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15`. O "X11" é fixo no userAgent do WebKitGTK; o protocolo usado foi Wayland (ver `docs/verificacao-manual.md`).
 
+### M02 (26/09/2026)
+
+Versões fixadas conforme a seção 3.6. Todas as entradas do `package.json` estão exatas (`grep -nE '"[\^~]' package.json` não imprime nada), e o `.npmrc` com `save-exact=true` mantém assim as próximas instalações.
+
+| Item | Versão | Onde |
+|---|---|---|
+| vite | 8.3.1 | `devDependencies` (era `^8.3.0`) |
+| @fluentui/svg-icons | 1.1.343 | `devDependencies` (novo) |
+| @microsoft/fast-element | 3.0.3 | `dependencies` (antes só transitiva; é `peerDependency` do Fluent) |
+| @microsoft/focusgroup-polyfill | 1.6.0 | `dependencies` (idem) |
+| @fontsource-variable/inter | 5.3.0 | `dependencies` (novo; usado no M06) |
+| tomatito-core | 0.1.0 | membro do workspace em `src-tauri/tomatito-core` |
+
 ## Desvios do plano
 
 ### M01
@@ -58,3 +71,16 @@ Ambiente no M01 (seção 6.4 do plano):
    ```
 
    Os avisos `GNU compiler is not supported for this target` vêm do crate `cc` no build script e não afetam o `check`. Isso só confere tipos e `cfg`; não linka nem roda nada. O teste real no Windows segue em `docs/pendencias-usuario.md`.
+
+### M02
+
+1. **Crates da seção 3.6 entram quando forem usados.** Ficaram fixados agora só os que o projeto já usa: `tauri` `=2.12.0` e `tauri-build` `=2.7.0` (com `=`), mais `serde` e `serde_json` (travados pelo `Cargo.lock`). Os plugins, `rodio`, `rusqlite`, `tokio`, `jiff`, `gtk`, `windows` e as features `tray-icon` e `image-png` do `tauri` entram nos marcos que os usam, com as versões da 3.6. Motivo: dependência sem uso só aumenta o build (o `rusqlite` com `bundled` compila o SQLite em C), e o `tauri dev` reescreve a lista de features do `tauri` para casar com a configuração (visto no M01), então a `tray-icon` é conferida junto com a bandeja. Os pacotes npm da 3.6 entraram todos, porque não custam build e o "Pronto quando" é sobre o `package.json`.
+2. **O app ainda não depende do `tomatito-core`.** O workspace existe (`[workspace] members = ["tomatito-core"]` no `src-tauri/Cargo.toml`), mas a linha `tomatito-core = { path = "tomatito-core" }` entra no M16, quando o `engine.rs` passa a usar o motor.
+3. **Teste do núcleo.** O "1 teste" do `tomatito-core` confere a própria regra de isolamento: lê o `Cargo.toml` do crate com `include_str!` e falha se alguma dependência direta for `tauri`, `wry`, `tao`, `gtk`, `webkit2gtk` ou `webview2*`. Conferido por mutação (numa cópia fora do repositório, com `tauri` como dependência, o teste falha com "o tomatito-core não pode depender de `tauri`").
+4. **`npm test` com testes de regras do repositório.** O `node --test` ainda não tinha o que testar (o `format.test.js` vem depois), então entrou `scripts/regras-do-repo.test.mjs`, que confere: versões npm exatas; `tauri` e `tauri-build` com `=` e no mesmo major.minor dos pacotes `@tauri-apps/*` (regra de atualização da 3.6); `version` ausente do `tauri.conf.json` e do `package.json`; a CSP exata da 3.8; `<html lang="pt-BR">` sem `<style>` nem `style="..."` no `index.html`; e a palavra proibida (1.1) fora do `package.json`, do `Cargo.toml`, do `tauri.conf.json`, do README, do `index.html` e de `src/`. Conferido por mutação (com `^8.3.1` no `vite`, o teste 1 falha).
+5. **`version` removida do `package.json`** (e da raiz do `package-lock.json`). O `0.0.0` vinha do template do Vite; a versão vive só no `Cargo.toml` (1.1). O pacote é `private`, então o npm não exige o campo.
+6. **`.gitignore` único na raiz.** O `src-tauri/.gitignore` do `tauri init` foi apagado, e as duas linhas dele (`target/` e `gen/schemas`) foram para o da raiz, junto com as da lista do M02. Ficaram também as entradas úteis do template do Vite (logs, editores, `*.local`).
+7. **`.npmrc` com `save-exact=true`** (fora do plano). Um `npm i` sem `--save-exact` não reintroduz o `^`.
+8. **Titular no `LICENSE`:** "kbrianps", o mesmo nome do `authors` do `Cargo.toml`. O `git config user.name` é outro; se preferir o nome completo, basta trocar a linha do copyright.
+9. **`docs/depois.md` começa com a lista da seção 2.2** (o estacionamento do plano), mais uma seção "Novas" para o que surgir nos marcos.
+10. **CSP.** Está no `tauri.conf.json` e passou pelo `generate_context!` (o `cargo clippy --workspace` recompilou o app com ela). O efeito no WebView só aparece no build e fica para o M08, como no plano.
