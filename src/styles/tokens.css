@@ -30,7 +30,7 @@
 /* 2. DERIVADOS PADRÃO (antes dos temas; cada tema pode sobrescrever) */
 [data-theme]{
   --tt-subtle-press:var(--tt-subtle-hover);
-  --tt-dial-tick:var(--tt-ring-track);        /* traços do mostrador: Lite, Suave e Claro ajustados a olho no M18 */
+  --tt-dial-tick:var(--tt-ring-track);        /* traços do mostrador: o trilho no Suave e no Claro (1,32 e 1,31:1 sobre o disco, M18) */
   --tt-timer-overdue:var(--tt-accent-fg);     /* temporizador em negativo (M32); o Lite sobrescreve */
   --tt-fg-2-on-ctl:var(--tt-fg-2);            /* texto 2 sobre input, hover ou selecionado; o Lite sobrescreve */
   --tt-ctl:var(--tt-input-bg);                /* controles: repouso e traços; Claro e Escuro sobrescrevem */
@@ -49,6 +49,7 @@
   --tt-fg-2-on-ctl:var(--tt-fg-1);            /* fg-2 cai para 3,94–4,25 sobre input, hover e selecionado */
   --tt-timer-overdue:var(--tt-fg-1);          /* accent-fg fica a 1,03:1 do fg-1; o rótulo "Encerrado há" distingue */
   --tt-ctl-hover:rgb(255 255 255/.10); --tt-ctl-press:rgb(255 255 255/.05);   /* fg-1: 4,57 e 5,04 */
+  --tt-dial-tick:#C26E65;                     /* a olho no M18: 1,36:1 sobre o disco, como os 1,33 do Escuro medido (o trilho dava 1,17) */
   --tt-fg-disabled:rgb(255 248 246/.55); --tt-accent-disabled:rgb(255 255 255/.22);   /* a olho no M13: 2,51 e 1,53:1 */
 }
 [data-theme="suave"]{ color-scheme:light;                                    /* Tomatito Suave */

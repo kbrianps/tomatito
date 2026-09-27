@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fraseDosIntervalos, intervalos, minutosPorExtenso, mmss, plurais } from './format.js';
+import { fraseDosIntervalos, intervalos, minutosPorExtenso, minutosRestantes, mmss, plurais } from './format.js';
 
 test('mm:ss arredonda o segundo para cima', () => {
   assert.equal(mmss(25 * 60_000), '25:00');
@@ -78,4 +78,15 @@ test('minutos por extenso e a escolha da forma', () => {
   // Em pt-BR, o 0 é "one" no Intl.PluralRules: por isso a frase trata o zero à parte.
   assert.equal(new Intl.PluralRules('pt-BR').select(0), 'one');
   assert.equal(plurais(3, { other: (n) => `${n}x` }), '3x', 'sem a forma da categoria, usa a other');
+});
+
+test('M18: minutos restantes do mostrador, arredondados para cima', () => {
+  assert.equal(minutosRestantes(25 * 60_000), 25);
+  assert.equal(minutosRestantes(25 * 60_000 - 1), 25);
+  assert.equal(minutosRestantes(24 * 60_000), 24);
+  assert.equal(minutosRestantes(24 * 60_000 + 1), 25);
+  assert.equal(minutosRestantes(1), 1);
+  assert.equal(minutosRestantes(59_999), 1);
+  assert.equal(minutosRestantes(240 * 60_000), 240);
+  for (const v of [0, -5, NaN, null, undefined, Infinity]) assert.equal(minutosRestantes(v), 0, String(v));
 });

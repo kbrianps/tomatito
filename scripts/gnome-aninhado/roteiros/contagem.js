@@ -1,5 +1,9 @@
 // Roteiro do M16 (laço, IPC e primeira contagem), carregado com
-// `gnome-shell --automation-script` pelo dentro.sh. Na janela main de verdade
+// `gnome-shell --automation-script` pelo dentro.sh. M18: a contagem em mm:ss
+// deu lugar ao mostrador, que mostra os minutos arredondados para cima; as
+// conferências do texto passaram a ser do número do mostrador (o restante do
+// Rust continua conferido ao segundo), e o encerrar é o item "Encerrar
+// sessão" do menu "...". Na janela main de verdade
 // (WebKitGTK no Mutter 50, Wayland), com o motor em Rust de verdade:
 //   1. iniciar (M17: o seletor em 25 e o clique do ponteiro virtual em
 //      "Iniciar sessão de foco"; antes, o botão provisório "Iniciar 25 min") mostra a
@@ -151,18 +155,18 @@ async function medirCpu(pid, s) {
   return { processo: pct(cpu(pid) - antes), tokio: pct(doTokio(tDepois) - doTokio(tAntes)), threads };
 }
 
-// Na página: o texto, a fase, o restante do Rust e as trocas do texto.
+// Na página: o número do mostrador, o título do cartão, o modo, o restante do
+// Rust e as trocas do número.
 const LER =
-  "(async () => { const s = await window.__TAURI_INTERNALS__.invoke('get_state'); return { texto: document.querySelector('[data-tempo]').textContent, fase: document.querySelector('[data-fase]').textContent, status: s.focus.status, restanteMs: s.focus.session?.remainingMs ?? null, escritas: window.__ttEscritas ?? null, visivel: document.visibilityState }; })()";
-const seg = (texto) => {
-  const [m, s] = texto.split(':').map(Number);
-  return m * 60 + s;
-};
-const bate = (l) => Math.abs(seg(l.texto) - Math.ceil(l.restanteMs / 1000)) <= 1;
+  "(async () => { const s = await window.__TAURI_INTERNALS__.invoke('get_state'); const c = document.querySelector('[data-cartao=sessao]'); return { minutos: Number(c.querySelector('[data-minutos]').textContent), fase: c.querySelector('h2').textContent, modo: c.dataset.modo, status: s.focus.status, restanteMs: s.focus.session?.remainingMs ?? null, escritas: window.__ttEscritas ?? null, visivel: document.visibilityState }; })()";
+// O número bate com o Rust: o restante arredondado para cima, em minutos (um
+// minuto de folga só na virada, quando o JS e o Rust leem instantes
+// diferentes).
+const bate = (l) => l.restanteMs !== null && Math.abs(l.minutos - Math.ceil(l.restanteMs / 60000)) <= (l.restanteMs % 60000 < 2000 || l.restanteMs % 60000 > 58000 ? 1 : 0);
 
 async function clicarNoBotao(r, seletor) {
   const c = await comando(
-    `(() => { const b = document.querySelector('${seletor}'); if (!b || b.hidden) return null; const q = b.getBoundingClientRect(); return [q.x + q.width / 2, q.y + q.height / 2]; })()`,
+    `(() => { const b = document.querySelector('${seletor}'); if (!b || b.closest('[hidden]')) return null; const q = b.getBoundingClientRect(); return [q.x + q.width / 2, q.y + q.height / 2]; })()`,
   );
   if (!c) throw new Error(`botão ausente: ${seletor}`);
   await clicar(r.x + Math.round(c[0]), r.y + Math.round(c[1]));
@@ -177,6 +181,13 @@ async function iniciarSessao(r, minutos) {
   );
   if (valor !== minutos) throw new Error(`o seletor parou em ${valor}, e não em ${minutos}`);
   await clicarNoBotao(r, '[data-cartao="sessao"] [data-iniciar]');
+}
+
+// M18: "Encerrar sessão" no menu "...", com o ponteiro.
+async function encerrar(r) {
+  await clicarNoBotao(r, '[data-cartao="sessao"] [data-mais]');
+  await sleep(300);
+  await clicarNoBotao(r, '[data-cartao="sessao"] fluent-menu-item[data-item="parar"]');
 }
 
 async function principal() {
@@ -199,9 +210,9 @@ async function principal() {
   R.medidas.processos = arvore(pid).map((p) => `${nome(p)}#${p}`);
 
   const inicial = await comando(LER);
-  checar('abre ocioso, com 00:00', inicial.status === 'idle' && inicial.texto === '00:00', inicial);
+  checar('abre ocioso, no preparo', inicial.status === 'idle' && inicial.modo === 'preparo', inicial);
   await comando(
-    "(window.__ttEscritas = 0, new MutationObserver((m) => (window.__ttEscritas += m.length)).observe(document.querySelector('[data-tempo]'), { childList: true, characterData: true, subtree: true }), true)",
+    "(window.__ttEscritas = 0, new MutationObserver((m) => (window.__ttEscritas += m.length)).observe(document.querySelector('[data-minutos]'), { childList: true, characterData: true, subtree: true }), true)",
   );
 
   // 4a. CPU parado, antes de qualquer sessão.
@@ -217,10 +228,10 @@ async function principal() {
   await comando('(window.__ttEscritas = 0, true)');
   await sleep(5000);
   const depois = await comando(LER);
-  checar('iniciar mostra a contagem (25:00 ou 24:59 logo depois do clique)', ['25:00', '24:59'].includes(logo.texto) && logo.status === 'focus', logo);
-  checar('a contagem anda: uns 5 s depois, 24:55 ± 1 s e igual ao Rust', Math.abs(seg(depois.texto) - (1500 - 5)) <= 1 && bate(depois), depois);
-  checar('o DOM do tempo é tocado uma vez por segundo (4 a 6 trocas em 5 s)', depois.escritas >= 4 && depois.escritas <= 6, { escritas: depois.escritas });
-  checar('a fase aparece', depois.fase === 'Período de foco 1 de 1', depois.fase);
+  checar('iniciar mostra o mostrador com 25 min', logo.minutos === 25 && logo.modo === 'andamento' && logo.status === 'focus', logo);
+  checar('a contagem anda: uns 5 s depois, o Rust tem 24:55 ± 1 s e o número continua 25', Math.abs(Math.ceil(depois.restanteMs / 1000) - (1500 - 5)) <= 1 && depois.minutos === 25 && bate(depois), depois);
+  checar('o número não é reescrito entre um minuto e outro (0 trocas em 5 s)', depois.escritas === 0, { escritas: depois.escritas });
+  checar('a fase aparece no título do cartão', depois.fase === 'Período de foco (1 de 1)', depois.fase);
   await captura('m16-contagem.png', r);
 
   // 4b. CPU com a contagem correndo, para comparar.
@@ -238,12 +249,12 @@ async function principal() {
   await sleep(300);
   const volta = await comando(LER);
   const esperado = 1500 - (agoraMs() - t0) / 1000;
-  checar(`minimizada ${MINIMIZADA_S} s: na volta, o texto bate com o Rust`, bate(volta) && volta.status === 'focus', volta);
-  checar(`minimizada ${MINIMIZADA_S} s: o texto bate com o relógio do roteiro (± 2 s)`, Math.abs(seg(volta.texto) - esperado) <= 2, { texto: volta.texto, esperado: Math.round(esperado) });
+  checar(`minimizada ${MINIMIZADA_S} s: na volta, o número bate com o Rust`, bate(volta) && volta.status === 'focus', volta);
+  checar(`minimizada ${MINIMIZADA_S} s: o Rust bate com o relógio do roteiro (± 2 s)`, Math.abs(volta.restanteMs / 1000 - esperado) <= 2, { restanteS: Math.round(volta.restanteMs / 1000), minutos: volta.minutos, esperado: Math.round(esperado) });
   await captura('m16-volta.png', r);
 
   // 3. Congelar 1 min num foco de 5 min.
-  await clicarNoBotao(r, 'button[data-acao="parar"]');
+  await encerrar(r);
   await iniciarSessao(r, 5);
   const c0 = agoraMs();
   await sleep(10000);
@@ -255,7 +266,7 @@ async function principal() {
   await sleep(700);
   const descongelado = await comando(LER);
   const esperadoC = 300 - (agoraMs() - c0) / 1000;
-  checar(`congelado ${CONGELADA_S} s num foco de 5 min: o restante desconta o tempo parado (± 2 s)`, Math.abs(seg(descongelado.texto) - esperadoC) <= 2 && bate(descongelado), { ...descongelado, esperado: Math.round(esperadoC) });
+  checar(`congelado ${CONGELADA_S} s num foco de 5 min: o restante desconta o tempo parado (± 2 s)`, Math.abs(descongelado.restanteMs / 1000 - esperadoC) <= 2 && bate(descongelado), { ...descongelado, esperado: Math.round(esperadoC) });
   // O tick do Rust depois da volta já traz o restante certo: sem o JS pedir
   // nada, dois segundos depois o texto continua batendo.
   await sleep(2000);
@@ -263,9 +274,9 @@ async function principal() {
   checar('dois segundos depois, continua batendo com o Rust', bate(seguinte), seguinte);
 
   // 4c. Parar e medir o CPU parado.
-  await clicarNoBotao(r, 'button[data-acao="parar"]');
+  await encerrar(r);
   const parado = await comando(LER);
-  checar('encerrar volta ao ocioso', parado.status === 'idle' && parado.texto === '00:00', parado);
+  checar('encerrar volta ao ocioso e ao preparo', parado.status === 'idle' && parado.modo === 'preparo', parado);
   await sleep(3000);
   R.medidas.cpuParado = await medirCpu(pid, 30);
   passo(`CPU parado: ${JSON.stringify(R.medidas.cpuParado)}`);

@@ -45,19 +45,34 @@ export default Object.freeze({
         other: (n) => `Você terá ${n} intervalos.`,
       }),
     }),
-    // M16: a contagem provisória do cartão de sessão (views/focus/contagem.js),
-    // que o cartão mostra durante a sessão até o mostrador do M18. O iniciar
-    // passou para o preparo (M17).
-    provisorio: Object.freeze({
+    // M18: a sessão em andamento no cartão (views/focus/andamento.js): o
+    // cabeçalho, que toma o lugar do título do cartão, o mostrador, os botões
+    // redondos, o menu "..." e o rodapé "A seguir".
+    andamento: Object.freeze({
+      focus: 'Período de foco',
+      break: 'Intervalo',
+      contagem: (n, total) => `(${n} de ${total})`,
+      unidade: 'min',
+      aSeguir: 'A seguir:',
+      proximo: Object.freeze({
+        break: (min) => `intervalo de ${min} min`,
+        focus: (min) => `foco de ${min} min`,
+      }),
       pausar: 'Pausar',
       retomar: 'Retomar',
-      pular: 'Pular',
-      parar: 'Encerrar',
-      ocioso: 'Nenhuma sessão em andamento',
-      concluida: 'Sessão concluída',
-      focus: (n, total) => `Período de foco ${n} de ${total}`,
-      break: (n, total) => `Intervalo ${n} de ${total}`,
-      pausado: (fase) => `Pausado: ${fase}`,
+      mais: 'Mais opções',
+      encerrar: 'Encerrar sessão',
+      pularIntervalo: 'Pular intervalo',
+      // O rótulo do mostrador (role="img"), atualizado uma vez por minuto
+      // (PLANO.md, 3.8): "27 minutos restantes, período de foco 1 de 2".
+      restantes: Object.freeze({
+        one: (n) => `${n} minuto restante`,
+        other: (n) => `${n} minutos restantes`,
+      }),
+      faseNoRotulo: Object.freeze({
+        focus: (n, total) => `período de foco ${n} de ${total}`,
+        break: (n, total) => `intervalo ${n} de ${total}`,
+      }),
     }),
   }),
   // Unidades por extenso, por categoria do Intl.PluralRules('pt-BR')

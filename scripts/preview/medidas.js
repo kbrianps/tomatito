@@ -628,4 +628,77 @@
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     return window.__ttSessao();
   };
+  // M18: a sessão em andamento no cartão de sessão. __ttMostrador() devolve o
+  // que se vê: o modo do cartão, o título, o número, o traço aceso, o rótulo
+  // do role="img", o botão de destaque, os itens do menu e o rodapé, mais as
+  // caixas em px CSS do cartão. __ttSerieDoMostrador(ms, passo) anota
+  // { t, minutos, aceso } a cada `passo` ms durante `ms` ms (o traço
+  // avançando). __ttMenuSessao('parar'|'pular') abre o "..." pelo click() do
+  // gatilho e escolhe o item pelo click() dele (no Chrome, o mostrador.mjs usa
+  // cliques de verdade). __ttSabotarMostrador() desce o mostrador 6 px (o
+  // controle negativo das posições).
+  window.__ttMostrador = () => {
+    const cartao = document.querySelector('[data-cartao="sessao"]');
+    const m = cartao.querySelector('[data-mostrador]');
+    const c = cartao.getBoundingClientRect();
+    const cx = (el) => {
+      const b = el.getBoundingClientRect();
+      return [b.x - c.x, b.y - c.y, b.width, b.height].map((v) => Math.round(v * 10) / 10);
+    };
+    const principal = cartao.querySelector('.tt-andamento-botoes > button');
+    const rodape = cartao.querySelector('[data-rodape]');
+    const aceso = [...m.querySelectorAll('[data-traco]')].filter((l) => l.hasAttribute('data-aceso'));
+    const cor = (el, prop) => (el ? getComputedStyle(el)[prop] : null);
+    return {
+      modo: cartao.dataset.modo,
+      titulo: cartao.querySelector('h2').textContent,
+      andamentoVisivel: !cartao.querySelector('[data-andamento]').hidden,
+      minutos: Number(m.querySelector('[data-minutos]').textContent),
+      aceso: aceso.map((l) => Number(l.dataset.traco)),
+      rotulo: m.getAttribute('aria-label'),
+      papel: m.getAttribute('role'),
+      principal: { acao: principal.dataset.acao, rotulo: principal.getAttribute('aria-label'), icone: principal.querySelector('svg')?.dataset?.icone ?? null },
+      mais: cartao.querySelector('[data-mais]').getAttribute('aria-label'),
+      itens: [...cartao.querySelectorAll('fluent-menu-item')].map((i) => ({ item: i.dataset.item, texto: i.textContent.trim(), desabilitado: i.hasAttribute('disabled') })),
+      menuAberto: cartao.querySelector('fluent-menu-list')?.matches(':popover-open') ?? false,
+      rodape: rodape.hasAttribute('data-vazio') ? null : rodape.textContent,
+      cores: {
+        traco: cor(m.querySelector('[data-traco]:not([data-aceso])'), 'stroke'),
+        aceso: cor(aceso[0], 'stroke'),
+        disco: cor(m.querySelector('.tt-mostrador-disco'), 'fill'),
+        numero: cor(m.querySelector('[data-minutos]'), 'color'),
+        unidade: cor(m.querySelector('.tt-mostrador-unidade'), 'color'),
+        esperado: { traco: window.__ttCor('--tt-dial-tick', 'color'), aceso: window.__ttCor('--tt-accent', 'color'), unidade: window.__ttCor('--tt-fg-2', 'color') },
+      },
+      fonte: { tamanho: getComputedStyle(m.querySelector('.tt-mostrador-centro')).fontSize, peso: getComputedStyle(m.querySelector('.tt-mostrador-centro')).fontWeight },
+      caixas: { cartao: [c.x, c.y, c.width, c.height], mostrador: cx(m), botoes: cx(cartao.querySelector('.tt-andamento-botoes')) },
+      pedidos: { inicios: window.__TOMATITO_PREVIEW_INICIOS__ ?? null, comandos: window.__TOMATITO_PREVIEW_COMANDOS__ ?? null },
+    };
+  };
+  window.__ttSerieDoMostrador = async (ms, passo = 250) => {
+    const serie = [];
+    const t0 = performance.now();
+    while (performance.now() - t0 <= ms) {
+      const m = window.__ttMostrador();
+      serie.push({ t: Math.round(performance.now() - t0), minutos: m.minutos, aceso: m.aceso[0] ?? null });
+      await new Promise((r) => setTimeout(r, passo));
+    }
+    return serie;
+  };
+  window.__ttMenuSessao = async (item) => {
+    document.querySelector('[data-cartao="sessao"] [data-mais]').click();
+    await doisQuadros();
+    const aberto = document.querySelector('[data-cartao="sessao"] fluent-menu-list').matches(':popover-open');
+    document.querySelector(`[data-cartao="sessao"] fluent-menu-item[data-item="${item}"]`).click();
+    await new Promise((r) => setTimeout(r, 50));
+    await doisQuadros();
+    return { abriu: aberto, ...window.__ttMostrador() };
+  };
+  window.__ttSabotarMostrador = async () => {
+    const folha = new CSSStyleSheet();
+    folha.replaceSync('.tt-mostrador { margin-top: 6px !important; }');
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, folha];
+    await doisQuadros();
+    return document.adoptedStyleSheets.length;
+  };
 })();

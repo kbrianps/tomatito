@@ -28,7 +28,8 @@ export function grades(nome) {
 
 /**
  * O SVG do ícone, decorativo (aria-hidden) e fora do foco, com a classe
- * tt-icone. O nome é o do Fluent System Icons, sem tamanho nem estilo.
+ * tt-icone e o nome em data-icone (M18: as conferências leem o glifo do
+ * botão de pausar). O nome é o do Fluent System Icons, sem tamanho nem estilo.
  * `grade` escolhe o desenho (16 por padrão); sem essa grade na pasta, vale a
  * menor maior que ela (o arrow_reset começa na 20). O tamanho na tela vem do
  * CSS.
@@ -38,5 +39,5 @@ export function icone(nome, grade = 16) {
   if (!porGrade) throw new Error(`ícone desconhecido: ${nome}`);
   const escolhida = grades(nome).find((g) => g >= grade);
   if (escolhida === undefined) throw new Error(`ícone ${nome} sem grade ${grade} ou maior`);
-  return porGrade.get(escolhida).replace('<svg ', '<svg class="tt-icone" aria-hidden="true" focusable="false" ');
+  return porGrade.get(escolhida).replace('<svg ', `<svg class="tt-icone" data-icone="${nome}" aria-hidden="true" focusable="false" `);
 }

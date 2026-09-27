@@ -500,3 +500,25 @@ O que foi conferido de forma automática (27/09/2026):
 7. [ ] Passe o mouse sobre uma seta do seletor e espere: aparece a dica "Aumentar" ou "Diminuir".
 8. [ ] Feche o `tauri dev` (Ctrl+C no terminal).
 
+
+## M18. Mostrador em foco
+
+O que foi conferido de forma automática (27/09/2026):
+
+- **"Pronto quando" no app de verdade** (`TOMATITO_SPEED=60 bash scripts/gnome-aninhado/rodar.sh mostrador`, GNOME Shell aninhado, motor em Rust e WebKitGTK): o seletor vai a 25 e o ponteiro virtual clica em "Iniciar sessão de foco"; o cartão mostra "Período de foco (1 de 1)", 25 min e o traço 0; em uns 10 s o traço aceso passa de 0 a 11 sem voltar e o número de 25 a 13, batendo com o restante do Rust; o ponteiro clica no "..." (o menu abre com "Encerrar sessão" e "Pular intervalo" desabilitado) e em "Encerrar sessão": o Rust volta ao ocioso e o cartão ao "Pronto para focar". 11 conferências ok. Captura do menu aberto em `docs/capturas/m18-app-menu.png`.
+- **Posições contra a captura do Relógio em sessão** (`node scripts/preview/mostrador.mjs`, Chrome headless e WebKitGTK fora da tela, 1372 × 936 px CSS no Escuro): cabeçalho, traços das 12, 3, 6 e 9 horas, número com a unidade, botões e rodapé diferem no máximo 2,9 px (o rodapé; o resto, até 1,9), medidos pelos pixels dentro do cartão (`scripts/preview/mostrador_bandas.py`). Com o mostrador 6 px mais baixo (controle negativo), 7 das 8 posições acusam. Lado a lado em `docs/capturas/m18-lado-a-lado.png`; os quatro temas em `docs/capturas/m18-temas.png`.
+- **O resto do marco**, nos dois motores: rótulo do `role="img"` ("27 minutos restantes, período de foco 1 de 2"), cores dos traços e do traço aceso, peso 350 do número, disco com 62% do cartão; no acelerado (`?velocidade=60`), 8 traços em 8 s; o menu encerra; no intervalo, "Intervalo", "A seguir: foco de 27 min" e "Pular intervalo" habilitado, que passa a "Período de foco (2 de 2)"; pausar e retomar trocam o glifo e o rótulo; o modo "uma volta por minuto" anda a cada 2,5 s. 15 conferências em cada motor.
+- **Regressões:** o roteiro aninhado do M16 (`contagem`, agora com o número do mostrador e o encerrar pelo menu; rodado com `TT_MINIMIZADA_S=30 TT_CONGELADA_S=20`, 14 conferências ok), o `scripts/preview/cartao-sessao.mjs` do M17 (36) e o `scripts/preview/responsivo.mjs` (85) passam; a 480 px com zoom de 160%, o cabeçalho quebra em duas linhas e empurra o disco, sem nada fora da janela.
+- `npm test` (120 testes), `npm run build` (sem nada da prévia no bundle) e `cargo clippy --workspace --all-targets -- -D warnings` passam. O Rust não mudou.
+
+### Para conferir (uns 5 minutos)
+
+1. [ ] `cd ~/dev/tomatito && TOMATITO_SPEED=60 npm run tauri dev`. Na tela Foco, ponha **25** no seletor (no `tauri dev`, as setas andam de 1 em 1) e clique em **Iniciar sessão de foco**.
+2. [ ] O cartão mostra, em cima e à esquerda, **Período de foco (1 de 1)**; no meio, o disco com 24 traços e **25 min**; embaixo, o botão redondo de pausar (claro, com o glifo vermelho no Lite) e o "...". Com 1 min passando por segundo, o traço aceso anda no sentido horário mais ou menos a cada segundo, e o número desce um por segundo.
+3. [ ] Abra `~/dev/tomatito-ref/crop-insession.png` ao lado e compare a olho: cabeçalho, disco, traços, número, botões e rodapé nas mesmas posições (a captura está a 175%).
+4. [ ] **Tom dos traços:** abra o DevTools (botão direito, Inspecionar) e, no console, troque o tema com `document.documentElement.dataset.theme = 'suave'`, depois `'light'`, `'dark'` e `'lite'`. Os traços apagados devem aparecer discretos, mas visíveis, nos quatro. Se algum ficar forte ou fraco demais, anote em `docs/pendencias-usuario.md` (item 25).
+5. [ ] **Os dois modos do traço:** no console, `document.documentElement.dataset.ttMostrador = 'minuto'` faz o traço dar uma volta por minuto; `'periodo'` volta ao padrão. Diga qual prefere (item 25).
+6. [ ] Clique no **pausar**: o glifo vira play e o número para; clique de novo: volta a contar.
+7. [ ] Clique no **"..."**: o menu mostra **Encerrar sessão** e **Pular intervalo** (apagado no foco). Clique em **Encerrar sessão**: o cartão volta ao "Pronto para focar".
+8. [ ] Com **60** no seletor, inicie de novo e espere uns 30 s (o primeiro foco, de 27,5 min): o rodapé dizia "A seguir: **intervalo de 5 min**" e passa a "Intervalo", com "A seguir: foco de 27 min". No "...", **Pular intervalo** agora está ativo e leva a "Período de foco (2 de 2)".
+9. [ ] Feche o `tauri dev` (Ctrl+C no terminal).

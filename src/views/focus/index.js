@@ -36,5 +36,5 @@ export function marcacao({ preparo = PREPARO_PADRAO, icone = semIcone } = {}) {
 export function montar(raiz, { store = storeDoApp, icone = semIcone } = {}) {
   raiz.innerHTML = marcacao({ preparo: store?.preparo, icone });
   if (!store) return null;
-  return sessao.ligar(raiz.querySelector('[data-cartao="sessao"]'), store);
+  return sessao.ligar(raiz.querySelector('[data-cartao="sessao"]'), store, { icone });
 }

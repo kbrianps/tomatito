@@ -38,4 +38,5 @@ Formato: data, marco em que surgiu e uma linha sobre a ideia.
 - 27/09/2026, M13: anel de foco duplo também nos componentes Fluent (caixa, radio, switch e item de menu), que hoje mostram o anel simples do próprio Fluent na cor do anel externo. Exige esconder o do componente e desenhar o anel em volta do rótulo (como o `FocusVisual` do CheckBox do WinUI). Decidir com o Orca no M43.
 - 27/09/2026, M17: gravar a última duração do seletor de minutos entre aberturas do app (hoje ela é lembrada só enquanto o app está aberto; o plano não pede e não há chave no `settings.json`).
 - 27/09/2026, M17: seletor de minutos como o NumberBox por completo: repetir o passo com o chevron apertado (o `RepeatButton`), a roda do mouse com o campo focado e a digitação de um valor. Hoje: teclas, chevrons e Home/End.
-
+- 27/09/2026, M18: "Pular o próximo intervalo" de dentro do foco (o foco atual continua e emenda no seguinte). Hoje o `focus_skip` pula a fase atual, e o item "Pular intervalo" do menu só vale num intervalo; exigiria um comando novo no núcleo.
+- 27/09/2026, M18: o botão de janela compacta que o Relógio mostra no canto do cartão em sessão. No Tomatito, o papel é do Full (M50 a M57); decidir lá se o cartão ganha um atalho para ele.

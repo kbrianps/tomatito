@@ -5,8 +5,9 @@
 // captura (controls.css, .tt-sessao).
 //
 // Sem sessão (ocioso ou concluída), o cartão mostra o preparo. Com uma sessão
-// em andamento, mostra a contagem provisória do M16 (contagem.js), até o
-// mostrador do M18.
+// em andamento, mostra o mostrador do M18 (andamento.js), e o título do cartão
+// vira o cabeçalho da fase ("Período de foco (1 de 2)"), à esquerda, em cima,
+// como no Relógio (o atributo data-modo do cartão troca o desenho, shell.css).
 //
 // A frase segue a regra do plan.rs com o F e o B do preparo que o Rust manda
 // no get_state (format.js, `intervalos`). O valor do seletor fica guardado
@@ -15,7 +16,7 @@
 import t from '../../lib/i18n/pt-BR.js';
 import { fraseDosIntervalos, intervalos } from '../../lib/format.js';
 import * as seletor from '../../components/minutes-picker.js';
-import * as contagem from './contagem.js';
+import * as andamento from './andamento.js';
 
 /** A duração que o seletor mostra ao abrir o app. */
 export const MINUTOS_INICIAIS = 30;
@@ -46,14 +47,27 @@ export function marcacao(preparo, icone = () => '') {
     `<label class="tt-opcao tt-preparo-pular"><fluent-checkbox size="large" data-pular></fluent-checkbox>${p.pular}</label>` +
     `<button type="button" class="tt-accent tt-preparo-iniciar" data-iniciar>${icone('play')}${p.iniciar}</button>` +
     `</div>` +
-    `<div data-andamento hidden>${contagem.marcacao()}</div>`
+    `<div data-andamento hidden>${andamento.marcacao(icone)}</div>`
   );
 }
 
-/** Liga o cartão já desenhado ao store. Devolve a função de limpeza. */
-export function ligar(cartao, store) {
+/**
+ * O título do cartão: "Pronto para focar" no preparo; na sessão, a fase em
+ * Subtitle e a contagem em peso normal ("Período de foco (1 de 2)").
+ */
+export function titulo(foco) {
+  const c = modo(foco) === 'andamento' ? andamento.cabecalho(foco) : null;
+  if (!c) return { fase: t.foco.sessao, contagem: '' };
+  return c;
+}
+
+/**
+ * Liga o cartão já desenhado ao store. `icone` é o do components/icon.js (o
+ * glifo do botão de pausar muda com o estado). Devolve a função de limpeza.
+ */
+export function ligar(cartao, store, { icone = () => '' } = {}) {
   const preparo = cartao.querySelector('[data-preparo]');
-  const andamento = cartao.querySelector('[data-andamento]');
+  const blocoAndamento = cartao.querySelector('[data-andamento]');
   const fraseEl = cartao.querySelector('[data-frase]');
   const pular = cartao.querySelector('[data-pular]');
   const iniciar = cartao.querySelector('[data-iniciar]');
@@ -83,24 +97,41 @@ export function ligar(cartao, store) {
   };
   pular.addEventListener('change', aoMarcar);
   iniciar.addEventListener('click', aoIniciar);
-  const desligarContagem = contagem.ligar(andamento, store);
+  const tituloEl = cartao.querySelector('h2');
+  const desligarAndamento = andamento.ligar(blocoAndamento, store, { icone });
+  let tituloAtual = null;
+  const escreverTitulo = (foco) => {
+    const { fase, contagem } = titulo(foco);
+    const chave = `${fase}|${contagem}`;
+    if (chave === tituloAtual) return;
+    tituloAtual = chave;
+    tituloEl.textContent = fase;
+    if (contagem) {
+      const span = cartao.ownerDocument.createElement('span');
+      span.className = 'tt-sessao-contagem';
+      span.textContent = ` ${contagem}`;
+      tituloEl.append(span);
+    }
+  };
 
   const aoMudar = (foco) => {
     sel.configurar(faixa(store.preparo));
     atualizarFrase();
     const m = modo(foco);
     // O foco do teclado não pode ficar num bloco que vai sumir.
-    const some = m === 'andamento' ? preparo : andamento;
+    const some = m === 'andamento' ? preparo : blocoAndamento;
     const focoIa = some.contains(cartao.ownerDocument?.activeElement ?? null);
     preparo.hidden = m !== 'preparo';
-    andamento.hidden = m !== 'andamento';
+    blocoAndamento.hidden = m !== 'andamento';
+    cartao.dataset.modo = m;
+    escreverTitulo(foco);
     if (focoIa) cartao.closest('.tt-pagina')?.querySelector('h1[tabindex="-1"]')?.focus();
   };
   const desassinar = store.assinar(aoMudar);
   aoMudar(store.foco);
   return () => {
     desassinar();
-    desligarContagem();
+    desligarAndamento();
     sel.desligar();
     pular.removeEventListener('change', aoMarcar);
     iniciar.removeEventListener('click', aoIniciar);

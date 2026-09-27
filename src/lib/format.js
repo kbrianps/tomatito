@@ -1,5 +1,6 @@
 // Formatos de tempo e de números da interface (PLANO.md, 3.8). M16: o mm:ss
-// da contagem provisória. M17: os plurais (Intl.PluralRules) e a regra dos
+// (a contagem provisória do M16, que saiu no M18). M18: os minutos
+// arredondados para cima do mostrador. M17: os plurais (Intl.PluralRules) e a regra dos
 // intervalos da frase do cartão "Pronto para focar". hh:mm:ss, -hh:mm:ss,
 // hh:mm:ss,cc e as durações por extenso ("2,5 horas") chegam com as telas que
 // os usam.
@@ -17,6 +18,15 @@ const plural = new Intl.PluralRules('pt-BR');
 export function mmss(ms) {
   const s = Number.isFinite(ms) && ms > 0 ? Math.ceil(ms / 1000) : 0;
   return `${dois(Math.floor(s / 60))}:${dois(s % 60)}`;
+}
+
+/**
+ * Minutos restantes do mostrador (M18), arredondados para cima, como no
+ * Relógio: 25 no início de um foco de 25 min, 1 no último minuto e 0 só no
+ * fim. Negativo ou inválido vira 0.
+ */
+export function minutosRestantes(ms) {
+  return Number.isFinite(ms) && ms > 0 ? Math.ceil(ms / 60_000) : 0;
 }
 
 /**

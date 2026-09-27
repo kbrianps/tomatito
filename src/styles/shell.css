@@ -216,12 +216,51 @@
 .tt-preparo-iniciar{ margin-top:24px; max-width:100%; height:auto; min-height:32px; padding-block:5px; white-space:normal; }
 .tt-sessao [data-andamento]{ width:100%; }
 
-/* Contagem provisória do cartão de sessão (M16), que o cartão mostra durante a
-   sessão até o mostrador do M18. O tempo usa o Display do Relógio (68/92,
-   Semibold), com algarismos de largura fixa. */
-.tt-contagem{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }
-.tt-contagem-tempo{ font:var(--tt-type-display); margin:0; }
-.tt-contagem > p{ margin:0; }
+/* M18: sessão em andamento (src/views/focus/andamento.js), com as posições da
+   captura do Relógio em sessão (crop-insession.png, a 175%, medidas em relação
+   ao canto do cartão; docs/decisoes.md, M18): o título do cartão vira o
+   cabeçalho da fase, à esquerda e em cima, na linha que o Relógio usa para os
+   botões do topo (centro a 20 px), em Body Strong (a altura das maiúsculas da
+   captura é a de 14 px, e não a do Subtitle do título "Pronto para focar"),
+   com a contagem "(1 de 2)" no peso normal; o disco começa a 35 px e tem 62% da largura
+   do cartão (280 de 448; o cqi é o da caixa de conteúdo, sem os 44 px do
+   padding), até 320 px numa coluna larga; os botões redondos de
+   32 px ficam 19 px abaixo do disco, a 8 px um do outro, e o rodapé 16 px
+   abaixo deles. O cartão é o contêiner das medidas (cqi), e o mostrador, o do
+   número: o SVG, os traços, o número e a unidade crescem e encolhem juntos. */
+.tt-card.tt-sessao{ container-type:inline-size; }
+/* O cabeçalho fica no fluxo (e não em position:absolute): numa coluna estreita
+   ele quebra em duas linhas e empurra o disco, em vez de passar por cima. As
+   margens negativas o levam do padding do cartão (36 em cima, 22 dos lados)
+   para 10 em cima e 16 à esquerda; os 5 embaixo põem o disco a 35. */
+.tt-sessao[data-modo="andamento"] > h2{ align-self:stretch; margin:-26px -6px 5px; font:var(--tt-type-body-strong); text-align:left; }
+.tt-sessao-contagem{ font-weight:400; white-space:nowrap; }
+.tt-andamento{ display:flex; flex-direction:column; align-items:center; }
+.tt-mostrador{ position:relative; width:min(calc((100cqi + 44px) * 0.625), 320px); aspect-ratio:1; container-type:inline-size; }
+.tt-mostrador-svg{ position:absolute; inset:0; width:100%; height:100%; }
+.tt-mostrador-disco{ fill:var(--tt-ctl); stroke:var(--tt-ctl-stroke-top); stroke-width:1; }
+.tt-mostrador-traco{ stroke:var(--tt-dial-tick); stroke-width:6; stroke-linecap:round; }
+.tt-mostrador-traco[data-aceso]{ stroke:var(--tt-accent); }
+/* O número (46 px no disco de 280, peso Semilight) e a unidade em --tt-fg-2,
+   menor (0,61 em, uns 28 px: o "m" da captura tem 14,9 px de altura, a do "x"
+   da Inter a 28 px), na mesma linha de base. O bloco é centrado no disco pelo translate; com a
+   Inter e a linha de 1 em, o meio dos algarismos cai no meio da linha. */
+.tt-mostrador-centro{
+  position:absolute; left:0; right:0; top:50%; translate:0 -50%; margin:0;
+  font-family:var(--tt-font-display); font-weight:var(--tt-w-semilight);
+  font-size:calc(100cqi * 46 / 280); line-height:1; text-align:center; white-space:pre;
+}
+.tt-mostrador-unidade{ font-size:.61em; color:var(--tt-fg-2); }
+.tt-andamento-botoes{ display:flex; gap:8px; margin-top:19px; }
+.tt-andamento-rodape{ margin:16px 0 0; color:var(--tt-fg-2); }
+.tt-andamento-rodape strong{ font-weight:600; color:var(--tt-fg-1); }
+/* Na última fase não há "A seguir"; a linha guarda o lugar. */
+.tt-andamento-rodape[data-vazio]{ visibility:hidden; }
+@media (forced-colors:active){
+  .tt-mostrador-disco{ fill:Canvas; stroke:CanvasText; }
+  .tt-mostrador-traco{ stroke:GrayText; }
+  .tt-mostrador-traco[data-aceso]{ stroke:Highlight; }
+}
 
 /* Amostra do M06 (#/dev) */
 .tt-amostra{

@@ -31,14 +31,14 @@ test('cada cartão é uma <section> com o título do catálogo em Subtitle, e a 
       `<section class="tt-card${id === 'sessao' ? ' tt-sessao' : ''}" data-cartao="${id}" aria-labelledby="foco-${id}">` +
         `<h2 id="foco-${id}" class="tt-t-subtitle">${t.foco[id]}</h2>` +
         // M17: só o cartão de sessão tem conteúdo (o preparo e, durante a
-        // sessão, a contagem provisória do M16).
+        // sessão, o mostrador do M18).
         (id === 'sessao' ? '<div class="tt-preparo" data-preparo>.*</div><div data-andamento hidden>.*</div>' : '') +
         '</section>',
     );
     assert.match(html, re);
   }
-  const { provisorio, preparo, ...titulos } = t.foco;
-  assert.ok(provisorio && preparo);
+  const { andamento, preparo, ...titulos } = t.foco;
+  assert.ok(andamento && preparo);
   assert.deepEqual(titulos, { sessao: 'Pronto para focar', progresso: 'Progresso diário', tarefas: 'Tarefas' });
 });
 
@@ -48,9 +48,9 @@ test('montar(raiz) desenha a marcação', () => {
   assert.equal(raiz.innerHTML, marcacao());
 });
 
-test('M17: os ícones vêm do contexto (play no botão, chevrons no seletor)', () => {
+test('M17: os ícones vêm do contexto (play no botão, chevrons no seletor; M18: pause e "..." na sessão)', () => {
   const icone = (nome) => `<svg data-icone="${nome}"></svg>`;
   const html = marcacao({ icone });
-  assert.deepEqual([...html.matchAll(/data-icone="(\w+)"/g)].map((m) => m[1]), ['chevron_up', 'chevron_down', 'play']);
-  assert.doesNotMatch(marcacao(), /<svg/, 'sem contexto, sem ícone (node --test)');
+  assert.deepEqual([...html.matchAll(/data-icone="(\w+)"/g)].map((m) => m[1]), ['chevron_up', 'chevron_down', 'play', 'pause', 'more_horizontal']);
+  assert.doesNotMatch(marcacao().replace(/<svg class="tt-mostrador-svg".*?<\/svg>/, ''), /<svg/, 'sem contexto, sem ícone (node --test); o SVG do mostrador é do dial.js');
 });
