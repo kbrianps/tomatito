@@ -38,7 +38,7 @@ const redimensionou = () =>
 // pode andar mais rápido (?velocidade=60, como o TOMATITO_SPEED). O "Pular"
 // passa para a fase seguinte, como no núcleo.
 const velocidade = Number(params.get('velocidade')) > 0 ? Number(params.get('velocidade')) : 1;
-const motor = { seq: 0, sessao: null, pausadoMs: null, prazo: null };
+const motor = { seq: 0, sessao: null, pausadoMs: null, prazo: null, faseAnterior: null };
 const agoraMotor = (() => {
   const base = Date.now();
   return () => base + (Date.now() - base) * velocidade;
@@ -77,23 +77,41 @@ function retratoFoco() {
     },
   };
 }
-function transicao() {
+// M19: com uma causa (started, ended, skipped, stopped), emite também o
+// tt://phase, com o seq, a fase nova e o total do tipo, como o engine.rs.
+function transicao(causa = null) {
   motor.seq++;
+  const anterior = motor.faseAnterior;
   agendarFim();
   const r = retratoFoco();
-  setTimeout(() => emit('tt://state', r));
+  const s = r.session;
+  const concluida = causa && causa !== 'started' && causa !== 'stopped' && !s;
+  const fase = causa && {
+    seq: r.seq, cause: causa, late: false,
+    status: concluida ? 'completed' : r.status,
+    ended: causa === 'started' ? null : anterior,
+    phase: s ? s.phase : null,
+    of: s ? (s.phase.kind === 'focus' ? s.blocks : s.intervals) : null,
+  };
+  window.__TOMATITO_PREVIEW_FASES__.push(fase || null);
+  setTimeout(() => {
+    emit('tt://state', r);
+    if (fase) emit('tt://phase', fase);
+  });
   return r;
 }
+window.__TOMATITO_PREVIEW_FASES__ = [];
 // A fase vence no prazo: passa para a seguinte ou volta ao ocioso.
 function agendarFim() {
   clearTimeout(motor.prazo);
   const s = motor.sessao;
   if (!s || motor.pausadoMs != null) return;
-  motor.prazo = setTimeout(() => (proximaFase(), transicao()), Math.max(0, (s.endsAt - agoraMotor()) / velocidade));
+  motor.prazo = setTimeout(() => (proximaFase(), transicao('ended')), Math.max(0, (s.endsAt - agoraMotor()) / velocidade));
 }
 function proximaFase() {
   const s = motor.sessao;
   if (!s) return;
+  motor.faseAnterior = s.fases[s.indice];
   if (s.indice + 1 >= s.fases.length) {
     motor.sessao = null;
     return;
@@ -140,12 +158,17 @@ const handlers = {
   focus_start: ({ minutes, skipBreaks }) => {
     window.__TOMATITO_PREVIEW_INICIOS__.push({ minutes, skipBreaks });
     iniciarFoco(minutes, null, Boolean(skipBreaks));
-    return transicao();
+    return transicao('started');
   },
   focus_pause: () => ((motor.pausadoMs = retratoFoco().session.remainingMs), transicao()),
   focus_resume: () => ((motor.sessao.endsAt = agoraMotor() + motor.pausadoMs), (motor.pausadoMs = null), transicao()),
-  focus_skip: () => (window.__TOMATITO_PREVIEW_COMANDOS__.push('focus_skip'), proximaFase(), transicao()),
-  focus_stop: () => (window.__TOMATITO_PREVIEW_COMANDOS__.push('focus_stop'), (motor.sessao = null), transicao()),
+  focus_skip: () => (window.__TOMATITO_PREVIEW_COMANDOS__.push('focus_skip'), proximaFase(), transicao('skipped')),
+  focus_stop: () => {
+    window.__TOMATITO_PREVIEW_COMANDOS__.push('focus_stop');
+    motor.faseAnterior = motor.sessao?.fases[motor.sessao.indice] ?? null;
+    motor.sessao = null;
+    return transicao('stopped');
+  },
   'plugin:window|is_maximized': () => janela.maximizada,
   'plugin:window|toggle_maximize': () => {
     janela.maximizada = !janela.maximizada;

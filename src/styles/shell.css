@@ -241,6 +241,10 @@
 .tt-mostrador-disco{ fill:var(--tt-ctl); stroke:var(--tt-ctl-stroke-top); stroke-width:1; }
 .tt-mostrador-traco{ stroke:var(--tt-dial-tick); stroke-width:6; stroke-linecap:round; }
 .tt-mostrador-traco[data-aceso]{ stroke:var(--tt-accent); }
+/* M19: no intervalo, o traço aceso em --tt-fg-2; pausado, o número também.
+   A troca é seca, sem transição, como a do Relógio. */
+.tt-andamento[data-fase="break"] .tt-mostrador-traco[data-aceso]{ stroke:var(--tt-fg-2); }
+.tt-andamento[data-pausado] .tt-mostrador-numero{ color:var(--tt-fg-2); }
 /* O número (46 px no disco de 280, peso Semilight) e a unidade em --tt-fg-2,
    menor (0,61 em, uns 28 px: o "m" da captura tem 14,9 px de altura, a do "x"
    da Inter a 28 px), na mesma linha de base. O bloco é centrado no disco pelo translate; com a
@@ -260,6 +264,8 @@
   .tt-mostrador-disco{ fill:Canvas; stroke:CanvasText; }
   .tt-mostrador-traco{ stroke:GrayText; }
   .tt-mostrador-traco[data-aceso]{ stroke:Highlight; }
+  .tt-andamento[data-fase="break"] .tt-mostrador-traco[data-aceso]{ stroke:CanvasText; }
+  .tt-andamento[data-pausado] .tt-mostrador-numero{ color:GrayText; }
 }
 
 /* Amostra do M06 (#/dev) */

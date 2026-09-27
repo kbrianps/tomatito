@@ -44,6 +44,9 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 25. **Conferir o M18 na tela e escolher o modo do traço** (desde o M18). Uns 5 minutos, com os passos em `docs/verificacao-manual.md`, seção M18: o mostrador com o relógio acelerado, o tom dos traços nos quatro temas (o do Lite foi escolhido por conta, `#C26E65`; o Suave e o Claro ficaram com o trilho do plano) e os dois modos do traço aceso ("progresso do período", o padrão, ou "uma volta por minuto"). O teste aninhado já fez o "Pronto quando" com o ponteiro virtual (11 conferências ok); falta o seu olho. Não bloqueia o M19.
 26. **Mostrador no Windows** (desde o M18). No WebView2, repetir os passos 1, 2, 6 e 7 da seção M18, e o 2 também com o alto contraste do Windows ligado (disco com a borda do sistema, traços em cinza e o aceso na cor de destaque). A prévia no Chrome headless (o mesmo motor) já passou em tudo; falta o WebView2 e o alto contraste. Entra na ida ao Windows do M48.
 
+27. **Conferir o M19 na tela** (desde o M19). Uns 5 minutos, com os passos em `docs/verificacao-manual.md`, seção M19: o pausado, o intervalo, a volta ao "Pronto para focar", o Espaço e a região `aria-live` no DevTools. No Lite, o traço aceso do intervalo (`--tt-fg-2`, rosa-claro) fica perto do branco do foco; diga se basta ou se prefere outro tom. O teste aninhado já fez o "Pronto quando" com o teclado virtual (11 conferências ok); falta o seu olho. Não bloqueia o M20.
+28. **Pausado, intervalo e Espaço no Windows** (desde o M19). No WebView2, repetir os passos 1 a 5 da seção M19, e o 3 também com o alto contraste do Windows ligado (traço aceso do intervalo na cor do texto, número pausado em cinza). O anúncio pelo Narrador é do M49. A prévia no Chrome headless (o mesmo motor) já passou em tudo, com o Espaço de verdade. Entra na ida ao Windows do M48.
+
 ## Resolvidas
 
 - **Nome** (1.2, item 1): continua "Tomatito".

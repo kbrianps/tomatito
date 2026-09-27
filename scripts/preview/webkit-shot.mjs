@@ -14,6 +14,8 @@
 //   --motion reduce       gtk-enable-animations desligado, que o WebKitGTK
 //                         repassa como prefers-reduced-motion: reduce
 //   --path /#/foco        caminho aberto (padrão /)
+//   --timeout 60          prazo da prévia inteira, em s (M19: a sessão de 60
+//                         min a 60× leva um minuto)
 // Passos (repetíveis, executados em ordem):
 //   --eval "expr"         avalia na página (promessas são esperadas) e imprime o JSON
 //   --resize 480x500@1.5  muda o tamanho da janela fora da tela (M10); o "@1.5",
@@ -34,7 +36,7 @@ const STEP_KINDS = ['eval', 'resize', 'wait', 'shot'];
 const HELPER = fileURLToPath(new URL('./webkit-shot.py', import.meta.url));
 
 function parseArgs(argv) {
-  const opts = { size: '1000x700', scheme: 'dark', motion: '', path: '/' };
+  const opts = { size: '1000x700', scheme: 'dark', motion: '', path: '/', timeout: '60' };
   const steps = [];
   for (let i = 0; i < argv.length; i += 2) {
     const key = argv[i].replace(/^--/, '');
@@ -79,6 +81,7 @@ async function main() {
       scheme: opts.scheme,
       motion: opts.motion,
       steps: opts.steps,
+      timeout: Number(opts.timeout) || 60,
     };
     child = spawn('python3', [HELPER, JSON.stringify(cfg)], { stdio: 'inherit' });
     const code = await new Promise((res) => child.once('exit', (c, s) => res(c ?? (s ? 1 : 0))));

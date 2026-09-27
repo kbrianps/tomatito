@@ -37,8 +37,8 @@ test('cada cartão é uma <section> com o título do catálogo em Subtitle, e a 
     );
     assert.match(html, re);
   }
-  const { andamento, preparo, ...titulos } = t.foco;
-  assert.ok(andamento && preparo);
+  const { andamento, preparo, fases, ...titulos } = t.foco;
+  assert.ok(andamento && preparo && fases);
   assert.deepEqual(titulos, { sessao: 'Pronto para focar', progresso: 'Progresso diário', tarefas: 'Tarefas' });
 });
 

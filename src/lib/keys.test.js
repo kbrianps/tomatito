@@ -1,7 +1,7 @@
 // Testes dos atalhos de navegação (M09, seção 3.8 do plano).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { escDeListaAberta, ligarAtalhosDeNavegacao, ligarEscDasListas, rotaDoAtalho } from './keys.js';
+import { escDeListaAberta, espacoLivre, ligarAtalhosDeNavegacao, ligarEscDasListas, rotaDoAtalho } from './keys.js';
 
 const tecla = (code, key, mods = {}) => ({ code, key, ctrlKey: true, altKey: false, shiftKey: false, metaKey: false, ...mods });
 
@@ -73,4 +73,30 @@ test('Esc com uma lista suspensa aberta cancela o padrão (o diálogo em volta n
   assert.equal(fechada.defaultPrevented, false);
   desligar();
   assert.equal(ouvinte, null);
+});
+
+// M19: o Espaço da tela Foco.
+const espaco = (alvo = null, mods = {}) => ({
+  key: ' ', code: 'Space', repeat: false, ctrlKey: false, altKey: false, shiftKey: false, metaKey: false,
+  defaultPrevented: false, target: alvo, ...mods,
+});
+// Um alvo cujo closest acha o seletor `dono` (se estiver na lista pedida).
+const alvo = (dono = null) => ({ closest: (s) => (dono && s.split(',').includes(dono) ? {} : null) });
+
+test('Espaço com o foco fora de botões e campos: vale', () => {
+  assert.equal(espacoLivre(espaco(alvo())), true, 'no <body> ou no título da tela');
+  assert.equal(espacoLivre(espaco(null)), true);
+  assert.equal(espacoLivre(espaco(alvo(), { key: 'Spacebar', code: 'Space' })), true, 'pela posição da tecla');
+});
+
+test('Espaço num controle, repetido, com modificador ou já tratado: não vale', () => {
+  for (const dono of ['button', 'a[href]', 'input', 'textarea', '[role="spinbutton"]', 'fluent-checkbox', 'fluent-menu-item', 'fluent-menu', 'dialog', '[tabindex]:not([tabindex^="-"])']) {
+    assert.equal(espacoLivre(espaco(alvo(dono))), false, dono);
+  }
+  assert.equal(espacoLivre(espaco(alvo(), { repeat: true })), false);
+  assert.equal(espacoLivre(espaco(alvo(), { ctrlKey: true })), false);
+  assert.equal(espacoLivre(espaco(alvo(), { shiftKey: true })), false);
+  assert.equal(espacoLivre(espaco(alvo(), { defaultPrevented: true })), false);
+  assert.equal(espacoLivre(espaco(alvo(), { isComposing: true })), false);
+  assert.equal(espacoLivre(espaco(alvo(), { key: 'Enter', code: 'Enter' })), false);
 });

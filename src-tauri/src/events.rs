@@ -184,14 +184,42 @@ pub enum CauseDto {
 }
 
 /// `tt://phase`.
+///
+/// M19: o evento basta para o anúncio `aria-live` ("Período de foco 2 de 2",
+/// "Intervalo 1 de 1", "Sessão concluída"): leva a fase que começou e quantas
+/// fases do mesmo tipo a sessão tem, tirados do retrato emitido logo antes,
+/// cujo `seq` vai junto.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PhaseEventDto {
+    /// O `seq` do `tt://state` desta troca (0 fora do motor).
+    pub seq: u64,
     pub cause: CauseDto,
     /// Só em `ended`: a última fase venceu há mais de 60 s.
     pub late: bool,
     pub status: StatusDto,
     pub ended: Option<PhaseDto>,
+    /// A fase atual depois da troca; `None` no ocioso e no concluído.
+    pub phase: Option<PhaseDto>,
+    /// Quantas fases do tipo de `phase` a sessão tem (os blocos de foco ou
+    /// os intervalos): o "2" de "1 de 2".
+    pub of: Option<u32>,
+}
+
+impl PhaseEventDto {
+    /// Completa o evento com o retrato emitido logo antes (engine.rs).
+    pub fn complete_with(&mut self, state: &FocusDto) {
+        self.seq = state.seq;
+        let session = state
+            .session
+            .as_ref()
+            .filter(|_| !matches!(state.status, StatusDto::Idle | StatusDto::Completed));
+        self.phase = session.map(|s| s.phase);
+        self.of = session.map(|s| match s.phase.kind {
+            PhaseKindDto::Focus => s.blocks,
+            PhaseKindDto::Break => s.intervals,
+        });
+    }
 }
 
 impl From<&PhaseChange> for PhaseEventDto {
@@ -203,10 +231,13 @@ impl From<&PhaseChange> for PhaseEventDto {
             ChangeCause::Stopped => (CauseDto::Stopped, false),
         };
         Self {
+            seq: 0,
             cause,
             late,
             status: c.status.into(),
             ended: c.ended.map(Into::into),
+            phase: None,
+            of: None,
         }
     }
 }
@@ -307,12 +338,14 @@ mod tests {
             .collect();
         assert_eq!(
             v[0],
-            json!({"cause": "started", "late": false, "status": "focus", "ended": null})
+            json!({"seq": 0, "cause": "started", "late": false, "status": "focus",
+                   "ended": null, "phase": null, "of": null})
         );
         assert_eq!(
             v[1],
-            json!({"cause": "ended", "late": true, "status": "completed",
-                   "ended": {"kind": "focus", "n": 1, "durationS": 300}})
+            json!({"seq": 0, "cause": "ended", "late": true, "status": "completed",
+                   "ended": {"kind": "focus", "n": 1, "durationS": 300},
+                   "phase": null, "of": null})
         );
     }
 

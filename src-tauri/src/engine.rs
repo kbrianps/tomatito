@@ -79,9 +79,25 @@ pub trait Sink: Send + Sync + 'static {
 }
 
 /// Adapta um [`Sink`] ao trait `Effects` do núcleo e numera os retratos.
+///
+/// M19: guarda o último retrato emitido. O núcleo sempre chama
+/// `state_changed` logo antes de `phase_changed`, e o `tt://phase` leva o
+/// `seq` e a fase desse retrato: o anúncio do `aria-live` sai do próprio
+/// evento, sem depender da ordem em que o JS recebe os dois.
 struct Outbox<'a, S: Sink> {
     sink: &'a S,
     seq: &'a mut u64,
+    last: Option<FocusDto>,
+}
+
+impl<'a, S: Sink> Outbox<'a, S> {
+    fn new(sink: &'a S, seq: &'a mut u64) -> Self {
+        Self {
+            sink,
+            seq,
+            last: None,
+        }
+    }
 }
 
 impl<S: Sink> Effects for Outbox<'_, S> {
@@ -99,9 +115,14 @@ impl<S: Sink> Effects for Outbox<'_, S> {
         let mut dto = FocusDto::from(snapshot);
         dto.seq = *self.seq;
         self.sink.state(&dto);
+        self.last = Some(dto);
     }
     fn phase_changed(&mut self, change: &PhaseChange) {
-        self.sink.phase(&change.into());
+        let mut dto = PhaseEventDto::from(change);
+        if let Some(last) = &self.last {
+            dto.complete_with(last);
+        }
+        self.sink.phase(&dto);
     }
 }
 
@@ -224,13 +245,7 @@ impl<S: Sink> Engine<S> {
         let mut g = self.lock();
         let now = self.clock.now();
         let Inner { focus, seq, .. } = &mut *g;
-        focus.advance_to(
-            now,
-            &mut Outbox {
-                sink: &self.sink,
-                seq,
-            },
-        );
+        focus.advance_to(now, &mut Outbox::new(&self.sink, seq));
         StateDto {
             focus: g.dto(now),
             speed: self.speed,
@@ -247,14 +262,7 @@ impl<S: Sink> Engine<S> {
         let mut g = self.lock();
         let now = self.clock.now();
         let Inner { focus, seq, .. } = &mut *g;
-        let r = f(
-            focus,
-            now,
-            &mut Outbox {
-                sink: &self.sink,
-                seq,
-            },
-        );
+        let r = f(focus, now, &mut Outbox::new(&self.sink, seq));
         let running = g.focus.is_running();
         let dto = g.dto(now);
         drop(g);
@@ -314,13 +322,7 @@ impl<S: Sink> Engine<S> {
         let mut g = self.lock();
         let now = self.clock.now();
         let Inner { focus, seq, .. } = &mut *g;
-        focus.advance_to(
-            now,
-            &mut Outbox {
-                sink: &self.sink,
-                seq,
-            },
-        );
+        focus.advance_to(now, &mut Outbox::new(&self.sink, seq));
         let snapshot = g.focus.snapshot(now);
         let Some((s, ends_at)) = snapshot
             .session
@@ -606,6 +608,61 @@ mod tests {
         // 1650 + 300 + 1650 s, um tick por segundo mostrado (de N a 1).
         assert_eq!(ticks.len(), 1650 + 300 + 1650);
         assert_eq!(e.state().focus.status, StatusDto::Completed);
+    }
+
+    #[test]
+    fn evento_de_fase_leva_a_fase_nova_e_o_seq_do_retrato() {
+        // M19: o anúncio de cada fase sai do próprio tt://phase.
+        let (e, clock) = motor();
+        e.start(60, false, None).unwrap();
+        let mut n = 0;
+        while e.tick() {
+            clock.advance_ms(250);
+            n += 1;
+            assert!(n < 60 * 60 * 4 + 10, "o laço não para");
+        }
+        e.stop().unwrap_err();
+        let out = e.sink().tirar();
+        let mut ultimo_seq = 0;
+        let mut fases = Vec::new();
+        for o in &out {
+            match o {
+                Out::State(f) => ultimo_seq = f.seq,
+                Out::Phase(p) => {
+                    assert_eq!(p.seq, ultimo_seq, "o seq do retrato emitido logo antes");
+                    fases.push((p.cause, p.status, p.phase.map(|f| (f.kind, f.n)), p.of));
+                }
+                _ => {}
+            }
+        }
+        use crate::events::PhaseKindDto::{Break, Focus};
+        assert_eq!(
+            fases,
+            [
+                (
+                    CauseDto::Started,
+                    StatusDto::Focus,
+                    Some((Focus, 1)),
+                    Some(2)
+                ),
+                (CauseDto::Ended, StatusDto::Break, Some((Break, 1)), Some(1)),
+                (CauseDto::Ended, StatusDto::Focus, Some((Focus, 2)), Some(2)),
+                (CauseDto::Ended, StatusDto::Completed, None, None),
+            ]
+        );
+
+        // Encerrar volta ao ocioso, sem fase.
+        e.start(5, false, None).unwrap();
+        e.sink().tirar();
+        e.stop().unwrap();
+        let out: Vec<_> = e
+            .sink()
+            .tirar()
+            .into_iter()
+            .filter(|o| matches!(o, Out::State(_) | Out::Phase(_)))
+            .collect();
+        assert!(matches!(&out[..], [Out::State(s), Out::Phase(p)]
+            if p.seq == s.seq && p.cause == CauseDto::Stopped && p.status == StatusDto::Idle && p.phase.is_none()));
     }
 
     #[test]

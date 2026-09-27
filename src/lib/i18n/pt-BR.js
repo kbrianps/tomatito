@@ -52,6 +52,8 @@ export default Object.freeze({
       focus: 'Período de foco',
       break: 'Intervalo',
       contagem: (n, total) => `(${n} de ${total})`,
+      // M19: o cabeçalho de uma fase pausada ganha " · Pausado".
+      pausado: 'Pausado',
       unidade: 'min',
       aSeguir: 'A seguir:',
       proximo: Object.freeze({
@@ -73,6 +75,16 @@ export default Object.freeze({
         focus: (n, total) => `período de foco ${n} de ${total}`,
         break: (n, total) => `intervalo ${n} de ${total}`,
       }),
+    }),
+    // M19: o anúncio de cada troca de fase, na região aria-live escondida
+    // (lib/a11y.js). Pausar e retomar não são anunciados.
+    fases: Object.freeze({
+      comecou: Object.freeze({
+        focus: (n, total) => `Começou o período de foco ${n} de ${total}.`,
+        break: (n, total) => `Começou o intervalo ${n} de ${total}.`,
+      }),
+      concluida: 'Sessão de foco concluída.',
+      encerrada: 'Sessão de foco encerrada.',
     }),
   }),
   // Unidades por extenso, por categoria do Intl.PluralRules('pt-BR')

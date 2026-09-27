@@ -701,4 +701,79 @@
     await doisQuadros();
     return document.adoptedStyleSheets.length;
   };
+
+  // M19: pausado, intervalo e concluído. __ttEstadoDaSessao() devolve o que
+  // muda entre os estados: o título, o rodapé, o botão de destaque, os
+  // atributos do bloco (data-fase, data-pausado), as cores do número e do
+  // traço aceso (com as esperadas) e o texto da região aria-live.
+  // __ttOuvirAnuncios() liga um MutationObserver na região e anota cada texto
+  // não vazio em __ttAnuncios (o que um leitor de tela receberia; no DevTools,
+  // é o que se vê mudar no nó .tt-anuncio). __ttPercorrer(ms, passo) anota a
+  // sequência de estados distintos por `ms` ms, ou até o cartão voltar ao
+  // preparo depois de ter saído dele. __ttEspaco() manda um Espaço ao
+  // documento, com o foco no título da tela (o WebKitGTK fora da tela não tem
+  // teclado; no Chrome, o fases.mjs usa o --key Space).
+  window.__ttEstadoDaSessao = () => {
+    const cartao = document.querySelector('[data-cartao="sessao"]');
+    const bloco = cartao.querySelector('.tt-andamento');
+    const m = cartao.querySelector('[data-mostrador]');
+    const aceso = m.querySelector('[data-traco][data-aceso]');
+    const principal = cartao.querySelector('.tt-andamento-botoes > button');
+    const rodape = cartao.querySelector('[data-rodape]');
+    const regiao = document.querySelector('[data-anuncio]');
+    return {
+      modo: cartao.dataset.modo,
+      titulo: cartao.querySelector('h2').textContent,
+      rodape: cartao.dataset.modo === 'andamento' && !rodape.hasAttribute('data-vazio') ? rodape.textContent : null,
+      principal: cartao.dataset.modo === 'andamento' ? { acao: principal.dataset.acao, rotulo: principal.getAttribute('aria-label'), icone: principal.querySelector('svg')?.dataset?.icone ?? null } : null,
+      fase: bloco.dataset.fase ?? null,
+      pausado: bloco.hasAttribute('data-pausado'),
+      cores: {
+        numero: getComputedStyle(m.querySelector('[data-minutos]')).color,
+        aceso: aceso ? getComputedStyle(aceso).stroke : null,
+        esperado: { fg1: window.__ttCor('--tt-fg-1', 'color'), fg2: window.__ttCor('--tt-fg-2', 'color'), accent: window.__ttCor('--tt-accent', 'color') },
+      },
+      regiao: regiao && {
+        texto: regiao.textContent,
+        live: regiao.getAttribute('aria-live'),
+        atomic: regiao.getAttribute('aria-atomic'),
+        caixa: (({ width, height }) => [width, height])(regiao.getBoundingClientRect()),
+        regioesLive: document.querySelectorAll('[aria-live]').length,
+      },
+      animacoes: document.getAnimations().length,
+      foco: document.activeElement?.tagName ?? null,
+    };
+  };
+  window.__ttOuvirAnuncios = () => {
+    window.__ttAnuncios = [];
+    const regiao = document.querySelector('[data-anuncio]');
+    const t0 = performance.now();
+    new MutationObserver(() => {
+      if (regiao.textContent) window.__ttAnuncios.push({ t: Math.round(performance.now() - t0), texto: regiao.textContent });
+    }).observe(regiao, { childList: true, characterData: true, subtree: true });
+    return true;
+  };
+  window.__ttPercorrer = async (ms, passo = 100) => {
+    const seq = [];
+    const t0 = performance.now();
+    let saiu = false;
+    while (performance.now() - t0 < ms) {
+      const e = window.__ttEstadoDaSessao();
+      const chave = JSON.stringify([e.modo, e.titulo, e.rodape, e.fase, e.pausado, e.cores.aceso, e.cores.numero]);
+      if (!seq.length || seq.at(-1).chave !== chave) seq.push({ t: Math.round(performance.now() - t0), chave, modo: e.modo, titulo: e.titulo, rodape: e.rodape, fase: e.fase, pausado: e.pausado, aceso: e.cores.aceso, numero: e.cores.numero, animacoes: e.animacoes });
+      if (e.modo === 'andamento') saiu = true;
+      if (saiu && e.modo === 'preparo') break;
+      await new Promise((r) => setTimeout(r, passo));
+    }
+    await new Promise((r) => setTimeout(r, 300)); // o último anúncio sai 100 ms depois
+    return { sequencia: seq.map(({ chave, ...r }) => r), anuncios: window.__ttAnuncios ?? null, fases: window.__TOMATITO_PREVIEW_FASES__ ?? null, esperado: window.__ttEstadoDaSessao().cores.esperado };
+  };
+  window.__ttEspaco = async () => {
+    document.querySelector('h1[tabindex="-1"]').focus();
+    const e = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true });
+    document.activeElement.dispatchEvent(e);
+    await new Promise((r) => setTimeout(r, 50));
+    await doisQuadros();
+    return { cancelado: e.defaultPrevented, ...window.__ttEstadoDaSessao() };
+  };
 })();

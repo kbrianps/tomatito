@@ -23,3 +23,9 @@ button{ font:inherit; }
 .tt-t-display{ font:var(--tt-type-display); }
 .tt-fg-2{ color:var(--tt-fg-2); }
 .tt-accent-fg{ color:var(--tt-accent-fg); }
+
+/* M19: a região aria-live das fases (index.html, lib/a11y.js): fora da vista,
+   mas na árvore de acessibilidade (display:none ou visibility:hidden a
+   calariam). */
+.tt-anuncio{ position:absolute; width:1px; height:1px; margin:-1px; padding:0; border:0;
+  overflow:hidden; clip-path:inset(50%); white-space:nowrap; }

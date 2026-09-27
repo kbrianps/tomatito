@@ -9,6 +9,10 @@
 // vira o cabeçalho da fase ("Período de foco (1 de 2)"), à esquerda, em cima,
 // como no Relógio (o atributo data-modo do cartão troca o desenho, shell.css).
 //
+// M19: no pausado, o título ganha " · Pausado"; quando a sessão conclui, o
+// cartão volta ao preparo sem animação (só troca o `hidden` dos blocos); e o
+// Espaço inicia ou pausa (acaoDoEspaco).
+//
 // A frase segue a regra do plan.rs com o F e o B do preparo que o Rust manda
 // no get_state (format.js, `intervalos`). O valor do seletor fica guardado
 // enquanto o app está aberto: voltar à tela, ou terminar uma sessão, mostra a
@@ -17,6 +21,7 @@ import t from '../../lib/i18n/pt-BR.js';
 import { fraseDosIntervalos, intervalos } from '../../lib/format.js';
 import * as seletor from '../../components/minutes-picker.js';
 import * as andamento from './andamento.js';
+import { espacoLivre } from '../../lib/keys.js';
 
 /** A duração que o seletor mostra ao abrir o app. */
 export const MINUTOS_INICIAIS = 30;
@@ -53,12 +58,28 @@ export function marcacao(preparo, icone = () => '') {
 
 /**
  * O título do cartão: "Pronto para focar" no preparo; na sessão, a fase em
- * Subtitle e a contagem em peso normal ("Período de foco (1 de 2)").
+ * Subtitle e a contagem em peso normal ("Período de foco (1 de 2)"), mais o
+ * estado ("Pausado", M19).
  */
 export function titulo(foco) {
   const c = modo(foco) === 'andamento' ? andamento.cabecalho(foco) : null;
-  if (!c) return { fase: t.foco.sessao, contagem: '' };
+  if (!c) return { fase: t.foco.sessao, contagem: '', estado: '' };
   return c;
+}
+
+/** O resto do título, em peso normal: " (1 de 2)", " · Pausado" ou os dois. */
+export function complemento({ contagem = '', estado = '' }) {
+  return (contagem ? ` ${contagem}` : '') + (estado ? ` · ${estado}` : '');
+}
+
+/**
+ * O que o Espaço faz na tela Foco (M19; PLANO.md, 3.8): no preparo, inicia a
+ * sessão (como o botão "Iniciar sessão de foco"); com uma fase correndo,
+ * pausa; pausado, retoma.
+ */
+export function acaoDoEspaco(foco) {
+  if (modo(foco) === 'preparo') return 'iniciar';
+  return andamento.acaoPrincipal(foco.status);
 }
 
 /**
@@ -101,15 +122,16 @@ export function ligar(cartao, store, { icone = () => '' } = {}) {
   const desligarAndamento = andamento.ligar(blocoAndamento, store, { icone });
   let tituloAtual = null;
   const escreverTitulo = (foco) => {
-    const { fase, contagem } = titulo(foco);
-    const chave = `${fase}|${contagem}`;
+    const tt = titulo(foco);
+    const resto = complemento(tt);
+    const chave = `${tt.fase}|${resto}`;
     if (chave === tituloAtual) return;
     tituloAtual = chave;
-    tituloEl.textContent = fase;
-    if (contagem) {
+    tituloEl.textContent = tt.fase;
+    if (resto) {
       const span = cartao.ownerDocument.createElement('span');
       span.className = 'tt-sessao-contagem';
-      span.textContent = ` ${contagem}`;
+      span.textContent = resto;
       tituloEl.append(span);
     }
   };
@@ -129,7 +151,20 @@ export function ligar(cartao, store, { icone = () => '' } = {}) {
   };
   const desassinar = store.assinar(aoMudar);
   aoMudar(store.foco);
+
+  // M19: Espaço inicia ou pausa, com o foco fora de botões e campos (onde o
+  // Espaço já é do controle). Só enquanto a tela Foco está montada.
+  const doc = cartao.ownerDocument;
+  const aoTeclar = (e) => {
+    if (!espacoLivre(e)) return;
+    e.preventDefault();
+    const acao = acaoDoEspaco(store.foco);
+    if (acao === 'iniciar') void aoIniciar();
+    else store.comando(acao).catch((erro) => console.warn('[foco]', erro));
+  };
+  doc.addEventListener('keydown', aoTeclar);
   return () => {
+    doc.removeEventListener('keydown', aoTeclar);
     desassinar();
     desligarAndamento();
     sel.desligar();

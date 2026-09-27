@@ -25,6 +25,8 @@ import { montarNavegacao } from './components/nav-view.js';
 import { ligarAtalhosDeNavegacao, ligarEscDasListas } from './lib/keys.js';
 import { iniciarRoteador } from './router.js';
 import { store } from './lib/store.js';
+import * as ipc from './lib/ipc.js';
+import { ligarAnuncioDeFases } from './lib/a11y.js';
 import * as foco from './views/focus/index.js';
 import * as temporizador from './views/timers.js';
 import * as cronometro from './views/stopwatch.js';
@@ -60,6 +62,8 @@ try {
   // M16: o estado do foco vem do Rust (get_state e eventos). Começa agora e
   // entra na espera do primeiro quadro: a janela já abre com a contagem certa.
   const ligado = store.ligar().catch((erro) => console.error('[store]', erro));
+  // M19: a região aria-live anuncia cada troca de fase (tt://phase).
+  ligarAnuncioDeFases({ ipc }).catch((erro) => console.error('[anúncio]', erro));
   const nav = montarNavegacao(document.querySelector('.tt-nav'), {
     icone,
     navegar: (rota) => roteador.navegar(rota),

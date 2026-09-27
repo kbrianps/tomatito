@@ -11,8 +11,13 @@
 // aceso, uma vez a cada 1/24 da fase, ou a cada 2,5 s no modo de uma volta por
 // minuto). Parado, nenhum quadro é pedido.
 //
-// Fica para o M19: o pausado ("· Pausado" e o número em --tt-fg-2), o traço
-// aceso do intervalo em --tt-fg-2, a região aria-live das fases e o Espaço.
+// M19: os estados da sessão no mesmo bloco. Pausado: o glifo vira play, o
+// cabeçalho ganha " · Pausado" e o número fica em --tt-fg-2. Intervalo: o
+// cabeçalho "Intervalo", o traço aceso em --tt-fg-2 e o rodapé "A seguir:
+// foco de 25 min". Os dois viram atributos do .tt-andamento (data-fase e
+// data-pausado) e o shell.css pinta. O concluído volta ao preparo
+// (card-session.js). O anúncio das fases é do lib/a11y.js, e o Espaço, do
+// card-session.js.
 import t from '../../lib/i18n/pt-BR.js';
 import { minutosRestantes, plurais } from '../../lib/format.js';
 import * as mostrador from '../../components/dial.js';
@@ -31,13 +36,28 @@ function fase(foco) {
 }
 
 /**
- * O cabeçalho do cartão: `{ fase, contagem }`. No foco, "Período de foco" e
- * "(1 de 2)"; no intervalo, só "Intervalo" (M19). Null sem sessão.
+ * O cabeçalho do cartão: `{ fase, contagem, estado }`. No foco, "Período de
+ * foco" e "(1 de 2)"; no intervalo, só "Intervalo"; pausado, `estado` é
+ * "Pausado" (M19), que o cartão escreve depois de um " · ". Null sem sessão.
  */
 export function cabecalho(foco) {
   const f = fase(foco);
   if (!f) return null;
-  return { fase: a[f.kind], contagem: f.kind === 'focus' ? a.contagem(f.n, f.total) : '' };
+  return {
+    fase: a[f.kind],
+    contagem: f.kind === 'focus' ? a.contagem(f.n, f.total) : '',
+    estado: foco.status === 'paused' ? a.pausado : '',
+  };
+}
+
+/**
+ * Os atributos do bloco para o CSS (M19): `fase` ('focus' ou 'break'; o
+ * traço aceso do intervalo fica em --tt-fg-2) e `pausado` (o número em
+ * --tt-fg-2). Sem sessão, `{ fase: null, pausado: false }`.
+ */
+export function aparencia(foco) {
+  const f = fase(foco);
+  return { fase: f?.kind ?? null, pausado: Boolean(f) && foco.status === 'paused' };
 }
 
 /**
@@ -150,6 +170,8 @@ export function ligar(raiz, store, { icone = () => '' } = {}) {
   const rodapeEl = raiz.querySelector('[data-rodape]');
   const rodapeRotulo = raiz.querySelector('[data-rodape-rotulo]');
   const rodapeValor = raiz.querySelector('[data-rodape-valor]');
+  const bloco = raiz.querySelector('.tt-andamento');
+  const menu = raiz.querySelector('[data-menu-sessao]');
   let minutosDoRotulo = null;
   let faseDoRotulo = null;
 
@@ -182,6 +204,13 @@ export function ligar(raiz, store, { icone = () => '' } = {}) {
       principal.setAttribute('aria-label', a[acao]);
       principal.innerHTML = icone(acao === 'retomar' ? 'play' : 'pause');
     }
+    const ap = aparencia(foco);
+    if (ap.fase) bloco.dataset.fase = ap.fase;
+    else delete bloco.dataset.fase;
+    bloco.toggleAttribute('data-pausado', ap.pausado);
+    // A sessão acabou (concluída ou encerrada) com o menu aberto: a lista é um
+    // popover na camada de cima e ficaria na tela sem o bloco.
+    if (!foco?.session || foco.status === 'completed') menu.closeMenu?.();
     if (podePularIntervalo(foco)) pular.removeAttribute('disabled');
     else pular.setAttribute('disabled', '');
     const r = rodape(foco);

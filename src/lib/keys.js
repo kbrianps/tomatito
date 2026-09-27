@@ -72,3 +72,31 @@ export function ligarEscDasListas(alvo = document) {
   alvo.addEventListener('keydown', aoTeclar, true);
   return () => alvo.removeEventListener('keydown', aoTeclar, true);
 }
+
+/**
+ * Controles em que o Espaço já tem dono (M19): botões, links, campos, o
+ * seletor de minutos, as caixas de marcar, os menus e os diálogos. Um
+ * elemento com tabindex ≥ 0 também é um controle; o título da tela, que
+ * recebe o foco ao trocar de tela, tem tabindex="-1" e não conta.
+ */
+const DONOS_DO_ESPACO = [
+  'button', 'a[href]', 'input', 'textarea', 'select', '[contenteditable]:not([contenteditable="false"])',
+  '[role="button"]', '[role="spinbutton"]', '[role="checkbox"]', '[role="switch"]', '[role="radio"]',
+  '[role="menuitem"]', '[role="option"]', '[role="link"]', '[role="dialog"]', 'dialog',
+  'fluent-checkbox', 'fluent-switch', 'fluent-radio', 'fluent-dropdown', 'fluent-menu', 'fluent-menu-item',
+  'fluent-option', 'fluent-dialog', '[tabindex]:not([tabindex^="-"])',
+].join(',');
+
+/**
+ * O Espaço da tela Foco (PLANO.md, 3.8, "Iniciar ou pausar"): a tecla sozinha,
+ * sem repetição nem modificadores, ainda não tratada, com o foco fora de
+ * botões e campos. `e.target` é o elemento com o foco (ou o <body>).
+ * @param {{ key: string, code?: string, repeat?: boolean, ctrlKey?: boolean, altKey?: boolean, shiftKey?: boolean, metaKey?: boolean, defaultPrevented?: boolean, isComposing?: boolean, target?: { closest?: (s: string) => unknown } }} e
+ * @returns {boolean}
+ */
+export function espacoLivre(e) {
+  if (e.key !== ' ' && e.code !== 'Space') return false;
+  if (e.repeat || e.defaultPrevented || e.isComposing) return false;
+  if (e.ctrlKey || e.altKey || e.shiftKey || e.metaKey) return false;
+  return !e.target?.closest?.(DONOS_DO_ESPACO);
+}

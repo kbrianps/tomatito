@@ -522,3 +522,21 @@ O que foi conferido de forma automática (27/09/2026):
 7. [ ] Clique no **"..."**: o menu mostra **Encerrar sessão** e **Pular intervalo** (apagado no foco). Clique em **Encerrar sessão**: o cartão volta ao "Pronto para focar".
 8. [ ] Com **60** no seletor, inicie de novo e espere uns 30 s (o primeiro foco, de 27,5 min): o rodapé dizia "A seguir: **intervalo de 5 min**" e passa a "Intervalo", com "A seguir: foco de 27 min". No "...", **Pular intervalo** agora está ativo e leva a "Período de foco (2 de 2)".
 9. [ ] Feche o `tauri dev` (Ctrl+C no terminal).
+
+## M19. Pausado, intervalo e concluído
+
+O que foi conferido de forma automática (27/09/2026):
+
+- **"Pronto quando" no app de verdade** (`TOMATITO_SPEED=60 bash scripts/gnome-aninhado/rodar.sh fases`, GNOME Shell aninhado, motor em Rust e WebKitGTK): o seletor vai a 60 e o teclado virtual aperta Espaço com o foco no título: a sessão começa; Espaço pausa ("Período de foco (1 de 2) · Pausado", número em `--tt-fg-2`, glifo de play) e Espaço retoma; a sessão corre sozinha por foco (0 s), intervalo (26,5 s; "Intervalo", traço aceso em `--tt-fg-2`, "A seguir: foco de 27 min"), foco 2 de 2 (31,5 s) e ocioso (59,1 s; "Pronto para focar", Rust em `completed`, sem animação); a região `aria-live` recebeu exatamente quatro textos, um por fase: "Começou o período de foco 1 de 2.", "Começou o intervalo 1 de 1.", "Começou o período de foco 2 de 2.", "Sessão de foco concluída.". 11 conferências ok. Captura do intervalo em `docs/capturas/m19-app-intervalo.png`.
+- **Prévia nos dois motores** (`node scripts/preview/fases.mjs`, Chrome headless com teclas de verdade e WebKitGTK fora da tela): a mesma sessão, o pausado no foco e no intervalo, o Espaço no seletor de minutos (não inicia) e a região única, polite, atômica e de 1 px. 6 conferências em cada motor. Os três estados lado a lado em `docs/capturas/m19-estados.png`.
+- `npm test` (131 testes), `cargo fmt --all --check`, `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`, a checagem cruzada `cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings` (com o `llvm-rc` do LLVM 21 no PATH) e `npm run build` (sem nada da prévia no bundle) passam. Regressões: o roteiro aninhado `mostrador` do M18 (11 ok), o `scripts/preview/mostrador.mjs` (15 em cada motor) e o `scripts/preview/cartao-sessao.mjs` do M17 (36) passam.
+
+### Para conferir (uns 5 minutos)
+
+1. [ ] `cd ~/dev/tomatito && TOMATITO_SPEED=60 npm run tauri dev`. Na tela Foco, ponha **60** no seletor (no `tauri dev`, as setas andam de 1 em 1) e clique no título **Foco** (fora de botões), depois aperte **Espaço**: a sessão começa.
+2. [ ] Aperte **Espaço** de novo: o cabeçalho vira **Período de foco (1 de 2) · Pausado**, o número fica mais apagado e o botão redondo mostra o play. **Espaço** outra vez retoma.
+3. [ ] Espere uns 27 s: o cabeçalho vira **Intervalo**, o traço aceso fica cinza-claro (no Lite, rosa-claro; veja se dá para notar a diferença do branco do foco) e o rodapé, **A seguir: foco de 27 min**. Pause no intervalo: **Intervalo · Pausado**. Retome.
+4. [ ] Uns 5 s depois, **Período de foco (2 de 2)**, sem rodapé; uns 27 s depois, o cartão volta ao **Pronto para focar** de uma vez, sem animação, com 60 no seletor.
+5. [ ] **Região `aria-live`:** abra o DevTools (botão direito, Inspecionar), ache no fim do `<body>` o `<div class="tt-anuncio" aria-live="polite">` e repita os passos 1 a 4 olhando o nó: ele muda de texto uma vez por fase (quatro vezes na sessão), e não muda ao pausar e retomar nem a cada minuto.
+6. [ ] (Opcional, o Orca é do M43.) Com o Orca ligado (Super+Alt+S), cada troca de fase é lida uma vez.
+7. [ ] Feche o `tauri dev` (Ctrl+C no terminal).

@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   acaoPrincipal,
+  aparencia,
   cabecalho,
   criarRelogio,
   leitura,
@@ -42,12 +43,22 @@ const sessao = (kind, n, { next = null, durationS = 25 * 60 } = {}) => ({
 });
 const foco = (status, s) => ({ status, session: s });
 
-test('cabeçalho: "Período de foco" e "(1 de 2)"; no intervalo, só "Intervalo"', () => {
+test('cabeçalho: "Período de foco" e "(1 de 2)"; no intervalo, só "Intervalo"; pausado, "Pausado"', () => {
   assert.equal(cabecalho(null), null);
   assert.equal(cabecalho({ status: 'idle', session: null }), null);
-  assert.deepEqual(cabecalho(foco('focus', sessao('focus', 1))), { fase: 'Período de foco', contagem: '(1 de 2)' });
-  assert.deepEqual(cabecalho(foco('paused', sessao('focus', 2))), { fase: 'Período de foco', contagem: '(2 de 2)' });
-  assert.deepEqual(cabecalho(foco('break', sessao('break', 1))), { fase: 'Intervalo', contagem: '' });
+  assert.deepEqual(cabecalho(foco('focus', sessao('focus', 1))), { fase: 'Período de foco', contagem: '(1 de 2)', estado: '' });
+  assert.deepEqual(cabecalho(foco('paused', sessao('focus', 2))), { fase: 'Período de foco', contagem: '(2 de 2)', estado: 'Pausado' });
+  assert.deepEqual(cabecalho(foco('break', sessao('break', 1))), { fase: 'Intervalo', contagem: '', estado: '' });
+  assert.deepEqual(cabecalho(foco('paused', sessao('break', 1))), { fase: 'Intervalo', contagem: '', estado: 'Pausado' });
+});
+
+test('aparência (M19): a fase e o pausado viram atributos do bloco', () => {
+  assert.deepEqual(aparencia(foco('focus', sessao('focus', 1))), { fase: 'focus', pausado: false });
+  assert.deepEqual(aparencia(foco('break', sessao('break', 1))), { fase: 'break', pausado: false });
+  assert.deepEqual(aparencia(foco('paused', sessao('break', 1))), { fase: 'break', pausado: true });
+  assert.deepEqual(aparencia(foco('paused', sessao('focus', 2))), { fase: 'focus', pausado: true });
+  assert.deepEqual(aparencia({ status: 'idle', session: null }), { fase: null, pausado: false });
+  assert.deepEqual(aparencia(null), { fase: null, pausado: false });
 });
 
 test('rodapé: "A seguir:" e a próxima fase; nada na última', () => {

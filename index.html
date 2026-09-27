@@ -34,6 +34,9 @@ if(tomato&&w.__TT_FULL_MODE__==='opaque')h.dataset.fullMode='opaque';})();</scri
         <main class="tt-conteudo"><div class="tt-rolagem"></div></main>
       </div>
     </div>
+    <!-- Anúncio das fases (M19; PLANO.md, 3.8): a única região aria-live, escondida, preenchida pelo
+         src/lib/a11y.js a cada troca de fase. -->
+    <div class="tt-anuncio" aria-live="polite" aria-atomic="true" data-anuncio></div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
