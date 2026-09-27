@@ -164,4 +164,195 @@
     });
     return { tokens: valores(false), tt: valores(true), componentes };
   }
+  // M12: os controles do #/dev que abrem por cima da tela (as listas do
+  // dropdown, os menus, as dicas e o diálogo). Nomes = data-amostra do
+  // dev-catalog.js (as dicas, pelo id do botão):
+  //
+  //   __ttPosicionar('menu-sessao', 'baixo')
+  //                          rola a tela para o controle ficar no meio da
+  //                          janela ('meio'), colado na borda de baixo
+  //                          ('baixo', para a lista virar para cima) ou logo
+  //                          abaixo da barra de título ('cima', para a dica
+  //                          virar para baixo); devolve o ponto de clique em
+  //                          px da página (o roteiro aninhado soma a posição
+  //                          da janela e clica com o ponteiro virtual)
+  //   __ttAbrir('menu-sessao')
+  //                          abre pelo JS (clique no gatilho; nas dicas, o
+  //                          mouseenter, com o atraso de 250 ms)
+  //   __ttMedirPopover('menu-sessao')
+  //                          caixas do gatilho e do que abriu, de que lado
+  //                          abriu, os desvios de alinhamento, se cabe na
+  //                          janela, o foco e as cores
+  //   __ttRolarAberto('menu-sessao', 40)
+  //                          rola a tela 40 px com o controle aberto e mede
+  //                          de novo (a lista acompanha o gatilho?)
+  //   __ttFecharPopovers()   fecha tudo e devolve quantos continuam abertos
+  //   __ttCaixas()           cores das caixas de seleção (marcada, desmarcada)
+  const POPOVERS = {
+    'menu-sessao': 'menu',
+    'menu-temporizador': 'menu',
+    meta: 'dropdown',
+    zerar: 'dropdown',
+    'dialogo-meta': 'dropdown',
+    'dica-reiniciar': 'dica',
+    'dica-volta': 'dica',
+    dialogo: 'dialogo',
+  };
+  const partesDe = (nome) => {
+    const tipo = POPOVERS[nome];
+    if (!tipo) throw new Error(`controle desconhecido: ${nome}`);
+    const q = (s) => document.querySelector(s);
+    if (tipo === 'menu') {
+      const host = q(`fluent-menu[data-amostra="${nome}"]`);
+      const gatilho = host.querySelector('[slot="trigger"]');
+      return { tipo, host, ancora: gatilho, alvo: gatilho, popup: host.querySelector('fluent-menu-list') };
+    }
+    if (tipo === 'dropdown') {
+      const host = q(`fluent-dropdown[data-amostra="${nome}"]`);
+      return { tipo, host, ancora: host, alvo: host.control ?? host, popup: host.querySelector('fluent-listbox') };
+    }
+    if (tipo === 'dica') {
+      const ancora = q(`#amostra-${nome}`);
+      return { tipo, host: ancora, ancora, alvo: ancora, popup: q(`fluent-tooltip[anchor="amostra-${nome}"]`) };
+    }
+    const host = q('#amostra-dialogo-meta');
+    const botao = q('[data-abre="amostra-dialogo-meta"]');
+    return { tipo, host, ancora: botao, alvo: botao, popup: host.dialog ?? host.shadowRoot?.querySelector('dialog') };
+  };
+  const areaDaTela = () => {
+    const r = document.querySelector('.tt-rolagem')?.getBoundingClientRect();
+    return r ? { topo: r.top, base: r.bottom } : { topo: 0, base: innerHeight };
+  };
+  window.__ttPosicionar = async (nome, onde = 'meio') => {
+    const { ancora, alvo } = partesDe(nome);
+    const rolagem = document.querySelector('.tt-rolagem');
+    const tela = rolagem?.firstElementChild;
+    // Um bloco alto no fim da tela, para dar para rolar a última seção até o
+    // topo (o mesmo do __ttMedir(..., { alto: true })).
+    if (tela && !tela.querySelector('.tt-teste-alto')) {
+      const bloco = document.createElement('div');
+      bloco.className = 'tt-teste-alto';
+      bloco.style.setProperty('height', '3000px');
+      tela.append(bloco);
+    }
+    const area = areaDaTela();
+    const r = ancora.getBoundingClientRect();
+    const alvoY = { meio: (area.topo + area.base) / 2 - r.height / 2, baixo: area.base - 8 - r.height, cima: area.topo + 8 }[onde];
+    if (alvoY === undefined) throw new Error(`posição desconhecida: ${onde}`);
+    rolagem.scrollTop += r.top - alvoY;
+    await doisQuadros();
+    const a = alvo.getBoundingClientRect();
+    return { onde, rolagem: rolagem.scrollTop, ancora: caixa(ancora), clique: [Math.round(a.x + a.width / 2), Math.round(a.y + a.height / 2)] };
+  };
+  window.__ttAbrir = async (nome) => {
+    const { tipo, alvo } = partesDe(nome);
+    if (tipo === 'dica') alvo.dispatchEvent(new MouseEvent('mouseenter'));
+    else alvo.click();
+    await new Promise((r) => setTimeout(r, tipo === 'dica' ? 450 : 300));
+    await doisQuadros();
+    return window.__ttMedirPopover(nome);
+  };
+  const descrever = (el) => {
+    if (!el || el === document.body) return 'body';
+    const t = el.textContent?.trim().replace(/\s+/g, ' ').slice(0, 40);
+    return `${el.localName}${t ? ` "${t}"` : ''}`;
+  };
+  window.__ttMedirPopover = (nome) => {
+    const { tipo, host, ancora, popup } = partesDe(nome);
+    const aberto = tipo === 'dialogo' ? Boolean(popup?.open) : Boolean(popup?.matches(':popover-open'));
+    const janela = [innerWidth, innerHeight];
+    const base = { nome, tipo, aberto, janela, foco: descrever(document.activeElement) };
+    if (!aberto) return base;
+    const a = ancora.getBoundingClientRect();
+    const p = popup.getBoundingClientRect();
+    const cs = getComputedStyle(popup);
+    const arred = (v) => Math.round(v * 10) / 10;
+    const r = {
+      ...base,
+      ancora: caixa(ancora),
+      popup: caixa(popup),
+      dentro: p.left >= -0.5 && p.top >= -0.5 && p.right <= janela[0] + 0.5 && p.bottom <= janela[1] + 0.5,
+      fundo: cs.backgroundColor,
+      borda: cs.borderTopColor,
+      posicao: cs.position,
+    };
+    if (tipo === 'dialogo') {
+      return {
+        ...r,
+        modal: popup.matches(':modal'),
+        centro: [arred(p.left + p.width / 2 - janela[0] / 2), arred(p.top + p.height / 2 - janela[1] / 2)],
+        cortina: getComputedStyle(popup, '::backdrop').backgroundColor,
+        titulo: host.querySelector('[slot="title"]')?.textContent,
+      };
+    }
+    // Lado em que abriu e os desvios (0 = no lugar): embaixo, o topo da lista
+    // menos a base do gatilho; em cima, a base do gatilho... ao contrário.
+    const abaixo = p.top >= a.bottom - 1;
+    const acima = p.bottom <= a.top + 1;
+    Object.assign(r, {
+      lado: abaixo ? 'abaixo' : acima ? 'acima' : 'sobre',
+      vao: arred(abaixo ? p.top - a.bottom : acima ? a.top - p.bottom : NaN),
+      esquerda: arred(p.left - a.left),
+      centro: arred(p.left + p.width / 2 - (a.left + a.width / 2)),
+      largura: [arred(a.width), arred(p.width)],
+    });
+    if (tipo !== 'dica') {
+      const item = popup.querySelector('fluent-menu-item, fluent-option');
+      if (item) r.item = { cor: getComputedStyle(item).color, fundo: getComputedStyle(item).backgroundColor };
+      r.expandido = (tipo === 'menu' ? ancora : host.control)?.getAttribute('aria-expanded');
+    }
+    return r;
+  };
+  window.__ttRolarAberto = async (nome, dy) => {
+    const antes = window.__ttMedirPopover(nome);
+    document.querySelector('.tt-rolagem').scrollTop += dy;
+    await doisQuadros();
+    await doisQuadros();
+    const depois = window.__ttMedirPopover(nome);
+    const mov = (k) => (antes[k] && depois[k] ? Math.round((depois[k][1] - antes[k][1]) * 10) / 10 : null);
+    return { dy, antes, depois, moveuAncora: mov('ancora'), moveuPopup: mov('popup') };
+  };
+  window.__ttFecharPopovers = async () => {
+    // Os componentes acompanham o evento toggle do popover (o menu atualiza o
+    // aria-expanded, e o dropdown, o open), então basta fechar cada popover.
+    for (const p of document.querySelectorAll(':popover-open')) p.hidePopover();
+    for (const d of document.querySelectorAll('fluent-dialog')) if (d.dialog?.open) d.hide();
+    document.activeElement?.blur?.();
+    await doisQuadros();
+    const dialogos = [...document.querySelectorAll('fluent-dialog')].filter((d) => d.dialog?.open).length;
+    return document.querySelectorAll(':popover-open').length + dialogos;
+  };
+  // Cores das caixas de seleção e, para conferir a ponte, os tokens que o
+  // checkbox marcado lê no hover e no clique ao lado dos --tt-* do tema.
+  window.__ttCaixas = () =>
+    [...document.querySelectorAll('fluent-checkbox')].map((c) => {
+      const s = getComputedStyle(c);
+      const ind = c.shadowRoot?.querySelector('.checked-indicator');
+      const v = (p) => s.getPropertyValue(p).trim().toUpperCase();
+      return {
+        marcada: Boolean(c.checked),
+        desabilitada: Boolean(c.disabled),
+        fundo: s.backgroundColor,
+        borda: s.borderTopColor,
+        glifo: ind ? getComputedStyle(ind).color : null,
+        caixa: caixa(c),
+        tokens: {
+          bordaHover: v('--colorCompoundBrandStrokeHover'),
+          bordaClique: v('--colorCompoundBrandStrokePressed'),
+          accent: v('--tt-accent'),
+          accentHover: v('--tt-accent-hover'),
+          accentClique: v('--tt-accent-pressed'),
+        },
+      };
+    });
+  // Controle negativo do M12: tira a âncora das listas do menu e do dropdown
+  // (um nome de âncora que não existe, com !important, que vence o estilo do
+  // componente e o que o dropdown grava no elemento). As listas passam a abrir
+  // fora do lugar, e as conferências de posição precisam acusar.
+  window.__ttSabotarAncoras = () => {
+    const folha = new CSSStyleSheet();
+    folha.replaceSync('fluent-menu-list, fluent-listbox { position-anchor: --tt-sem-ancora !important; }');
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, folha];
+    return document.adoptedStyleSheets.length;
+  };
 })();

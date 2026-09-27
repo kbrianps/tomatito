@@ -312,3 +312,40 @@ test('caminhos de arquivo nos scripts do Node saem do fileURLToPath e do pathToF
     assert.doesNotMatch(texto, /['"`]file:\/\/\$\{/, `scripts/${arquivo}: use pathToFileURL(caminho)`);
   }
 });
+
+// M12: controles Fluent e posicionamento.
+test('controles do M12: o #/dev tem todos os componentes Fluent da seção 1.1, e a ponte e o controls.css os ajustam ao tema', () => {
+  const catalogo = ler('src/views/dev-catalog.js');
+  const usados = new Set([...catalogo.matchAll(/<(fluent-[a-z-]+)/g)].map((m) => m[1]));
+  for (const tag of [
+    'fluent-switch', 'fluent-radio-group', 'fluent-radio', 'fluent-checkbox', 'fluent-dropdown', 'fluent-listbox',
+    'fluent-option', 'fluent-dialog', 'fluent-dialog-body', 'fluent-menu', 'fluent-menu-list', 'fluent-menu-item', 'fluent-tooltip',
+  ]) {
+    assert.ok(usados.has(tag), `o catálogo não mostra <${tag}>`);
+  }
+  assert.equal((catalogo.match(/<fluent-menu[\s>]/g) ?? []).length, 2, 'dois menus: cada um precisa abrir no próprio botão');
+  // Um import por arquivo, com o especificador do pacote (e não o define-all).
+  const main = ler('src/main.js');
+  assert.doesNotMatch(main, /web-components\/(?:define-all|web-components(?:-all)?(?:\.min)?)\.js|from '@fluentui\/web-components'/);
+  for (const nome of ['checkbox', 'dropdown', 'listbox', 'option', 'dialog', 'dialog-body', 'menu', 'menu-list', 'menu-item', 'tooltip']) {
+    assert.match(main, new RegExp(`^import '@fluentui/web-components/${nome}\\.js';$`, 'm'));
+  }
+  // Ponte: a borda do checkbox marcado no hover e no clique, e o texto dos
+  // itens de menu e das opções (3,98:1 no Lite com o cinza do Fluent).
+  const ponte = ler('src/styles/bridge.css');
+  for (const [token, tt] of [
+    ['colorCompoundBrandStrokeHover', 'tt-accent-hover'],
+    ['colorCompoundBrandStrokePressed', 'tt-accent-pressed'],
+    ['colorNeutralForeground2', 'tt-fg-1'],
+    ['colorNeutralForeground2Hover', 'tt-fg-1'],
+    ['colorNeutralForeground2Pressed', 'tt-fg-2-on-ctl'],
+  ]) {
+    assert.match(ponte, new RegExp(`--${token}:var\\(--${tt}\\);`), `a ponte liga --${token} a --${tt}`);
+  }
+  const controles = ler('src/styles/controls.css');
+  assert.match(controles, /fluent-dropdown > button\[slot="control"\]\{ all:unset; flex:1 1 auto; \}/, 'o botão de dentro do dropdown não recebe o estilo de button');
+  assert.match(controles, /fluent-listbox,fluent-menu-list,fluent-tooltip\{ border-color:var\(--tt-border\); \}/);
+  assert.match(controles, /fluent-dialog\{ --dialog-backdrop:var\(--tt-smoke\); \}/);
+  // Esc numa lista aberta fecha só a lista (keys.js), ligado no main.js.
+  assert.match(main, /^ {2}ligarEscDasListas\(\);$/m);
+});

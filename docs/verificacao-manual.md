@@ -343,3 +343,38 @@ Os tokens do Fluent (as cores, os raios e as sombras que os componentes leem) ag
 6. [ ] Feche a janela no X e, no terminal, Ctrl+C se o `tauri dev` não sair sozinho.
 
 Se algo não bater, anote qual passo e o que apareceu.
+
+## M12. Controles Fluent e posicionamento
+
+O `#/dev` virou o "Catálogo de controles": além da amostra do M06, tem caixas de seleção, duas listas suspensas ("Meta diária" e a longa "Zerar progresso às"), dois menus, um diálogo ("Editar meta diária", com uma lista dentro) e duas dicas. No WebKitGTK, tudo abre no lugar certo com o CSS Anchor Positioning, inclusive o `fluent-menu`, então o popover próprio (plano B do marco) não foi preciso. Captura: `docs/capturas/m12-controles.png`, toda tirada do app de verdade no teste aninhado: em cima, o menu "Sessão" aberto embaixo do botão, o menu "Temporizador" virado para cima perto da borda de baixo e a lista das 24 horas também virada para cima; embaixo, a lista "Meta diária", as duas dicas (em cima e embaixo do botão), as caixas de seleção marcadas em creme e o diálogo com a lista aberta.
+
+### O que já foi conferido sem olhar a tela (27/09/2026)
+
+- **Teste num GNOME Shell aninhado** (Mutter 50.1, Wayland, o app de verdade com ponteiro e teclado virtuais; nada aparece na sua tela): `bash scripts/gnome-aninhado/rodar.sh controles`, 22 conferências, todas ok:
+  - a caixa marcada é creme (`#FFF4EE`) na tela, sem nenhum pixel azul; clicar marca e desmarca; com o mouse em cima, fica no creme do hover (`#FDE8E0`), e apertada, no do pressionado (`#F8D7CC`);
+  - com o clique do ponteiro, os dois menus abrem embaixo do próprio botão, alinhados à esquerda dele (cada um no seu, apesar de o Fluent dar o mesmo nome de âncora aos dois); com o botão colado na borda de baixo, o menu vira para cima; as listas suspensas abrem embaixo da caixa, com pelo menos a largura dela, e a longa vira para cima e cabe na janela. Conferido pela página e pelos pixels (o que mudou na tela entre antes e depois do clique fica em volta do que abriu). Esc fecha e devolve o foco ao botão;
+  - a roda do mouse com o menu aberto rola a tela, e o menu acompanha o botão (78 px os dois);
+  - teclado: Enter no botão abre o menu com o foco no 1º item, ↓ e ↑ andam, Esc fecha e volta ao botão;
+  - clicar em "2 horas" troca o valor da lista e fecha;
+  - as dicas aparecem com o mouse parado, centradas em cima do botão (ou embaixo, na "Volta"), a 4 px; Esc fecha; somem ao tirar o mouse (também para fora da janela, com um movimento de verdade); o foco do teclado também as mostra;
+  - o diálogo é modal, centrado, com o fundo escurecido pelo `--tt-smoke` (o painel atrás fica `#73241E`, o Lite a 70%); a lista de dentro abre embaixo da caixa; o 1º Esc fecha só a lista, o 2º fecha o diálogo, e o foco volta ao botão que o abriu; Cancelar fecha;
+  - nenhum erro na página; o app sai sozinho quando a janela fecha.
+- **Nos dois motores, sem janela** (`node scripts/preview/controles.mjs`): as mesmas posições no Chrome headless (o motor do Windows) e no WebKitGTK fora da tela, e as caixas marcadas no accent de cada tema (creme no Lite, `#B8402D` no Suave e no Claro, `#DD634B` no Escuro), nunca azuis, com o hover e o clique da borda vindos da ponte. Controle negativo: com as âncoras sabotadas de propósito, as 5 conferências de menu e de lista acusam a falha nos dois motores.
+- **Build de debug, com a CSP:** as 10 partidas a frio do teste aninhado agora também vão ao `#/dev` e abrem e fecham os menus, as listas, as dicas e o diálogo pelo console do inspetor: nenhum "Refused to".
+- **Regressões:** os roteiros do M07 (36 conferências), do M09 (25), do M10 (18) e do M11 (17), as partidas a frio do M08 (10 no dev e 10 no build de debug) e as prévias do M10 e do M11 continuam passando.
+- **Na sua sessão, rápido e sem mexer na janela:** o build de debug abriu com o inspetor remoto por menos de 25 s; o console veio vazio, a CSP recusou o controle, e os menus, as listas, as dicas e o diálogo do `#/dev` abriram e fecharam sem nenhum "Refused to". O app foi fechado logo em seguida, sem processo sobrando.
+- `npm test`, `node scripts/contrast.mjs`, `npm run build`, `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace` e a checagem cruzada do Windows passam.
+
+### Passos para você (uns 5 minutos)
+
+1. [ ] Em `~/dev/tomatito`, rode `npm run tauri dev` e espere a janela (uns 5 s).
+2. [ ] Botão direito na janela → **Inspecionar** → aba **Console**. Digite `location.hash = '#/dev'` e Enter: aparece o "Catálogo de controles". Feche o DevTools.
+3. [ ] **Caixas de seleção:** role até "Caixas de seleção". "Pular intervalos" está marcada em **creme** (não azul), com o visto escuro. Clique em "Tocar som no fim do intervalo": ela fica creme também. Clique de novo: desmarca. (As duas desabilitadas estão pretas: é esperado até o M13, que acerta os estados desabilitados.)
+4. [ ] **Menus:** em "Menus", clique em "Sessão": a lista abre logo embaixo do botão, com a borda esquerda alinhada à dele. Aperte **Esc**: fecha. Clique em "Temporizador": abre embaixo **dele**, e não do "Sessão". Com o menu aberto, gire a roda do mouse sobre a área da direita: o menu anda junto com o botão.
+5. [ ] **Virar para cima:** role a tela até o botão "Temporizador" ficar bem perto da borda de baixo da janela e clique nele: o menu abre **em cima** do botão. Faça o mesmo com a lista "Zerar progresso às": ela abre para cima, com uma barra de rolagem, e cabe na janela.
+6. [ ] **Listas:** clique na caixa "Meta diária": a lista abre embaixo, da largura da caixa ou mais. Clique em "2 horas": a caixa passa a mostrar "2 horas", e a lista fecha.
+7. [ ] **Dicas:** pare o mouse sobre "Reiniciar": em um quarto de segundo aparece, **em cima** e centrada, "Voltar o temporizador ao início". Sobre "Volta", a dica aparece **embaixo**. Tire o mouse: some.
+8. [ ] **Diálogo:** clique em "Editar meta diária": o diálogo aparece no meio da janela, com o resto escurecido. Abra a lista "Meta diária" dele: abre embaixo da caixa, por cima da borda do diálogo. Aperte **Esc** uma vez: fecha só a lista. Aperte **Esc** de novo: fecha o diálogo. Abra de novo e clique em "Cancelar": fecha.
+9. [ ] Feche a janela no X e, no terminal, Ctrl+C se o `tauri dev` não sair sozinho.
+
+Se algo não bater, anote qual passo e o que apareceu.

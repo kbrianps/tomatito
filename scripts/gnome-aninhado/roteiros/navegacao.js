@@ -359,8 +359,9 @@ async function principal() {
 
   // 5. Tab do painel para o conteúdo, no #/dev (a única tela com controles por enquanto).
   await comando("location.hash = '#/dev'");
-  e = await esperar(() => (estado()?.nav?.hash === '#/dev' && estado()?.titulo === 'Amostra do tema' ? estado() : null), 3000, 'o #/dev');
-  checar('#/dev abre a amostra do M06, sem item marcado no painel', e.nav.atual === null && e.nav.indicador === null, e.nav);
+  // O título do #/dev era "Amostra do tema" até o M11; no M12 virou o catálogo.
+  e = await esperar(() => (estado()?.nav?.hash === '#/dev' && estado()?.titulo === 'Catálogo de controles' ? estado() : null), 3000, 'o #/dev');
+  checar('#/dev abre o catálogo de controles, sem item marcado no painel', e.nav.atual === null && e.nav.indicador === null, e.nav);
   // Um clique no espaço vazio à esquerda dos cartões põe ali o ponto de partida
   // do Tab (regra do HTML): o Tab seguinte vai ao primeiro botão do conteúdo.
   await clicar(r.x + 286, r.y + 600);

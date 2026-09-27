@@ -50,3 +50,29 @@ fluent-radio-group .tt-opcao{ gap:8px; }
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
 }
 .tt-ring-tempo{ font:var(--tt-type-title-large); }
+
+/* M12: componentes Fluent que faltavam (checkbox, dropdown, menu, dialog e
+   tooltip). As cores vêm dos tokens do Fluent (gerados e ponte); aqui ficam
+   só os ajustes que o tema pede. */
+
+/* Campo com rótulo em cima, como o Header do ComboBox do WinUI (8 px até o
+   controle). O rótulo é o nome da lista (dev-catalog.js). */
+.tt-campo{ display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
+.tt-campo-rotulo{ color:var(--tt-fg-1); }
+
+/* O fluent-dropdown põe o próprio <button role="combobox"> dentro de si, no
+   DOM do documento, e a regra de button acima (que vence o ::slotted() do
+   componente) desenharia um botão dentro da caixa. Aqui ele volta a ser só o
+   texto da caixa, como o Fluent pede (all: unset e flex: 1). */
+fluent-dropdown > button[slot="control"]{ all:unset; flex:1 1 auto; }
+
+/* O que abre por cima da tela (as listas do dropdown, os menus e as dicas)
+   tem o fundo do cartão; a borda de 1 px em --tt-border o separa do cartão
+   e da camada no Lite, onde a sombra sozinha se perde no vermelho (a mesma
+   borda da dica do painel compacto, M10). */
+fluent-listbox,fluent-menu-list,fluent-tooltip{ border-color:var(--tt-border); }
+
+/* Fundo atrás do diálogo modal: o --tt-smoke da seção 4.2 (preto a 30%), no
+   lugar do colorBackgroundOverlay do Fluent (preto a 40% no claro, 50% no
+   escuro). */
+fluent-dialog{ --dialog-backdrop:var(--tt-smoke); }

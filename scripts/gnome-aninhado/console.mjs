@@ -11,6 +11,9 @@
 // mostraria aberto depois da partida. Depois disso, o script:
 //   - lê o estado da página (atributos do <html>, fontes, URL) e o cabeçalho
 //     Content-Security-Policy que o Tauri mandou com o index.html;
+//   - M12: vai ao #/dev e abre e fecha pelo JS os menus, as listas
+//     suspensas, as dicas e o diálogo (as mensagens desse trecho ficam em
+//     mensagensDoExercicio);
 //   - roda um controle positivo (um <script> inline sem hash, que a CSP do
 //     build recusa), para provar que a CSP está ativa e que um "Refused to"
 //     chegaria até aqui. As mensagens do controle ficam à parte.
@@ -62,6 +65,49 @@ const ESTADO = `(async () => {
     })(),
   });
 })()`;
+// M12: os controles que abrem por cima da tela, exercitados pelo JS no #/dev
+// (os dois menus, as duas listas suspensas, as dicas e o diálogo, com a lista
+// de dentro dele), para qualquer "Refused to" que eles causem sob a CSP do
+// build aparecer no console. Devolve o que abriu e fecha tudo no fim.
+const EXERCICIO = `(async () => {
+  const quadros = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+  location.hash = '#/dev';
+  await espera(300);
+  await quadros();
+  const abriu = {};
+  for (const m of document.querySelectorAll('fluent-menu')) {
+    m.querySelector('[slot="trigger"]').click();
+    await espera(200);
+    abriu[m.dataset.amostra] = m.querySelector('fluent-menu-list').matches(':popover-open');
+    m.closeMenu();
+  }
+  const listas = [...document.querySelectorAll('fluent-dropdown')].filter((d) => !d.closest('fluent-dialog'));
+  for (const d of listas) {
+    d.control.click();
+    await espera(200);
+    abriu[d.dataset.amostra] = d.listbox.matches(':popover-open');
+    d.listbox.hidePopover();
+  }
+  for (const t of document.querySelectorAll('fluent-tooltip')) {
+    document.getElementById(t.getAttribute('anchor')).dispatchEvent(new MouseEvent('mouseenter'));
+    await espera(400);
+    abriu[t.getAttribute('anchor')] = t.matches(':popover-open');
+    t.hidePopover();
+  }
+  const dlg = document.querySelector('fluent-dialog');
+  dlg.show();
+  await espera(300);
+  abriu.dialogo = dlg.dialog.open;
+  const dd = dlg.querySelector('fluent-dropdown');
+  dd.control.click();
+  await espera(200);
+  abriu['dialogo-meta'] = dd.listbox.matches(':popover-open');
+  dd.listbox.hidePopover();
+  dlg.hide();
+  await quadros();
+  return JSON.stringify({ abriu, abertosNoFim: document.querySelectorAll(':popover-open').length + (dlg.dialog.open ? 1 : 0) });
+})()`;
 // Um <script> inline sem hash, posto pela página: a CSP do build o recusa. (Um
 // new Function() não serve de controle: o que o inspetor avalia passa por fora
 // da regra de eval da CSP.)
@@ -88,7 +134,7 @@ async function alvo() {
   throw new Error(`nenhum alvo WebPage em http://${endereco}/`);
 }
 
-const resultado = { alvo: null, mensagens: [], estado: null, controle: null, mensagensDoControle: [] };
+const resultado = { alvo: null, mensagens: [], estado: null, exercicio: null, mensagensDoExercicio: [], controle: null, mensagensDoControle: [] };
 const salvar = () => writeFileSync(saida, JSON.stringify(resultado, null, 2));
 
 try {
@@ -97,6 +143,8 @@ try {
   let id = 0;
   let pagina = null;
   let fase = 'partida';
+  const listaDaFase = () =>
+    ({ partida: resultado.mensagens, exercicio: resultado.mensagensDoExercicio, controle: resultado.mensagensDoControle })[fase];
   const pendentes = new Map();
   const enviar = (method, params = {}) =>
     new Promise((resolve) => {
@@ -126,9 +174,9 @@ try {
       } else if (d.method === 'Console.messageAdded') {
         const c = d.params.message;
         const msg = { fonte: c.source, nivel: c.level, texto: c.text, url: c.url ?? null, linha: c.line ?? null };
-        (fase === 'partida' ? resultado.mensagens : resultado.mensagensDoControle).push(msg);
+        listaDaFase().push(msg);
       } else if (d.method === 'Console.messageRepeatCountUpdated') {
-        const lista = fase === 'partida' ? resultado.mensagens : resultado.mensagensDoControle;
+        const lista = listaDaFase();
         if (lista.length) lista.at(-1).repeticoes = d.params.count;
       }
     };
@@ -144,6 +192,13 @@ try {
     ? await enviar('Runtime.awaitPromise', { promiseObjectId: p.result.objectId, returnByValue: true })
     : p;
   resultado.estado = typeof e?.result?.value === 'string' ? JSON.parse(e.result.value) : e;
+  fase = 'exercicio';
+  const px = await enviar('Runtime.evaluate', { expression: EXERCICIO });
+  const ex = px?.result?.objectId
+    ? await enviar('Runtime.awaitPromise', { promiseObjectId: px.result.objectId, returnByValue: true })
+    : px;
+  resultado.exercicio = typeof ex?.result?.value === 'string' ? JSON.parse(ex.result.value) : ex;
+  await new Promise((r) => setTimeout(r, 300));
   fase = 'controle';
   const c = await enviar('Runtime.evaluate', { expression: CONTROLE, returnByValue: true });
   resultado.controle = c?.result?.value ?? c;

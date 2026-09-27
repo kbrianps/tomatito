@@ -9,6 +9,9 @@
 // caractere: no AZERTY, a tecla do 1 dá "&" sem Shift. O teclado numérico
 // também vale. A vírgula é lida pelo caractere (no AZERTY ela fica em outra
 // tecla) ou pela posição da tecla Comma do ABNT2 e do US.
+//
+// M12: o Esc numa lista suspensa aberta fecha só a lista, e não o diálogo em
+// volta (ligarEscDasListas).
 
 const ROTA_DO_DIGITO = Object.freeze({ 1: 'foco', 2: 'temporizador', 3: 'cronometro' });
 
@@ -40,4 +43,32 @@ export function ligarAtalhosDeNavegacao(navegar, alvo = document) {
   };
   alvo.addEventListener('keydown', aoTeclar);
   return () => alvo.removeEventListener('keydown', aoTeclar);
+}
+
+/**
+ * Esc numa lista suspensa aberta: a tecla é da lista (M12).
+ *
+ * O fluent-dropdown 3.1.3 fecha a lista no Esc, mas não cancela o evento; o
+ * <dialog> do fluent-dialog em volta recebe o mesmo Esc e fecha junto, e a
+ * edição se perde. No ComboBox do WinUI, o Esc fecha só a lista. Cancelar o
+ * padrão do keydown impede o pedido de fechar do diálogo; a lista continua
+ * fechando pelo próprio componente, que não olha o defaultPrevented no Esc
+ * (docs/decisoes.md, M12).
+ * @param {{ key: string, target?: { closest?: (s: string) => { open?: boolean } | null } }} e
+ * @returns {boolean}
+ */
+export function escDeListaAberta(e) {
+  return e.key === 'Escape' && Boolean(e.target?.closest?.('fluent-dropdown')?.open);
+}
+
+/**
+ * Liga a regra do Esc nas listas suspensas, na fase de captura (antes do
+ * componente e do diálogo). Devolve uma função que a desliga.
+ */
+export function ligarEscDasListas(alvo = document) {
+  const aoTeclar = (e) => {
+    if (escDeListaAberta(e)) e.preventDefault();
+  };
+  alvo.addEventListener('keydown', aoTeclar, true);
+  return () => alvo.removeEventListener('keydown', aoTeclar, true);
 }

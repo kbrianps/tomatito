@@ -1,7 +1,7 @@
 // Testes dos atalhos de navegação (M09, seção 3.8 do plano).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ligarAtalhosDeNavegacao, rotaDoAtalho } from './keys.js';
+import { escDeListaAberta, ligarAtalhosDeNavegacao, ligarEscDasListas, rotaDoAtalho } from './keys.js';
 
 const tecla = (code, key, mods = {}) => ({ code, key, ctrlKey: true, altKey: false, shiftKey: false, metaKey: false, ...mods });
 
@@ -43,6 +43,34 @@ test('o ouvinte navega, cancela o padrão e respeita quem já cancelou', () => {
   ouvinte(e2);
   assert.deepEqual(rotas, ['temporizador']);
   assert.equal(e2.defaultPrevented, false);
+  desligar();
+  assert.equal(ouvinte, null);
+});
+
+// M12: Esc numa lista suspensa aberta é da lista, e não do diálogo em volta.
+test('Esc com uma lista suspensa aberta cancela o padrão (o diálogo em volta não fecha); fechada, não', () => {
+  const alvoEm = (open) => ({ closest: (s) => (s === 'fluent-dropdown' ? { open } : null) });
+  assert.equal(escDeListaAberta({ key: 'Escape', target: alvoEm(true) }), true);
+  assert.equal(escDeListaAberta({ key: 'Escape', target: alvoEm(false) }), false, 'lista fechada: o Esc fecha o diálogo');
+  assert.equal(escDeListaAberta({ key: 'Escape', target: { closest: () => null } }), false, 'fora de uma lista');
+  assert.equal(escDeListaAberta({ key: 'Enter', target: alvoEm(true) }), false);
+  assert.equal(escDeListaAberta({ key: 'Escape', target: null }), false);
+
+  let ouvinte;
+  let captura;
+  const alvo = {
+    addEventListener: (_t, fn, c) => ((ouvinte = fn), (captura = c)),
+    removeEventListener: () => (ouvinte = null),
+  };
+  const desligar = ligarEscDasListas(alvo);
+  assert.equal(captura, true, 'na fase de captura, antes do componente');
+  const evento = (e) => ({ defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...e });
+  const aberta = evento({ key: 'Escape', target: alvoEm(true) });
+  ouvinte(aberta);
+  assert.equal(aberta.defaultPrevented, true);
+  const fechada = evento({ key: 'Escape', target: alvoEm(false) });
+  ouvinte(fechada);
+  assert.equal(fechada.defaultPrevented, false);
   desligar();
   assert.equal(ouvinte, null);
 });

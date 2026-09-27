@@ -88,6 +88,17 @@ if (r.controle === 'tema-errado') {
     'console do DevTools sem nenhum "Refused to"',
     partidas.every((P) => P.console && !P.console.erro && !(P.console.mensagens ?? []).some((m) => /Refused to/i.test(m.texto))),
   );
+  // M12: os controles que abrem por cima da tela, abertos e fechados pelo
+  // console.mjs no #/dev, sem nenhum "Refused to" (no build, sob a CSP).
+  const ABREM = ['menu-sessao', 'menu-temporizador', 'meta', 'zerar', 'amostra-dica-reiniciar', 'amostra-dica-volta', 'dialogo', 'dialogo-meta'];
+  checar(
+    'os menus, as listas, as dicas e o diálogo do #/dev abrem e fecham, sem nenhum "Refused to" no console',
+    partidas.every((P) => {
+      const x = P.console?.exercicio;
+      return x && ABREM.every((k) => x.abriu?.[k] === true) && x.abertosNoFim === 0 &&
+        !(P.console.mensagensDoExercicio ?? []).some((m) => /Refused to/i.test(m.texto));
+    }),
+  );
   if (r.modo === 'build') {
     const csp = partidas[0]?.console?.estado?.csp ?? '';
     console.log(`CSP recebida com o index.html: ${csp}`);

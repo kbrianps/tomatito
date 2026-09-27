@@ -130,7 +130,11 @@ const pagina = () => ({
   dataset: { ...document.documentElement.dataset },
   fontes: document.fonts.status,
   interCarregada: document.fonts.check('14px "Inter Variable"'),
-  definidos: ['fluent-switch', 'fluent-radio', 'fluent-radio-group'].filter((t) => customElements.get(t)),
+  definidos: [
+    'fluent-switch', 'fluent-radio', 'fluent-radio-group', 'fluent-checkbox', 'fluent-dropdown', 'fluent-listbox',
+    'fluent-option', 'fluent-dialog', 'fluent-dialog-body', 'fluent-menu', 'fluent-menu-list', 'fluent-menu-item',
+    'fluent-tooltip',
+  ].filter((t) => customElements.get(t)),
 });
 enviar('pagina', { quando: 'sonda', ...pagina() });
 document.addEventListener('visibilitychange', () => enviar('pagina', { quando: 'visibilitychange', ...pagina() }));

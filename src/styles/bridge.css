@@ -7,11 +7,14 @@
   --colorNeutralBackground1:var(--tt-bg-card); --colorNeutralBackground2:var(--tt-bg-surface);
   --colorNeutralBackground3:var(--tt-bg-app);  --colorNeutralForeground1:var(--tt-fg-1);
   --colorNeutralForeground3:var(--tt-fg-2);    --colorNeutralStroke2:var(--tt-border);
+  --colorNeutralForeground2:var(--tt-fg-1); --colorNeutralForeground2Hover:var(--tt-fg-1);   /* M12: itens de menu e opções */
+  --colorNeutralForeground2Pressed:var(--tt-fg-2-on-ctl);
   --colorNeutralStrokeAccessible:var(--tt-stroke-control);
   --colorBrandBackground:var(--tt-accent); --colorBrandBackgroundHover:var(--tt-accent-hover);
   --colorBrandBackgroundPressed:var(--tt-accent-pressed);
   --colorCompoundBrandBackground:var(--tt-accent); --colorCompoundBrandBackgroundHover:var(--tt-accent-hover);
   --colorCompoundBrandBackgroundPressed:var(--tt-accent-pressed); --colorCompoundBrandStroke:var(--tt-accent);
+  --colorCompoundBrandStrokeHover:var(--tt-accent-hover); --colorCompoundBrandStrokePressed:var(--tt-accent-pressed);   /* M12 */
   --colorNeutralForegroundOnBrand:var(--tt-fg-on-accent);
   --colorBrandForeground1:var(--tt-accent-fg); --colorBrandForegroundLink:var(--tt-accent-fg);
   --colorBrandStroke1:var(--tt-accent-fg); --colorStrokeFocus2:var(--tt-fg-1);

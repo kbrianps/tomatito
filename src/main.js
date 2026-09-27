@@ -3,12 +3,25 @@
 import '@fluentui/web-components/switch.js';
 import '@fluentui/web-components/radio.js';
 import '@fluentui/web-components/radio-group.js';
+// M12: os demais controles da seção 1.1 (checkbox, dropdown, dialog, menu e
+// tooltip), com as partes que cada um usa: a lista e as opções do dropdown, o
+// corpo do diálogo e a lista e os itens do menu.
+import '@fluentui/web-components/checkbox.js';
+import '@fluentui/web-components/dropdown.js';
+import '@fluentui/web-components/listbox.js';
+import '@fluentui/web-components/option.js';
+import '@fluentui/web-components/dialog.js';
+import '@fluentui/web-components/dialog-body.js';
+import '@fluentui/web-components/menu.js';
+import '@fluentui/web-components/menu-list.js';
+import '@fluentui/web-components/menu-item.js';
+import '@fluentui/web-components/tooltip.js';
 import { Updates } from '@microsoft/fast-element';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { montarBarraDeTitulo } from './components/title-bar.js';
 import { icone } from './components/icon.js';
 import { montarNavegacao } from './components/nav-view.js';
-import { ligarAtalhosDeNavegacao } from './lib/keys.js';
+import { ligarAtalhosDeNavegacao, ligarEscDasListas } from './lib/keys.js';
 import { iniciarRoteador } from './router.js';
 import * as foco from './views/focus/index.js';
 import * as temporizador from './views/timers.js';
@@ -24,7 +37,12 @@ import * as dev from './views/dev-catalog.js';
 // componentes usados estão definidos e as fontes carregadas, para o primeiro
 // quadro já sair pintado. USADOS lista só as tags importadas acima; um teste
 // confere as duas listas. O finally mostra a janela mesmo se algo falhar.
-const USADOS = ['fluent-switch', 'fluent-radio', 'fluent-radio-group'];
+const USADOS = [
+  'fluent-switch', 'fluent-radio', 'fluent-radio-group',
+  'fluent-checkbox', 'fluent-dropdown', 'fluent-listbox', 'fluent-option',
+  'fluent-dialog', 'fluent-dialog-body', 'fluent-menu', 'fluent-menu-list', 'fluent-menu-item',
+  'fluent-tooltip',
+];
 const h = document.documentElement;
 const win = getCurrentWindow();
 // Sem transições até o primeiro quadro: a página é montada com a janela
@@ -47,6 +65,7 @@ try {
     aoMudar: (rota, anterior) => nav.selecionar(rota, { animar: anterior !== null }),
   });
   ligarAtalhosDeNavegacao((rota) => roteador.navegar(rota));
+  ligarEscDasListas();
 
   // Força o layout do texto novo, para as fontes dele entrarem no
   // document.fonts.ready (sem isso, o ready poderia resolver antes de o
