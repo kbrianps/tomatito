@@ -21,7 +21,8 @@
 //   --press "seletor"     aperta o botão do mouse no centro, sem soltar (:active)
 //   --key "Control+1"     aperta e solta uma tecla, com modificadores (Control,
 //                         Shift, Alt, Meta) separados por "+": Tab, Enter,
-//                         Escape, Space, ArrowUp/Down/Left/Right, Home, End, 0-9,
+//                         Escape, Space, ArrowUp/Down/Left/Right, Home, End,
+//                         PageUp, PageDown, 0-9,
 //                         a-z e "Comma" (a vírgula)
 //   --ax "seletor"        papel, nome e estados que o Chrome expõe na árvore de
 //                         acessibilidade para cada elemento do seletor
@@ -140,6 +141,8 @@ const TECLAS = {
   ArrowRight: ['ArrowRight', 'ArrowRight', 39],
   Home: ['Home', 'Home', 36],
   End: ['End', 'End', 35],
+  PageUp: ['PageUp', 'PageUp', 33],   // M17
+  PageDown: ['PageDown', 'PageDown', 34],
   Comma: [',', 'Comma', 188, ','],
 };
 const MODIFICADORES = {

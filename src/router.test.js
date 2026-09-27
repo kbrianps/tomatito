@@ -83,3 +83,20 @@ test('sem hash, abre a Foco sem criar entrada no histórico, e troca de tela com
   assert.equal(titulo.focado, true, 'com o foco dentro da tela que saiu, ele vai para o título da nova');
   assert.throws(() => roteador.navegar('inexistente'), /rota desconhecida/);
 });
+
+test('M17: cada tela recebe a raiz e o contexto (o ícone)', (t) => {
+  t.after(() => {
+    for (const k of ['location', 'history', 'document', 'addEventListener']) delete globalThis[k];
+  });
+  const { raiz } = ambiente('#/foco');
+  const recebidos = [];
+  const telas = Object.fromEntries(ROTAS.map((r) => [r, { montar: (...args) => void recebidos.push(args) }]));
+  const contexto = { icone: () => '<svg></svg>' };
+  const roteador = iniciarRoteador({ raiz, telas, contexto });
+  roteador.navegar('dev');
+  assert.deepEqual(recebidos, [[raiz, contexto], [raiz, contexto]]);
+  // Sem contexto, um objeto vazio (as telas desestruturam o segundo argumento).
+  recebidos.length = 0;
+  iniciarRoteador({ raiz, telas });
+  assert.deepEqual(recebidos, [[raiz, {}]]);
+});

@@ -468,10 +468,35 @@ O que foi conferido de forma automática (27/09/2026):
 
 ### Para conferir (uns 15 minutos, quase todos esperando)
 
-1. [ ] `cd ~/dev/tomatito && npm run tauri dev`. Na tela Foco, o cartão "Pronto para focar" mostra `00:00` e "Nenhuma sessão em andamento".
-2. [ ] Clique em **Iniciar 25 min**: aparece `25:00` e, em seguida, `24:59`, `24:58`... A linha de baixo diz "Período de foco 1 de 1".
+1. [ ] `cd ~/dev/tomatito && npm run tauri dev`. Na tela Foco, o cartão "Pronto para focar" mostra o seletor de minutos (desde o M17; antes, `00:00` e os botões provisórios).
+2. [ ] Ponha **25** no seletor (no `tauri dev`, as setas andam de 1 em 1; Home leva a 1 e PageUp soma 15) e clique em **Iniciar sessão de foco**: aparece `25:00` e, em seguida, `24:59`, `24:58`... A linha de baixo diz "Período de foco 1 de 1".
 3. [ ] **Minimizar 6 min:** anote o tempo na tela, minimize a janela, espere 6 min no relógio do sistema e volte pela barra de tarefas (ou Alt+Tab). O número deve ser o anotado menos 6 min (± 1 s), já no primeiro quadro, sem "pular" depois.
-4. [ ] Clique em **Encerrar** e depois em **Iniciar 5 min**. Espere uns 30 s e anote o tempo.
+4. [ ] Clique em **Encerrar**, ponha **5** no seletor e clique em **Iniciar sessão de foco**. Espere uns 30 s e anote o tempo.
 5. [ ] **Suspensão:** num terminal, `systemctl suspend`; acorde o computador depois de 1 min pelo relógio do celular. Na volta, o tempo deve ser o anotado menos o tempo que passou (≈ 1 min e pouco), e não o anotado. Se a fase tiver vencido durante a suspensão, a tela mostra "Sessão concluída".
 6. [ ] **CPU parado:** clique em **Encerrar**, abra outro terminal e rode `top -p $(pgrep -x tomatito)`. Depois de uns 10 s, a coluna `%CPU` fica em `0,0` (no máximo um `0,3` de vez em quando). Com uma sessão correndo, fica um pouco acima.
 7. [ ] Feche o `tauri dev` (Ctrl+C no terminal).
+
+
+## M17. Card "Pronto para focar"
+
+O que foi conferido de forma automática (27/09/2026):
+
+- **Posições contra a captura do Relógio** (`node scripts/preview/cartao-sessao.mjs`, Chrome headless e WebKitGTK fora da tela, janela de 1372 × 936 px CSS no Escuro, o tamanho da captura a 175%): título, as duas linhas do texto, o seletor (topo e sublinhado), os algarismos, a unidade, os dois chevrons, a frase, a caixa e o botão diferem no máximo 2,0 px em y e 1,1 px no centro em x, medidos pelos pixels dentro do cartão (`scripts/preview/bandas.py`). Com o conteúdo 6 px mais baixo (controle negativo), as 11 posições acusam. Captura lado a lado em `docs/capturas/m17-lado-a-lado.png`, e os quatro temas em `docs/capturas/m17-temas.png`.
+- **Seletor:** 160 × 87, campo de 111 e coluna de 48 com 1 px de separação, chevrons de 42 + 1 + 42; fundo `--tt-input-bg`, sublinhado `--tt-stroke-control`, unidade `--tt-fg-2-on-ctl` e texto `--tt-fg-2`; ARIA: `role="spinbutton"`, "Duração da sessão", 5 a 240, `aria-valuetext` "30 minutos", descrito pela frase; chevrons fora do Tab.
+- **Teclas e chevrons** (no Chrome, teclas e cliques de verdade; no WebKitGTK, eventos do JS): chevrons 35, 30, 25; ↑ 30, PageUp 45, ↑ 50, PageUp 65, PageDown 50, ↓ 45, End 240 (chevron de cima desabilitado; o clique nele não faz nada), Home 5 (o de baixo desabilitado), ↓ 5, e PageUp até 65. O clique no chevron deixa o foco no campo.
+- **Frase:** 30 e 5 min "Sem intervalos.", 45 e 50 "Você terá 1 intervalo.", 65 "Você terá 2 intervalos.", 240 "Você terá 7 intervalos."; com "Pular intervalos", "Sem intervalos.". Os exemplos do `plan.rs` (30, 45, 60, 90 e 185 min) estão travados no `format.test.js`.
+- **Iniciar:** o botão pede o `focus_start` com `{ minutes: 65, skipBreaks: true }`, e o cartão passa para a contagem. No debug, o seletor anda de 1 em 1 a partir de 1 min.
+- **App de verdade** (teste aninhado do M16, `bash scripts/gnome-aninhado/rodar.sh contagem`, com o motor em Rust e o WebKitGTK): as sessões de 25 e de 5 min começam pelo seletor e pelo botão novo, com as 14 conferências ok.
+- `npm test` (110 testes), `npm run build`, `cargo test --workspace`, `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` e a checagem cruzada `cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings` (com o `llvm-rc` do LLVM 21 no PATH) passam; o `scripts/preview/responsivo.mjs` também (85 conferências).
+
+### Para conferir (uns 5 minutos)
+
+1. [ ] `cd ~/dev/tomatito && npm run tauri dev`. Na tela Foco, o cartão "Pronto para focar" mostra o texto "Escolha a duração. Em sessões longas, o Tomatito intercala intervalos curtos.", o seletor com **30** e "min", "Sem intervalos.", a caixa "Pular intervalos" e o botão "Iniciar sessão de foco" com o ícone de play.
+2. [ ] Abra `~/dev/tomatito-ref/clock-focus-sessions-page.png` ao lado e compare o cartão a olho: título, texto, seletor, frase, caixa e botão na mesma ordem e nas mesmas alturas (a captura está a 175%; se quiser a mesma escala, use o Ctrl + do app duas ou três vezes).
+3. [ ] Clique na seta de cima do seletor: **31** (no `tauri dev`, o passo é 1; no Tomatito instalado, a partir do M21b, é 5). Clique na de baixo: volta a **30**.
+4. [ ] Clique no número e use o teclado: ↑ e ↓ mudam 1; PageUp e PageDown mudam 15; End vai a **240** (a seta de cima fica apagada) e Home a **1** (a de baixo fica apagada). A tela não rola com essas teclas.
+5. [ ] Com **60**, a frase diz "Você terá 1 intervalo."; com **90**, "Você terá 2 intervalos."; com **30**, "Sem intervalos.". Marque "Pular intervalos": com 90, a frase vira "Sem intervalos.".
+6. [ ] Com **5** e "Pular intervalos" desmarcado, clique em **Iniciar sessão de foco**: o cartão passa para a contagem (`05:00`, "Período de foco 1 de 1"). Clique em **Encerrar**: o cartão volta ao seletor, ainda com **5**.
+7. [ ] Passe o mouse sobre uma seta do seletor e espere: aparece a dica "Aumentar" ou "Diminuir".
+8. [ ] Feche o `tauri dev` (Ctrl+C no terminal).
+

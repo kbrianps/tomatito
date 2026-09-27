@@ -26,11 +26,29 @@ export default Object.freeze({
     sessao: 'Pronto para focar',
     progresso: 'Progresso diário',
     tarefas: 'Tarefas',
+    // M17: o cartão "Pronto para focar" (views/focus/card-session.js). O
+    // texto é o da seção 2.1 do plano; ele não promete silenciar as
+    // notificações do sistema.
+    preparo: Object.freeze({
+      texto: 'Escolha a duração. Em sessões longas, o Tomatito intercala intervalos curtos.',
+      seletor: 'Duração da sessão',
+      aumentar: 'Aumentar',
+      diminuir: 'Diminuir',
+      unidade: 'min',
+      pular: 'Pular intervalos',
+      iniciar: 'Iniciar sessão de foco',
+      // A frase dos intervalos, por categoria do Intl.PluralRules('pt-BR')
+      // (format.js). O zero tem frase própria: em pt-BR, o 0 cai em "one".
+      semIntervalos: 'Sem intervalos.',
+      intervalos: Object.freeze({
+        one: (n) => `Você terá ${n} intervalo.`,
+        other: (n) => `Você terá ${n} intervalos.`,
+      }),
+    }),
     // M16: a contagem provisória do cartão de sessão (views/focus/contagem.js),
-    // até o cartão de verdade do M17 e do M18.
+    // que o cartão mostra durante a sessão até o mostrador do M18. O iniciar
+    // passou para o preparo (M17).
     provisorio: Object.freeze({
-      minutos: Object.freeze([5, 25]),
-      iniciar: (m) => `Iniciar ${m} min`,
       pausar: 'Pausar',
       retomar: 'Retomar',
       pular: 'Pular',
@@ -41,5 +59,10 @@ export default Object.freeze({
       break: (n, total) => `Intervalo ${n} de ${total}`,
       pausado: (fase) => `Pausado: ${fase}`,
     }),
+  }),
+  // Unidades por extenso, por categoria do Intl.PluralRules('pt-BR')
+  // (format.js): o aria-valuetext do seletor de minutos ("25 minutos").
+  unidades: Object.freeze({
+    minutos: Object.freeze({ one: (n) => `${n} minuto`, other: (n) => `${n} minutos` }),
   }),
 });

@@ -1,7 +1,8 @@
 // Roteiro do M16 (laço, IPC e primeira contagem), carregado com
 // `gnome-shell --automation-script` pelo dentro.sh. Na janela main de verdade
 // (WebKitGTK no Mutter 50, Wayland), com o motor em Rust de verdade:
-//   1. iniciar (clique do ponteiro virtual em "Iniciar 25 min") mostra a
+//   1. iniciar (M17: o seletor em 25 e o clique do ponteiro virtual em
+//      "Iniciar sessão de foco"; antes, o botão provisório "Iniciar 25 min") mostra a
 //      contagem: o texto anda um segundo por segundo, e o DOM é tocado uma
 //      vez por segundo (um MutationObserver conta as trocas);
 //   2. minimizar por 6 min e voltar mostra o tempo certo: o texto na volta
@@ -167,6 +168,17 @@ async function clicarNoBotao(r, seletor) {
   await clicar(r.x + Math.round(c[0]), r.y + Math.round(c[1]));
 }
 
+// M17: o seletor de minutos vai até `minutos` pelas setas (eventos do JS no
+// campo, que andam de passo em passo; no debug, de 1 em 1), e o ponteiro
+// virtual clica em "Iniciar sessão de foco".
+async function iniciarSessao(r, minutos) {
+  const valor = await comando(
+    `(() => { const c = document.querySelector('[data-cartao="sessao"] [role="spinbutton"]'); for (let i = 0; i < 300 && Number(c.getAttribute('aria-valuenow')) !== ${minutos}; i++) { const k = Number(c.getAttribute('aria-valuenow')) < ${minutos} ? 'ArrowUp' : 'ArrowDown'; c.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true })); } return Number(c.getAttribute('aria-valuenow')); })()`,
+  );
+  if (valor !== minutos) throw new Error(`o seletor parou em ${valor}, e não em ${minutos}`);
+  await clicarNoBotao(r, '[data-cartao="sessao"] [data-iniciar]');
+}
+
 async function principal() {
   passo('início');
   const seat = global.stage.context.get_backend().get_default_seat();
@@ -198,7 +210,7 @@ async function principal() {
   passo(`CPU ocioso: ${JSON.stringify(R.medidas.cpuOcioso)}`);
 
   // 1. Iniciar mostra a contagem.
-  await clicarNoBotao(r, 'button[data-minutos="25"]');
+  await iniciarSessao(r, 25);
   const t0 = agoraMs();
   await sleep(200);
   const logo = await comando(LER);
@@ -232,7 +244,7 @@ async function principal() {
 
   // 3. Congelar 1 min num foco de 5 min.
   await clicarNoBotao(r, 'button[data-acao="parar"]');
-  await clicarNoBotao(r, 'button[data-minutos="5"]');
+  await iniciarSessao(r, 5);
   const c0 = agoraMs();
   await sleep(10000);
   const pids = arvore(pid);

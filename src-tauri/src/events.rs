@@ -211,8 +211,8 @@ impl From<&PhaseChange> for PhaseEventDto {
     }
 }
 
-/// Resposta do `get_state`. As configurações (M17 em diante, com o
-/// `settings.rs`) e os `recursos` (M39) entram aqui quando existirem.
+/// Resposta do `get_state`. As configurações (com o `settings.rs`) e os
+/// `recursos` (M39) entram aqui quando existirem.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StateDto {
@@ -220,6 +220,23 @@ pub struct StateDto {
     /// Velocidade do relógio do motor: 1, ou a do `TOMATITO_SPEED` num build
     /// de debug. O JS a usa para contar entre dois ticks.
     pub speed: f64,
+    /// M17: o que o cartão "Pronto para focar" precisa para montar uma sessão.
+    pub setup: SetupDto,
+}
+
+/// M17: a faixa e o passo do seletor de minutos (5 a 240, de 5 em 5; no
+/// debug, de 1 em 1, a mesma faixa que o `focus_start` aceita) e o F e o B
+/// que o próximo `focus_start` vai usar, para a frase "Você terá N
+/// intervalos." seguir a regra do `plan.rs` sem uma segunda fonte para os
+/// números. F e B são os padrões até o `settings.rs`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetupDto {
+    pub min_minutes: u32,
+    pub max_minutes: u32,
+    pub step_minutes: u32,
+    pub focus_minutes: u32,
+    pub break_minutes: u32,
 }
 
 #[cfg(test)]
@@ -296,6 +313,27 @@ mod tests {
             v[1],
             json!({"cause": "ended", "late": true, "status": "completed",
                    "ended": {"kind": "focus", "n": 1, "durationS": 300}})
+        );
+    }
+
+    #[test]
+    fn preparo_da_sessao_em_camel_case() {
+        let dto = SetupDto {
+            min_minutes: 5,
+            max_minutes: 240,
+            step_minutes: 5,
+            focus_minutes: 25,
+            break_minutes: 5,
+        };
+        assert_eq!(
+            serde_json::to_value(dto).unwrap(),
+            json!({
+                "minMinutes": 5,
+                "maxMinutes": 240,
+                "stepMinutes": 5,
+                "focusMinutes": 25,
+                "breakMinutes": 5,
+            })
         );
     }
 }

@@ -67,9 +67,10 @@ test('sem sessão, 00:00', () => {
 });
 
 test('botões por estado', () => {
-  assert.deepEqual(acoesVisiveis(null), ['iniciar']);
-  assert.deepEqual(acoesVisiveis('idle'), ['iniciar']);
-  assert.deepEqual(acoesVisiveis('completed'), ['iniciar']);
+  // M17: iniciar é do preparo (card-session.js).
+  assert.deepEqual(acoesVisiveis(null), []);
+  assert.deepEqual(acoesVisiveis('idle'), []);
+  assert.deepEqual(acoesVisiveis('completed'), []);
   assert.deepEqual(acoesVisiveis('focus'), ['pausar', 'pular', 'parar']);
   assert.deepEqual(acoesVisiveis('break'), ['pausar', 'pular', 'parar']);
   assert.deepEqual(acoesVisiveis('paused'), ['retomar', 'pular', 'parar']);
@@ -89,7 +90,6 @@ test('marcação: tempo, fase e os botões escondidos até o primeiro retrato', 
   const html = marcacao();
   assert.match(html, /<p class="tt-contagem-tempo tt-num" data-tempo>00:00<\/p>/);
   const acoes = [...html.matchAll(/<button type="button" data-acao="(\w+)"[^>]* hidden>/g)].map((m) => m[1]);
-  assert.deepEqual(acoes, ['iniciar', 'iniciar', 'pausar', 'retomar', 'pular', 'parar']);
-  assert.match(html, /data-minutos="5" class="tt-accent" hidden>Iniciar 5 min</);
+  assert.deepEqual(acoes, ['pausar', 'retomar', 'pular', 'parar']);
   assert.doesNotMatch(html, /aria-live/, 'números que mudam a cada segundo ficam sem aria-live (3.8)');
 });

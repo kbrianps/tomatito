@@ -36,3 +36,6 @@ Formato: data, marco em que surgiu e uma linha sobre a ideia.
 - 27/09/2026, M10: botão de expandir o painel compacto por cima do conteúdo (o `PaneToggleButton` do NavigationView), para ver os nomes sem alargar a janela. Hoje o painel compacto tem só os ícones e as dicas, como pede o M10.
 - 27/09/2026, M13: passar a dica do painel compacto (M10) para a dica própria dos botões de ícone (`src/components/dica.js`), para as duas terem o mesmo comportamento (Esc, folga para o mouse, some na troca de tela). Hoje as duas funcionam e têm o mesmo desenho.
 - 27/09/2026, M13: anel de foco duplo também nos componentes Fluent (caixa, radio, switch e item de menu), que hoje mostram o anel simples do próprio Fluent na cor do anel externo. Exige esconder o do componente e desenhar o anel em volta do rótulo (como o `FocusVisual` do CheckBox do WinUI). Decidir com o Orca no M43.
+- 27/09/2026, M17: gravar a última duração do seletor de minutos entre aberturas do app (hoje ela é lembrada só enquanto o app está aberto; o plano não pede e não há chave no `settings.json`).
+- 27/09/2026, M17: seletor de minutos como o NumberBox por completo: repetir o passo com o chevron apertado (o `RepeatButton`), a roda do mouse com o campo focado e a digitação de um valor. Hoje: teclas, chevrons e Home/End.
+

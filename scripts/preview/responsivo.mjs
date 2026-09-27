@@ -102,6 +102,11 @@ function montarPassos(motor, capturas) {
     medir('__ttMedidas()', { tipo: 'dica', caso: 'mouse no item seguinte, depois do Esc', quer: ['Cronômetro'] });
     passos.push('--hover', '.tt-foco-grade', '--wait', '200');
     medir('__ttMedidas()', { tipo: 'dica', caso: 'mouse fora do painel', quer: [] });
+    // M17: a tela Foco passou a ter controles (o seletor de minutos). O Tab
+    // parte do ponto de navegação do Chrome, que o mouse moveu para a tela;
+    // o ponto volta para a barra de título (foco nela e o tabindex tirado
+    // logo depois), e o Tab entra pelo painel, como numa janela recém-aberta.
+    medir('__ttTabDoComeco()', { tipo: 'nada' });
     passos.push('--key', 'Tab', '--wait', '400');
     medir('__ttMedidas()', { tipo: 'dica', caso: 'Tab (foco do teclado no item atual)', quer: ['Foco'] });
     passos.push('--key', 'ArrowDown', '--wait', '400');

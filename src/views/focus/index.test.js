@@ -28,16 +28,17 @@ test('cada cartão é uma <section> com o título do catálogo em Subtitle, e a 
   assert.match(html, /^<div class="tt-pagina"><h1 class="tt-t-title" tabindex="-1">Foco<\/h1>/);
   for (const id of ['sessao', 'tarefas', 'progresso']) {
     const re = new RegExp(
-      `<section class="tt-card" data-cartao="${id}" aria-labelledby="foco-${id}">` +
+      `<section class="tt-card${id === 'sessao' ? ' tt-sessao' : ''}" data-cartao="${id}" aria-labelledby="foco-${id}">` +
         `<h2 id="foco-${id}" class="tt-t-subtitle">${t.foco[id]}</h2>` +
-        // M16: só o cartão de sessão tem conteúdo (a contagem provisória).
-        (id === 'sessao' ? '<div class="tt-contagem">.*</div>' : '') +
+        // M17: só o cartão de sessão tem conteúdo (o preparo e, durante a
+        // sessão, a contagem provisória do M16).
+        (id === 'sessao' ? '<div class="tt-preparo" data-preparo>.*</div><div data-andamento hidden>.*</div>' : '') +
         '</section>',
     );
     assert.match(html, re);
   }
-  const { provisorio, ...titulos } = t.foco;
-  assert.ok(provisorio);
+  const { provisorio, preparo, ...titulos } = t.foco;
+  assert.ok(provisorio && preparo);
   assert.deepEqual(titulos, { sessao: 'Pronto para focar', progresso: 'Progresso diário', tarefas: 'Tarefas' });
 });
 
@@ -45,4 +46,11 @@ test('montar(raiz) desenha a marcação', () => {
   const raiz = { innerHTML: '' };
   assert.equal(montar(raiz, { store: null }), null);
   assert.equal(raiz.innerHTML, marcacao());
+});
+
+test('M17: os ícones vêm do contexto (play no botão, chevrons no seletor)', () => {
+  const icone = (nome) => `<svg data-icone="${nome}"></svg>`;
+  const html = marcacao({ icone });
+  assert.deepEqual([...html.matchAll(/data-icone="(\w+)"/g)].map((m) => m[1]), ['chevron_up', 'chevron_down', 'play']);
+  assert.doesNotMatch(marcacao(), /<svg/, 'sem contexto, sem ícone (node --test)');
 });

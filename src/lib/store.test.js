@@ -1,7 +1,7 @@
 // Testes do store (M16) com um IPC falso e um relógio de parede falso.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { criarStore } from './store.js';
+import { criarStore, PREPARO_PADRAO } from './store.js';
 
 const EVENTOS = { estado: 'tt://state', tick: 'tt://tick' };
 const T0 = 1_790_000_000_000;
@@ -140,4 +140,19 @@ test('comando aplica a resposta; comando recusado ressincroniza e rejeita', asyn
   await assert.rejects(m.store.comando('pausar'), { code: 'notRunning' });
   await new Promise((r) => setImmediate(r));
   assert.deepEqual(m.chamadas, ['iniciar 5', 'pausar', 'get_state']);
+});
+
+test('M17: o preparo vem do get_state, com o padrão antes e diante de um setup inválido', async () => {
+  const debug = { minMinutes: 1, maxMinutes: 240, stepMinutes: 1, focusMinutes: 25, breakMinutes: 5 };
+  const m = montar({ estado: { focus: retrato(0, 'idle'), speed: 1, setup: debug } });
+  assert.deepEqual(m.store.preparo, PREPARO_PADRAO);
+  assert.deepEqual(PREPARO_PADRAO, { minMinutes: 5, maxMinutes: 240, stepMinutes: 5, focusMinutes: 25, breakMinutes: 5 });
+  await m.store.sincronizar();
+  assert.deepEqual(m.store.preparo, debug);
+  assert.ok(Object.isFrozen(m.store.preparo));
+  for (const ruim of [null, { ...debug, breakMinutes: 0 }, { ...debug, minMinutes: 300 }, { ...debug, stepMinutes: 1.5 }]) {
+    m.estado = { focus: retrato(0, 'idle'), speed: 1, setup: ruim };
+    await m.store.sincronizar();
+    assert.deepEqual(m.store.preparo, debug, `ignora ${JSON.stringify(ruim)}`);
+  }
 });

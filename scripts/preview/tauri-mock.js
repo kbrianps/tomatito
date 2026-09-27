@@ -9,6 +9,8 @@
 //   ?foco=N[&restante=ms][&pausado=1]
 //                               M16: abre com uma sessão de foco de N min
 //                               correndo (ou pausada), com o restante dado
+//   ?debug=1                    M17: o preparo do build de debug (seletor de
+//                               1 em 1, a partir de 1 min)
 // As globais do initialization_script (?pref, ?ultimo e ?plataforma) não são
 // daqui: precisam existir antes do script de boot do <head>, e vêm do script
 // clássico que o vite.config.js desta pasta põe antes dele.
@@ -64,9 +66,21 @@ if (params.has('foco')) {
   motor.seq = 1;
 }
 
+// M17: o `setup` do get_state (src-tauri/src/events.rs, SetupDto).
+const preparo =
+  params.get('debug') === '1'
+    ? { minMinutes: 1, maxMinutes: 240, stepMinutes: 1, focusMinutes: 25, breakMinutes: 5 }
+    : { minMinutes: 5, maxMinutes: 240, stepMinutes: 5, focusMinutes: 25, breakMinutes: 5 };
+// Os focus_start pedidos, para as conferências (--eval).
+window.__TOMATITO_PREVIEW_INICIOS__ = [];
+
 const handlers = {
-  get_state: () => ({ focus: retratoFoco(), speed: 1 }),
-  focus_start: ({ minutes }) => (iniciarFoco(minutes), transicao()),
+  get_state: () => ({ focus: retratoFoco(), speed: 1, setup: preparo }),
+  focus_start: ({ minutes, skipBreaks }) => {
+    window.__TOMATITO_PREVIEW_INICIOS__.push({ minutes, skipBreaks });
+    iniciarFoco(minutes);
+    return transicao();
+  },
   focus_pause: () => ((motor.pausadoMs = retratoFoco().session.remainingMs), transicao()),
   focus_resume: () => ((motor.sessao.endsAt = Date.now() + motor.pausadoMs), (motor.pausadoMs = null), transicao()),
   focus_skip: () => ((motor.sessao = null), transicao()),

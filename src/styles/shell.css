@@ -196,8 +196,29 @@
   .tt-foco-grade{ grid-template-columns:repeat(2, minmax(0,1fr)); }
 }
 
-/* Contagem provisória do cartão de sessão (M16; sai no M17). O tempo usa o
-   Display do Relógio (68/92, Semibold), com algarismos de largura fixa. */
+/* M17: cartão "Pronto para focar" (src/views/focus/card-session.js). Tudo
+   centrado, com as posições do cartão do Relógio (clock-focus-sessions-page.png,
+   medidas a 175% em relação ao canto do cartão; docs/decisoes.md, M17). O
+   Relógio tem uma linha de botões no topo do cartão (modo compacto e "..."),
+   que o Tomatito não tem ("sem botões mortos", 2.1): o espaço fica, para o
+   título ficar na mesma altura. A altura mínima é a do cartão da captura, e
+   segura o cartão parado quando a sessão começa (o mostrador do M18 entra no
+   mesmo lugar). */
+.tt-card.tt-sessao{ align-items:center; gap:0; min-height:422px; padding:36px 22px 16px; text-align:center; }
+.tt-preparo{ display:flex; flex-direction:column; align-items:center; width:100%; }
+.tt-preparo[hidden]{ display:none; }
+.tt-preparo-texto{ margin-top:6px; color:var(--tt-fg-2); }
+.tt-preparo .tt-seletor{ margin-top:22px; }
+.tt-preparo-frase{ margin-top:16px; }
+.tt-preparo-pular{ margin-top:7px; }
+/* Numa coluna estreita (zoom de 160% a 480 px), o texto do botão quebra em
+   vez de passar da borda do cartão. */
+.tt-preparo-iniciar{ margin-top:24px; max-width:100%; height:auto; min-height:32px; padding-block:5px; white-space:normal; }
+.tt-sessao [data-andamento]{ width:100%; }
+
+/* Contagem provisória do cartão de sessão (M16), que o cartão mostra durante a
+   sessão até o mostrador do M18. O tempo usa o Display do Relógio (68/92,
+   Semibold), com algarismos de largura fixa. */
 .tt-contagem{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }
 .tt-contagem-tempo{ font:var(--tt-type-display); margin:0; }
 .tt-contagem > p{ margin:0; }

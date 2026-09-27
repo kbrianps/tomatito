@@ -548,4 +548,84 @@
     document.adoptedStyleSheets = [...document.adoptedStyleSheets, folha];
     return document.adoptedStyleSheets.length;
   };
+  // M17: o cartão "Pronto para focar". __ttSessao() devolve o estado visível
+  // do cartão; __ttTeclaNoSeletor('PageUp') manda a tecla ao campo por
+  // dispatchEvent (o WebKitGTK fora da tela não tem teclado de verdade; no
+  // Chrome, o cartao-sessao.mjs usa o --key); __ttClicar('seletor') chama o
+  // click() do elemento.
+  window.__ttSessao = () => {
+    const cartao = document.querySelector('[data-cartao="sessao"]');
+    const campo = cartao.querySelector('[role="spinbutton"]');
+    const [mais, menos] = cartao.querySelectorAll('[data-passo]');
+    const caixa = (el) => {
+      const c = cartao.getBoundingClientRect();
+      const b = el.getBoundingClientRect();
+      return [b.x - c.x, b.y - c.y, b.width, b.height].map((v) => Math.round(v * 10) / 10);
+    };
+    const visivel = (el) => !el.closest('[hidden]') && getComputedStyle(el).display !== 'none';
+    return {
+      valor: Number(campo.getAttribute('aria-valuenow')),
+      numero: cartao.querySelector('[data-numero]').textContent,
+      aria: Object.fromEntries(['role', 'tabindex', 'aria-label', 'aria-valuemin', 'aria-valuemax', 'aria-valuenow', 'aria-valuetext', 'aria-describedby'].map((k) => [k, campo.getAttribute(k)])),
+      frase: cartao.querySelector('[data-frase]').textContent,
+      pular: Boolean(cartao.querySelector('[data-pular]').checked),
+      mais: { desabilitado: mais.disabled, tabindex: mais.getAttribute('tabindex') },
+      menos: { desabilitado: menos.disabled, tabindex: menos.getAttribute('tabindex') },
+      preparo: visivel(cartao.querySelector('[data-preparo]')),
+      andamento: visivel(cartao.querySelector('[data-andamento]')),
+      foco: document.activeElement?.className || document.activeElement?.tagName || null,
+      inicios: window.__TOMATITO_PREVIEW_INICIOS__ ?? [],
+      caixas: {
+        janela: (({ x, y, width, height }) => [x, y, width, height])(cartao.getBoundingClientRect()),
+        cartao: caixa(cartao),
+        seletor: caixa(cartao.querySelector('.tt-seletor')),
+        campo: caixa(campo),
+        chevrons: caixa(cartao.querySelector('.tt-seletor-chevrons')),
+        mais: caixa(mais),
+        menos: caixa(menos),
+        caixa: caixa(cartao.querySelector('[data-pular]')),
+        botao: caixa(cartao.querySelector('[data-iniciar]')),
+      },
+      cores: {
+        campo: getComputedStyle(cartao.querySelector('.tt-seletor')).backgroundColor,
+        sublinhado: getComputedStyle(cartao.querySelector('.tt-seletor')).borderBottomColor,
+        unidade: getComputedStyle(cartao.querySelector('.tt-seletor-unidade')).color,
+        texto: getComputedStyle(cartao.querySelector('.tt-preparo-texto')).color,
+        esperado: {
+          campo: window.__ttCor('--tt-input-bg'),
+          sublinhado: window.__ttCor('--tt-stroke-control'),
+          unidade: window.__ttCor('--tt-fg-2-on-ctl'),
+          texto: window.__ttCor('--tt-fg-2'),
+        },
+      },
+    };
+  };
+  // M17: devolve o ponto de partida do Tab do Chrome para a barra de título
+  // (o mouse o leva para onde passa), como numa janela recém-aberta.
+  window.__ttTabDoComeco = () => {
+    const t = document.querySelector('.tt-titlebar');
+    t.tabIndex = -1;
+    t.focus();
+    t.removeAttribute('tabindex');
+    return document.activeElement === t;
+  };
+  window.__ttSabotarSessao = async () => {
+    const folha = new CSSStyleSheet();
+    folha.replaceSync('.tt-card.tt-sessao { padding-top: 42px !important; }');
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, folha];
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    return document.adoptedStyleSheets.length;
+  };
+  window.__ttTeclaNoSeletor = (key) => {
+    const campo = document.querySelector('[data-cartao="sessao"] [role="spinbutton"]');
+    campo.focus();
+    const e = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    campo.dispatchEvent(e);
+    return { cancelado: e.defaultPrevented, ...window.__ttSessao() };
+  };
+  window.__ttClicar = async (seletor) => {
+    document.querySelector(seletor).click();
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    return window.__ttSessao();
+  };
 })();

@@ -1,7 +1,8 @@
 // Contagem provisória da tela Foco (M16): o restante da fase em mm:ss, a fase
-// e botões de texto (sem ícone, para o módulo rodar no node --test) para iniciar (5 ou 25 min), pausar, retomar, pular e encerrar. O
-// cartão de verdade (seletor de minutos, anel e botões redondos) chega no M17
-// e no M18, e este bloco sai.
+// e botões de texto (sem ícone, para o módulo rodar no node --test) para
+// pausar, retomar, pular e encerrar. M17: iniciar passou para o cartão "Pronto
+// para focar" (card-session.js), que mostra este bloco só com uma sessão em
+// andamento. O mostrador e os botões redondos chegam no M18, e este bloco sai.
 //
 // O texto é desenhado num requestAnimationFrame que só roda com uma fase
 // correndo e só mexe no DOM quando o segundo mostrado muda (PLANO.md, 3.1).
@@ -21,7 +22,7 @@ export function acoesVisiveis(status) {
     case 'paused':
       return ['retomar', 'pular', 'parar'];
     default:
-      return ['iniciar'];
+      return [];
   }
 }
 
@@ -73,13 +74,12 @@ export function criarRelogio({ store, escrever, quadro, cancelar }) {
 }
 
 export function marcacao() {
-  const botao = (acao, texto, extra = '') => `<button type="button" data-acao="${acao}"${extra} hidden>${texto}</button>`;
+  const botao = (acao, texto) => `<button type="button" data-acao="${acao}" hidden>${texto}</button>`;
   return (
     `<div class="tt-contagem">` +
     `<p class="tt-contagem-tempo tt-num" data-tempo>${mmss(0)}</p>` +
     `<p class="tt-fg-2" data-fase>${p.ocioso}</p>` +
     `<div class="tt-linha">` +
-    p.minutos.map((m) => botao('iniciar', p.iniciar(m), ` data-minutos="${m}" class="tt-accent"`)).join('') +
     botao('pausar', p.pausar) +
     botao('retomar', p.retomar) +
     botao('pular', p.pular) +
@@ -108,8 +108,7 @@ export function ligar(raiz, store) {
   const aoClicar = (e) => {
     const b = e.target.closest('button[data-acao]');
     if (!b || !raiz.contains(b)) return;
-    const args = b.dataset.acao === 'iniciar' ? [Number(b.dataset.minutos)] : [];
-    store.comando(b.dataset.acao, ...args).catch((erro) => console.warn('[foco]', erro));
+    store.comando(b.dataset.acao).catch((erro) => console.warn('[foco]', erro));
   };
   raiz.addEventListener('click', aoClicar);
   const desassinar = store.assinar(aoMudar);

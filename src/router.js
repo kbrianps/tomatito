@@ -24,6 +24,8 @@ export function rotaDoHash(hash) {
 /**
  * Liga o roteador. `telas` associa cada rota a um objeto com `montar(raiz)`,
  * que desenha a tela dentro de `raiz` e pode devolver uma função de limpeza.
+ * M17: `montar` recebe também o `contexto` (hoje, o `icone` do
+ * components/icon.js, que as telas não importam para rodar no node --test).
  * `aoMudar(rota, anterior)` roda depois de cada troca (e na primeira tela, com
  * `anterior` null).
  *
@@ -33,7 +35,7 @@ export function rotaDoHash(hash) {
  * Se o foco do teclado estava dentro da tela que saiu, ele passa para o
  * título da tela nova (o <h1> com tabindex="-1"), em vez de cair no <body>.
  */
-export function iniciarRoteador({ raiz, telas, aoMudar = () => {} }) {
+export function iniciarRoteador({ raiz, telas, contexto = {}, aoMudar = () => {} }) {
   let atual = null;
   let limpar = null;
 
@@ -47,7 +49,7 @@ export function iniciarRoteador({ raiz, telas, aoMudar = () => {} }) {
     const focoDentro = raiz.contains(document.activeElement);
     limpar?.();
     raiz.replaceChildren();
-    limpar = telas[rota].montar(raiz) ?? null;
+    limpar = telas[rota].montar(raiz, contexto) ?? null;
     raiz.scrollTop = 0;
     const anterior = atual;
     atual = rota;

@@ -67,6 +67,7 @@ try {
   const roteador = iniciarRoteador({
     raiz: document.querySelector('.tt-rolagem'),
     telas: { foco, temporizador, cronometro, configuracoes, dev },
+    contexto: { icone },
     aoMudar: (rota, anterior) => nav.selecionar(rota, { animar: anterior !== null }),
   });
   ligarAtalhosDeNavegacao((rota) => roteador.navegar(rota));

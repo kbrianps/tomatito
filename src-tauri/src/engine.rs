@@ -35,7 +35,7 @@ use tomatito_core::{
     PhaseChange, PlanSettings, SessionConfig, Sound, SystemClock,
 };
 
-use crate::events::{self, FocusDto, PhaseEventDto, StateDto, TickDto};
+use crate::events::{self, FocusDto, PhaseEventDto, SetupDto, StateDto, TickDto};
 
 /// O ritmo do laço (3.2).
 pub const TICK_EVERY: Duration = Duration::from_millis(250);
@@ -44,6 +44,23 @@ pub const TICK_EVERY: Duration = Duration::from_millis(250);
 /// debug, a partir de 1, porque lá o seletor anda de 1 em 1 (M17).
 pub const MIN_MINUTES: u32 = if cfg!(debug_assertions) { 1 } else { 5 };
 pub const MAX_MINUTES: u32 = 240;
+/// Passo do seletor de minutos (M17): de 5 em 5, e de 1 em 1 no debug.
+pub const STEP_MINUTES: u32 = if cfg!(debug_assertions) { 1 } else { 5 };
+
+/// F e B das sessões novas: os padrões, até o `settings.rs`. O `focus_start`
+/// e o `get_state` (a frase dos intervalos no cartão) leem daqui.
+const PLAN_SETTINGS: PlanSettings = PlanSettings::DEFAULT;
+
+/// O `setup` do `get_state` (M17).
+fn setup() -> SetupDto {
+    SetupDto {
+        min_minutes: MIN_MINUTES,
+        max_minutes: MAX_MINUTES,
+        step_minutes: STEP_MINUTES,
+        focus_minutes: PLAN_SETTINGS.focus_minutes,
+        break_minutes: PLAN_SETTINGS.break_minutes,
+    }
+}
 
 /// Para onde vão os efeitos do motor.
 pub trait Sink: Send + Sync + 'static {
@@ -217,6 +234,7 @@ impl<S: Sink> Engine<S> {
         StateDto {
             focus: g.dto(now),
             speed: self.speed,
+            setup: setup(),
         }
     }
 
@@ -265,7 +283,7 @@ impl<S: Sink> Engine<S> {
         }
         let config = SessionConfig {
             minutes,
-            settings: PlanSettings::DEFAULT,
+            settings: PLAN_SETTINGS,
             skip_breaks,
             task_id,
         };
@@ -628,6 +646,17 @@ mod tests {
         let v = serde_json::to_value(&erro).unwrap();
         assert_eq!(v["code"], "alreadyActive");
         assert!(v["message"].as_str().unwrap().contains("em andamento"));
+    }
+
+    #[test]
+    fn get_state_leva_o_preparo_da_sessao() {
+        let (e, _) = motor();
+        let s = e.state().setup;
+        assert_eq!((s.min_minutes, s.max_minutes), (MIN_MINUTES, MAX_MINUTES));
+        assert_eq!(s.step_minutes, if cfg!(debug_assertions) { 1 } else { 5 });
+        assert_eq!((s.focus_minutes, s.break_minutes), (25, 5));
+        // O passo cabe na faixa: do mínimo ao máximo, de passo em passo.
+        assert_eq!((s.max_minutes - s.min_minutes) % s.step_minutes, 0);
     }
 
     #[test]

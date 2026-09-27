@@ -163,3 +163,53 @@ fluent-dropdown[disabled]{ --colorNeutralBackgroundDisabled:transparent; }
   border:1px solid var(--tt-border); border-radius:var(--tt-r-ctl);
   box-shadow:var(--shadow8);
 }
+
+/* M17: seletor de minutos (src/components/minutes-picker.js), como o NumberBox
+   do Relógio (clock-focus-sessions-page.png, a 175%): 160 × 87 por fora, com
+   o campo de 111 px e a coluna de chevrons de 48, separados por 1 px, e a
+   mesma separação entre os dois chevrons (42 + 1 + 42 por dentro). Fundo
+   --tt-input-bg nas duas partes (na captura, o campo e os chevrons têm o
+   mesmo fundo), borda de 1 px em --tt-border, sublinhado em
+   --tt-stroke-control e raio 4. O número tem 40 px, o tamanho do Title
+   Large, mas no peso normal, como na captura, com algarismos de largura
+   fixa; a unidade "min" fica embaixo, em --tt-fg-2-on-ctl, como os
+   chevrons. */
+.tt-seletor{
+  display:grid; grid-template-columns:110px 48px; grid-template-rows:85px;
+  width:160px; height:87px; flex:none;
+  background:var(--tt-input-bg);
+  border:1px solid var(--tt-border); border-bottom-color:var(--tt-stroke-control);
+  border-radius:var(--tt-r-ctl);
+  overflow:hidden;
+}
+.tt-seletor-campo{
+  display:flex; flex-direction:column; align-items:center;
+  padding-top:10px; min-width:0;
+  color:var(--tt-fg-1); cursor:default;
+}
+.tt-seletor-numero{ font:400 40px/52px var(--tt-font-display); }
+.tt-seletor-unidade{ margin-top:-2px; font:var(--tt-type-body); color:var(--tt-fg-2-on-ctl); }
+.tt-seletor-chevrons{ display:grid; grid-template-rows:42px 43px; border-left:1px solid var(--tt-border); }
+.tt-seletor-chevron{
+  width:auto; height:auto; padding:0;
+  border:0; border-radius:0;
+  background:transparent; color:var(--tt-fg-2-on-ctl);
+}
+/* O chevron da captura tem uns 16 px de largura: o desenho da grade de 16
+   (10 px de largura) ampliado para 24. */
+.tt-seletor-chevron .tt-icone{ width:24px; height:24px; }
+.tt-seletor-chevron + .tt-seletor-chevron{ border-top:1px solid var(--tt-border); }
+.tt-seletor-chevron:hover{ background:var(--tt-subtle-hover); }
+.tt-seletor-chevron:active{ background:var(--tt-subtle-press); border-color:var(--tt-border); }
+.tt-seletor-chevron:disabled{ background:transparent; color:var(--tt-fg-disabled); border-color:var(--tt-border); pointer-events:none; }
+/* Foco do teclado no campo: o anel duplo dos botões (M13), em volta do
+   seletor inteiro, que é o controle. */
+.tt-seletor-campo:focus{ outline:none; }
+.tt-seletor:has(.tt-seletor-campo:focus-visible){
+  outline:2px solid var(--tt-focus-outer); outline-offset:1px;
+  box-shadow:0 0 0 1px var(--tt-focus-inner);
+}
+@media (forced-colors:active){
+  .tt-seletor:has(.tt-seletor-campo:focus-visible){ outline-color:Highlight; }
+  .tt-seletor-chevron:disabled{ color:GrayText; }
+}
