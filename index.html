@@ -1,7 +1,15 @@
 <!doctype html>
-<html lang="pt-BR" data-theme="lite">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+    <!-- Boot sem clarão (PLANO.md, 4.7): grava data-theme-pref, data-theme e data-platform no <html>
+         antes de qualquer folha de estilo, a partir das globais do initialization_script do Rust. -->
+    <script>(function(){var h=document.documentElement,w=window,p=w.__TT_PREF__||'lite';
+var tomato=location.pathname.indexOf('tomato')>=0;
+var base=tomato?'full':(p==='full'?(w.__TT_LAST__||'lite'):p);
+var r=base==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):base;
+h.dataset.themePref=p;h.dataset.theme=r;h.dataset.platform=w.__TT_PLATFORM__||'web';
+if(tomato&&w.__TT_FULL_MODE__==='opaque')h.dataset.fullMode='opaque';})();</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tomatito</title>
     <!-- Ordem da seção 4.2 do plano. O fluent-tokens.gen.css entra antes do tokens.css no M11. -->

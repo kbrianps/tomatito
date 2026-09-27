@@ -9,10 +9,18 @@
 # algo falhar. Nada aparece na tela da sessão de verdade.
 #
 #   bash scripts/gnome-aninhado/rodar.sh barra-de-titulo   # roteiro do M07
+#   bash scripts/gnome-aninhado/rodar.sh partida-a-frio    # roteiro do M08
 #
 # Pré-requisito: o binário de debug atualizado (`cd src-tauri && cargo build`).
 # O `npm run build` não é preciso: a página vem do Vite (porta 5173, que
-# precisa estar livre), com a sonda injetada só nesse servidor.
+# precisa estar livre), com a sonda injetada só nesse servidor. Para testar um
+# build com os arquivos embutidos (`npx tauri build --debug --no-bundle`), aponte
+# TOMATITO_BIN para uma cópia dele; o Vite continua subindo, mas fica sem uso.
+#
+# Um roteiro com a linha `export const LANCA_O_APP = true;` abre o app
+# sozinho (quantas vezes quiser); sem ela, o dentro.sh abre o app uma vez. O
+# resumo é o resumo-<roteiro>.mjs, se existir, ou o resumo.mjs. TT_LIMITE (em
+# segundos, padrão 300) é o prazo da rodada inteira.
 #
 # Derivado do teste do spike (scripts/aninhado, na branch spike/full), com o
 # mesmo isolamento: tudo roda num escopo do systemd do usuário (morto no fim),
@@ -30,7 +38,7 @@ ROTEIRO=${1:-barra-de-titulo}
 
 if [ -z "${TT_DENTRO_DO_ESCOPO:-}" ]; then
   UNIDADE=tt-aninhado-$$
-  TT_DENTRO_DO_ESCOPO=1 systemd-run --user --scope --quiet --unit="$UNIDADE" -- timeout 300 bash "$0" "$@"
+  TT_DENTRO_DO_ESCOPO=1 systemd-run --user --scope --quiet --unit="$UNIDADE" -- timeout "${TT_LIMITE:-300}" bash "$0" "$@"
   CODIGO=$?
   systemctl --user stop "$UNIDADE.scope" 2>/dev/null
   exit $CODIGO
@@ -44,6 +52,8 @@ TARGET=$(cd "$RAIZ/src-tauri" && cargo metadata --format-version 1 --no-deps 2>/
 export TOMATITO_BIN=${TOMATITO_BIN:-$TARGET/debug/tomatito}
 [ -x "$TOMATITO_BIN" ] || { echo "falta o binário de debug: $TOMATITO_BIN (cargo build)"; exit 1; }
 export TT_ROTEIRO=$AQUI/roteiros/$ROTEIRO.js
+grep -q '^export const LANCA_O_APP = true;' "$TT_ROTEIRO" && export TT_APP_PELO_ROTEIRO=1
+export TT_NODE=$(command -v node) TT_CONSOLE_MJS=$AQUI/console.mjs
 
 RUNDIR=$(mktemp -d /tmp/tt-XXXXXX)
 chmod 700 "$RUNDIR"
@@ -70,4 +80,6 @@ dbus-run-session -- bash "$AQUI/dentro.sh" > "$TT_OUT/dbus.log" 2>&1
 kill $VITE $SISTEMA 2>/dev/null
 sleep 0.5
 rm -rf "$RUNDIR" "$ISO"
-node "$AQUI/resumo.mjs" "$TT_OUT"
+RESUMO=$AQUI/resumo-$ROTEIRO.mjs
+[ -f "$RESUMO" ] || RESUMO=$AQUI/resumo.mjs
+node "$RESUMO" "$TT_OUT"

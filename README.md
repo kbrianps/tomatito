@@ -32,6 +32,7 @@ Conferências visuais sem abrir janelas na sua sessão (em `scripts/`, fora do a
 ```bash
 npm run shot -- --path "/?plataforma=linux" --shot /tmp/previa.png   # prévia no Chrome headless
 bash scripts/gnome-aninhado/rodar.sh barra-de-titulo                 # a janela de verdade num GNOME Shell aninhado (Linux)
+bash scripts/gnome-aninhado/rodar.sh partida-a-frio                  # 10 aberturas, quadro a quadro, e o console do DevTools
 ```
 
 O CI (`.github/workflows/ci.yml`) roda o build, os testes, o `cargo fmt` e o `cargo clippy` no Linux e no Windows a cada push.

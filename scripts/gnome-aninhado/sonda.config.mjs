@@ -6,7 +6,10 @@ import { fileURLToPath } from 'node:url';
 import base from '../../vite.config.js';
 
 const LOG = process.env.SONDA_LOG;
-const SONDA = readFileSync(new URL('./sonda.js', import.meta.url), 'utf8');
+// TT_CONTROLE (M08) liga um controle negativo na sonda; ver sonda.js.
+const SONDA =
+  `const CONTROLE = ${JSON.stringify(process.env.TT_CONTROLE ?? '')};\n` +
+  readFileSync(new URL('./sonda.js', import.meta.url), 'utf8');
 
 export default {
   ...base,

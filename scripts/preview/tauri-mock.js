@@ -4,14 +4,15 @@
 // que as telas passarem a chamar.
 //
 // Parâmetros na URL (--path do shot.mjs):
-//   ?plataforma=linux|windows   simula o window.__TT_PLATFORM__ do
-//                               initialization_script (sem ele, fica "web")
 //   ?maximizada=1               a janela começa maximizada
+//   ?tema-do-sistema=dark|light o que o win.theme() responde (padrão: dark)
+// As globais do initialization_script (?pref, ?ultimo e ?plataforma) não são
+// daqui: precisam existir antes do script de boot do <head>, e vêm do script
+// clássico que o vite.config.js desta pasta põe antes dele.
 import { emit } from '@tauri-apps/api/event';
 import { mockIPC, mockWindows } from '@tauri-apps/api/mocks';
 
 const params = new URLSearchParams(location.search);
-if (params.get('plataforma')) window.__TT_PLATFORM__ = params.get('plataforma');
 
 // Estado da janela simulada; os botões da barra de título o alteram.
 const janela = { maximizada: params.get('maximizada') === '1', visivel: false };
@@ -26,6 +27,7 @@ const handlers = {
     return null;
   },
   'plugin:window|show': () => ((janela.visivel = true), null),
+  'plugin:window|theme': () => params.get('tema-do-sistema') ?? 'dark',
   'plugin:window|minimize': () => (console.info('[prévia] minimizar'), null),
   'plugin:window|close': () => (console.info('[prévia] fechar'), null),
 };

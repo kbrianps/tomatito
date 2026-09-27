@@ -6,6 +6,14 @@ import base from '../../vite.config.js';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 
+// Globais do initialization_script (src-tauri/src/window/main_window.rs), lidas
+// da URL (--path do shot.mjs): ?pref=lite|suave|light|dark|system|full,
+// ?ultimo=<lastNormalTheme> e ?plataforma=linux|windows. Sem parâmetro, a
+// global fica indefinida, como num navegador comum (o boot cai em lite e web).
+const GLOBAIS = `(function(){var q=new URLSearchParams(location.search),w=window;
+if(q.get('pref'))w.__TT_PREF__=q.get('pref');if(q.get('ultimo'))w.__TT_LAST__=q.get('ultimo');
+if(q.get('plataforma'))w.__TT_PLATFORM__=q.get('plataforma');})();`;
+
 export default {
   ...base,
   root,
@@ -24,7 +32,13 @@ export default {
     {
       name: 'tomatito-preview-mock',
       apply: 'serve',
+      // Dois scripts no começo do <head>, antes do script de boot do app:
+      // 1. um clássico e inline, que faz o papel do initialization_script do
+      //    Rust (window.__TT_PREF__ e afins). Precisa ser clássico: o script de
+      //    boot roda durante o parse, antes de qualquer módulo;
+      // 2. o mock do Tauri, que é módulo e roda depois do parse.
       transformIndexHtml: () => [
+        { tag: 'script', children: GLOBAIS, injectTo: 'head-prepend' },
         {
           tag: 'script',
           attrs: { type: 'module', src: '/scripts/preview/tauri-mock.js' },

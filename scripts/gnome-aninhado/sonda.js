@@ -3,6 +3,14 @@
 // teclado e, a cada mudança, o estado que o roteiro confere: tamanho da página
 // (muda com o zoom), estado da barra de título e cores dos botões em hover.
 // Só existe no servidor do teste; o app nunca a importa.
+//
+// M08: também manda o estado da página cada vez que a visibilidade muda (a
+// main nasce escondida, e o show() a torna visível): atributos do <html> e
+// fontes carregadas no momento em que a janela aparece. Com CONTROLE =
+// "tema-errado" (definida pelo sonda.config.mjs a partir de TT_CONTROLE), a
+// sonda estraga o boot de propósito: pinta o tema Claro e mostra a janela
+// antes do main.js, e só volta ao Lite 600 ms depois. Serve de controle
+// negativo do roteiro partida-a-frio: a captura precisa acusar os quadros.
 const t0 = performance.now();
 const janela = window.__TAURI_INTERNALS__?.metadata?.currentWindow?.label ?? '?';
 const enviar = (tipo, dados) =>
@@ -60,3 +68,19 @@ addEventListener('load', () => {
   enviar('info', { ua: navigator.userAgent, label: janela, platform: window.__TT_PLATFORM__, pref: window.__TT_PREF__ });
   setInterval(vigiar, 100);
 });
+
+const pagina = () => ({
+  visibilidade: document.visibilityState,
+  dataset: { ...document.documentElement.dataset },
+  fontes: document.fonts.status,
+  interCarregada: document.fonts.check('14px "Inter Variable"'),
+  definidos: ['fluent-switch', 'fluent-radio', 'fluent-radio-group'].filter((t) => customElements.get(t)),
+});
+enviar('pagina', { quando: 'sonda', ...pagina() });
+document.addEventListener('visibilitychange', () => enviar('pagina', { quando: 'visibilitychange', ...pagina() }));
+
+if (CONTROLE === 'tema-errado') {
+  document.documentElement.dataset.theme = 'light';
+  window.__TAURI_INTERNALS__.invoke('plugin:window|show', { label: janela });
+  setTimeout(() => (document.documentElement.dataset.theme = 'lite'), 600);
+}

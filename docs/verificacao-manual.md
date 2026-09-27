@@ -207,3 +207,47 @@ A `main` agora nasce no `setup` (em Rust), sem a moldura do sistema, e a barra d
 9. [ ] **Fechar:** clique no X. A janela fecha, e o `tauri dev` no terminal termina sozinho (ou fica esperando; nesse caso, Ctrl+C).
 
 Se algo não bater, anote o passo e o que apareceu. Se o duplo clique só arrastar, sem maximizar, ou se a beirada não mostrar o cursor de redimensionar, é justamente o que o teste aninhado não consegue ver com um mouse de verdade.
+
+## M08. Boot sem clarão
+
+O script do `<head>` grava o tema e a plataforma no `<html>` antes de qualquer folha de estilo, e a `main` só aparece depois que os componentes, as fontes e a barra de título estão prontos. Captura: `docs/capturas/m08-partida-a-frio.png`, com os quadros de uma partida a frio do build (em cima: o primeiro quadro, só a cor de fundo do Lite, e o segundo, 27 ms depois, já igual ao final) e de uma partida do controle negativo (embaixo: o teste acusa os quadros com o tema Claro que a sonda provocou de propósito).
+
+### O que já foi conferido sem olhar a tela (26/09/2026)
+
+- **Teste num GNOME Shell aninhado** (Mutter 50.1, Wayland, o app de verdade; nada aparece na sua tela): `bash scripts/gnome-aninhado/rodar.sh partida-a-frio` abre o app 10 vezes, com os dados e o cache apagados antes de cada partida, e guarda cada quadro que o compositor pinta com a janela, do primeiro até 2,5 s depois. Resultados:
+
+  | Rodada | Quadros | Brancos, escuros, transparentes ou de outro tema | 1º quadro | 2º quadro | Console do DevTools |
+  |---|---|---|---|---|---|
+  | Build de debug (`npx tauri build --debug --no-bundle`), 10 partidas | 189 distintos | nenhum | só o fundo `#A5342B`, entre 521 e 593 ms depois de abrir o processo | igual ao final, 26 a 35 ms depois do 1º | nenhuma mensagem; a CSP chega com o hash do script de boot, e o controle (um script inline sem hash) é recusado com "Refused to" |
+  | Dev (Vite), 10 partidas | 219 distintos | nenhum | só o fundo `#A5342B`, entre 543 e 622 ms | igual ao final, 25 a 35 ms depois do 1º | só o "[vite] connecting..." e o "[vite] connected." (no dev, a CSP não vale) |
+  | Controle negativo: a sonda mostra o tema Claro por 600 ms, 2 partidas | 30 distintos | acusados nas 2 partidas (2 e 3 quadros brancos), como devia | só o fundo | branco | |
+  | Controle negativo: sem o `Updates.process()` no `main.js`, 3 partidas | 88 distintos | nenhum, mas o teste falha, como devia | só o fundo | radio "5 minutos" ainda desmarcado (0,02% diferente do final) | |
+
+- **Antes da correção da CSP**, o mesmo teste achou, em toda partida do build, `Refused to connect to ipc://localhost/plugin%3Aevent%7Clisten ...` e o aviso `IPC custom protocol failed, Tauri will now use the postMessage interface instead` (`docs/decisoes.md`, M08, item 1). Depois do `connect-src`, o console ficou vazio.
+- **Na sua sessão, rápido e sem mexer na janela:** o build de debug abriu com o inspetor remoto ligado, o `console.mjs` leu o console em 1,3 s (nenhuma mensagem; o `<html>` com `lite`, `lite` e `linux`; a Inter carregada; a CSP com o hash do script de boot e o `connect-src`; o controle recusado com "Refused to"), e o app foi fechado logo em seguida, sem processo sobrando. A janela ficou na tela uns 2 s.
+- **Prévia no Chrome headless:** com `?pref=dark`, `?pref=light`, `?pref=system` e `?pref=full&ultimo=suave`, o `<html>` sai com o tema resolvido e a cor de fundo certa (`#202020`, `#F3F3F3`, o do sistema e `#F6ECE9`).
+- O roteiro do M07 (`barra-de-titulo`) continua com as 36 conferências ok, agora com o `data-platform` gravado pelo script de boot.
+- `npm test` (36 testes, 9 novos do boot), `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --check` e a checagem cruzada do Windows passam.
+
+### Passos para você (uns 5 minutos)
+
+O "Pronto quando" pede 10 partidas a frio gravadas. A gravação é para ver com os seus olhos o que o teste já mediu quadro a quadro.
+
+1. [ ] Gere o build de debug: em `~/dev/tomatito`, `npx tauri build --debug --no-bundle` (uns 40 s). Não pule este passo: um `cargo build` ou um `npm run tauri dev` deixam no mesmo caminho um binário que procura o Vite e abre com erro.
+2. [ ] Deixe um terminal aberto em `~/dev/tomatito`, sobre um fundo claro (por exemplo, uma janela do Nautilus maximizada atrás), para um clarão branco ou preto ficar fácil de ver.
+3. [ ] Aperte **Ctrl+Alt+Shift+R**: abre a ferramenta de gravação do GNOME. Escolha gravar a **tela** inteira e clique no botão redondo. Aparece um ponto vermelho no canto de cima.
+4. [ ] No terminal, rode `/opt/cargo-target/tomatito/debug/tomatito`. A janela vermelha aparece de uma vez, já com a amostra do tema. Feche no X da própria janela. Repita até completar **10 vezes**.
+5. [ ] Pare a gravação clicando no ponto vermelho (ou Ctrl+Alt+Shift+R de novo). O vídeo fica em `~/Vídeos/Screencasts/`.
+6. [ ] Para ver quadro a quadro sem instalar nada, gere uma cópia 8 vezes mais lenta e assista:
+
+   ```bash
+   cd ~/Vídeos/Screencasts
+   ffmpeg -i "$(ls -t *.webm | head -1)" -vf "setpts=8*PTS" -an /tmp/tomatito-lento.webm
+   xdg-open /tmp/tomatito-lento.webm
+   ```
+
+   Em nenhuma das 10 aberturas pode aparecer um retângulo branco, preto ou cinza, nem a janela com outras cores antes do vermelho. O esperado é: no lugar da janela surge o vermelho liso e, logo em seguida, a amostra (título, cartões, anel). O GNOME faz a janela crescer um pouco ao abrir; isso é do sistema.
+7. [ ] **Console do DevTools:** rode `/opt/cargo-target/tomatito/debug/tomatito` mais uma vez, clique com o botão direito no meio da janela → **Inspecionar** → aba **Console**. Não pode haver nenhuma linha com "Refused to". Feche o inspetor e a janela.
+8. [ ] Apague o vídeo e a cópia lenta, se não quiser guardá-los: `rm /tmp/tomatito-lento.webm` e o arquivo em `~/Vídeos/Screencasts/`.
+
+Se aparecer algum clarão, anote em qual das 10 aberturas (a ordem do vídeo) e a cor. Se o console mostrar um "Refused to", copie a linha inteira.

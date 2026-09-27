@@ -30,3 +30,4 @@ Ideias que ficam fora do marco da vez. Regra do plano (2.2): ideia nova entra aq
 Formato: data, marco em que surgiu e uma linha sobre a ideia.
 
 - 26/09/2026, M07: barra de título esmaecida com a janela inativa (título e glifos em `--tt-fg-disabled`, como no Windows 11), pelo `onFocusChanged`.
+- 26/09/2026, M08: o script de boot aceitar só os seis valores de tema e cair no Lite com qualquer outro. Hoje ele confia no Rust (um `settings.json` editado à mão com um tema inexistente deixaria o `<html>` sem bloco de tokens).

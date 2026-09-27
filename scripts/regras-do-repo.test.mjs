@@ -38,10 +38,15 @@ test('a versão vive só no Cargo.toml', () => {
   assert.equal(pkg.version, undefined, 'package.json não precisa de "version"');
 });
 
-test('CSP da seção 3.8 no tauri.conf.json', () => {
+test('CSP da seção 3.8 no tauri.conf.json, mais o connect-src do IPC (M08)', () => {
+  // O Tauri 2.12 só acrescenta hashes e nonces ao script-src e ao style-src.
+  // Sem o connect-src, o fetch do IPC (ipc://localhost no Linux,
+  // http://ipc.localhost no Windows) é recusado e cai no postMessage, com um
+  // "Refused to connect" no console (docs/decisoes.md, M08).
   assert.equal(
     tauriConf.app.security.csp,
-    "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'",
+    "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; " +
+      "connect-src 'self' ipc: http://ipc.localhost",
   );
 });
 
