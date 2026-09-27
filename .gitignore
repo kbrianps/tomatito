@@ -5,7 +5,7 @@ dist-ssr/
 src-tauri/target/
 src-tauri/gen/schemas/
 
-# Gerado no predev/prebuild a partir do @fluentui/tokens (M06)
+# Gerado no predev/prebuild a partir do @fluentui/tokens (M11)
 src/styles/fluent-tokens.gen.css
 
 # target-dir local do Cargo (/opt/cargo-target/tomatito); cada máquina decide o seu

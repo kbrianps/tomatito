@@ -298,3 +298,17 @@ test('responsivo: painel compacto de 48 px abaixo de 860 px e grade da Foco em 2
   assert.match(css, /\.tt-foco-grade\{[^}]*grid-template-columns:minmax\(0,1fr\)[^}]*gap:var\(--tt-gap\)/, 'uma coluna abaixo, com gap de 16');
   assert.match(ler('src/styles/tokens.css'), /--tt-gap:16px;/);
 });
+
+test('caminhos de arquivo nos scripts do Node saem do fileURLToPath e do pathToFileURL (o CI também roda no Windows)', () => {
+  // No windows-latest, o .pathname da URL do módulo dá '/D:/a/...', que o Node
+  // resolve como 'D:\D:\a\...'; e a URL montada à mão com o prefixo file:// e o
+  // caminho interpolado erra com as barras invertidas e os '%' do Windows.
+  const scripts = readdirSync(new URL('.', import.meta.url), { recursive: true })
+    .filter((arquivo) => /\.m?js$/.test(arquivo) && !arquivo.includes('node_modules'));
+  assert.ok(scripts.length > 10);
+  for (const arquivo of scripts) {
+    const texto = ler(`scripts/${arquivo}`);
+    assert.doesNotMatch(texto, /import\.meta\.url\)\s*\.pathname/, `scripts/${arquivo}: use fileURLToPath(new URL(...))`);
+    assert.doesNotMatch(texto, /['"`]file:\/\/\$\{/, `scripts/${arquivo}: use pathToFileURL(caminho)`);
+  }
+});

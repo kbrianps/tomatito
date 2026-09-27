@@ -8,7 +8,8 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createDarkTheme, createLightTheme } from '@fluentui/tokens';
 import { escrever, gerarCss, lerRampa, SAIDA } from './build-theme-css.mjs';
 
@@ -88,7 +89,7 @@ test('escrever(): gera o arquivo que falta, não regrava o que já está em dia 
   try {
     mkdirSync(join(raiz, 'src/styles'), { recursive: true });
     writeFileSync(join(raiz, 'src/styles/tokens.css'), tokensCss);
-    const url = new URL(`file://${raiz}/`);
+    const url = pathToFileURL(raiz + sep);
     assert.equal(existsSync(join(raiz, SAIDA)), false);
     assert.deepEqual({ ...escrever(url), bytes: 0 }, { caminho: SAIDA, mudou: true, bytes: 0 });
     const primeiro = readFileSync(join(raiz, SAIDA), 'utf8');
@@ -103,7 +104,7 @@ test('escrever(): gera o arquivo que falta, não regrava o que já está em dia 
 });
 
 test('a linha de comando grava o arquivo do repositório e diz o que fez', () => {
-  const script = new URL('./build-theme-css.mjs', import.meta.url).pathname;
+  const script = fileURLToPath(new URL('./build-theme-css.mjs', import.meta.url));
   const saida = execFileSync(process.execPath, [script], { encoding: 'utf8' });
   assert.match(saida, /^build-theme-css: src\/styles\/fluent-tokens\.gen\.css (gerado|já estava em dia) \(\d+ bytes\)\n$/);
 });
