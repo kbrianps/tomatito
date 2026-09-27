@@ -383,7 +383,9 @@ export const LINHAS = [
     ref: [[4.53], [5.55], [5.56], [8.58]] },
   { par: 'Texto 1 / controle (repouso · hover · pressionado)', frente: '--tt-fg-1',
     fundos: [['--tt-bg-card', '--tt-ctl'], ['--tt-bg-card', '--tt-ctl-hover'], ['--tt-bg-card', '--tt-ctl-press']], min: 4.5,
-    ref: [[4.77, 4.57, 5.04], [18.19, 16.83, 16.83], [17.26, 16.67, 16.67], [11.73, 11.03, 12.82]] },
+    // Suave, pressionado: 16,83 na tabela do plano (o hover repetido); 17,39 com o
+    // --tt-ctl-press acertado a olho no M13 (docs/decisoes.md, M13).
+    ref: [[4.77, 4.57, 5.04], [18.19, 16.83, 17.39], [17.26, 16.67, 16.67], [11.73, 11.03, 12.82]] },
   { par: 'Texto sobre accent / accent', frente: '--tt-fg-on-accent', fundos: [['--tt-accent']], min: 4.5,
     ref: [[7.43], [5.51], [5.51], [5.96]] },
   { par: 'Texto sobre accent / hover', frente: '--tt-fg-on-accent', fundos: [['--tt-accent-hover']], min: 4.5,
@@ -416,6 +418,23 @@ export const LINHAS_CAMADA = [
   { par: 'Accent como texto / camada', frente: '--tt-accent-fg', fundos: [['--tt-bg-surface']], min: 4.5 },
   { par: 'Borda da camada / fundo', frente: '--tt-border', fundos: [['--tt-bg-app']], min: null,
     minTexto: 'decorativa, como no WinUI' },
+];
+
+// Desabilitados (M13): a WCAG 2.2 isenta controles desabilitados (1.4.3 e
+// 1.4.11), então não há mínimo; a tabela registra os valores que o M13 acertou
+// a olho no Lite e no Suave, ao lado dos do Claro e do Escuro, que são os do
+// WinUI (TextFillColorDisabled, AccentFillColorDisabled). O texto desabilitado
+// sobre o controle ficou na faixa do WinUI (2,5 a 3,0); no destaque
+// desabilitado, o texto é o mesmo --tt-fg-disabled.
+export const LINHAS_DESABILITADOS = [
+  { par: 'Texto desabilitado / controle', frente: '--tt-fg-disabled', fundos: [['--tt-bg-card', '--tt-ctl']], min: null,
+    minTexto: 'isento (1.4.3)' },
+  { par: 'Texto desabilitado / cartão', frente: '--tt-fg-disabled', fundos: [['--tt-bg-card']], min: null,
+    minTexto: 'isento (1.4.3)' },
+  { par: 'Texto desabilitado / destaque desabilitado', frente: '--tt-fg-disabled',
+    fundos: [['--tt-bg-card', '--tt-accent-disabled']], min: null, minTexto: 'isento (1.4.3)' },
+  { par: 'Destaque desabilitado / cartão', frente: '--tt-accent-disabled', fundos: [['--tt-bg-card']], min: null,
+    minTexto: 'isento (1.4.11)' },
 ];
 
 // Tomate (Full), medido sobre o corpo, nos três estados da .stage.
@@ -515,6 +534,7 @@ export function conferir(css, { referencia = true } = {}) {
     });
   const linhas = tabelaPorTema(LINHAS);
   const camada = tabelaPorTema(LINHAS_CAMADA);
+  const desabilitados = tabelaPorTema(LINHAS_DESABILITADOS);
 
   const cadeiaTomate = (estado, extra = {}) => [
     { tag: 'html', atributos: { 'data-theme': 'full', 'data-platform': 'linux', ...extra } },
@@ -540,14 +560,14 @@ export function conferir(css, { referencia = true } = {}) {
     return { par: nota.par, valor: virgula(medida.direto[0]), nota: nota.nota };
   });
 
-  return { linhas, camada, tomate, notas, falhas, divergencias };
+  return { linhas, camada, desabilitados, tomate, notas, falhas, divergencias };
 }
 
 // ---------------------------------------------------------------------------
 // 6. Saída
 // ---------------------------------------------------------------------------
 
-export function formatar({ linhas, camada, tomate, notas }) {
+export function formatar({ linhas, camada, desabilitados = [], tomate, notas }) {
   const tabela = (cabecalho, corpo) =>
     [cabecalho, cabecalho.map(() => '---'), ...corpo].map((l) => `| ${l.join(' | ')} |`).join('\n');
   return [
@@ -563,6 +583,13 @@ export function formatar({ linhas, camada, tomate, notas }) {
     tabela(
       ['Par', ...TEMAS.map(([, nome]) => nome), 'Mínimo'],
       camada.map((l) => [l.par, ...l.celulas, l.minimo]),
+    ),
+    '',
+    'Desabilitados (M13), fora da tabela 4.4: só registro (a WCAG isenta controles desabilitados).',
+    '',
+    tabela(
+      ['Par', ...TEMAS.map(([, nome]) => nome), 'Mínimo'],
+      desabilitados.map((l) => [l.par, ...l.celulas, l.minimo]),
     ),
     '',
     'Tomate (Full), medido sobre o corpo:',
@@ -611,6 +638,7 @@ function principal(argv) {
   console.log(
     `${pares}: todos no mínimo ou acima` + (referencia ? ' e iguais à tabela 4.4 do plano.' : '; a tabela do plano não foi conferida.'),
   );
+  console.log(`Mais ${LINHAS_DESABILITADOS.length * TEMAS.length} medidas dos desabilitados, só de registro.`);
   return 0;
 }
 

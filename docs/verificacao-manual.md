@@ -378,3 +378,36 @@ O `#/dev` virou o "Catálogo de controles": além da amostra do M06, tem caixas 
 9. [ ] Feche a janela no X e, no terminal, Ctrl+C se o `tauri dev` não sair sozinho.
 
 Se algo não bater, anote qual passo e o que apareceu.
+
+## M13. Botões próprios, foco e ícones
+
+O `#/dev` agora mostra todos os botões do app (padrão, destaque, sutil de 32 × 32 e circulares de 32 e 64 px), cada um com o seu desabilitado, os desabilitados dos componentes Fluent (caixas, switches, radio, lista suspensa e item de menu) e o cartão "Ícones", com os 18 ícones copiados para `src/assets/icons/`. O Tab mostra o anel duplo nos botões, e os botões só de ícone têm uma dica própria. Capturas: `docs/capturas/m13-botoes.png` (app de verdade, no teste aninhado: os botões com o anel do Tab e a dica, os desabilitados e os ícones) e `docs/capturas/m13-temas.png` (prévia no Chrome: os botões e as opções nos quatro temas).
+
+### O que já foi conferido sem olhar a tela (27/09/2026)
+
+- **Teste num GNOME Shell aninhado** (Mutter 50.1, Wayland, o app de verdade com ponteiro e teclado virtuais; nada aparece na sua tela): `bash scripts/gnome-aninhado/rodar.sh botoes`, 17 conferências, todas ok:
+  - os botões e os desabilitados do Fluent com as cores dos tokens do Lite (nenhum preto nem cinza do Fluent) e os ícones do catálogo no tamanho certo, sem nenhum pedido ao pacote de ícones;
+  - o Tab (do teclado virtual) leva ao primeiro botão com o anel duplo, conferido também nos pixels: 1 px do cartão colado ao botão e 2 px de creme por fora; o Tab seguinte vai ao "Cancelar" e o outro pula os dois desabilitados e chega ao "Mais opções", com o anel e a dica em cima; Esc fecha a dica e o foco fica;
+  - o clique do ponteiro não mostra o anel; o botão padrão fica `#B55045` em repouso, `#B75449` com o mouse e `#B34A3F` apertado (com a borda de baixo lisa); o sutil, sem fundo em repouso, ganha o hover;
+  - a dica com o ponteiro parado no "Marcar volta": fechada 120 ms depois, aberta depois do atraso, em cima e centrada a 4 px (na página e na tela); passando ao vizinho "Pausar", a dica dele vem sem o atraso; some com Esc, ao tirar o mouse (também para fora da janela), ao apertar o botão; volta quando o mouse volta; nada no botão desabilitado; com o menu "Sessão" aberto, a dica aparece e o menu continua aberto.
+- **Nos dois motores, sem janela** (`node scripts/preview/botoes.mjs`): os botões e os desabilitados nos quatro temas, contra os tokens de cada um; os ícones; a dica (atraso, posição, virar para baixo perto do topo, sair, desabilitado, menu aberto); e, no Chrome (o motor do Windows), o mouse e o Tab de verdade, inclusive o anel redondo no botão circular. Controle negativo: com a âncora da dica sabotada, a posição acusa nos dois.
+- **Contraste:** `node scripts/contrast.mjs` imprime uma tabela nova, "Desabilitados", só de registro: no Lite e no Suave, os valores ficaram na faixa do Claro e do Escuro (os do Windows).
+- **Build de debug, com a CSP:** as partidas a frio também abrem e fecham a dica dos botões de ícone: nenhum "Refused to".
+- **Regressões:** os roteiros do M07 (36 conferências), do M09 (25), do M10 (18), do M11 (17) e do M12 (22), as partidas a frio do M08 (10 no dev e 10 no build de debug) e as prévias do M10, do M11 e do M12 continuam passando.
+- **Na sua sessão, rápido e sem mexer na janela:** o build de debug abriu por uns 5 s com o inspetor remoto; o console veio vazio, a CSP recusou o controle, e os controles do `#/dev` (inclusive a dica dos botões de ícone) abriram e fecharam sem nenhum "Refused to". O app foi fechado logo em seguida, sem processo sobrando.
+- `npm test`, `node scripts/copy-icons.mjs --conferir`, `npm run build`, `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace` e a checagem cruzada do Windows passam.
+
+### Passos para você (uns 5 minutos)
+
+1. [ ] Em `~/dev/tomatito`, rode `npm run tauri dev` e espere a janela (uns 5 s).
+2. [ ] Botão direito na janela → **Inspecionar** → aba **Console**. Digite `location.hash = '#/dev'` e Enter. Feche o DevTools.
+3. [ ] **Botões:** no cartão "Botões", o "Iniciar sessão de foco" é creme com um ▶ vermelho; o "Cancelar" é translúcido. Passe o mouse e aperte (sem soltar) o "Cancelar": ele clareia no hover e escurece um pouco apertado. Embaixo, "Salvar" e "Descartar" estão desabilitados: texto apagado, mas legível, e nada muda com o mouse.
+4. [ ] **Anel do Tab:** clique no título "Catálogo de controles" e aperte **Tab**: o "Iniciar sessão de foco" ganha um anel creme por fora, separado do botão por uma linha fina vermelha. Tab de novo: vai ao "Cancelar". Tab de novo: pula os dois desabilitados e vai ao "…" (Mais opções), e um quarto de segundo depois aparece a dica "Mais opções" em cima. Aperte **Esc**: a dica some e o anel fica.
+5. [ ] **Clique sem anel:** clique no "Cancelar" com o mouse: nenhum anel aparece.
+6. [ ] **Dica com o mouse:** pare o mouse sobre o botão redondo grande da bandeira: aparece "Marcar volta" em cima, centrada. Tire o mouse: some. Pare de novo e clique: some. Sobre o último botão redondo grande (desabilitado), nenhuma dica.
+7. [ ] **Desabilitados do Fluent:** role até "Opções", "Caixas de seleção" e "Listas suspensas": os switches, o radio de 30 minutos, as duas caixas desabilitadas e a lista "Som do intervalo" aparecem apagados, **sem nada preto**. Abra o menu "Temporizador": o item "Duplicar" está apagado e sem fundo escuro.
+8. [ ] **Ícones:** no fim da página, o cartão "Ícones" mostra 18 ícones (alguns em dois tamanhos), todos visíveis e em creme.
+9. [ ] **Outros temas (opcional):** no Console do DevTools, `document.documentElement.dataset.theme = 'suave'` (e depois `'light'` e `'dark'`): os botões e os desabilitados acompanham o tema. No Suave, o botão padrão apertado fica um pouco mais claro que no hover.
+10. [ ] Feche a janela no X e, no terminal, Ctrl+C se o `tauri dev` não sair sozinho.
+
+Se algo não bater, anote qual passo e o que apareceu.

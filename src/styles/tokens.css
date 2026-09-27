@@ -49,7 +49,7 @@
   --tt-fg-2-on-ctl:var(--tt-fg-1);            /* fg-2 cai para 3,94–4,25 sobre input, hover e selecionado */
   --tt-timer-overdue:var(--tt-fg-1);          /* accent-fg fica a 1,03:1 do fg-1; o rótulo "Encerrado há" distingue */
   --tt-ctl-hover:rgb(255 255 255/.10); --tt-ctl-press:rgb(255 255 255/.05);   /* fg-1: 4,57 e 5,04 */
-  --tt-fg-disabled:rgb(255 248 246/.45); --tt-accent-disabled:rgb(255 255 255/.16);   /* a olho no M13 */
+  --tt-fg-disabled:rgb(255 248 246/.55); --tt-accent-disabled:rgb(255 255 255/.22);   /* a olho no M13: 2,51 e 1,53:1 */
 }
 [data-theme="suave"]{ color-scheme:light;                                    /* Tomatito Suave */
   --tt-bg-app:#F6ECE9; --tt-bg-surface:#FAF3F1; --tt-bg-card:#FFFAF9; --tt-border:#EEDAD5;
@@ -59,8 +59,8 @@
   --tt-subtle-hover:rgb(165 46 30/.05); --tt-subtle-selected:rgb(165 46 30/.08);
   --tt-input-bg:#FFFFFF;
   --tt-critical:#C42B1C;
-  --tt-ctl-hover:#FAF5F4; --tt-ctl-press:#FAF5F4;   /* input ⊕ subtle-hover/press; hoje iguais: a olho no M13 */
-  --tt-fg-disabled:rgb(34 17 14/.36); --tt-accent-disabled:rgb(0 0 0/.216);          /* a olho no M13 */
+  --tt-ctl-hover:#FAF5F4; --tt-ctl-press:#FDF9F8;   /* hover = input ⊕ subtle-hover; pressionado a olho no M13 (recua, como no Claro) */
+  --tt-fg-disabled:rgb(34 17 14/.40); --tt-accent-disabled:rgb(34 17 14/.20);        /* a olho no M13: 2,57 e 1,54:1 */
 }
 [data-theme="light"]{ color-scheme:light;                                    /* Claro */
   --tt-bg-app:#F3F3F3; --tt-bg-surface:#F9F9F9; --tt-bg-card:#FBFBFB; --tt-border:#ECECEC;

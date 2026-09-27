@@ -13,7 +13,7 @@
 //     Content-Security-Policy que o Tauri mandou com o index.html;
 //   - M12: vai ao #/dev e abre e fecha pelo JS os menus, as listas
 //     suspensas, as dicas e o diálogo (as mensagens desse trecho ficam em
-//     mensagensDoExercicio);
+//     mensagensDoExercicio); M13: também a dica dos botões de ícone;
 //   - roda um controle positivo (um <script> inline sem hash, que a CSP do
 //     build recusa), para provar que a CSP está ativa e que um "Refused to"
 //     chegaria até aqui. As mensagens do controle ficam à parte.
@@ -82,7 +82,8 @@ const EXERCICIO = `(async () => {
     abriu[m.dataset.amostra] = m.querySelector('fluent-menu-list').matches(':popover-open');
     m.closeMenu();
   }
-  const listas = [...document.querySelectorAll('fluent-dropdown')].filter((d) => !d.closest('fluent-dialog'));
+  // A lista desabilitada (M13) não abre.
+  const listas = [...document.querySelectorAll('fluent-dropdown:not([disabled])')].filter((d) => !d.closest('fluent-dialog'));
   for (const d of listas) {
     d.control.click();
     await espera(200);
@@ -95,6 +96,16 @@ const EXERCICIO = `(async () => {
     abriu[t.getAttribute('anchor')] = t.matches(':popover-open');
     t.hidePopover();
   }
+  // M13: a dica própria dos botões de ícone (popover manual, com o anchor-name
+  // gravado pelo CSSOM), aberta pelo mouse e fechada pelo Esc.
+  const grande = document.querySelector('[data-botao="grande"]');
+  grande.scrollIntoView({ block: 'center' });
+  await quadros();
+  grande.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
+  await espera(450);
+  abriu['dica-botao'] = document.querySelector('.tt-dica').matches(':popover-open');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await quadros();
   const dlg = document.querySelector('fluent-dialog');
   dlg.show();
   await espera(300);

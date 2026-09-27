@@ -156,3 +156,19 @@ test('node scripts/contrast.mjs termina com 0 e imprime a tabela 4.4', () => {
   assert.match(r.stdout, /iguais à tabela 4\.4 do plano\.$/m);
   assert.equal(spawnSync(process.execPath, [script, '--xpto'], { encoding: 'utf8' }).status, 2);
 });
+
+test('M13: desabilitados, só de registro (sem mínimo), com o Lite e o Suave na faixa do Claro e do Escuro', () => {
+  const r = conferir(lerArquivos());
+  const linha = (par) => r.desabilitados.find((l) => l.par === par);
+  assert.deepEqual(linha('Texto desabilitado / controle').celulas, ['2,51', '2,57', '2,50', '3,01']);
+  assert.deepEqual(linha('Destaque desabilitado / cartão').celulas, ['1,53', '1,54', '1,67', '1,65']);
+  for (const l of r.desabilitados) assert.match(l.minimo, /^isento/);
+  // Sem mínimo: um texto desabilitado invisível não reprova a tabela 4.4...
+  const css = lerArquivos().map((f) =>
+    f.origem.endsWith('tokens.css') ? { ...f, texto: f.texto.replace('--tt-fg-disabled:rgb(255 248 246/.55)', '--tt-fg-disabled:#AF4135') } : f,
+  );
+  const mudado = conferir(css);
+  assert.deepEqual(mudado.falhas, []);
+  // ...mas a tabela mostra o 1,00.
+  assert.equal(mudado.desabilitados.find((l) => l.par === 'Texto desabilitado / cartão').celulas[0], '1,00');
+});

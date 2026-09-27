@@ -149,7 +149,11 @@ function diferenca(a, b) {
 // Onde ler cada cor no #/dev, em px da página (a captura começa no canto da
 // janela). Trilho do switch ligado: 8 px para dentro da borda esquerda (a
 // bolinha fica à direita). Cartão: canto de cima à direita, longe do texto.
-const GEOMETRIA = `(() => {
+// M13: o cartão "Opções" desceu (o "Botões de ícone" entrou antes dele), e a
+// tela rola até ele ficar no meio da janela antes de medir.
+const GEOMETRIA = `(async () => {
+  document.querySelector('[aria-labelledby="amostra-opcoes"]').scrollIntoView({ block: 'center' });
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   const c = (el) => { const b = el.getBoundingClientRect(); return [Math.round(b.x + b.width / 2), Math.round(b.y + b.height / 2)]; };
   const [lig, des] = document.querySelectorAll('fluent-switch');
   const radio = [...document.querySelectorAll('fluent-radio')].find((r) => r.checked);

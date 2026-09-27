@@ -18,6 +18,13 @@
   --colorNeutralForegroundOnBrand:var(--tt-fg-on-accent);
   --colorBrandForeground1:var(--tt-accent-fg); --colorBrandForegroundLink:var(--tt-accent-fg);
   --colorBrandStroke1:var(--tt-accent-fg); --colorStrokeFocus2:var(--tt-fg-1);
+  --colorStrokeFocus1:var(--tt-focus-inner);   /* M13: anel interno do foco (lista suspensa) */
+  /* M13: desabilitados. Sem isto, no Lite, vinham os cinzas do bloco escuro do gerado
+     (caixa #141414, texto #5c5c5c). Fundo como o do controle em repouso (o
+     ControlFillColorDisabled do WinUI fica perto dele); traço, glifo e texto no
+     --tt-fg-disabled. O controls.css tira o fundo dos itens de menu. */
+  --colorNeutralBackgroundDisabled:var(--tt-ctl); --colorNeutralForegroundDisabled:var(--tt-fg-disabled);
+  --colorNeutralStrokeDisabled:var(--tt-fg-disabled);
   --fontFamilyBase:var(--tt-font-text);
   --borderRadiusMedium:var(--tt-r-ctl); --borderRadiusXLarge:var(--tt-r-card);
   /* componentes do app */

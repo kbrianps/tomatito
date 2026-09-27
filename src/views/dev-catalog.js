@@ -3,6 +3,11 @@
 // (checkbox, dropdown, menu, dialog e tooltip), e o M13 completa os botões e
 // os estados.
 //
+// M13: os botões completos (padrão, destaque, sutil e circular, com os
+// desabilitados), os botões só de ícone com a dica própria (data-dica,
+// components/dica.js), os desabilitados dos componentes Fluent e todos os
+// ícones copiados para src/assets/icons/ (scripts/copy-icons.mjs).
+//
 // Não é uma tela do app: não aparece no painel nem tem atalho (abre-se pelo
 // console do DevTools com location.hash = '#/dev', ou pela URL da prévia). Por
 // isso os textos daqui são de exemplo e ficam fora do catálogo de textos da
@@ -19,6 +24,21 @@
 // longa ("Zerar progresso às", 24 horas) para conferir a altura máxima e a
 // virada para cima perto da borda de baixo (docs/decisoes.md, M12).
 import { Updates } from '@microsoft/fast-element';
+import { grades, icone, NOMES } from '../components/icon.js';
+
+// Botão só de ícone: aria-label (o nome) e data-dica (a dica com o mesmo texto).
+const deIcone = (classe, nome, rotulo, { grade = 16, extra = '' } = {}) =>
+  `<button type="button" class="${classe}" aria-label="${rotulo}" data-dica${extra}>${icone(nome, grade)}</button>`;
+
+// Todos os ícones copiados, em cada grade, no tamanho da grade.
+const ICONES = NOMES.map(
+  (nome) =>
+    `<li class="tt-amostra-icone" data-icone="${nome}"><span class="tt-amostra-icone-grades">` +
+    grades(nome)
+      .map((g) => `<span class="tt-amostra-icone-${g}" data-grade="${g}">${icone(nome, g)}</span>`)
+      .join('') +
+    `</span><span class="tt-t-caption tt-fg-2">${nome}</span></li>`,
+).join('');
 
 const horas = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, '0')}:00`);
 
@@ -26,16 +46,43 @@ const AMOSTRA = `
 <div class="tt-amostra">
   <header class="tt-amostra-topo">
     <h1 class="tt-t-title" tabindex="-1">Catálogo de controles</h1>
-    <p class="tt-fg-2">Os controles do app sobre os tokens do tema: botões, opções, anel, texto e os componentes Fluent que abrem por cima da tela.</p>
+    <p class="tt-fg-2">Os controles do app sobre os tokens do tema: botões, opções, anel, texto, os componentes Fluent que abrem por cima da tela e os ícones. Os estados desabilitados aparecem ao lado dos normais.</p>
   </header>
 
   <div class="tt-amostra-grade">
-    <section class="tt-card" aria-labelledby="amostra-botoes">
+    <section class="tt-card" aria-labelledby="amostra-botoes" data-amostra="botoes">
       <h2 id="amostra-botoes" class="tt-t-subtitle">Botões</h2>
-      <p class="tt-fg-2">Primário para a ação principal da tela; secundário para as demais.</p>
+      <p class="tt-fg-2">Primário para a ação principal da tela; secundário para as demais. Embaixo, os dois desabilitados.</p>
       <div class="tt-linha">
-        <button type="button" class="tt-accent">Iniciar sessão de foco</button>
-        <button type="button">Cancelar</button>
+        <button type="button" class="tt-accent" data-botao="destaque">${icone('play')}Iniciar sessão de foco</button>
+        <button type="button" data-botao="padrao">Cancelar</button>
+      </div>
+      <div class="tt-linha">
+        <button type="button" class="tt-accent" disabled data-botao="destaque-desabilitado">${icone('save')}Salvar</button>
+        <button type="button" disabled data-botao="padrao-desabilitado">Descartar</button>
+      </div>
+    </section>
+
+    <section class="tt-card" aria-labelledby="amostra-botoes-icone" data-amostra="botoes-icone">
+      <h2 id="amostra-botoes-icone" class="tt-t-subtitle">Botões de ícone</h2>
+      <p class="tt-fg-2">Só com ícone, sempre com nome e dica. Sutis de 32 × 32; circulares de 32 e 64 px. O último de cada linha está desabilitado.</p>
+      <div class="tt-linha" data-grupo="sutis">
+        ${deIcone('tt-sutil', 'more_horizontal', 'Mais opções', { extra: ' data-botao="sutil"' })}
+        ${deIcone('tt-sutil', 'edit', 'Editar')}
+        ${deIcone('tt-sutil', 'add', 'Adicionar tarefa')}
+        ${deIcone('tt-sutil', 'dismiss', 'Remover')}
+        ${deIcone('tt-sutil', 'save', 'Salvar', { extra: ' disabled data-botao="sutil-desabilitado"' })}
+      </div>
+      <div class="tt-linha" data-grupo="circulares">
+        ${deIcone('tt-circular tt-accent', 'play', 'Iniciar', { extra: ' data-botao="circular-destaque"' })}
+        ${deIcone('tt-circular', 'arrow_reset', 'Reiniciar', { extra: ' data-botao="circular"' })}
+        ${deIcone('tt-circular', 'stop', 'Encerrar', { extra: ' disabled data-botao="circular-desabilitado"' })}
+      </div>
+      <div class="tt-linha" data-grupo="grandes">
+        ${deIcone('tt-circular tt-grande tt-accent', 'pause', 'Pausar', { grade: 24, extra: ' data-botao="grande-destaque"' })}
+        ${deIcone('tt-circular tt-grande', 'flag', 'Marcar volta', { grade: 24, extra: ' data-botao="grande"' })}
+        ${deIcone('tt-circular tt-grande', 'arrow_reset', 'Reiniciar', { grade: 24 })}
+        ${deIcone('tt-circular tt-grande tt-accent', 'play', 'Iniciar', { grade: 24, extra: ' disabled data-botao="grande-desabilitado"' })}
       </div>
     </section>
 
@@ -44,12 +91,15 @@ const AMOSTRA = `
       <div class="tt-pilha">
         <label class="tt-opcao"><fluent-switch checked></fluent-switch>Tocar som no fim do foco</label>
         <label class="tt-opcao"><fluent-switch></fluent-switch>Pular intervalos</label>
+        <label class="tt-opcao"><fluent-switch checked disabled></fluent-switch>Ligado e desabilitado</label>
+        <label class="tt-opcao"><fluent-switch disabled></fluent-switch>Desligado e desabilitado</label>
       </div>
       <p id="amostra-intervalo" class="tt-t-body-strong">Duração do intervalo</p>
       <fluent-radio-group name="intervalo" value="5" orientation="vertical" aria-labelledby="amostra-intervalo">
         <label class="tt-opcao"><fluent-radio value="5"></fluent-radio>5 minutos</label>
         <label class="tt-opcao"><fluent-radio value="10"></fluent-radio>10 minutos</label>
         <label class="tt-opcao"><fluent-radio value="15"></fluent-radio>15 minutos</label>
+        <label class="tt-opcao"><fluent-radio value="30" disabled></fluent-radio>30 minutos (desabilitada)</label>
       </fluent-radio-group>
     </section>
 
@@ -121,6 +171,15 @@ const AMOSTRA = `
           </fluent-listbox>
         </fluent-dropdown>
       </div>
+      <div class="tt-campo">
+        <span id="amostra-som-rotulo" class="tt-campo-rotulo">Som do intervalo</span>
+        <fluent-dropdown disabled data-rotulo="amostra-som-rotulo" data-amostra="som">
+          <fluent-listbox>
+            <fluent-option value="sino" selected>Sino</fluent-option>
+            <fluent-option value="nenhum">Nenhum</fluent-option>
+          </fluent-listbox>
+        </fluent-dropdown>
+      </div>
     </section>
 
     <section class="tt-card" aria-labelledby="amostra-menus" data-amostra="menus">
@@ -185,6 +244,12 @@ const AMOSTRA = `
         <button type="button" id="amostra-dica-volta">Volta</button>
         <fluent-tooltip anchor="amostra-dica-volta" positioning="below">Marcar uma volta do cronômetro</fluent-tooltip>
       </div>
+    </section>
+
+    <section class="tt-card tt-amostra-largo" aria-labelledby="amostra-icones" data-amostra="icones">
+      <h2 id="amostra-icones" class="tt-t-subtitle">Ícones</h2>
+      <p class="tt-fg-2">Todos os copiados para src/assets/icons/, em cada grade copiada (16, 20 ou 24 px).</p>
+      <ul class="tt-amostra-icones">${ICONES}</ul>
     </section>
   </div>
 </div>

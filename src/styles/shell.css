@@ -207,3 +207,20 @@
   grid-template-columns:repeat(auto-fit, minmax(min(100%, 340px), 1fr));
 }
 @media (max-width:600px){ .tt-amostra{ padding:20px 16px 32px; } }
+/* Ícones do catálogo (M13): uma célula por ícone, com cada grade no próprio
+   tamanho e o nome embaixo; o cartão ocupa a largura toda da grade. */
+.tt-amostra-largo{ grid-column:1 / -1; }
+.tt-amostra-icones{
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(128px, 1fr)); gap:8px;
+  margin:0; padding:0; list-style:none;
+}
+.tt-amostra-icone{
+  display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0;
+  padding:12px 4px 8px; border-radius:var(--tt-r-ctl); background:var(--tt-bg-surface);
+}
+.tt-amostra-icone > .tt-t-caption{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tt-amostra-icone-grades{ display:flex; align-items:center; justify-content:center; gap:12px; height:24px; }
+.tt-amostra-icone .tt-icone{ display:block; fill:currentColor; }
+.tt-amostra-icone-16 .tt-icone{ width:16px; height:16px; }
+.tt-amostra-icone-20 .tt-icone{ width:20px; height:20px; }
+.tt-amostra-icone-24 .tt-icone{ width:24px; height:24px; }

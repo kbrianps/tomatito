@@ -90,9 +90,10 @@ if (r.controle === 'tema-errado') {
   );
   // M12: os controles que abrem por cima da tela, abertos e fechados pelo
   // console.mjs no #/dev, sem nenhum "Refused to" (no build, sob a CSP).
-  const ABREM = ['menu-sessao', 'menu-temporizador', 'meta', 'zerar', 'amostra-dica-reiniciar', 'amostra-dica-volta', 'dialogo', 'dialogo-meta'];
+  // M13: e a dica própria dos botões de ícone.
+  const ABREM = ['menu-sessao', 'menu-temporizador', 'meta', 'zerar', 'amostra-dica-reiniciar', 'amostra-dica-volta', 'dica-botao', 'dialogo', 'dialogo-meta'];
   checar(
-    'os menus, as listas, as dicas e o diálogo do #/dev abrem e fecham, sem nenhum "Refused to" no console',
+    'os menus, as listas, as dicas (também a dos botões de ícone) e o diálogo do #/dev abrem e fecham, sem nenhum "Refused to" no console',
     partidas.every((P) => {
       const x = P.console?.exercicio;
       return x && ABREM.every((k) => x.abriu?.[k] === true) && x.abertosNoFim === 0 &&

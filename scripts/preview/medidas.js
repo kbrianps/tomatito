@@ -150,7 +150,8 @@
       Object.fromEntries(
         props.filter((p) => p.startsWith('--tt-') === doTomatito).map((p) => [p.slice(2), cs.getPropertyValue(p).trim()]),
       );
-    const componentes = [...raiz.querySelectorAll('fluent-switch, fluent-radio')].map((c) => {
+    // Os desabilitados (M13) têm cores próprias e são conferidos pelo botoes.mjs.
+    const componentes = [...raiz.querySelectorAll('fluent-switch:not([disabled]), fluent-radio:not([disabled])')].map((c) => {
       const s = getComputedStyle(c);
       const ind = c.shadowRoot?.querySelector('.checked-indicator');
       const si = ind && getComputedStyle(ind);
@@ -352,6 +353,198 @@
   window.__ttSabotarAncoras = () => {
     const folha = new CSSStyleSheet();
     folha.replaceSync('fluent-menu-list, fluent-listbox { position-anchor: --tt-sem-ancora !important; }');
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, folha];
+    return document.adoptedStyleSheets.length;
+  };
+  // M13: botões próprios, foco, a dica dos botões de ícone, os ícones e os
+  // desabilitados, no #/dev.
+  //
+  //   __ttCor('--tt-fg-disabled')
+  //                          a cor do token no tema atual, escrita como o
+  //                          getComputedStyle escreve (para comparar)
+  //   __ttBotoes()           os botões [data-botao] do catálogo: caixa, raio,
+  //                          fundo, texto, bordas de cima e de baixo, anel e o
+  //                          tamanho do ícone
+  //   __ttFoco()             o elemento com o foco, se casa :focus-visible, e
+  //                          o contorno e a sombra dele (o anel duplo)
+  //   __ttDica()             a dica dos botões de ícone: aberta, texto, de que
+  //                          botão, de que lado, o vão, o centro e as cores
+  //   __ttMostrarDica('[data-botao="grande"]', { espera: 400 })
+  //                          pointerover sintético no botão e mede depois da
+  //                          espera (o atraso é de 250 ms)
+  //   __ttIcones()           as células do cartão Ícones e os pedidos de rede
+  //                          ao @fluentui/svg-icons (tem de ser nenhum)
+  //   __ttDesabilitados()    as cores dos componentes Fluent desabilitados e
+  //                          dos rótulos ao lado deles
+  //   __ttSabotarDica()      controle negativo: a dica perde a âncora
+  window.__ttCor = (token, prop = 'background-color') => {
+    const el = document.createElement('div');
+    el.style.setProperty(prop, `var(${token})`);
+    document.body.append(el);
+    const v = getComputedStyle(el).getPropertyValue(prop);
+    el.remove();
+    return v;
+  };
+  const icone = (el) => {
+    const svg = el.querySelector('svg.tt-icone');
+    if (!svg) return null;
+    const r = svg.getBoundingClientRect();
+    return { tamanho: [arred(r.width), arred(r.height)], cor: getComputedStyle(svg).fill };
+  };
+  window.__ttBotoes = () =>
+    Object.fromEntries(
+      [...document.querySelectorAll('[data-botao]')].map((b) => {
+        const s = getComputedStyle(b);
+        return [
+          b.dataset.botao,
+          {
+            caixa: caixa(b),
+            raio: s.borderTopLeftRadius,
+            fundo: s.backgroundColor,
+            cor: s.color,
+            bordaCima: s.borderTopColor,
+            bordaBaixo: s.borderBottomColor,
+            bordaLargura: s.borderTopWidth,
+            desabilitado: b.disabled,
+            nome: b.getAttribute('aria-label') ?? b.textContent.trim(),
+            dica: b.hasAttribute('data-dica'),
+            icone: icone(b),
+          },
+        ];
+      }),
+    );
+  window.__ttFoco = () => {
+    const a = document.activeElement;
+    const s = a && getComputedStyle(a);
+    return {
+      elemento: a === document.body ? 'body' : `${a.localName} "${(a.getAttribute('aria-label') ?? a.textContent).trim().slice(0, 40)}"`,
+      visivel: Boolean(a?.matches(':focus-visible')),
+      contorno: s && [s.outlineStyle, s.outlineWidth, s.outlineColor, s.outlineOffset],
+      sombra: s?.boxShadow,
+      raio: s?.borderTopLeftRadius,
+      esperado: { fora: window.__ttCor('--tt-focus-outer'), dentro: window.__ttCor('--tt-focus-inner') },
+    };
+  };
+  window.__ttDica = () => {
+    const d = document.querySelector('.tt-dica');
+    if (!d) return { existe: false };
+    const aberta = d.matches(':popover-open');
+    const alvo = [...document.querySelectorAll('[data-dica]')].find((b) => b.style.getPropertyValue('anchor-name'));
+    const base = {
+      existe: true,
+      aberta,
+      popover: d.getAttribute('popover'),
+      ariaHidden: d.getAttribute('aria-hidden'),
+      quantas: document.querySelectorAll('.tt-dica').length,
+      alvo: alvo ? alvo.getAttribute('aria-label') : null,
+    };
+    if (!aberta || !alvo) return base;
+    const a = alvo.getBoundingClientRect();
+    const p = d.getBoundingClientRect();
+    const cs = getComputedStyle(d);
+    const abaixo = p.top >= a.bottom - 1;
+    const acima = p.bottom <= a.top + 1;
+    return {
+      ...base,
+      texto: d.textContent,
+      ancora: caixa(alvo),
+      dica: caixa(d),
+      lado: abaixo ? 'abaixo' : acima ? 'acima' : 'sobre',
+      vao: arred(abaixo ? p.top - a.bottom : acima ? a.top - p.bottom : NaN),
+      centro: arred(p.left + p.width / 2 - (a.left + a.width / 2)),
+      dentro: p.left >= -0.5 && p.top >= -0.5 && p.right <= innerWidth + 0.5 && p.bottom <= innerHeight + 0.5,
+      fundo: cs.backgroundColor,
+      borda: cs.borderTopColor,
+      cor: cs.color,
+      fonte: cs.fontSize,
+    };
+  };
+  window.__ttMostrarDica = async (seletor, { espera = 400, evento = 'pointerover' } = {}) => {
+    const b = document.querySelector(seletor);
+    if (!b) throw new Error(`botão não encontrado: ${seletor}`);
+    if (evento === 'focus') b.focus({ focusVisible: true }); // a opção só existe no Chromium
+    else b.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }));
+    await new Promise((r) => setTimeout(r, espera));
+    await doisQuadros();
+    return window.__ttDica();
+  };
+  window.__ttSairDica = async (seletor) => {
+    const b = document.querySelector(seletor);
+    b.dispatchEvent(new PointerEvent('pointerout', { bubbles: true, pointerType: 'mouse', relatedTarget: document.querySelector('.tt-amostra-topo h1') }));
+    document.querySelector('.tt-amostra-topo h1').dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }));
+    await new Promise((r) => setTimeout(r, 300));
+    await doisQuadros();
+    return window.__ttDica();
+  };
+  window.__ttIcones = () => {
+    const celulas = [...document.querySelectorAll('.tt-amostra-icone')].map((li) => ({
+      nome: li.dataset.icone,
+      grades: [...li.querySelectorAll('[data-grade]')].map((g) => {
+        const svg = g.querySelector('svg');
+        const r = svg.getBoundingClientRect();
+        return { grade: Number(g.dataset.grade), tamanho: [arred(r.width), arred(r.height)], desenho: svg.querySelectorAll('path').length, fill: getComputedStyle(svg).fill };
+      }),
+    }));
+    const pedidos = performance.getEntriesByType('resource').map((e) => e.name);
+    return {
+      celulas,
+      nomes: celulas.map((c) => c.nome),
+      svgs: celulas.reduce((n, c) => n + c.grades.length, 0),
+      noPacote: pedidos.filter((n) => /svg-icons/.test(n)),
+      naPasta: pedidos.filter((n) => /\/src\/assets\/icons\//.test(n)).length,
+      corDoTexto: getComputedStyle(document.querySelector('.tt-amostra-icone')).color,
+    };
+  };
+  window.__ttDesabilitados = () => {
+    const cs = (el) => getComputedStyle(el);
+    const sombra = (el, sel) => el.shadowRoot?.querySelector(sel);
+    const caixas = [...document.querySelectorAll('fluent-checkbox[disabled]')].map((c) => ({
+      marcada: Boolean(c.checked),
+      fundo: cs(c).backgroundColor,
+      borda: cs(c).borderTopColor,
+      glifo: c.checked ? cs(sombra(c, '.checked-indicator')).color : null,
+      rotulo: cs(c.closest('.tt-opcao')).color,
+    }));
+    const chaves = [...document.querySelectorAll('fluent-switch[disabled]')].map((c) => ({
+      ligada: Boolean(c.checked),
+      fundo: cs(c).backgroundColor,
+      borda: cs(c).borderTopColor,
+      bolinha: cs(sombra(c, '.checked-indicator')).backgroundColor,
+      rotulo: cs(c.closest('.tt-opcao')).color,
+    }));
+    const radios = [...document.querySelectorAll('fluent-radio[disabled]')].map((c) => ({
+      fundo: cs(c).backgroundColor,
+      borda: cs(c).borderTopColor,
+      rotulo: cs(c.closest('.tt-opcao')).color,
+    }));
+    const dd = document.querySelector('fluent-dropdown[disabled]');
+    const ctrl = sombra(dd, '.control');
+    const lista = {
+      fundo: ctrl && cs(ctrl).backgroundColor,
+      texto: cs(dd.control ?? dd).color,
+      rotulo: cs(dd.closest('.tt-campo').querySelector('.tt-campo-rotulo')).color,
+      desabilitada: dd.control?.disabled ?? null,
+    };
+    // O item mora num popover fechado (display: none), e o WebKitGTK 2.52 não
+    // recalcula o estilo herdado ali depois de uma troca de tema (o
+    // getComputedStyle devolve as cores do tema anterior; aberto, o menu pinta
+    // certo). A lista abre só para a medida.
+    const item = document.querySelector('fluent-menu-item[disabled]');
+    const listaDoMenu = item.closest('fluent-menu-list');
+    const fechada = !listaDoMenu.matches(':popover-open');
+    if (fechada) listaDoMenu.showPopover();
+    const menu = { fundo: cs(item).backgroundColor, texto: cs(item).color };
+    if (fechada) listaDoMenu.hidePopover();
+    const esperado = {
+      controle: window.__ttCor('--tt-ctl'),
+      desabilitado: window.__ttCor('--tt-fg-disabled'),
+      transparente: 'rgba(0, 0, 0, 0)',
+    };
+    return { caixas, chaves, radios, lista, menu, esperado };
+  };
+  window.__ttSabotarDica = () => {
+    const folha = new CSSStyleSheet();
+    folha.replaceSync('.tt-dica { position-anchor: --tt-sem-ancora !important; }');
     document.adoptedStyleSheets = [...document.adoptedStyleSheets, folha];
     return document.adoptedStyleSheets.length;
   };

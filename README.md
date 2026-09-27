@@ -29,6 +29,8 @@ cd src-tauri && cargo test -p tomatito-core    # testes do motor, sem compilar o
 
 O `src/styles/fluent-tokens.gen.css` (os tokens do Fluent de cada tema) é gerado pelo `scripts/build-theme-css.mjs`, que roda sozinho antes do `npm run dev` e do `npm run build` (e, portanto, do `tauri dev` e do `tauri build`). Ele fica fora do git; para refazê-lo à mão, `node scripts/build-theme-css.mjs`.
 
+Os ícones da interface ficam em `src/assets/icons/`, no git: só os usados, copiados do `@fluentui/svg-icons` (MIT) pelo `scripts/copy-icons.mjs`. Para acrescentar um, inclua-o na lista do script e rode `node scripts/copy-icons.mjs`; o `npm test` confere se a pasta bate com a lista.
+
 Conferências visuais sem abrir janelas na sua sessão (em `scripts/`, fora do app):
 
 ```bash
@@ -38,8 +40,12 @@ bash scripts/gnome-aninhado/rodar.sh partida-a-frio                  # 10 abertu
 bash scripts/gnome-aninhado/rodar.sh navegacao                       # painel, atalhos, teclado e o indicador deslizando
 bash scripts/gnome-aninhado/rodar.sh responsivo                      # estreitar a janela até 480 px, zoom e dicas do painel
 bash scripts/gnome-aninhado/rodar.sh temas-fluent                    # os tokens do Fluent em cada tema, na página e na tela
+bash scripts/gnome-aninhado/rodar.sh controles                       # menus, listas, dicas e diálogo com o ponteiro e o teclado
+bash scripts/gnome-aninhado/rodar.sh botoes                          # botões, anel de foco pelo Tab e a dica dos botões de ícone
 node scripts/preview/responsivo.mjs                                  # o layout em 15 larguras, no Chrome e no WebKitGTK
 node scripts/preview/temas-fluent.mjs                                # os tokens do Fluent nos cinco temas, no Chrome e no WebKitGTK
+node scripts/preview/controles.mjs                                   # onde abrem os menus, as listas e as dicas, nos dois motores
+node scripts/preview/botoes.mjs                                      # botões, desabilitados, anel, dica e ícones, nos dois motores
 ```
 
 O CI (`.github/workflows/ci.yml`) roda o build, os testes, o `cargo fmt` e o `cargo clippy` no Linux e no Windows a cada push.

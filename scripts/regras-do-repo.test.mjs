@@ -349,3 +349,99 @@ test('controles do M12: o #/dev tem todos os componentes Fluent da seção 1.1, 
   // Esc numa lista aberta fecha só a lista (keys.js), ligado no main.js.
   assert.match(main, /^ {2}ligarEscDasListas\(\);$/m);
 });
+
+// M13: botões próprios, foco e ícones.
+test('botões do M13 no controls.css: padrão, destaque, sutil, circular, desabilitados e o anel duplo', () => {
+  const css = ler('src/styles/controls.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const regras = [...css.matchAll(/(^|\n)([^{}\n@][^{}]*?)\{([^}]*)\}/g)].map((m) => ({ sel: m[2].trim(), corpo: m[3] }));
+  const regra = (sel) => {
+    const r = regras.find((x) => x.sel === sel);
+    assert.ok(r, `falta a regra ${sel}`);
+    return r.corpo;
+  };
+  const indice = (sel) => regras.findIndex((x) => x.sel === sel);
+  const base = regra('button');
+  assert.match(base, /height:32px/);
+  assert.match(base, /border-radius:var\(--tt-r-ctl\)/);
+  assert.match(base, /background:var\(--tt-ctl\)/);
+  assert.match(base, /border:1px solid var\(--tt-ctl-stroke-top\); border-bottom-color:var\(--tt-ctl-stroke-bottom\)/);
+  assert.match(regra('button:hover'), /background:var\(--tt-ctl-hover\)/);
+  assert.match(regra('button:active'), /background:var\(--tt-ctl-press\)/);
+  assert.match(regra('button.tt-accent'), /background:var\(--tt-accent\); color:var\(--tt-fg-on-accent\)/);
+  assert.match(regra('button.tt-accent:disabled'), /background:var\(--tt-accent-disabled\)/);
+  assert.match(regra('button.tt-sutil'), /width:32px/);
+  assert.match(regra('button.tt-sutil'), /background:transparent/);
+  assert.match(regra('button.tt-sutil:hover'), /background:var\(--tt-subtle-hover\)/);
+  assert.match(regra('button.tt-circular'), /width:32px[\s\S]*border-radius:50%/);
+  assert.match(regra('button.tt-circular.tt-grande'), /width:64px; height:64px/);
+  assert.match(regra('button:disabled'), /color:var\(--tt-fg-disabled\)/);
+  // O desabilitado vence o hover e o pressionado pela ordem (mesma especificidade).
+  for (const [antes, depois] of [
+    ['button:hover', 'button:disabled'],
+    ['button:active', 'button:disabled'],
+    ['button.tt-accent:hover', 'button.tt-accent:disabled'],
+    ['button.tt-sutil:hover', 'button.tt-sutil:disabled'],
+  ]) {
+    assert.ok(indice(antes) < indice(depois), `${depois} precisa vir depois de ${antes}`);
+  }
+  // Anel duplo: 2 px de --tt-focus-outer por fora e 1 px de --tt-focus-inner colado ao botão.
+  const foco = regra('button:focus-visible');
+  assert.match(foco, /outline:2px solid var\(--tt-focus-outer\); outline-offset:1px/);
+  assert.match(foco, /box-shadow:0 0 0 1px var\(--tt-focus-inner\)/);
+  assert.match(ler('src/styles/bridge.css'), /--tt-focus-outer:var\(--tt-fg-1\); --tt-focus-inner:var\(--tt-bg-card\);/);
+  // Nenhuma regra de botão vence a do botão de dentro do fluent-dropdown (0,1,2): sem :not().
+  for (const { sel } of regras.filter((r) => /^button/.test(r.sel))) assert.doesNotMatch(sel, /:not\(/, sel);
+});
+
+test('desabilitados e foco dos componentes Fluent pela ponte (M13)', () => {
+  const ponte = ler('src/styles/bridge.css');
+  for (const [token, tt] of [
+    ['colorNeutralBackgroundDisabled', 'tt-ctl'],
+    ['colorNeutralForegroundDisabled', 'tt-fg-disabled'],
+    ['colorNeutralStrokeDisabled', 'tt-fg-disabled'],
+    ['colorStrokeFocus1', 'tt-focus-inner'],
+  ]) {
+    assert.match(ponte, new RegExp(`--${token}:var\\(--${tt}\\);`), `a ponte liga --${token} a --${tt}`);
+  }
+  const controles = ler('src/styles/controls.css');
+  assert.match(controles, /fluent-menu-item\[disabled\]\{ background:transparent; \}/);
+  assert.match(controles, /fluent-dropdown\[disabled\]\{ --colorNeutralBackgroundDisabled:transparent; \}/);
+  assert.match(controles, /\.tt-opcao:has\(> :is\(\[disabled\], :disabled\)\)/);
+});
+
+test('ícones só da pasta copiada: nada do @fluentui/svg-icons no código do app', () => {
+  const semComentarios = (texto) => texto.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  for (const { arquivo, texto } of jsDoApp) {
+    assert.doesNotMatch(semComentarios(texto), /@fluentui\/svg-icons/, `${arquivo} importa do pacote de ícones`);
+  }
+  for (const arquivo of readdirSync(new URL('../src', import.meta.url), { recursive: true })) {
+    if (/\.(css|html)$/.test(arquivo)) assert.doesNotMatch(ler(`src/${arquivo}`), /svg-icons/, `src/${arquivo}`);
+  }
+  assert.doesNotMatch(indexHtml, /svg-icons/);
+  const icon = ler('src/components/icon.js');
+  assert.match(icon, /import\.meta\.glob\('\.\.\/assets\/icons\/\*\.svg', \{ query: '\?raw', import: 'default', eager: true \}\)/);
+  assert.ok(pkg.devDependencies['@fluentui/svg-icons'], 'o pacote continua só em devDependencies');
+  assert.equal(pkg.dependencies['@fluentui/svg-icons'], undefined);
+  // Todo ícone pedido no código existe na pasta.
+  const disponiveis = new Set(readdirSync(new URL('../src/assets/icons', import.meta.url)).map((a) => a.replace(/_\d+_(regular|filled)\.svg$/, '')));
+  for (const { arquivo, texto } of jsDoApp) {
+    for (const m of texto.matchAll(/icone\('([a-z_]+)'/g)) assert.ok(disponiveis.has(m[1]), `${arquivo}: ícone ${m[1]} fora da pasta`);
+  }
+  for (const { rota, icone: nome } of [{ icone: 'target' }, { icone: 'hourglass_half' }, { icone: 'timer' }, { icone: 'settings' }]) {
+    assert.ok(disponiveis.has(nome), rota);
+  }
+});
+
+test('dica dos botões só de ícone: ligada no main.js, e todo data-dica do catálogo com aria-label', () => {
+  assert.match(ler('src/main.js'), /^ {2}ligarDicas\(\);$/m);
+  const catalogo = ler('src/views/dev-catalog.js');
+  const comDica = [...catalogo.matchAll(/<button[^>]*data-dica[^>]*>/g)].map((m) => m[0]);
+  assert.ok(comDica.length >= 1);
+  for (const b of comDica) assert.match(b, /aria-label="[^"]+"/, b);
+  assert.ok((catalogo.match(/deIcone\(/g) ?? []).length >= 12, 'os botões de ícone do catálogo');
+  const css = ler('src/styles/controls.css');
+  assert.match(css, /\.tt-dica\{[^}]*position-anchor:--tt-dica-alvo; position-area:block-start; position-try-fallbacks:flip-block;/);
+  assert.match(ler('src/components/dica.js'), /export const ANCORA = '--tt-dica-alvo';/);
+  assert.match(ler('src/components/dica.js'), /setAttribute\('popover', 'manual'\)/, 'popover manual: não fecha um menu aberto');
+  assert.doesNotMatch(ler('src/components/dica.js'), /\.style\.(?!setProperty|removeProperty)/, 'sem estilo em linha além do anchor-name (3.8)');
+});

@@ -1,10 +1,23 @@
-/* src/styles/controls.css: controles feitos à mão (botões, cartão, anel) e o
-   ajuste fino dos componentes Fluent. Só lê tokens --tt-*.
-   M06: o básico para a amostra (botão padrão e de destaque em repouso, hover e
-   pressionado; cartão; anel). O M13 completa os botões (sutil, circular,
-   desabilitado e o anel de foco duplo). */
+/* src/styles/controls.css: controles feitos à mão (botões, cartão, anel, dica) e
+   o ajuste fino dos componentes Fluent. Só lê tokens --tt-* (e o --shadow8 do
+   gerado, como a dica do painel).
+   M06: o básico para a amostra. M13: os botões completos (padrão, destaque,
+   sutil, circular e desabilitados), o anel de foco duplo, os ícones dentro dos
+   botões, a dica dos botões só de ícone e os desabilitados dos componentes
+   Fluent. */
 
-/* Botões: <button> nativo, medidas do Button do WinUI (32 px, raio 4, texto normal) */
+/* Botões: <button> nativo, com as medidas e os estados do Button do WinUI
+   (Button_themeresources.xaml): 32 px de altura, raio 4 e texto normal; fundo
+   ControlFillColorDefault/Secondary/Tertiary (--tt-ctl, -hover, -press); borda
+   ControlElevationBorderBrush, que é mais forte embaixo no claro e em cima no
+   escuro (--tt-ctl-stroke-top e --tt-ctl-stroke-bottom) e fica lisa
+   (ControlStrokeColorDefault, aqui o --tt-ctl-stroke-top) ao apertar e
+   desabilitado. O texto continua --tt-fg-1 no pressionado, que é o par
+   "Texto 1 / controle" da tabela 4.4.
+   Os estados vêm em ordem: repouso, hover, pressionado e, por último,
+   desabilitado, que vence os outros pela ordem (mesma especificidade). Nada
+   de :not() aqui: a regra do botão de dentro do fluent-dropdown (abaixo, com
+   all:unset) precisa continuar vencendo todas. */
 button{
   display:inline-flex; align-items:center; justify-content:center; gap:8px;
   height:32px; padding:0 11px;
@@ -15,11 +28,51 @@ button{
   transition:background-color var(--tt-dur-fast) linear;
 }
 button:hover{ background:var(--tt-ctl-hover); }
-button:active{ background:var(--tt-ctl-press); }
+button:active{ background:var(--tt-ctl-press); border-color:var(--tt-ctl-stroke-top); }
 
+/* Destaque (AccentButton): o accent do tema, sem borda visível. */
 button.tt-accent{ background:var(--tt-accent); color:var(--tt-fg-on-accent); border-color:transparent; }
 button.tt-accent:hover{ background:var(--tt-accent-hover); }
 button.tt-accent:active{ background:var(--tt-accent-pressed); }
+
+/* Sutil: só ícone, 32 × 32, sem fundo nem borda em repouso; hover e
+   pressionado no SubtleFillColorSecondary e Tertiary (--tt-subtle-hover e
+   -press), com o ícone secundário no pressionado, como os itens do painel. */
+button.tt-sutil{ width:32px; padding:0; background:transparent; border-color:transparent; }
+button.tt-sutil:hover{ background:var(--tt-subtle-hover); }
+button.tt-sutil:active{ background:var(--tt-subtle-press); color:var(--tt-fg-2-on-ctl); }
+
+/* Circular: 32 px (os do temporizador) e 64 px (os do cronômetro e da Foco),
+   só com ícone. Combina com o destaque (tt-accent) para a ação principal. */
+button.tt-circular{ width:32px; padding:0; border-radius:50%; }
+button.tt-circular.tt-grande{ width:64px; height:64px; }
+
+/* Desabilitados: texto e ícone em --tt-fg-disabled (TextFillColorDisabled);
+   o destaque vira --tt-accent-disabled (AccentFillColorDisabled); o sutil
+   continua sem fundo. */
+button:disabled{ background:var(--tt-ctl); color:var(--tt-fg-disabled); border-color:var(--tt-ctl-stroke-top); }
+button.tt-accent:disabled{ background:var(--tt-accent-disabled); border-color:transparent; }
+button.tt-sutil:disabled{ background:transparent; border-color:transparent; }
+
+/* Ícones dentro dos botões: 16 px (24 px no circular grande), na cor do texto. */
+button .tt-icone{ flex:none; width:16px; height:16px; fill:currentColor; }
+button.tt-circular.tt-grande .tt-icone{ width:24px; height:24px; }
+
+/* Foco do teclado: o anel duplo, por fora do botão, como o FocusVisual do
+   WinUI (FocusVisualMargin -3): 1 px de --tt-focus-inner colado à borda e 2 px
+   de --tt-focus-outer em volta. O contorno e a sombra acompanham o raio (o
+   circular fica com um anel redondo). Só no :focus-visible: o clique não
+   mostra o anel. */
+button:focus-visible{
+  outline:2px solid var(--tt-focus-outer); outline-offset:1px;
+  box-shadow:0 0 0 1px var(--tt-focus-inner);
+}
+
+/* Alto contraste (Windows): a sombra some e as cores viram as do sistema. */
+@media (forced-colors:active){
+  button:focus-visible{ outline-color:Highlight; }
+  button:disabled{ color:GrayText; border-color:GrayText; }
+}
 
 /* Cartão */
 .tt-card{
@@ -76,3 +129,36 @@ fluent-listbox,fluent-menu-list,fluent-tooltip{ border-color:var(--tt-border); }
    lugar do colorBackgroundOverlay do Fluent (preto a 40% no claro, 50% no
    escuro). */
 fluent-dialog{ --dialog-backdrop:var(--tt-smoke); }
+
+/* M13: desabilitados dos componentes Fluent. As cores vêm da ponte
+   (--colorNeutral*Disabled); aqui, o rótulo ao lado do controle desabilitado
+   (TextFillColorDisabled, como o texto de um CheckBox desabilitado do WinUI)
+   e o fundo do item de menu desabilitado, que no MenuFlyoutItem do WinUI é o
+   do próprio menu (a ponte daria o fundo de controle). */
+.tt-opcao:has(> :is([disabled], :disabled)),
+.tt-campo:has(> fluent-dropdown[disabled]) > .tt-campo-rotulo{ color:var(--tt-fg-disabled); }
+fluent-menu-item[disabled]{ background:transparent; }
+/* Na lista suspensa desabilitada, o fundo do controle fica transparente (o do
+   cartão, como a lista habilitada): o Fluent pinta com o mesmo token a caixa e
+   o quadrado do chevron, e o --tt-ctl, que é translúcido, somaria duas vezes
+   em volta do chevron. */
+fluent-dropdown[disabled]{ --colorNeutralBackgroundDisabled:transparent; }
+
+/* M13: dica dos botões só de ícone (src/components/dica.js). Uma só, na camada
+   de cima (popover manual, que não fecha um menu aberto), ancorada ao botão
+   com o mouse em cima ou com o foco do teclado: em cima dele e centrada, a
+   4 px, virando para baixo quando não cabe (o mesmo posicionamento do
+   fluent-tooltip, conferido no WebKitGTK no M12). O desenho é o da dica do
+   painel compacto (M10): fundo do cartão, texto Caption, raio 4, borda em
+   --tt-border e a sombra de 8. É decorativa (aria-hidden): o texto é o
+   aria-label do botão, que já é o nome dele. */
+.tt-dica{
+  position:absolute; inset:auto; margin:4px 0;
+  position-anchor:--tt-dica-alvo; position-area:block-start; position-try-fallbacks:flip-block;
+  max-width:240px; overflow:visible;
+  padding:5px 8px 7px;
+  font:var(--tt-type-caption); white-space:nowrap;
+  background:var(--tt-bg-card); color:var(--tt-fg-1);
+  border:1px solid var(--tt-border); border-radius:var(--tt-r-ctl);
+  box-shadow:var(--shadow8);
+}

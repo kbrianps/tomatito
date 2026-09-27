@@ -20,6 +20,7 @@ import { Updates } from '@microsoft/fast-element';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { montarBarraDeTitulo } from './components/title-bar.js';
 import { icone } from './components/icon.js';
+import { ligarDicas } from './components/dica.js';
 import { montarNavegacao } from './components/nav-view.js';
 import { ligarAtalhosDeNavegacao, ligarEscDasListas } from './lib/keys.js';
 import { iniciarRoteador } from './router.js';
@@ -66,6 +67,8 @@ try {
   });
   ligarAtalhosDeNavegacao((rota) => roteador.navegar(rota));
   ligarEscDasListas();
+  // Dica dos botões só de ícone (M13): uma para a página inteira.
+  ligarDicas();
 
   // Força o layout do texto novo, para as fontes dele entrarem no
   // document.fonts.ready (sem isso, o ready poderia resolver antes de o
