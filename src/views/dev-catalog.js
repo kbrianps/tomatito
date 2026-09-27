@@ -25,6 +25,7 @@
 // virada para cima perto da borda de baixo (docs/decisoes.md, M12).
 import { Updates } from '@microsoft/fast-element';
 import { grades, icone, NOMES } from '../components/icon.js';
+import { sons } from '../lib/ipc.js';
 
 // Botão só de ícone: aria-label (o nome) e data-dica (a dica com o mesmo texto).
 const deIcone = (classe, nome, rotulo, { grade = 16, extra = '' } = {}) =>
@@ -246,6 +247,15 @@ const AMOSTRA = `
       </div>
     </section>
 
+    <section class="tt-card" aria-labelledby="amostra-sons" data-amostra="sons">
+      <h2 id="amostra-sons" class="tt-t-subtitle">Sons</h2>
+      <p class="tt-fg-2">Os dois avisos sonoros, tocados agora na saída de áudio atual. Troque a saída (um fone, por exemplo) e teste de novo: vale sem reiniciar o app.</p>
+      <div class="tt-linha">
+        <button type="button" data-som="focusEnd">Testar fim de foco</button>
+        <button type="button" data-som="breakEnd">Testar fim de intervalo</button>
+      </div>
+    </section>
+
     <section class="tt-card tt-amostra-largo" aria-labelledby="amostra-icones" data-amostra="icones">
       <h2 id="amostra-icones" class="tt-t-subtitle">Ícones</h2>
       <p class="tt-fg-2">Todos os copiados para src/assets/icons/, em cada grade copiada (16, 20 ou 24 px).</p>
@@ -270,6 +280,12 @@ export function montar(raiz) {
   // fecham pelo próprio fluent-dialog). Na volta, o foco vai para o botão que
   // abriu, como no ContentDialog.
   const aoClicar = (ev) => {
+    // Sons (M20): cada botão pede o `sound_test` do seu som.
+    const som = ev.target.closest?.('[data-som]');
+    if (som) {
+      sons.testar(som.dataset.som).catch((e) => console.error('sound_test', e));
+      return;
+    }
     const abre = ev.target.closest?.('[data-abre]');
     if (abre) {
       raiz.querySelector(`#${abre.dataset.abre}`)?.show();

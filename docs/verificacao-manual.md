@@ -540,3 +540,25 @@ O que foi conferido de forma automática (27/09/2026):
 5. [ ] **Região `aria-live`:** abra o DevTools (botão direito, Inspecionar), ache no fim do `<body>` o `<div class="tt-anuncio" aria-live="polite">` e repita os passos 1 a 4 olhando o nó: ele muda de texto uma vez por fase (quatro vezes na sessão), e não muda ao pausar e retomar nem a cada minuto.
 6. [ ] (Opcional, o Orca é do M43.) Com o Orca ligado (Super+Alt+S), cada troca de fase é lida uma vez.
 7. [ ] Feche o `tauri dev` (Ctrl+C no terminal).
+
+## M20. Sons
+
+O que foi conferido de forma automática (27/09/2026):
+
+- **Os arquivos e a thread** (`cargo test -p tomatito audio`): os dois WAVs embutidos são mono, 44,1 kHz, 16 bits e 1 s; o rodio decodifica os dois; o fim de foco tem dois ataques e o de intervalo, um; o volume escala o som; a thread atende os pedidos na ordem, não trava quem pede e segue depois de um erro e de um pânico. `python3 scripts/gen-sounds.py --check` confere que os arquivos são os do script, byte a byte.
+- **Tocando de verdade na saída da máquina, a 1%** (`cargo test -p tomatito toca_na_saida -- --ignored`, com o `pw-dump` olhando): o PipeWire mostrou o fluxo `alsa_playback.tomatito…` rodando, um por som, e sumindo entre um e outro.
+- **No app de verdade, com PipeWire** (`TOMATITO_SPEED=60 TT_PIPEWIRE=/run/user/$UID bash scripts/gnome-aninhado/rodar.sh sons`, GNOME Shell aninhado): no `#/dev`, o ponteiro virtual clica em "Testar fim de foco" e em "Testar fim de intervalo": cada clique abre um fluxo novo no PipeWire, de uns 1,4 s, ligado à saída padrão, que fecha sozinho; o `sound_test` sem argumento abre dois, um depois do outro; uma sessão de 5 min (5 s a 60×) termina e o som sai pelo motor. Nenhuma falha de som no log.
+- **No app de verdade, sem áudio** (o mesmo com `TT_SEM_AUDIO=1` no lugar do `TT_PIPEWIRE`): os cinco pedidos viram cinco linhas "`[tomatito] som: … não tocou: sem saída de áudio`" no log, a sessão termina, o app segue respondendo e fecha normalmente, sem pânico.
+- `npm test`, `npm run build`, `cargo fmt --all --check`, `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings` e a checagem cruzada `cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings` (com o `llvm-rc` do LLVM 21 no PATH) passam.
+
+O que não dá para conferir daqui: **ouvir** os sons e **trocar a saída** (esta máquina só tem a saída interna, e trocar a saída padrão da sua sessão durante o teste mexeria no seu áudio).
+
+### Para conferir (uns 5 minutos, com um fone à mão)
+
+1. [ ] Volume do sistema num nível normal. `cd ~/dev/tomatito && npm run tauri dev` e vá ao catálogo: no console do DevTools (botão direito, Inspecionar), digite `location.hash = '#/dev'` e Enter. Role até o cartão **Sons**.
+2. [ ] Clique em **Testar fim de foco**: duas notas curtas, subindo, que somem em menos de 1 s. Clique em **Testar fim de intervalo**: uma nota só. Nenhum estalo no começo nem no fim. Diga se o timbre e o volume (80%) servem (`docs/pendencias-usuario.md`, item 29).
+3. [ ] **Sem reiniciar o app**, plugue o fone (ou conecte um fone Bluetooth) e confira em Configurações → Som que a saída mudou para ele. Clique de novo em **Testar fim de foco**: o som sai **no fone**, e não no alto-falante.
+4. [ ] Desplugue o fone (a saída volta ao alto-falante) e teste de novo: sai no alto-falante.
+5. [ ] Com o som do sistema **mudo**, clique em Testar: nada toca e o app segue normal.
+6. [ ] **Fim de fase:** feche o `tauri dev` e abra com `TOMATITO_SPEED=60 npm run tauri dev`. Na Foco, ponha **60** no seletor e inicie: uns 27 s depois, o fim do foco toca as duas notas; uns 5 s depois, o fim do intervalo toca a nota só; uns 27 s depois, o fim da sessão toca as duas notas de novo. Repita com a janela **minimizada**: os sons tocam do mesmo jeito.
+7. [ ] Feche o `tauri dev` (Ctrl+C no terminal).

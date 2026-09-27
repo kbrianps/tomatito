@@ -12,7 +12,14 @@ if [ -n "${TT_APP_PELO_ROTEIRO:-}" ]; then
   # O roteiro abre o app sozinho (M08: várias partidas a frio).
   APP_PID=
 else
-  WAYLAND_DISPLAY=tt-aninhado GDK_BACKEND=wayland WAYLAND_DEBUG=client \
+  # M20: com TT_PIPEWIRE (a pasta do socket do PipeWire da sessão, em geral
+  # /run/user/$UID), só o app fala com o PipeWire de verdade, para o som sair;
+  # sem ela, o ALSA não acha o PipeWire (o XDG_RUNTIME_DIR é o da rodada) e
+  # pode abrir a placa direto. Com TT_SEM_AUDIO=1, o ALSA fica sem nenhuma
+  # configuração e o app, sem saída de áudio (o caminho de erro do M20).
+  env WAYLAND_DISPLAY=tt-aninhado GDK_BACKEND=wayland WAYLAND_DEBUG=client \
+    ${TT_PIPEWIRE:+PIPEWIRE_RUNTIME_DIR=$TT_PIPEWIRE} \
+    ${TT_SEM_AUDIO:+ALSA_CONFIG_PATH=/dev/null} \
     "$TOMATITO_BIN" > "$TT_OUT/app.log" 2>&1 &
   APP_PID=$!
 fi

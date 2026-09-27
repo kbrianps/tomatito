@@ -26,5 +26,14 @@ export const foco = Object.freeze({
   parar: () => invoke('focus_stop'),
 });
 
+/**
+ * `sound_test{sound?}` (audio.rs, M20): toca `'focusEnd'` ou `'breakEnd'`
+ * agora, com o volume atual; sem argumento, os dois, um depois do outro.
+ * Resolve na hora, sem esperar o som; um erro de áudio só vai para o log do Rust.
+ */
+export const sons = Object.freeze({
+  testar: (som) => invoke('sound_test', som ? { sound: som } : {}),
+});
+
 /** Ouve um evento do Rust; `cb` recebe só o conteúdo. Devolve o `unlisten`. */
 export const ouvir = (evento, cb) => listen(evento, (e) => cb(e.payload));

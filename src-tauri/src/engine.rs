@@ -20,8 +20,9 @@
 //! Tudo é emitido com o motor travado, para os eventos saírem na ordem das
 //! transições.
 //!
-//! Som (M20), notificação (M21) e gravação (M26) ainda não existem: por
-//! enquanto, o `TauriSink` só registra esses pedidos no stderr (em debug).
+//! O som (M20) vai para a thread do `audio.rs`, sem esperar. Notificação (M21)
+//! e gravação (M26) ainda não existem: por enquanto, o `TauriSink` só registra
+//! esses pedidos no stderr (em debug).
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -35,6 +36,7 @@ use tomatito_core::{
     PhaseChange, PlanSettings, SessionConfig, Sound, SystemClock,
 };
 
+use crate::audio::Som;
 use crate::events::{self, FocusDto, PhaseEventDto, SetupDto, StateDto, TickDto};
 
 /// O ritmo do laço (3.2).
@@ -389,14 +391,15 @@ pub fn clock_from_env() -> (Box<dyn Clock>, f64) {
     (Box::new(SystemClock), 1.0)
 }
 
-/// O [`Sink`] do app: emite os eventos para todas as janelas.
+/// O [`Sink`] do app: emite os eventos para todas as janelas e pede os sons.
 pub struct TauriSink {
     app: tauri::AppHandle,
+    som: Arc<Som>,
 }
 
 impl TauriSink {
-    pub fn new(app: tauri::AppHandle) -> Self {
-        Self { app }
+    pub fn new(app: tauri::AppHandle, som: Arc<Som>) -> Self {
+        Self { app, som }
     }
 
     fn emit<T: Serialize + Clone>(&self, event: &str, payload: &T) {
@@ -417,9 +420,10 @@ impl Sink for TauriSink {
     fn phase(&self, change: &PhaseEventDto) {
         self.emit(events::PHASE, change);
     }
-    fn sound(&self, _sound: Sound) {
-        #[cfg(debug_assertions)]
-        eprintln!("[tomatito] som (M20): {_sound:?}");
+    fn sound(&self, sound: Sound) {
+        // Só manda o pedido: o motor está travado aqui, e a thread de som é
+        // que espera o som acabar, com o volume que ela guarda.
+        self.som.tocar(sound);
     }
     fn notice(&self, _notice: Notice) {
         #[cfg(debug_assertions)]

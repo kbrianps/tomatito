@@ -44,6 +44,9 @@ if [ -z "${TT_DENTRO_DO_ESCOPO:-}" ]; then
   exit $CODIGO
 fi
 
+# M20: fora do PipeWire, o ALSA do app pode abrir a placa direto; os fins de
+# fase dos roteiros tocam a 1%, salvo TOMATITO_VOLUME explícito.
+export TOMATITO_VOLUME=${TOMATITO_VOLUME:-1}
 export TT_OUT=${TT_OUT:-$(mktemp -d "${TMPDIR:-/tmp}/tomatito-aninhado-XXXXXX")}
 mkdir -p "$TT_OUT"
 export SONDA_LOG=$TT_OUT/sonda.jsonl

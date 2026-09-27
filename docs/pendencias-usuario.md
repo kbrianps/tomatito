@@ -47,6 +47,9 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 27. **Conferir o M19 na tela** (desde o M19). Uns 5 minutos, com os passos em `docs/verificacao-manual.md`, seção M19: o pausado, o intervalo, a volta ao "Pronto para focar", o Espaço e a região `aria-live` no DevTools. No Lite, o traço aceso do intervalo (`--tt-fg-2`, rosa-claro) fica perto do branco do foco; diga se basta ou se prefere outro tom. O teste aninhado já fez o "Pronto quando" com o teclado virtual (11 conferências ok); falta o seu olho. Não bloqueia o M20.
 28. **Pausado, intervalo e Espaço no Windows** (desde o M19). No WebView2, repetir os passos 1 a 5 da seção M19, e o 3 também com o alto contraste do Windows ligado (traço aceso do intervalo na cor do texto, número pausado em cinza). O anúncio pelo Narrador é do M49. A prévia no Chrome headless (o mesmo motor) já passou em tudo, com o Espaço de verdade. Entra na ida ao Windows do M48.
 
+29. **Ouvir os sons e trocar a saída** (desde o M20). Uns 5 minutos, com um fone, com os passos em `docs/verificacao-manual.md`, seção M20: escutar os dois sons no catálogo (`#/dev`, cartão Sons) e dizer se o timbre e o volume padrão (80%, a 3.3 deixou "a confirmar") servem; plugar o fone e testar de novo **sem reiniciar o app** (é o "Pronto quando" do M20); e ouvir os três fins de fase numa sessão acelerada. O teste aninhado já conferiu, pelo PipeWire, que cada som abre um fluxo novo na saída padrão do momento e que, sem saída de áudio, o app só registra no log; falta o seu ouvido e o fone. Não bloqueia o M21.
+30. **Som no Windows** (desde o M20). No Windows, o rodio usa o WASAPI. Repetir os passos 2 a 5 da seção M20 (com um fone USB ou Bluetooth trocando a saída padrão). Som duplo com a notificação é do M49. A checagem cruzada `cargo clippy --target x86_64-pc-windows-msvc` passa; falta tocar de verdade. Entra na ida ao Windows do M48.
+
 ## Resolvidas
 
 - **Nome** (1.2, item 1): continua "Tomatito".

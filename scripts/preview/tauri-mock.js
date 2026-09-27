@@ -169,6 +169,11 @@ const handlers = {
     motor.sessao = null;
     return transicao('stopped');
   },
+  // M20: o som não toca na prévia; só anota o pedido.
+  sound_test: ({ sound } = {}) => {
+    window.__TOMATITO_PREVIEW_COMANDOS__.push(`sound_test:${sound ?? 'ambos'}`);
+    return null;
+  },
   'plugin:window|is_maximized': () => janela.maximizada,
   'plugin:window|toggle_maximize': () => {
     janela.maximizada = !janela.maximizada;

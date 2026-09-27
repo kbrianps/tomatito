@@ -1,3 +1,4 @@
+mod audio;
 mod commands;
 mod engine;
 mod events;
@@ -14,10 +15,13 @@ pub fn run() {
             // O motor nasce antes das janelas: o laço roda com ou sem elas
             // (PLANO.md, 3.2), e o primeiro `get_state` do JS já o encontra.
             let (clock, speed) = engine::clock_from_env();
+            // A thread de som sobe junto: o motor e o `sound_test` usam a mesma.
+            let som = Arc::new(audio::Som::iniciar());
+            app.manage(som.clone());
             let motor = Arc::new(engine::Engine::new(
                 clock,
                 speed,
-                engine::TauriSink::new(app.handle().clone()),
+                engine::TauriSink::new(app.handle().clone(), som),
             ));
             app.manage(motor.clone());
             tauri::async_runtime::spawn(motor.run());
@@ -34,6 +38,7 @@ pub fn run() {
             commands::focus_resume,
             commands::focus_skip,
             commands::focus_stop,
+            commands::sound_test,
         ])
         .run(tauri::generate_context!())
         .expect("error while building tauri application");

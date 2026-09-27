@@ -25,6 +25,9 @@ tauri = { version = "=2.12.0", features = [] }
 tomatito-core = { path = "tomatito-core" }
 # O laço do motor (engine.rs): interval e Notify. É o mesmo tokio do Tauri.
 tokio = { version = "1.53", features = ["time", "sync", "macros"] }
+# Som (audio.rs, M20). Só a saída (cpal) e o WAV pelo hound: sem os
+# decodificadores do symphonia nem a gravação (docs/decisoes.md, M20).
+rodio = { version = "0.22.2", default-features = false, features = ["playback", "hound"] }
 
 [dev-dependencies]
 # Testes do laço com o tempo do tokio parado (start_paused).

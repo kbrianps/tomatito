@@ -6,8 +6,11 @@
 
 use std::sync::Arc;
 
+use serde::Deserialize;
 use tauri::State;
+use tomatito_core::Sound;
 
+use crate::audio::Som;
 use crate::engine::{CommandError, Engine, TauriSink};
 use crate::events::{FocusDto, StateDto};
 
@@ -50,4 +53,35 @@ pub fn focus_skip(engine: State<'_, AppEngine>) -> Result<FocusDto, CommandError
 #[tauri::command]
 pub fn focus_stop(engine: State<'_, AppEngine>) -> Result<FocusDto, CommandError> {
     engine.stop()
+}
+
+/// Qual som testar, no JS: `"focusEnd"` ou `"breakEnd"`.
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SoundDto {
+    FocusEnd,
+    BreakEnd,
+}
+
+impl From<SoundDto> for Sound {
+    fn from(s: SoundDto) -> Self {
+        match s {
+            SoundDto::FocusEnd => Sound::FocusEnd,
+            SoundDto::BreakEnd => Sound::BreakEnd,
+        }
+    }
+}
+
+/// `sound_test{sound?}`: toca um som agora, com o volume atual (o "Testar"
+/// das Configurações, M38). Sem `sound`, toca os dois, um depois do outro.
+/// Volta na hora; um erro de áudio só vai para o log (`audio.rs`).
+#[tauri::command]
+pub fn sound_test(som: State<'_, Arc<Som>>, sound: Option<SoundDto>) {
+    let sons = match sound {
+        Some(s) => vec![s.into()],
+        None => vec![Sound::FocusEnd, Sound::BreakEnd],
+    };
+    for s in sons {
+        som.tocar(s);
+    }
 }
