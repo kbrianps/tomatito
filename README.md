@@ -23,6 +23,7 @@ Requisitos: Node 22.12 ou mais novo, Rust 1.90 ou mais novo e as dependências d
 npm ci
 npm run tauri dev                              # o app em modo de desenvolvimento
 npm test                                       # testes do JS (node --test)
+node scripts/contrast.mjs                      # contraste (WCAG 2.2) dos pares de cada tema
 cd src-tauri && cargo test -p tomatito-core    # testes do motor, sem compilar o Tauri
 ```
 

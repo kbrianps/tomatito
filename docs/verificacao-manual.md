@@ -151,3 +151,16 @@ A amostra fica direto no `index.html` (a rota `#/dev` entra no M09). A janela ai
 5. [ ] Passe o mouse sobre "Iniciar sessão de foco" (fica um pouco mais rosado) e sobre "Cancelar" (fica um pouco mais claro). Segurando o clique, os dois mudam de novo.
 6. [ ] A letra é a Inter, a mesma da captura (o "25:00" do cartão "Texto" e o "16:00" do anel com números da mesma largura). Para conferir pelo console: botão direito → **Inspecionar** → Console, e digite `document.fonts.check('14px "Inter Variable"')`. A resposta é `true`.
 7. [ ] Feche a janela e encerre o `tauri dev` com Ctrl+C no terminal.
+
+## M06b. Conferência de contraste
+
+Nada a conferir na tela: o marco é um script, e o "Pronto quando" é automático.
+
+### O que já foi conferido (26/09/2026)
+
+- `node scripts/contrast.mjs` termina com código 0 e imprime a tabela 4.4 (os quatro temas e os três estados do tomate), com os 90 valores iguais aos do plano.
+- `npm test` roda o mesmo cálculo (`scripts/contrast.test.mjs`), então o CI confere a tabela em todo push.
+
+### Se quiser rodar (1 minuto)
+
+1. [ ] Em `~/dev/tomatito`, rode `node scripts/contrast.mjs; echo $?`. Aparece a tabela, a última linha diz "todos no mínimo ou acima e iguais à tabela 4.4 do plano." e o `echo` mostra `0`.
