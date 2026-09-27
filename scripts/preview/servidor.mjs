@@ -5,10 +5,15 @@
 // no meio a limpeza dos scripts de prévia (fechar o navegador e apagar o
 // perfil temporário). Os ouvintes que o Vite acrescenta são removidos aqui;
 // quem chama fica responsável por fechar o servidor nos sinais.
+//
+// O Vite sobe pela API, sem o `npm run dev`, então o predev não roda: o
+// fluent-tokens.gen.css (M11) é gerado aqui antes.
 import { createServer } from 'vite';
+import { escrever as gerarTokensFluent } from '../build-theme-css.mjs';
 import previewConfig from './vite.config.js';
 
 export async function startPreviewServer() {
+  gerarTokensFluent();
   const before = {
     sigterm: new Set(process.listeners('SIGTERM')),
     stdinEnd: new Set(process.stdin.listeners('end')),

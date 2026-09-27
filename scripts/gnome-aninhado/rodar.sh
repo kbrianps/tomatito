@@ -54,6 +54,8 @@ export TOMATITO_BIN=${TOMATITO_BIN:-$TARGET/debug/tomatito}
 export TT_ROTEIRO=$AQUI/roteiros/$ROTEIRO.js
 grep -q '^export const LANCA_O_APP = true;' "$TT_ROTEIRO" && export TT_APP_PELO_ROTEIRO=1
 export TT_NODE=$(command -v node) TT_CONSOLE_MJS=$AQUI/console.mjs
+# O Vite sobe direto, sem o `npm run dev`: o predev (tokens do Fluent, M11) roda aqui.
+node "$RAIZ/scripts/build-theme-css.mjs" > "$TT_OUT/tokens.log" 2>&1 || { cat "$TT_OUT/tokens.log"; exit 1; }
 
 RUNDIR=$(mktemp -d /tmp/tt-XXXXXX)
 chmod 700 "$RUNDIR"

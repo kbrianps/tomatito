@@ -1,7 +1,7 @@
 /* src/styles/bridge.css: ponte dos tokens do Tomatito para os do Fluent (PLANO 4.3).
-   Carrega depois do fluent-tokens.gen.css (a partir do M11): mesma especificidade, a
-   ordem decide. O (0,1,0) daqui também vence o html{} (0,0,1) que o setTheme
-   provisório grava numa folha adotada (M01 a M11). */
+   Carrega depois do fluent-tokens.gen.css (M11): mesma especificidade (0,1,0), a
+   ordem decide. Os tokens que a ponte não cobre (--borderRadiusCircular, --spacing*,
+   --colorNeutralForegroundInverted...) vêm do gerado. */
 
 [data-theme]{
   --colorNeutralBackground1:var(--tt-bg-card); --colorNeutralBackground2:var(--tt-bg-surface);

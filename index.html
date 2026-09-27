@@ -12,7 +12,9 @@ h.dataset.themePref=p;h.dataset.theme=r;h.dataset.platform=w.__TT_PLATFORM__||'w
 if(tomato&&w.__TT_FULL_MODE__==='opaque')h.dataset.fullMode='opaque';})();</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tomatito</title>
-    <!-- Ordem da seção 4.2 do plano. O fluent-tokens.gen.css entra antes do tokens.css no M11. -->
+    <!-- Ordem da seção 4.2 do plano. O fluent-tokens.gen.css (M11) é gerado pelo
+         scripts/build-theme-css.mjs no predev e no prebuild, e fica fora do git. -->
+    <link rel="stylesheet" href="/src/styles/fluent-tokens.gen.css" />
     <link rel="stylesheet" href="/src/styles/tokens.css" />
     <link rel="stylesheet" href="/src/styles/bridge.css" />
     <link rel="stylesheet" href="/src/styles/fonts.css" />

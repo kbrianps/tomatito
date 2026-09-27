@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "node scripts/build-theme-css.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/build-theme-css.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",

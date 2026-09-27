@@ -9,6 +9,13 @@
 //                          o mesmo, com um bloco de 3000 px no fim da tela,
 //                          para a camada ganhar a barra de rolagem vertical
 //   __ttTema('light')      troca o data-theme, espera dois quadros e mede
+//   __ttFluent()           (M11) os tokens do Fluent no <html> e as cores que
+//                          os fluent-switch e fluent-radio da tela pintam agora
+//   __ttFluent('suave')    o mesmo, depois de trocar o data-theme e esperar
+//                          dois quadros (a troca que se faz no DevTools)
+//   __ttFluentAninhado('suave')
+//                          o mesmo num <div data-theme="suave"> com um switch,
+//                          posto e tirado da página (prévia aninhada)
 //
 // "Rolagem horizontal" é medida pelo efeito, e não por scrollWidth >
 // clientWidth: o teste manda rolar para a direita e vê quanto andou. Com zoom
@@ -110,4 +117,51 @@
     await doisQuadros();
     return window.__ttMedidas();
   };
+
+  // M11: tokens do Fluent (todas as propriedades --* do <html> que não são
+  // --tt-*), os --tt-* (para conferir a ponte) e, para cada componente da
+  // tela, as cores do próprio elemento e do indicador dentro do shadow root,
+  // que é onde os tokens viram pixel.
+  window.__ttFluent = async (tema) => {
+    const h = document.documentElement;
+    if (tema) {
+      h.dataset.theme = tema;
+      await doisQuadros();
+    }
+    return { tema: h.dataset.theme, ...fluentEm(h, document) };
+  };
+  // Prévia aninhada (o motivo de os seletores serem [data-theme], e não
+  // :root; PLANO.md, 4.2): um <div data-theme="suave"> com um switch marcado
+  // dentro do <html> de outro tema. Mede o div e o switch e os tira da tela.
+  window.__ttFluentAninhado = async (tema) => {
+    const div = document.createElement('div');
+    div.dataset.theme = tema;
+    div.innerHTML = '<fluent-switch checked></fluent-switch>';
+    document.body.append(div);
+    await doisQuadros();
+    const r = { tema, temaDoHtml: document.documentElement.dataset.theme, ...fluentEm(div, div) };
+    div.remove();
+    return r;
+  };
+  function fluentEm(el, raiz) {
+    const cs = getComputedStyle(el);
+    const props = [...cs].filter((p) => p.startsWith('--'));
+    const valores = (doTomatito) =>
+      Object.fromEntries(
+        props.filter((p) => p.startsWith('--tt-') === doTomatito).map((p) => [p.slice(2), cs.getPropertyValue(p).trim()]),
+      );
+    const componentes = [...raiz.querySelectorAll('fluent-switch, fluent-radio')].map((c) => {
+      const s = getComputedStyle(c);
+      const ind = c.shadowRoot?.querySelector('.checked-indicator');
+      const si = ind && getComputedStyle(ind);
+      return {
+        tag: c.localName,
+        marcado: Boolean(c.checked),
+        fundo: s.backgroundColor,
+        borda: s.borderTopColor,
+        indicador: si && { fundo: si.backgroundColor, cor: si.color },
+      };
+    });
+    return { tokens: valores(false), tt: valores(true), componentes };
+  }
 })();

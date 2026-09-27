@@ -115,7 +115,8 @@ const jsDoApp = readdirSync(new URL('../src', import.meta.url), { recursive: tru
 test('folhas de estilo como <link> no index.html, na ordem da seção 4.2, e nunca por import no JS', () => {
   const ordem = ['fluent-tokens.gen.css', 'tokens.css', 'bridge.css', 'fonts.css', 'base.css', 'shell.css', 'controls.css'];
   const links = [...indexHtml.matchAll(/<link rel="stylesheet" href="\/src\/styles\/([^"]+)"/g)].map((m) => m[1]);
-  for (const folha of ['tokens.css', 'bridge.css', 'fonts.css', 'base.css']) {
+  // M11: o fluent-tokens.gen.css entra como primeira folha (scripts/build-theme-css.test.mjs).
+  for (const folha of ['fluent-tokens.gen.css', 'tokens.css', 'bridge.css', 'fonts.css', 'base.css']) {
     assert.ok(links.includes(folha), `falta o <link> do ${folha}`);
   }
   assert.deepEqual(links, ordem.filter((folha) => links.includes(folha)), 'ordem diferente da seção 4.2');

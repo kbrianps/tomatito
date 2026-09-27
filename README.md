@@ -27,6 +27,8 @@ node scripts/contrast.mjs                      # contraste (WCAG 2.2) dos pares 
 cd src-tauri && cargo test -p tomatito-core    # testes do motor, sem compilar o Tauri
 ```
 
+O `src/styles/fluent-tokens.gen.css` (os tokens do Fluent de cada tema) é gerado pelo `scripts/build-theme-css.mjs`, que roda sozinho antes do `npm run dev` e do `npm run build` (e, portanto, do `tauri dev` e do `tauri build`). Ele fica fora do git; para refazê-lo à mão, `node scripts/build-theme-css.mjs`.
+
 Conferências visuais sem abrir janelas na sua sessão (em `scripts/`, fora do app):
 
 ```bash
@@ -35,7 +37,9 @@ bash scripts/gnome-aninhado/rodar.sh barra-de-titulo                 # a janela 
 bash scripts/gnome-aninhado/rodar.sh partida-a-frio                  # 10 aberturas, quadro a quadro, e o console do DevTools
 bash scripts/gnome-aninhado/rodar.sh navegacao                       # painel, atalhos, teclado e o indicador deslizando
 bash scripts/gnome-aninhado/rodar.sh responsivo                      # estreitar a janela até 480 px, zoom e dicas do painel
+bash scripts/gnome-aninhado/rodar.sh temas-fluent                    # os tokens do Fluent em cada tema, na página e na tela
 node scripts/preview/responsivo.mjs                                  # o layout em 15 larguras, no Chrome e no WebKitGTK
+node scripts/preview/temas-fluent.mjs                                # os tokens do Fluent nos cinco temas, no Chrome e no WebKitGTK
 ```
 
 O CI (`.github/workflows/ci.yml`) roda o build, os testes, o `cargo fmt` e o `cargo clippy` no Linux e no Windows a cada push.

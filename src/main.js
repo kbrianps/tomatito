@@ -3,8 +3,6 @@
 import '@fluentui/web-components/switch.js';
 import '@fluentui/web-components/radio.js';
 import '@fluentui/web-components/radio-group.js';
-import { setTheme } from '@fluentui/web-components/theme/set-theme.js';
-import { webDarkTheme } from '@fluentui/tokens';
 import { Updates } from '@microsoft/fast-element';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { montarBarraDeTitulo } from './components/title-bar.js';
@@ -17,7 +15,8 @@ import * as temporizador from './views/timers.js';
 import * as cronometro from './views/stopwatch.js';
 import * as configuracoes from './views/settings.js';
 import * as dev from './views/dev-catalog.js';
-setTheme(webDarkTheme);   // provisório: sai no M11
+// Os tokens do Fluent vêm do fluent-tokens.gen.css, um bloco por data-theme
+// (PLANO.md, 4.5): sem setTheme() em runtime desde o M11.
 
 // Boot sem clarão (PLANO.md, 4.7). Os atributos de tema e de plataforma já
 // estão no <html>, gravados pelo script do <head>. A main nasce escondida

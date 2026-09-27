@@ -48,6 +48,18 @@ const ESTADO = `(async () => {
         rolagemHorizontal: h.scrollWidth > h.clientWidth,
       };
     })(),
+    // M11: tokens do Fluent vindos do CSS gerado, sem a folha adotada do setTheme.
+    fluent: (() => {
+      const cs = getComputedStyle(h);
+      const v = (n) => cs.getPropertyValue(n).trim();
+      return {
+        folhasAdotadas: document.adoptedStyleSheets.length,
+        tokens: [...cs].filter((p) => p.startsWith('--') && !p.startsWith('--tt-')).length,
+        colorNeutralForegroundInverted: v('--colorNeutralForegroundInverted'),
+        colorCompoundBrandBackground: v('--colorCompoundBrandBackground'),
+        borderRadiusCircular: v('--borderRadiusCircular'),
+      };
+    })(),
   });
 })()`;
 // Um <script> inline sem hash, posto pela página: a CSP do build o recusa. (Um

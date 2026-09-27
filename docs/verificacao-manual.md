@@ -314,3 +314,32 @@ A área das telas virou uma camada (`--tt-bg-surface`) com borda de 1 px em cima
 8. [ ] Feche a janela no X e, no terminal, Ctrl+C se o `tauri dev` não sair sozinho.
 
 Se algo não bater, anote qual passo e o que apareceu.
+
+## M11. Tokens do Fluent gerados
+
+Os tokens do Fluent (as cores, os raios e as sombras que os componentes leem) agora vêm de um arquivo gerado no build, `src/styles/fluent-tokens.gen.css`, com um bloco por tema; o `setTheme` provisório do M01 saiu. No Lite, nada muda na tela. Nos temas claros (Suave e Claro), a bolinha do switch ligado passa de escura a branca, como no Windows 11. Captura: `docs/capturas/m11-temas-fluent.png`, do app de verdade no teste aninhado: em cima, o cartão "Opções" do `#/dev` nos quatro temas; embaixo, o Suave e o Claro como eram no M10.
+
+### O que já foi conferido sem olhar a tela (27/09/2026)
+
+- **Teste num GNOME Shell aninhado** (Mutter 50.1, Wayland, o app de verdade; nada aparece na sua tela): `bash scripts/gnome-aninhado/rodar.sh temas-fluent`, 18 conferências, todas ok:
+  - **nada muda na tela:** as cinco telas no Lite, a 1000 × 700, idênticas pixel a pixel às do M10 (uma rodada com o `index.html` e o `main.js` do M10, outra com os do M11, comparadas com `TT_ANTES`);
+  - trocando o `data-theme` do `<html>` como no console do DevTools, entre `lite`, `suave`, `light` e `dark`: os 459 tokens do Fluent de cada tema são os do bloco gerado (e, nos 22 que a ponte cobre, o `--tt-*` do tema); o switch, o radio e o cartão pintam as cores do tema na página e na captura da tela, de quatro jeitos diferentes;
+  - um `<div data-theme="suave">` dentro do `<html>` do Lite recebe os tokens e o switch do Suave;
+  - nenhum erro na página; o app sai sozinho quando a janela fecha.
+  - Controle negativo: com o `index.html` e o `main.js` do M10, as conferências de tokens falham nos quatro temas, e as da tela no Suave e no Claro (a bolinha escura).
+- **Nos dois motores, sem janela** (`node scripts/preview/temas-fluent.mjs`): o mesmo no Chrome headless (o motor do Windows) e no WebKitGTK fora da tela, nos cinco temas (com o `full`, que pinta como o Lite) e na prévia aninhada do Suave, do Claro e do Escuro. As prévias das cinco telas no Lite e da Foco e do `#/dev` no Escuro também saíram idênticas às do M10, pixel a pixel, nos dois motores.
+- **Build:** `rm -f src/styles/fluent-tokens.gen.css && npm run build` gerou o arquivo de novo antes do Vite; no CSS do `dist/`, os tokens de cada tema equivalem aos do dev (o build só encurta a escrita, como `200ms` para `.2s`).
+- **Regressões:** os roteiros do M07 (36 conferências), do M09 (25) e do M10 (18) e as partidas a frio do M08 (10 no dev e 10 no build de debug, sem quadro fora do Lite e sem "Refused to") continuam passando.
+- **Na sua sessão, rápido e sem mexer na janela:** o build de debug (`npx tauri build --debug --no-bundle`) abriu com o inspetor remoto; o console veio vazio, a CSP recusou o controle, o `<html>` veio com `lite`, a Inter carregada, nenhuma folha adotada no documento (a do `setTheme` saiu), os tokens do Fluent vindos do CSS gerado (`--colorNeutralForegroundInverted` `#242424`, `--borderRadiusCircular` `10000px`) e o layout de 1000 px igual ao do M10. O app foi fechado logo em seguida, sem processo sobrando.
+- `npm test` (64 testes, 8 novos do gerador), `node scripts/contrast.mjs`, `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace` e a checagem cruzada do Windows passam.
+
+### Passos para você (uns 3 minutos)
+
+1. [ ] Em `~/dev/tomatito`, rode `rm -f src/styles/fluent-tokens.gen.css && npm run build`. A primeira linha depois do `> prebuild` diz `build-theme-css: src/styles/fluent-tokens.gen.css gerado (39811 bytes)`, e o build termina com o `dist/` montado; o arquivo existe de novo em `src/styles/`.
+2. [ ] Rode `npm run tauri dev` e espere a janela (uns 5 s). Ela abre no Lite, igual à de antes.
+3. [ ] Botão direito na janela → **Inspecionar** → aba **Console**. Digite `location.hash = '#/dev'` e Enter: aparece a "Amostra do tema".
+4. [ ] No Console, digite `document.documentElement.dataset.theme = 'suave'` e Enter. O fundo fica rosado claro, o switch "Tocar som no fim do foco" fica vermelho com a **bolinha branca**, o desligado tem a bolinha marrom, e o radio "5 minutos" fica vermelho. Repita com `'light'` (o mesmo sobre cinza claro), `'dark'` (fundo escuro, switch em vermelho claro com a bolinha escura) e `'lite'` (volta ao vermelho, com o switch creme).
+5. [ ] (Opcional) Na aba **Elements**, clique no `<html>`, dê duplo clique no valor de `data-theme` e troque por `suave`: o efeito é o mesmo do passo 4. No painel **Styles** de um `fluent-switch`, os `--color...` vêm do `fluent-tokens.gen.css`, e os que a ponte cobre (como `--colorNeutralBackground1`), do `bridge.css`.
+6. [ ] Feche a janela no X e, no terminal, Ctrl+C se o `tauri dev` não sair sozinho.
+
+Se algo não bater, anote qual passo e o que apareceu.
