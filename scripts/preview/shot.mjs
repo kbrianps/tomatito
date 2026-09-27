@@ -14,6 +14,8 @@
 // Passos (repetíveis, executados em ordem):
 //   --eval "expr"         avalia na página e imprime o resultado em JSON
 //   --click "seletor"     clique real do mouse no centro do elemento
+//   --hover "seletor"     move o mouse para o centro do elemento (:hover)
+//   --press "seletor"     aperta o botão do mouse no centro, sem soltar (:active)
 //   --fonts "seletor"     fontes da plataforma usadas no texto do elemento
 //                         (CSS.getPlatformFontsForNode), com o nº de glifos
 //   --wait 300            espera, em ms
@@ -38,7 +40,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { startPreviewServer } from './servidor.mjs';
 
-const STEP_KINDS = ['eval', 'click', 'fonts', 'wait', 'shot'];
+const STEP_KINDS = ['eval', 'click', 'hover', 'press', 'fonts', 'wait', 'shot'];
 
 function parseArgs(argv) {
   const opts = { size: '1000x700', scheme: 'dark', path: '/' };
@@ -333,7 +335,7 @@ async function main() {
         await new Promise((r) => setTimeout(r, Number(value)));
       } else if (kind === 'eval') {
         console.log(`${value} => ${JSON.stringify(await evaluate(value))}`);
-      } else if (kind === 'click') {
+      } else if (kind === 'click' || kind === 'hover' || kind === 'press') {
         const sel = JSON.stringify(value);
         const pt = await evaluate(`(() => {
           const el = document.querySelector(${sel});
@@ -342,17 +344,20 @@ async function main() {
           const r = el.getBoundingClientRect();
           return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
         })()`);
-        for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased']) {
+        const types = { click: ['mouseMoved', 'mousePressed', 'mouseReleased'], hover: ['mouseMoved'], press: ['mouseMoved', 'mousePressed'] }[kind];
+        for (const type of types) {
           await page.send('Input.dispatchMouseEvent', {
             type,
             x: pt.x,
             y: pt.y,
-            button: 'left',
-            clickCount: 1,
+            button: type === 'mouseMoved' ? 'none' : 'left',
+            buttons: type === 'mousePressed' ? 1 : 0,
+            clickCount: type === 'mouseMoved' ? 0 : 1,
           });
         }
         await settle();
-        console.log(`clique em ${value} (${Math.round(pt.x)}, ${Math.round(pt.y)})`);
+        const verbo = { click: 'clique em', hover: 'mouse sobre', press: 'botão apertado em' }[kind];
+        console.log(`${verbo} ${value} (${Math.round(pt.x)}, ${Math.round(pt.y)})`);
       } else if (kind === 'fonts') {
         await page.send('DOM.enable');
         await page.send('CSS.enable');

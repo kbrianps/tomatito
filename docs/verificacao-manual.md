@@ -164,3 +164,46 @@ Nada a conferir na tela: o marco é um script, e o "Pronto quando" é automátic
 ### Se quiser rodar (1 minuto)
 
 1. [ ] Em `~/dev/tomatito`, rode `node scripts/contrast.mjs; echo $?`. Aparece a tabela, a última linha diz "todos no mínimo ou acima e iguais à tabela 4.4 do plano." e o `echo` mostra `0`.
+
+## M07. Janela em Rust e barra de título
+
+A `main` agora nasce no `setup` (em Rust), sem a moldura do sistema, e a barra de título é própria. Capturas: `docs/capturas/m07-barra-de-titulo.png` (a janela inteira, com a borda de 1 px) e `docs/capturas/m07-barra-estados.png` (o X em hover e o glifo de restaurar com a janela maximizada, ampliados 3 vezes). As duas saíram do WebKitGTK de verdade, no GNOME Shell aninhado.
+
+### O que já foi conferido sem olhar a tela (26/09/2026)
+
+- **Teste num GNOME Shell aninhado** (Mutter 50.1, Wayland, o app de debug de verdade; nada aparece na sua tela): `bash scripts/gnome-aninhado/rodar.sh barra-de-titulo` terminou com código 0 e as 36 conferências ok:
+
+  | Conferência | Resultado |
+  |---|---|
+  | Janela | 1000 × 700, sem moldura (o quadro é igual ao buffer), uma janela só, título "Tomatito", app_id `tomatito`, mínimo 480 × 500 enviado ao compositor |
+  | Globais do `initialization_script` | `__TT_PREF__ = "lite"`, `__TT_PLATFORM__ = "linux"` |
+  | Botões | Minimizar, Maximizar e Fechar, com `aria-label` e `tabindex="-1"` |
+  | Borda de 1 px | `#BD6359` nos quatro lados, com `#A5342B` logo por dentro; some com a janela maximizada |
+  | Hover do X | fundo `#C42B1C` e glifo `#FFFFFF` (pixels da captura e estilo calculado) |
+  | Hover do minimizar | branco a 6% (`--tt-subtle-hover`) |
+  | Arrastar | pelo título, pelo ícone e pela área vazia da barra, a janela anda exatamente o que o ponteiro andou; pelo botão Minimizar e pelo conteúdo, não anda (e soltar fora do botão não minimiza) |
+  | Duplo clique na barra | maximiza (1920 × 1048, a área de trabalho) e restaura (1000 × 700, no mesmo lugar) |
+  | Botão do meio | maximiza e restaura; o glifo e o rótulo trocam entre Maximizar e Restaurar, também quando quem maximiza é o próprio GNOME |
+  | Minimizar | a janela minimiza |
+  | Redimensionar | pelas bordas direita, de baixo, esquerda e de cima (esta, sobre a barra), pelo canto de baixo à direita, e até o mínimo de 480 × 500 |
+  | Zoom | Ctrl+= deixa a página com 833 px de largura (120%); Ctrl+- volta a 1000 e depois vai a 1250 (80%); Ctrl+0 volta a 1000 |
+  | Fechar | a janela some, e o app sai sozinho com código 0 |
+  | Protocolo | o app pediu `xdg_toplevel.move`, `resize` com as bordas 8, 2, 4, 1 e 10, `set_maximized`, `unset_maximized` e `set_minimized`, sem erro |
+
+- **Na sua sessão, rápido e sem mexer na janela:** o binário de debug, com a sonda, abriu a janela em 1,1 s, a 1000 × 700, no tema Lite, com a plataforma `linux` e a borda. O `npm run tauri dev` também abriu a janela, em uns 4 s. As duas vezes o app foi fechado logo em seguida, sem processo sobrando.
+- **Prévia no Chrome headless:** posições da barra (ícone em x = 16, título em x = 46, botões de 46 × 32 a partir de x = 862), hover e pressionado do X e o glifo trocando ao clicar no botão do meio.
+- `npm test` (27 testes, 4 novos da barra e 3 novos de regras), `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings` e a checagem cruzada do Windows passam.
+
+### Passos para você (uns 4 minutos)
+
+1. [ ] Em `~/dev/tomatito`, rode `npm run tauri dev`. A janela abre sem a barra do GNOME: no topo há uma faixa de 32 px com um anel pequeno, "Tomatito" em letra pequena e três botões à direita (traço, quadrado e X).
+2. [ ] Em volta da janela há uma linha fina, um pouco mais clara que o vermelho do fundo (é a borda de 1 px; o GNOME não desenha sombra para esta janela).
+3. [ ] **Arrastar:** segure o clique sobre o título "Tomatito" e arraste: a janela vem junto. Repita pegando o anel e um ponto vazio da faixa, entre o título e os botões.
+4. [ ] **Duplo clique** num ponto vazio da faixa: a janela maximiza, a linha fina some e o quadrado do meio vira dois quadrados sobrepostos. Outro duplo clique: volta ao tamanho de antes, e o glifo volta a ser um quadrado.
+5. [ ] **Botões:** passe o mouse sobre o X: o fundo fica vermelho vivo e o X fica branco. Sobre o traço e o quadrado, o fundo só clareia um pouco. Clique no quadrado (maximiza), de novo (restaura) e no traço (minimiza); traga a janela de volta pelo dock ou pelo Alt+Tab.
+6. [ ] Passe o mouse sobre cada botão e espere: aparece a dica "Minimizar", "Maximizar" (ou "Restaurar") e "Fechar".
+7. [ ] **Redimensionar:** leve o mouse até a beirada de qualquer lado da janela (os últimos 5 px por dentro, sobre a linha fina): o cursor vira uma seta de redimensionar. Arraste e a janela muda de tamanho. Tente também por um canto e pela beirada de cima (sobre a faixa da barra). A janela não fica menor que uns 480 × 500.
+8. [ ] **Zoom:** clique no meio da página e aperte Ctrl e = (ou Ctrl e +): tudo fica maior, inclusive a barra. Ctrl e -: diminui. Ctrl e 0: volta ao normal.
+9. [ ] **Fechar:** clique no X. A janela fecha, e o `tauri dev` no terminal termina sozinho (ou fica esperando; nesse caso, Ctrl+C).
+
+Se algo não bater, anote o passo e o que apareceu. Se o duplo clique só arrastar, sem maximizar, ou se a beirada não mostrar o cursor de redimensionar, é justamente o que o teste aninhado não consegue ver com um mouse de verdade.

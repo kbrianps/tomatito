@@ -27,6 +27,13 @@ node scripts/contrast.mjs                      # contraste (WCAG 2.2) dos pares 
 cd src-tauri && cargo test -p tomatito-core    # testes do motor, sem compilar o Tauri
 ```
 
+Conferências visuais sem abrir janelas na sua sessão (em `scripts/`, fora do app):
+
+```bash
+npm run shot -- --path "/?plataforma=linux" --shot /tmp/previa.png   # prévia no Chrome headless
+bash scripts/gnome-aninhado/rodar.sh barra-de-titulo                 # a janela de verdade num GNOME Shell aninhado (Linux)
+```
+
 O CI (`.github/workflows/ci.yml`) roda o build, os testes, o `cargo fmt` e o `cargo clippy` no Linux e no Windows a cada push.
 
 Estrutura:

@@ -29,4 +29,4 @@ Ideias que ficam fora do marco da vez. Regra do plano (2.2): ideia nova entra aq
 
 Formato: data, marco em que surgiu e uma linha sobre a ideia.
 
-- (nenhuma ainda)
+- 26/09/2026, M07: barra de título esmaecida com a janela inativa (título e glifos em `--tt-fg-disabled`, como no Windows 11), pelo `onFocusChanged`.

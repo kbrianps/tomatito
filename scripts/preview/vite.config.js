@@ -11,6 +11,14 @@ export default {
   root,
   configFile: false,
   server: { ...base.server, port: 5174, strictPort: false },
+  // O mock entra pelo transformIndexHtml, que o Vite não varre ao pré-empacotar
+  // as dependências. Sem esta lista, a primeira prévia depois de limpar o cache
+  // descobre as dependências do mock com a página aberta, o Vite recarrega a
+  // página, e o shot.mjs fica esperando uma avaliação que não volta (M07).
+  optimizeDeps: {
+    ...base.optimizeDeps,
+    include: [...(base.optimizeDeps?.include ?? []), '@tauri-apps/api/mocks', '@tauri-apps/api/event'],
+  },
   plugins: [
     ...(base.plugins ?? []),
     {

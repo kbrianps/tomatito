@@ -1,0 +1,73 @@
+#!/bin/bash
+# Teste da janela main num GNOME Shell aninhado, sem tela (M07 em diante).
+#
+# Sobe um GNOME Shell 50 headless (o mesmo Mutter da sessão), com monitor
+# virtual de 1920x1080, e roda nele o binário de debug do app. Um roteiro de
+# automação (roteiros/*.js) roda dentro do shell: mexe na janela com ponteiro
+# e teclado virtuais, tira capturas e grava resultado.json. O resumo.mjs junta
+# isso ao que o app pediu ao compositor (WAYLAND_DEBUG) e sai com código 1 se
+# algo falhar. Nada aparece na tela da sessão de verdade.
+#
+#   bash scripts/gnome-aninhado/rodar.sh barra-de-titulo   # roteiro do M07
+#
+# Pré-requisito: o binário de debug atualizado (`cd src-tauri && cargo build`).
+# O `npm run build` não é preciso: a página vem do Vite (porta 5173, que
+# precisa estar livre), com a sonda injetada só nesse servidor.
+#
+# Derivado do teste do spike (scripts/aninhado, na branch spike/full), com o
+# mesmo isolamento: tudo roda num escopo do systemd do usuário (morto no fim),
+# com XDG_* próprios, GSettings em memória (não toca no dconf), um barramento
+# de sessão novo e um barramento de sistema falso, sem logind nem GDM. O
+# XDG_RUNTIME_DIR fica num diretório curto em /tmp (o caminho do socket
+# Wayland tem limite de 108 bytes) e é apagado no fim. A saída vai para $TT_OUT
+# ou um diretório temporário, impresso no fim, com resultado.json, capturas e
+# logs.
+set -u
+AQUI=$(cd "$(dirname "$0")" && pwd)
+RAIZ=$(cd "$AQUI/../.." && pwd)
+ROTEIRO=${1:-barra-de-titulo}
+[ -f "$AQUI/roteiros/$ROTEIRO.js" ] || { echo "roteiro inexistente: $AQUI/roteiros/$ROTEIRO.js"; exit 2; }
+
+if [ -z "${TT_DENTRO_DO_ESCOPO:-}" ]; then
+  UNIDADE=tt-aninhado-$$
+  TT_DENTRO_DO_ESCOPO=1 systemd-run --user --scope --quiet --unit="$UNIDADE" -- timeout 300 bash "$0" "$@"
+  CODIGO=$?
+  systemctl --user stop "$UNIDADE.scope" 2>/dev/null
+  exit $CODIGO
+fi
+
+export TT_OUT=${TT_OUT:-$(mktemp -d "${TMPDIR:-/tmp}/tomatito-aninhado-XXXXXX")}
+mkdir -p "$TT_OUT"
+export SONDA_LOG=$TT_OUT/sonda.jsonl
+: > "$SONDA_LOG"
+TARGET=$(cd "$RAIZ/src-tauri" && cargo metadata --format-version 1 --no-deps 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).target_directory))')
+export TOMATITO_BIN=${TOMATITO_BIN:-$TARGET/debug/tomatito}
+[ -x "$TOMATITO_BIN" ] || { echo "falta o binário de debug: $TOMATITO_BIN (cargo build)"; exit 1; }
+export TT_ROTEIRO=$AQUI/roteiros/$ROTEIRO.js
+
+RUNDIR=$(mktemp -d /tmp/tt-XXXXXX)
+chmod 700 "$RUNDIR"
+ISO=$TT_OUT/iso
+mkdir -p "$ISO"/{config,cache,data,state}
+export XDG_RUNTIME_DIR=$RUNDIR XDG_CONFIG_HOME=$ISO/config XDG_CACHE_HOME=$ISO/cache \
+  XDG_DATA_HOME=$ISO/data XDG_STATE_HOME=$ISO/state
+export GSETTINGS_BACKEND=memory XDG_CURRENT_DESKTOP=GNOME XDG_SESSION_TYPE=wayland NO_AT_BRIDGE=1
+unset WAYLAND_DISPLAY DISPLAY XDG_SESSION_DESKTOP GNOME_SHELL_SESSION_MODE DBUS_SESSION_BUS_ADDRESS
+# Mesa (Intel) para o shell e para o app; o EGL da NVIDIA fica de fora.
+export __EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/50_mesa.json
+
+dbus-daemon --session --address="unix:path=$RUNDIR/sistema" --nofork --nopidfile > "$TT_OUT/sistema.log" 2>&1 &
+SISTEMA=$!
+export DBUS_SYSTEM_BUS_ADDRESS="unix:path=$RUNDIR/sistema"
+
+cd "$RAIZ"
+node node_modules/vite/bin/vite.js --config "$AQUI/sonda.config.mjs" > "$TT_OUT/vite.log" 2>&1 &
+VITE=$!
+for _ in $(seq 100); do curl -sf http://localhost:5173/ > /dev/null && break; sleep 0.2; done
+
+dbus-run-session -- bash "$AQUI/dentro.sh" > "$TT_OUT/dbus.log" 2>&1
+
+kill $VITE $SISTEMA 2>/dev/null
+sleep 0.5
+rm -rf "$RUNDIR" "$ISO"
+node "$AQUI/resumo.mjs" "$TT_OUT"

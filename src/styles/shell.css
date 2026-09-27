@@ -1,8 +1,57 @@
 /* src/styles/shell.css: estrutura da janela main.
-   M07 traz a barra de título e a borda de 1 px no Linux; M09, a navegação;
-   M10, a camada de conteúdo e o responsivo. Por enquanto, só a página da
-   amostra do M06, que vai para a rota #/dev no M09. */
+   M07: a barra de título e a borda de 1 px no Linux; M09, a navegação;
+   M10, a camada de conteúdo e o responsivo. Abaixo da barra, por enquanto, só a
+   página da amostra do M06, que vai para a rota #/dev no M09. */
 
+/* Janela: barra de 32 px em cima e o conteúdo, que rola sozinho, embaixo. */
+.tt-janela{ display:grid; grid-template-rows:32px minmax(0,1fr); height:100%; }
+.tt-conteudo{ overflow:auto; }
+
+/* Barra de título (src/components/title-bar.js) */
+.tt-titlebar{
+  display:flex; align-items:center; min-width:0; height:32px;
+  background:var(--tt-titlebar-bg); color:var(--tt-fg-1);
+}
+.tt-titlebar-icone{
+  flex:none; width:16px; height:16px; margin-left:16px;               /* x = 16 */
+  fill:none; stroke:var(--tt-accent-fg); stroke-width:2; stroke-linecap:round;
+}
+.tt-titlebar-titulo{
+  flex:0 1 auto; min-width:0; margin-left:14px;                        /* x = 46 */
+  font:var(--tt-type-caption);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+/* Botões de legenda: 46 × 32, sem borda nem raio, colados no canto. */
+.tt-caption{ display:flex; flex:none; height:100%; margin-left:auto; }
+.tt-caption-btn{
+  width:46px; height:32px; padding:0;
+  border:0; border-radius:0; background:transparent; color:var(--tt-fg-1);
+}
+.tt-caption-btn:hover{ background:var(--tt-subtle-hover); }
+.tt-caption-btn:active{ background:var(--tt-subtle-press); }
+/* Fechar: vermelho do sistema com glifo branco, em todos os temas. Pressionado,
+   o vermelho fica a 90% e o glifo a 70%, como no Windows 11 (a olho). */
+.tt-caption-btn.tt-caption-fechar:hover{ background:var(--tt-caption-close); color:#FFFFFF; }
+.tt-caption-btn.tt-caption-fechar:active{
+  background:color-mix(in srgb, var(--tt-caption-close) 90%, transparent);
+  color:rgb(255 255 255/.7);
+}
+.tt-caption-btn svg{
+  display:block; width:10px; height:10px;
+  fill:none; stroke:currentColor; stroke-width:1;
+}
+
+/* Linux: sem moldura nem sombra do sistema (Wayland), a janela ganha uma borda
+   de 1 px por cima de tudo, que não pega cliques. Some com a janela
+   maximizada, como a borda do Windows 11. */
+[data-platform="linux"] .tt-janela::after{
+  content:""; position:fixed; inset:0; z-index:1000;
+  border:1px solid var(--tt-border); pointer-events:none;
+}
+[data-platform="linux"][data-maximized] .tt-janela::after{ display:none; }
+
+/* Amostra do M06 */
 .tt-amostra{
   display:flex; flex-direction:column; gap:var(--tt-gap);
   max-width:1120px; margin:0 auto; padding:28px 32px 40px;

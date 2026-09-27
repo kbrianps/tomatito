@@ -148,3 +148,63 @@ test('fonts.css só com a Inter latin e latin-ext em opsz (sem cirílico, grego 
   }
   assert.ok(pkg.dependencies['@fontsource-variable/inter'], 'a fonte vem do @fontsource-variable/inter');
 });
+
+// M07: janela main criada em Rust e barra de título própria (seções 3.4, 3.8 e 4.7).
+test('nenhuma janela no tauri.conf.json: a main nasce no setup, com o builder da seção 4.7', () => {
+  assert.deepEqual(tauriConf.app.windows, [], 'app.windows precisa ser []');
+  const lib = ler('src-tauri/src/lib.rs');
+  assert.match(lib, /\.setup\(\|app\|[\s\S]*main_window::build_main\(/);
+  const main = ler('src-tauri/src/window/main_window.rs');
+  const chamadas = [
+    'WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("index.html".into()))',
+    '.title("Tomatito")',
+    '.inner_size(1000.0, 700.0)',
+    '.min_inner_size(480.0, 500.0)',
+    '.decorations(false)',
+    '.shadow(true)',
+    '.zoom_hotkeys_enabled(true)',
+    '.background_color(background_for(prefs.resolved_theme))',
+    '.visible(false)',
+    '.initialization_script(init_script(prefs))',
+  ];
+  for (const c of chamadas) assert.ok(main.includes(c), `main_window.rs sem ${c}`);
+  assert.match(main, /pub const LABEL: &str = "main";/);
+});
+
+test('capabilities/main.json com as permissões da seção 3.8, só para a main', () => {
+  const arquivos = readdirSync(new URL('../src-tauri/capabilities', import.meta.url)).sort();
+  assert.ok(!arquivos.includes('default.json'), 'o default.json do template sai');
+  const cap = JSON.parse(ler('src-tauri/capabilities/main.json'));
+  assert.deepEqual(cap.windows, ['main']);
+  assert.deepEqual([...cap.permissions].sort(), [
+    'core:default',
+    'core:webview:allow-set-webview-zoom',
+    'core:window:allow-close',
+    'core:window:allow-hide',
+    'core:window:allow-minimize',
+    'core:window:allow-set-focus',
+    'core:window:allow-set-theme',
+    'core:window:allow-show',
+    'core:window:allow-start-dragging',
+    'core:window:allow-toggle-maximize',
+  ]);
+});
+
+test('barra de título: região de arraste no index.html, borda do Linux e glifos sem fonte de ícones', () => {
+  assert.match(indexHtml, /<div class="tt-titlebar" data-tauri-drag-region="deep"><\/div>/);
+  const shell = ler('src/styles/shell.css');
+  assert.match(shell, /\[data-platform="linux"\] \.tt-janela::after\{[^}]*border:1px solid var\(--tt-border\)/);
+  assert.match(shell, /\.tt-caption-btn\{[^}]*width:46px; height:32px;/);
+  assert.match(shell, /\.tt-caption-fechar:hover\{ background:var\(--tt-caption-close\); color:#FFFFFF; \}/);
+  // Os glifos da barra são desenho próprio (PLANO.md, 9): nada das fontes da
+  // Microsoft fora dos comentários (que explicam justamente isso).
+  const fontesProibidas = /Segoe (Fluent Icons|MDL2 Assets)/i;
+  const semComentarios = (texto) =>
+    texto.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '').replace(/^\s*\/\/.*$/gm, '');
+  for (const arquivo of readdirSync(new URL('../src', import.meta.url), { recursive: true })) {
+    if (/\.(js|css|html)$/.test(arquivo)) {
+      assert.doesNotMatch(semComentarios(ler(`src/${arquivo}`)), fontesProibidas, `src/${arquivo}`);
+    }
+  }
+  assert.doesNotMatch(semComentarios(indexHtml), fontesProibidas);
+});
