@@ -10,12 +10,19 @@
 // Opções:
 //   --size 1000x700       viewport (padrão 1000x700, o tamanho da main)
 //   --scheme dark|light   prefers-color-scheme emulado (padrão dark)
+//   --motion reduce       prefers-reduced-motion emulado (padrão: sem preferência)
 //   --path /#/foco        caminho aberto (padrão /)
 // Passos (repetíveis, executados em ordem):
 //   --eval "expr"         avalia na página e imprime o resultado em JSON
 //   --click "seletor"     clique real do mouse no centro do elemento
 //   --hover "seletor"     move o mouse para o centro do elemento (:hover)
 //   --press "seletor"     aperta o botão do mouse no centro, sem soltar (:active)
+//   --key "Control+1"     aperta e solta uma tecla, com modificadores (Control,
+//                         Shift, Alt, Meta) separados por "+": Tab, Enter,
+//                         Escape, Space, ArrowUp/Down/Left/Right, Home, End, 0-9,
+//                         a-z e "Comma" (a vírgula)
+//   --ax "seletor"        papel, nome e estados que o Chrome expõe na árvore de
+//                         acessibilidade para cada elemento do seletor
 //   --fonts "seletor"     fontes da plataforma usadas no texto do elemento
 //                         (CSS.getPlatformFontsForNode), com o nº de glifos
 //   --wait 300            espera, em ms
@@ -40,10 +47,10 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { startPreviewServer } from './servidor.mjs';
 
-const STEP_KINDS = ['eval', 'click', 'hover', 'press', 'fonts', 'wait', 'shot'];
+const STEP_KINDS = ['eval', 'click', 'hover', 'press', 'key', 'ax', 'fonts', 'wait', 'shot'];
 
 function parseArgs(argv) {
-  const opts = { size: '1000x700', scheme: 'dark', path: '/' };
+  const opts = { size: '1000x700', scheme: 'dark', motion: '', path: '/' };
   const steps = [];
   for (let i = 0; i < argv.length; i += 2) {
     const key = argv[i].replace(/^--/, '');
@@ -102,6 +109,35 @@ function launchChrome(profileDir) {
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Teclas do --key: o que o Input.dispatchKeyEvent do DevTools precisa (key,
+// code e o código virtual do Windows, que o Chrome usa para Tab e setas).
+const TECLAS = {
+  Tab: ['Tab', 'Tab', 9],
+  Enter: ['Enter', 'Enter', 13, '\r'],
+  Escape: ['Escape', 'Escape', 27],
+  Space: [' ', 'Space', 32, ' '],
+  ArrowUp: ['ArrowUp', 'ArrowUp', 38],
+  ArrowDown: ['ArrowDown', 'ArrowDown', 40],
+  ArrowLeft: ['ArrowLeft', 'ArrowLeft', 37],
+  ArrowRight: ['ArrowRight', 'ArrowRight', 39],
+  Home: ['Home', 'Home', 36],
+  End: ['End', 'End', 35],
+  Comma: [',', 'Comma', 188, ','],
+};
+const MODIFICADORES = {
+  Alt: [1, 'Alt', 'AltLeft', 18],
+  Control: [2, 'Control', 'ControlLeft', 17],
+  Meta: [4, 'Meta', 'MetaLeft', 91],
+  Shift: [8, 'Shift', 'ShiftLeft', 16],
+};
+function tecla(nome) {
+  if (TECLAS[nome]) return TECLAS[nome];
+  if (/^[0-9]$/.test(nome)) return [nome, `Digit${nome}`, nome.charCodeAt(0), nome];
+  if (/^[a-z]$/.test(nome)) return [nome, `Key${nome.toUpperCase()}`, nome.toUpperCase().charCodeAt(0), nome];
+  throw new Error(`tecla desconhecida no --key: ${nome}`);
+}
+
 const alive = (chrome) => chrome.proc.exitCode === null && chrome.proc.signalCode === null;
 
 // PIDs cuja linha de comando cita o perfil (Chrome, filhos e crashpad handler).
@@ -322,7 +358,10 @@ async function main() {
       mobile: false,
     });
     await page.send('Emulation.setEmulatedMedia', {
-      features: [{ name: 'prefers-color-scheme', value: opts.scheme }],
+      features: [
+        { name: 'prefers-color-scheme', value: opts.scheme },
+        { name: 'prefers-reduced-motion', value: opts.motion },
+      ],
     });
     const loaded = page.once('Page.loadEventFired');
     await page.send('Page.navigate', { url: origin + opts.path });
@@ -358,6 +397,44 @@ async function main() {
         await settle();
         const verbo = { click: 'clique em', hover: 'mouse sobre', press: 'botão apertado em' }[kind];
         console.log(`${verbo} ${value} (${Math.round(pt.x)}, ${Math.round(pt.y)})`);
+      } else if (kind === 'key') {
+        const partes = value.split('+');
+        const [key, code, vk, text] = tecla(partes.pop());
+        const mods = partes.map((m) => {
+          if (!MODIFICADORES[m]) throw new Error(`modificador desconhecido no --key: ${m}`);
+          return MODIFICADORES[m];
+        });
+        let modifiers = 0;
+        for (const [bit, mKey, mCode, mVk] of mods) {
+          modifiers |= bit;
+          await page.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: mKey, code: mCode, windowsVirtualKeyCode: mVk, modifiers });
+        }
+        // Com Ctrl, Alt ou Meta, a tecla não gera texto (é um atalho).
+        const comTexto = text !== undefined && !(modifiers & 7);
+        const base = { key, code, windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk, modifiers };
+        await page.send('Input.dispatchKeyEvent', { type: comTexto ? 'keyDown' : 'rawKeyDown', ...base, ...(comTexto ? { text, unmodifiedText: text } : {}) });
+        await page.send('Input.dispatchKeyEvent', { type: 'keyUp', ...base });
+        for (const [bit, mKey, mCode, mVk] of mods.reverse()) {
+          modifiers &= ~bit;
+          await page.send('Input.dispatchKeyEvent', { type: 'keyUp', key: mKey, code: mCode, windowsVirtualKeyCode: mVk, modifiers });
+        }
+        await settle();
+        console.log(`tecla ${value}`);
+      } else if (kind === 'ax') {
+        await page.send('DOM.enable');
+        await page.send('Accessibility.enable');
+        const { root } = await page.send('DOM.getDocument', { depth: 0 });
+        const { nodeIds } = await page.send('DOM.querySelectorAll', { nodeId: root.nodeId, selector: value });
+        if (!nodeIds.length) throw new Error(`elemento não encontrado: ${value}`);
+        for (const nodeId of nodeIds) {
+          const { nodes } = await page.send('Accessibility.getPartialAXTree', { nodeId, fetchRelatives: false });
+          const n = nodes[0] ?? {};
+          const props = (n.properties ?? [])
+            .filter((p) => p.value?.value !== undefined && p.value.value !== false)
+            .map((p) => `${p.name}=${JSON.stringify(p.value.value)}`)
+            .join(' ');
+          console.log(`ax ${value}: ${n.role?.value ?? '?'} "${n.name?.value ?? ''}"${props ? ` ${props}` : ''}`);
+        }
       } else if (kind === 'fonts') {
         await page.send('DOM.enable');
         await page.send('CSS.enable');

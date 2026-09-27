@@ -213,3 +213,40 @@ test('barra de título: região de arraste no index.html, borda do Linux e glifo
   }
   assert.doesNotMatch(semComentarios(indexHtml), fontesProibidas);
 });
+
+// M09: navegação (seções 3.7, 3.8 e o marco M09).
+test('navegação: <nav> e <main> vazios no index.html, com a amostra do M06 fora dele (vai para o #/dev)', () => {
+  assert.match(indexHtml, /<nav class="tt-nav"><\/nav>\s*<main class="tt-conteudo"><\/main>/);
+  assert.doesNotMatch(indexHtml, /tt-amostra|<fluent-/, 'a amostra mora no src/views/dev-catalog.js');
+  const main = ler('src/main.js');
+  const telas = main.match(/telas: \{ ([^}]+) \}/);
+  assert.ok(telas, 'o main.js passa as telas ao roteador');
+  assert.deepEqual(telas[1].split(', '), ['foco', 'temporizador', 'cronometro', 'configuracoes', 'dev']);
+  for (const arquivo of ['views/focus/index.js', 'views/timers.js', 'views/stopwatch.js', 'views/settings.js', 'views/dev-catalog.js']) {
+    assert.match(ler(`src/${arquivo}`), /^export function montar\(raiz\)/m, `${arquivo} exporta montar(raiz)`);
+  }
+});
+
+test('navegação: medidas do NavigationView e tokens da seção M09 no shell.css e no nav-view.js', () => {
+  const css = ler('src/styles/shell.css');
+  const regra = (sel) => {
+    const m = css.match(new RegExp(`(?:^|\\n)${sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\{([^}]*)\\}`));
+    assert.ok(m, `falta a regra ${sel}`);
+    return m[1];
+  };
+  assert.match(regra('.tt-nav'), /width:280px/);
+  const item = regra('.tt-nav-item');
+  assert.match(item, /height:36px/);
+  assert.match(item, /margin:2px 4px/);
+  assert.match(item, /border-radius:var\(--tt-r-ctl\)/);
+  assert.match(regra('.tt-nav-item:hover'), /background:var\(--tt-subtle-hover\)/);
+  assert.match(regra('.tt-nav-item[aria-current="page"]'), /background:var\(--tt-subtle-selected\)/);
+  const ind = regra('.tt-nav-indicador');
+  assert.match(ind, /width:3px; height:16px/);
+  assert.match(ind, /background:var\(--tt-nav-indicator\)/);
+  const nav = ler('src/components/nav-view.js');
+  assert.match(nav, /duration: duracao\('--tt-dur-in'\)/, 'o indicador desliza em --tt-dur-in (250 ms)');
+  assert.match(nav, /getPropertyValue\('--tt-ease-point'\)/, 'com --tt-ease-point');
+  assert.match(nav, /prefers-reduced-motion: reduce[\s\S]*duracao\('--tt-dur-fast'\)/, 'e vira fade de 83 ms com movimento reduzido');
+  assert.doesNotMatch(nav, /\.style\.(?!setProperty)/, 'sem estilo em linha além de variáveis (3.8)');
+});

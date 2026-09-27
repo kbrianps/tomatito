@@ -236,7 +236,7 @@ O "Pronto quando" pede 10 partidas a frio gravadas. A gravação é para ver com
 1. [ ] Gere o build de debug: em `~/dev/tomatito`, `npx tauri build --debug --no-bundle` (uns 40 s). Não pule este passo: um `cargo build` ou um `npm run tauri dev` deixam no mesmo caminho um binário que procura o Vite e abre com erro.
 2. [ ] Deixe um terminal aberto em `~/dev/tomatito`, sobre um fundo claro (por exemplo, uma janela do Nautilus maximizada atrás), para um clarão branco ou preto ficar fácil de ver.
 3. [ ] Aperte **Ctrl+Alt+Shift+R**: abre a ferramenta de gravação do GNOME. Escolha gravar a **tela** inteira e clique no botão redondo. Aparece um ponto vermelho no canto de cima.
-4. [ ] No terminal, rode `/opt/cargo-target/tomatito/debug/tomatito`. A janela vermelha aparece de uma vez, já com a amostra do tema. Feche no X da própria janela. Repita até completar **10 vezes**.
+4. [ ] No terminal, rode `/opt/cargo-target/tomatito/debug/tomatito`. A janela vermelha aparece de uma vez, já com a amostra do tema (desde o M09: com o painel à esquerda e o título "Foco"; a amostra foi para o `#/dev`). Feche no X da própria janela. Repita até completar **10 vezes**.
 5. [ ] Pare a gravação clicando no ponto vermelho (ou Ctrl+Alt+Shift+R de novo). O vídeo fica em `~/Vídeos/Screencasts/`.
 6. [ ] Para ver quadro a quadro sem instalar nada, gere uma cópia 8 vezes mais lenta e assista:
 
@@ -246,8 +246,41 @@ O "Pronto quando" pede 10 partidas a frio gravadas. A gravação é para ver com
    xdg-open /tmp/tomatito-lento.webm
    ```
 
-   Em nenhuma das 10 aberturas pode aparecer um retângulo branco, preto ou cinza, nem a janela com outras cores antes do vermelho. O esperado é: no lugar da janela surge o vermelho liso e, logo em seguida, a amostra (título, cartões, anel). O GNOME faz a janela crescer um pouco ao abrir; isso é do sistema.
+   Em nenhuma das 10 aberturas pode aparecer um retângulo branco, preto ou cinza, nem a janela com outras cores antes do vermelho. O esperado é: no lugar da janela surge o vermelho liso e, logo em seguida, a tela completa (até o M08, a amostra com título, cartões e anel; desde o M09, o painel e o título "Foco", com o item Foco já marcado, sem o fundo dele "acender" depois). O GNOME faz a janela crescer um pouco ao abrir; isso é do sistema.
 7. [ ] **Console do DevTools:** rode `/opt/cargo-target/tomatito/debug/tomatito` mais uma vez, clique com o botão direito no meio da janela → **Inspecionar** → aba **Console**. Não pode haver nenhuma linha com "Refused to". Feche o inspetor e a janela.
 8. [ ] Apague o vídeo e a cópia lenta, se não quiser guardá-los: `rm /tmp/tomatito-lento.webm` e o arquivo em `~/Vídeos/Screencasts/`.
 
 Se aparecer algum clarão, anote em qual das 10 aberturas (a ordem do vídeo) e a cor. Se o console mostrar um "Refused to", copie a linha inteira.
+
+## M09. Navegação
+
+O painel de 280 px com Foco, Temporizador e Cronômetro em cima e Configurações no rodapé, o roteador por hash (`#/foco`, `#/temporizador`, `#/cronometro`, `#/configuracoes` e o `#/dev` com a amostra do M06) e os atalhos Ctrl+1/2/3 e Ctrl+,. Captura: `docs/capturas/m09-navegacao.png`, toda tirada do app de verdade no teste aninhado: em cima, a janela na tela Foco e, à direita, 8 dos 15 quadros que o compositor pintou enquanto o indicador descia do Cronômetro para as Configurações (Ctrl+,); no meio, o painel no Lite, no Suave, no Claro e no Escuro; embaixo, o anel de foco do teclado no Temporizador.
+
+### O que já foi conferido sem olhar a tela (26/09/2026)
+
+- **Teste num GNOME Shell aninhado** (Mutter 50.1, Wayland, o app de verdade com ponteiro e teclado virtuais; nada aparece na sua tela): `bash scripts/gnome-aninhado/rodar.sh navegacao`, 25 conferências, todas ok:
+  - `<nav aria-label="Principal">`, a Foco como tela inicial, e só o item dela no Tab;
+  - itens de 272 × 36 em x = 4, a cada 40 px a partir de y = 34, e Configurações a 6 px da base; indicador de 3 × 16 na borda esquerda do item, centrado, em `--tt-nav-indicator` (creme no Lite);
+  - clicar em Temporizador troca a tela; Ctrl+3, Ctrl+,, Ctrl+1 e Ctrl+2 também;
+  - **o indicador desliza** nas cinco trocas, medido de dois jeitos: pela página, a cada quadro (de 194 a 242 ms até parar a menos de 0,5 px do destino, de 6 a 15 posições intermediárias, sem voltar); e pelos quadros que o compositor pintou (de 6 a 15 quadros com o indicador no meio do caminho, em 255 a 311 ms, com o atraso do shell aninhado);
+  - Tab entra no painel pelo item da tela atual, com o anel de foco; ↓ ↓ ↓ ↑ Home ↑ End ↑ levam o foco a Cronômetro, Configurações, Configurações (sem dar a volta), Cronômetro, Foco, Foco, Configurações e Cronômetro; as setas não trocam a tela, e só o item focado fica no Tab; Enter abre o item focado; saindo do painel com o foco em outro item e voltando com o Tab, a entrada é de novo o item da tela atual;
+  - no `#/dev`, o painel é uma parada só do Tab entre o começo e o conteúdo: Shift+Tab do primeiro botão volta ao painel, e o Tab seguinte, mesmo depois de ↓, vai ao primeiro botão;
+  - hover do Lite em branco a 6% e selecionado em branco a 10%;
+  - **selecionado no Claro e no Escuro, trocando o `data-theme`** (pela sonda, como no console do DevTools), medido na tela e comparado com a captura do Relógio: Claro `#F3F3F3` → `#EAEAEA` (Relógio, sobre a Mica: `#F0F3F9` → `#E8EAF0`, a mesma sobreposição de preto a ~3,5%); Escuro `#202020` → `#2D2D2D` (Relógio: `#202020` → `#2D2D2D`, igual); indicador `#B8402D` no Claro e `#F0745A` no Escuro. Suave e Lite também conferidos;
+  - nenhum erro na página; o app sai sozinho quando a janela fecha.
+- **Boot sem clarão, de novo:** o roteiro do M08 (`partida-a-frio`) passa no dev e no build de debug, 10 partidas cada: só dois quadros distintos por partida, o fundo liso e o final. Na primeira rodada do M09 ele pegou o fundo do item Foco "acendendo" depois do `show()` (uma transição de 83 ms); a correção está em `docs/decisoes.md`, M09, item 6. O roteiro do M07 (`barra-de-titulo`) continua com as 36 conferências ok.
+- **Prévias:** no Chrome headless (onde o `focusgroup` é nativo, como no WebView2 do Windows), clique, Ctrl+1/2/3, Ctrl+,, Tab, as setas, Home, End e Enter fazem o mesmo; com `--motion reduce`, o indicador troca com fade de 83 ms, sem sair do lugar. No WebKitGTK fora da tela (`npm run shot:webkit`), o polyfill cuida das setas e da parada do Tab, o indicador desliza em uns 250 ms, e com o "Animações" do GTK desligado vira o fade.
+- **Na sua sessão, rápido e sem mexer na janela:** o build de debug abriu com o inspetor remoto ligado; o console veio vazio (nenhum "Refused to"), a URL em `#/foco`, o tema Lite e a Inter carregada; o app foi fechado logo em seguida, sem processo sobrando.
+- `npm test` (48 testes, 12 novos), `node scripts/contrast.mjs`, `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace` e a checagem cruzada do Windows passam.
+
+### Passos para você (uns 4 minutos)
+
+1. [ ] Em `~/dev/tomatito`, rode `npm run tauri dev` e espere a janela (uns 5 s).
+2. [ ] **Clique** em Temporizador, Cronômetro, Configurações e Foco. A cada clique, o título da direita muda, o item clicado fica com o fundo um pouco mais claro, e a barrinha creme da esquerda **desliza** do item anterior até ele (rápida no começo e freando no fim, em um quarto de segundo). De Cronômetro para Configurações ela atravessa o painel inteiro.
+3. [ ] **Atalhos:** Ctrl+2, Ctrl+3, Ctrl+, (vírgula) e Ctrl+1. Cada um abre a tela certa, com o mesmo deslize.
+4. [ ] **Teclado:** clique na área vazia da direita e aperte **Tab**: o item da tela atual ganha um contorno creme. Use **↑** e **↓**: o contorno anda pelos quatro itens, sem dar a volta nas pontas, e a tela não muda. **Enter** abre o item com o contorno. Mais um **Tab** sai do painel.
+5. [ ] **Claro e Escuro contra o Relógio:** clique com o botão direito na área vazia → **Inspecionar** → aba **Console**, e rode `document.documentElement.dataset.theme = 'light'`. Compare o item marcado com o da janela da esquerda de `~/dev/tomatito-ref/wl-the-old-Focus-sessions-on-the-left-and-new-Focus-sessions-on-the-right.png` (um cinza só um pouco mais escuro que o painel). Depois rode `document.documentElement.dataset.theme = 'dark'` e compare com `~/dev/tomatito-ref/clock-focus-sessions-page.png` (o mesmo cinza do "Focus sessions"). A barrinha é vermelha nos dois (e não rosa, como no Relógio, que usa a cor de destaque do Windows). Volte com `document.documentElement.dataset.theme = 'lite'` e feche o inspetor.
+6. [ ] (Opcional) Desligue as animações do GNOME num terminal, com `gsettings set org.gnome.desktop.interface enable-animations false`, e troque de tela (se nada mudar, feche e abra o app de novo): a barrinha some de um item e aparece no outro com um fade rápido, sem deslizar. Religue com `gsettings set org.gnome.desktop.interface enable-animations true`.
+7. [ ] Feche a janela no X e, no terminal, Ctrl+C se o `tauri dev` não sair sozinho.
+
+Se algo não bater, anote qual passo e o que apareceu.

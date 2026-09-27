@@ -7,7 +7,7 @@ sessão. A renderização é por software (HardwareAccelerationPolicy.NEVER),
 porque a janela fora da tela não consegue contexto GL no Wayland; para CSS,
 fontes e layout, o resultado é o mesmo do app.
 
-Entrada: um JSON em argv[1] com url, width, height, scheme e steps
+Entrada: um JSON em argv[1] com url, width, height, scheme, motion e steps
 ([["eval", "expr"], ["wait", "300"], ["shot", "arquivo.png"]]).
 Saída: uma linha por passo no stdout; o console.error/warn e os erros da página
 vão para o stderr. Código 1 se a página lançar erro ou um passo falhar.
@@ -40,6 +40,8 @@ PROBE = """
 settings = Gtk.Settings.get_default()
 if settings is not None:
     settings.set_property("gtk-application-prefer-dark-theme", cfg.get("scheme") == "dark")
+    # Animações desligadas no GTK: o WebKitGTK responde prefers-reduced-motion: reduce.
+    settings.set_property("gtk-enable-animations", cfg.get("motion") != "reduce")
 
 content = WebKit2.UserContentManager()
 content.add_script(

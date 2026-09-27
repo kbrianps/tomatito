@@ -4,6 +4,12 @@
 // (muda com o zoom), estado da barra de título e cores dos botões em hover.
 // Só existe no servidor do teste; o app nunca a importa.
 //
+// M09: o estado inclui o painel de navegação (rota, item atual, parada do Tab,
+// foco e a caixa do indicador) e o título da tela. A cada hashchange, a sonda
+// mede a posição do indicador do item atual em cada quadro, por 450 ms, e manda
+// a série como um evento "deslize". E roda os comandos do roteiro
+// (sonda.config.mjs).
+//
 // M08: também manda o estado da página cada vez que a visibilidade muda (a
 // main nasce escondida, e o show() a torna visível): atributos do <html> e
 // fontes carregadas no momento em que a janela aparece. Com CONTROLE =
@@ -25,7 +31,8 @@ addEventListener('unhandledrejection', (e) => enviar('erro', String(e.reason)));
 const desc = (el) => {
   if (!el || !el.tagName) return String(el);
   const cls = el.getAttribute('class');
-  return `${el.tagName.toLowerCase()}${cls ? '.' + cls.split(' ').join('.') : ''}${el.dataset?.acao ? '[' + el.dataset.acao + ']' : ''}`;
+  const extra = el.dataset?.acao ?? el.dataset?.rota;
+  return `${el.tagName.toLowerCase()}${cls ? '.' + cls.split(' ').join('.') : ''}${extra ? '[' + extra + ']' : ''}`;
 };
 for (const tipo of ['mousedown', 'mouseup', 'click', 'dblclick']) {
   addEventListener(tipo, (e) => enviar(tipo, { x: e.clientX, y: e.clientY, detail: e.detail, alvo: desc(e.target) }), true);
@@ -53,9 +60,58 @@ function estado() {
     pairado: pairado ? { acao: pairado.dataset.acao, fundo: getComputedStyle(pairado).backgroundColor, cor: getComputedStyle(pairado).color } : null,
     borda: borda ? { display: borda.display, cor: borda.borderTopColor, largura: borda.borderTopWidth } : null,
     foco: desc(document.activeElement),
+    focoVisivel: document.activeElement?.matches?.(':focus-visible') ?? false,
+    nav: navegacao(),
+    titulo: document.querySelector('.tt-conteudo h1')?.textContent ?? null,
     rolagem: [document.documentElement.scrollWidth, document.documentElement.scrollHeight],
   };
 }
+function navegacao() {
+  const nav = document.querySelector('.tt-nav');
+  if (!nav) return null;
+  const links = [...nav.querySelectorAll('a.tt-nav-item')];
+  const atual = links.find((a) => a.getAttribute('aria-current') === 'page');
+  const caixa = (el) => (el ? [...Object.values(el.getBoundingClientRect().toJSON())].slice(0, 4).map(Math.round) : null);
+  const indicador = atual?.querySelector('.tt-nav-indicador');
+  return {
+    rotulo: nav.getAttribute('aria-label'),
+    hash: location.hash,
+    atual: atual?.dataset.rota ?? null,
+    paradaDoTab: links.filter((a) => a.tabIndex === 0).map((a) => a.dataset.rota),
+    itens: links.map((a) => ({ rota: a.dataset.rota, caixa: caixa(a) })),
+    indicador: indicador ? { caixa: caixa(indicador), opacidade: getComputedStyle(indicador).opacity, cor: getComputedStyle(indicador).backgroundColor } : null,
+    fundoDoAtual: atual ? getComputedStyle(atual).backgroundColor : null,
+  };
+}
+addEventListener('hashchange', () => {
+  const t0 = performance.now();
+  const serie = [];
+  const medir = (agora) => {
+    const ind = document.querySelector('.tt-nav-item[aria-current="page"] .tt-nav-indicador');
+    if (ind) serie.push([Math.round(agora - t0), Math.round(ind.getBoundingClientRect().top * 10) / 10]);
+    if (agora - t0 < 450) requestAnimationFrame(medir);
+    else enviar('deslize', { hash: location.hash, serie });
+  };
+  requestAnimationFrame(medir);
+});
+let ultimoComando = null;
+setInterval(async () => {
+  try {
+    const c = await (await fetch('/__sonda/comando', { cache: 'no-store' })).json();
+    if (!c.id || c.id === ultimoComando) return;
+    ultimoComando = c.id;
+    let resultado;
+    try {
+      resultado = await (0, eval)(c.js);
+    } catch (e) {
+      resultado = `erro: ${e}`;
+    }
+    enviar('comando', { id: c.id, js: c.js, resultado: resultado ?? null });
+  } catch {
+    // o servidor pode estar saindo
+  }
+}, 100);
+
 let ultimo = '';
 function vigiar() {
   const e = JSON.stringify(estado());

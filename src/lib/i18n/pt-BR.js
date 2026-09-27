@@ -11,4 +11,13 @@ export default Object.freeze({
     restaurar: 'Restaurar',
     fechar: 'Fechar',
   }),
+  // Painel de navegação (M09). Os nomes das telas servem também de título de
+  // cada tela.
+  navegacao: Object.freeze({
+    rotulo: 'Principal',
+    foco: 'Foco',
+    temporizador: 'Temporizador',
+    cronometro: 'Cronômetro',
+    configuracoes: 'Configurações',
+  }),
 });

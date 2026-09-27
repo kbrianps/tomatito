@@ -11,6 +11,8 @@
 // Opções:
 //   --size 1000x700       viewport (padrão 1000x700, o tamanho da main)
 //   --scheme dark|light   gtk-application-prefer-dark-theme (padrão dark)
+//   --motion reduce       gtk-enable-animations desligado, que o WebKitGTK
+//                         repassa como prefers-reduced-motion: reduce
 //   --path /#/foco        caminho aberto (padrão /)
 // Passos (repetíveis, executados em ordem):
 //   --eval "expr"         avalia na página (promessas são esperadas) e imprime o JSON
@@ -29,7 +31,7 @@ const STEP_KINDS = ['eval', 'wait', 'shot'];
 const HELPER = fileURLToPath(new URL('./webkit-shot.py', import.meta.url));
 
 function parseArgs(argv) {
-  const opts = { size: '1000x700', scheme: 'dark', path: '/' };
+  const opts = { size: '1000x700', scheme: 'dark', motion: '', path: '/' };
   const steps = [];
   for (let i = 0; i < argv.length; i += 2) {
     const key = argv[i].replace(/^--/, '');
@@ -72,6 +74,7 @@ async function main() {
       width: opts.width,
       height: opts.height,
       scheme: opts.scheme,
+      motion: opts.motion,
       steps: opts.steps,
     };
     child = spawn('python3', [HELPER, JSON.stringify(cfg)], { stdio: 'inherit' });

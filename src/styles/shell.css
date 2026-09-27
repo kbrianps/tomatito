@@ -1,11 +1,12 @@
 /* src/styles/shell.css: estrutura da janela main.
-   M07: a barra de título e a borda de 1 px no Linux; M09, a navegação;
-   M10, a camada de conteúdo e o responsivo. Abaixo da barra, por enquanto, só a
-   página da amostra do M06, que vai para a rota #/dev no M09. */
+   M07: a barra de título e a borda de 1 px no Linux; M09, a navegação e as
+   telas; M10, a camada de conteúdo e o responsivo. */
 
-/* Janela: barra de 32 px em cima e o conteúdo, que rola sozinho, embaixo. */
+/* Janela: barra de 32 px em cima; embaixo, o painel e o conteúdo, que rola
+   sozinho. */
 .tt-janela{ display:grid; grid-template-rows:32px minmax(0,1fr); height:100%; }
-.tt-conteudo{ overflow:auto; }
+.tt-corpo{ display:flex; min-height:0; }
+.tt-conteudo{ flex:1; min-width:0; overflow:auto; }
 
 /* Barra de título (src/components/title-bar.js) */
 .tt-titlebar{
@@ -51,7 +52,67 @@
 }
 [data-platform="linux"][data-maximized] .tt-janela::after{ display:none; }
 
-/* Amostra do M06 */
+/* Painel de navegação (src/components/nav-view.js). Medidas do NavigationView
+   do WinUI (NavigationView_themeresources.xaml), conferidas na captura do
+   Relógio (clock-focus-sessions-page.png, a 175%): painel de 280 px; itens de
+   36 px com margens de 4 px dos lados e 2 px em cima e embaixo, raio 4; ícone
+   de 16 px centrado na coluna de 40 px (x = 12 no item) e texto em x = 44;
+   indicador de 3 × 16 px, raio 2, na borda esquerda do item e centrado na
+   altura. Configurações no rodapé, a 4 px (+ 2 da margem) da base. */
+.tt-nav{
+  display:flex; flex-direction:column; flex:none; width:280px;
+  padding-bottom:4px;
+}
+/* Listas em flex: sem isso, as margens de 2 px dos itens colapsariam entre
+   um item e o seguinte (2 px em vez de 4). */
+.tt-nav-lista{ display:flex; flex-direction:column; margin:0; padding:0; list-style:none; }
+.tt-nav-rodape{ margin-top:auto; }
+.tt-nav-item{
+  position:relative; display:flex; align-items:center; gap:16px;
+  height:36px; margin:2px 4px; padding:0 14px 0 12px;
+  border-radius:var(--tt-r-ctl);
+  color:var(--tt-fg-1); text-decoration:none;
+  cursor:default; -webkit-user-drag:none;
+  transition:background-color var(--tt-dur-fast) linear;
+}
+/* Estados do NavigationViewItem: hover no SubtleFillColorSecondary
+   (--tt-subtle-hover), pressionado no Tertiary (--tt-subtle-press, com o texto
+   secundário) e selecionado no Secondary (--tt-subtle-selected). Selecionado com
+   o mouse em cima fica no Tertiary, como no WinUI. */
+.tt-nav-item:hover{ background:var(--tt-subtle-hover); }
+.tt-nav-item:active{ background:var(--tt-subtle-press); color:var(--tt-fg-2-on-ctl); }
+.tt-nav-item[aria-current="page"]{ background:var(--tt-subtle-selected); }
+.tt-nav-item[aria-current="page"]:hover{ background:var(--tt-subtle-press); }
+.tt-nav-item[aria-current="page"]:active{ background:var(--tt-subtle-selected); }
+.tt-nav-item .tt-icone{ flex:none; width:16px; height:16px; fill:currentColor; }
+.tt-nav-rotulo{ min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+/* Um indicador por item; só o do selecionado aparece. O z-index põe o
+   indicador por cima dos outros itens enquanto ele desliza. */
+.tt-nav-indicador{
+  position:absolute; z-index:1; left:0; top:10px; width:3px; height:16px;
+  border-radius:2px; background:var(--tt-nav-indicator);
+  opacity:0; pointer-events:none;
+}
+.tt-nav-item[aria-current="page"] > .tt-nav-indicador{ opacity:1; }
+/* Foco do teclado: o anel duplo (2 px por fora, 1 px por dentro). O M13 estende
+   o mesmo anel aos outros controles. */
+.tt-nav-item:focus{ outline:none; }
+.tt-nav-item:focus-visible{
+  outline:2px solid var(--tt-focus-outer); outline-offset:0;
+  box-shadow:inset 0 0 0 1px var(--tt-focus-inner);
+}
+/* Alto contraste (Windows): o fundo do indicador viraria Canvas. */
+@media (forced-colors:active){
+  .tt-nav-indicador{ forced-color-adjust:none; background:Highlight; }
+  .tt-nav-item:focus-visible{ outline-color:Highlight; box-shadow:none; }
+}
+
+/* Telas. O título recebe o foco quando a tela troca com o foco dentro da tela
+   anterior (src/router.js); o foco ali não precisa de anel. */
+.tt-pagina{ padding:28px 32px 40px; }
+.tt-conteudo h1[tabindex="-1"]:focus{ outline:none; }
+
+/* Amostra do M06 (#/dev) */
 .tt-amostra{
   display:flex; flex-direction:column; gap:var(--tt-gap);
   max-width:1120px; margin:0 auto; padding:28px 32px 40px;

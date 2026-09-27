@@ -31,3 +31,5 @@ Formato: data, marco em que surgiu e uma linha sobre a ideia.
 
 - 26/09/2026, M07: barra de título esmaecida com a janela inativa (título e glifos em `--tt-fg-disabled`, como no Windows 11), pelo `onFocusChanged`.
 - 26/09/2026, M08: o script de boot aceitar só os seis valores de tema e cair no Lite com qualquer outro. Hoje ele confia no Rust (um `settings.json` editado à mão com um tema inexistente deixaria o `<html>` sem bloco de tokens).
+- 26/09/2026, M09: Espaço também abrir o item focado do painel, como no NavigationView do WinUI (hoje só Enter, como num link). Decidir junto com o Espaço de iniciar e pausar da tela Foco (3.8), para os dois não brigarem.
+- 26/09/2026, M09: esconder (só visualmente) o título das telas Foco, Temporizador e Cronômetro, que o Relógio não mostra; o `<h1>` continua para o leitor de tela e para o foco na troca de tela. Decidir no M17, no M32 e no M34, ou na revisão de fidelidade do M42.

@@ -68,7 +68,7 @@
   --tt-accent:var(--tt-tomato-80); --tt-accent-hover:var(--tt-tomato-70); --tt-accent-pressed:var(--tt-tomato-60);
   --tt-fg-on-accent:#FFFFFF; --tt-accent-fg:var(--tt-tomato-80); --tt-ring-track:#E0E0E0;
   --tt-subtle-hover:rgb(0 0 0/.035); --tt-subtle-press:rgb(0 0 0/.024);
-  --tt-subtle-selected:rgb(0 0 0/.035);       /* a confirmar com a captura do Relógio no M09 */
+  --tt-subtle-selected:rgb(0 0 0/.035);       /* conferido com a captura do Relógio no M09 */
   --tt-input-bg:rgb(255 255 255/.70);
   --tt-critical:#C42B1C;                      /* erro sempre com ícone + texto */
   --tt-ctl:rgb(255 255 255/.70); --tt-ctl-hover:rgb(249 249 249/.50); --tt-ctl-press:rgb(249 249 249/.30);
@@ -81,7 +81,7 @@
   --tt-accent:var(--tt-tomato-100); --tt-accent-hover:var(--tt-tomato-110); --tt-accent-pressed:var(--tt-tomato-90);
   --tt-fg-on-accent:#000000; --tt-accent-fg:var(--tt-tomato-110); --tt-ring-track:#3D3D3D;
   --tt-subtle-hover:rgb(255 255 255/.059); --tt-subtle-press:rgb(255 255 255/.039);
-  --tt-subtle-selected:rgb(255 255 255/.059); /* a confirmar com a captura do Relógio no M09 */
+  --tt-subtle-selected:rgb(255 255 255/.059); /* conferido com a captura do Relógio no M09 */
   --tt-input-bg:rgb(255 255 255/.059);
   --tt-critical:#FF99A4;
   --tt-dial-tick:#4A4A4D;                     /* medido no Relógio */

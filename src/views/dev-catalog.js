@@ -1,0 +1,81 @@
+// Catálogo de controles para desenvolvimento (#/dev). No M09 é a amostra do
+// tema do M06, que saiu do index.html; o M12 e o M13 completam o catálogo com
+// todos os controles e estados.
+//
+// Não é uma tela do app: não aparece no painel nem tem atalho (abre-se pelo
+// console do DevTools com location.hash = '#/dev', ou pela URL da prévia). Por
+// isso os textos daqui são de exemplo e ficam fora do catálogo de textos da
+// interface (src/lib/i18n/pt-BR.js).
+//
+// Todo fluent-* usado aqui precisa do seu import no main.js (o base.css esconde
+// o que não foi definido).
+
+const AMOSTRA = `
+<div class="tt-amostra">
+  <header class="tt-amostra-topo">
+    <h1 class="tt-t-title" tabindex="-1">Amostra do tema</h1>
+    <p class="tt-fg-2">Tomatito Lite: botões, controles, cartão e anel sobre os tokens do tema.</p>
+  </header>
+
+  <div class="tt-amostra-grade">
+    <section class="tt-card" aria-labelledby="amostra-botoes">
+      <h2 id="amostra-botoes" class="tt-t-subtitle">Botões</h2>
+      <p class="tt-fg-2">Primário para a ação principal da tela; secundário para as demais.</p>
+      <div class="tt-linha">
+        <button type="button" class="tt-accent">Iniciar sessão de foco</button>
+        <button type="button">Cancelar</button>
+      </div>
+    </section>
+
+    <section class="tt-card" aria-labelledby="amostra-opcoes">
+      <h2 id="amostra-opcoes" class="tt-t-subtitle">Opções</h2>
+      <div class="tt-pilha">
+        <label class="tt-opcao"><fluent-switch checked></fluent-switch>Tocar som no fim do foco</label>
+        <label class="tt-opcao"><fluent-switch></fluent-switch>Pular intervalos</label>
+      </div>
+      <p id="amostra-intervalo" class="tt-t-body-strong">Duração do intervalo</p>
+      <fluent-radio-group name="intervalo" value="5" orientation="vertical" aria-labelledby="amostra-intervalo">
+        <label class="tt-opcao"><fluent-radio value="5"></fluent-radio>5 minutos</label>
+        <label class="tt-opcao"><fluent-radio value="10"></fluent-radio>10 minutos</label>
+        <label class="tt-opcao"><fluent-radio value="15"></fluent-radio>15 minutos</label>
+      </fluent-radio-group>
+    </section>
+
+    <section class="tt-card" aria-labelledby="amostra-anel">
+      <h2 id="amostra-anel" class="tt-t-subtitle">Anel</h2>
+      <figure class="tt-ring" role="img" aria-label="16 minutos restantes, período de foco 1 de 2">
+        <svg viewBox="0 0 236 236" aria-hidden="true" focusable="false">
+          <circle class="tt-ring-track" cx="118" cy="118" r="108" />
+          <!-- 2π·108 ≈ 678,58; 64% do percurso = 434,29 -->
+          <circle
+            class="tt-ring-arc"
+            cx="118"
+            cy="118"
+            r="108"
+            stroke-dasharray="434.29 678.58"
+            transform="rotate(-90 118 118)"
+          />
+        </svg>
+        <figcaption class="tt-ring-rotulo">
+          <span class="tt-ring-tempo tt-num">16:00</span>
+          <span class="tt-fg-2">minutos restantes</span>
+        </figcaption>
+      </figure>
+    </section>
+
+    <section class="tt-card" aria-labelledby="amostra-texto">
+      <h2 id="amostra-texto" class="tt-t-subtitle">Texto</h2>
+      <p class="tt-t-title-large tt-num">25:00</p>
+      <p class="tt-t-body-large">Sessão de foco de 50 minutos</p>
+      <p>Texto do corpo: ação, intervalo, período, configuração.</p>
+      <p class="tt-fg-2">Texto secundário: próximo intervalo às 14:35.</p>
+      <p class="tt-t-caption tt-fg-2">Legenda: 2 períodos de 25 minutos</p>
+      <p class="tt-accent-fg">Texto em destaque: próximo período em 5 minutos.</p>
+    </section>
+  </div>
+</div>
+`;
+
+export function montar(raiz) {
+  raiz.innerHTML = AMOSTRA;
+}
