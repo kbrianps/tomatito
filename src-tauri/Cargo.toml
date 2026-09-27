@@ -22,3 +22,10 @@ tauri-build = { version = "=2.7.0", features = [] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "=2.12.0", features = [] }
+tomatito-core = { path = "tomatito-core" }
+# O laço do motor (engine.rs): interval e Notify. É o mesmo tokio do Tauri.
+tokio = { version = "1.53", features = ["time", "sync", "macros"] }
+
+[dev-dependencies]
+# Testes do laço com o tempo do tokio parado (start_paused).
+tokio = { version = "1.53", features = ["rt", "macros", "test-util"] }

@@ -224,7 +224,8 @@ test('navegação: <nav> e <main> vazios no index.html, com a amostra do M06 for
   assert.ok(telas, 'o main.js passa as telas ao roteador');
   assert.deepEqual(telas[1].split(', '), ['foco', 'temporizador', 'cronometro', 'configuracoes', 'dev']);
   for (const arquivo of ['views/focus/index.js', 'views/timers.js', 'views/stopwatch.js', 'views/settings.js', 'views/dev-catalog.js']) {
-    assert.match(ler(`src/${arquivo}`), /^export function montar\(raiz\)/m, `${arquivo} exporta montar(raiz)`);
+    // M16: a Foco aceita um segundo argumento opcional (o store, para os testes).
+    assert.match(ler(`src/${arquivo}`), /^export function montar\(raiz(\)|, \{)/m, `${arquivo} exporta montar(raiz)`);
   }
 });
 

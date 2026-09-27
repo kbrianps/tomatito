@@ -448,3 +448,30 @@ O som tocando, a notificação aparecendo e a contagem na tela chegam no M16 (co
 2. [ ] `cargo test -p tomatito-core --test foco relogio_pulando`: `test result: ok. 2 passed` (o salto de 40 min e o de 2 h).
 3. [ ] `cargo test -p tomatito-core --release`: `15 passed`, `20 passed` e `2 passed` (o modo acelerado não existe no release).
 4. [ ] No CI do Windows (quando o repositório existir; `docs/pendencias-usuario.md`, item 2), o passo **5. cargo test** lista `Running tests\foco.rs` com `test result: ok. 22 passed`.
+
+
+## M16. Laço, IPC e primeira contagem
+
+O que foi conferido de forma automática (27/09/2026):
+
+- **Motor (`cargo test -p tomatito`, 17 testes; também em `--release`):** iniciar emite `tt://state` e `tt://phase` e devolve o retrato; um `tt://tick` por segundo mostrado; o relógio de parede saltando 1 min entre dois ticks num foco de 5 min (a volta de uma suspensão) já sai descontado no primeiro tick e no `get_state`; o `get_state` fecha a fase vencida antes do tick; a sessão de 60 min inteira pelo laço (três sons, 3.600 ticks); pausar para os ticks; os códigos de erro; a faixa de minutos; o limite do atraso no modo acelerado; e o laço de verdade com o tempo do tokio parado: ocioso, pausado, concluído e depois de encerrar, uma hora sem nenhum tick.
+- **JS (`npm test`, 94 testes):** o `store.js` (estimativa pelo relógio de parede, correção pelo tick, `seq`, ressincronização no `visibilitychange` e no foco da janela, velocidade do `TOMATITO_SPEED`), o relógio de quadros (120 quadros em 2 s = 3 escritas no DOM; parado, nenhum quadro pendente) e o `mm:ss`.
+- **Prévia no Chrome headless** com o mock do Tauri (`scripts/preview/tauri-mock.js`, agora com um motor de foco simulado): iniciar, contar e pausar.
+- **Teste aninhado** (`bash scripts/gnome-aninhado/rodar.sh contagem`, GNOME Shell 50 headless com o binário de debug e o motor de verdade), 14 conferências ok:
+  - "Iniciar 25 min" com o ponteiro virtual: `25:00` logo depois do clique; 5 s depois, `24:55`, igual ao `get_state`, com 5 trocas do texto no DOM (uma por segundo);
+  - minimizada por 360 s: na volta, `18:38`, igual ao Rust (1.117.812 ms) e ao relógio do roteiro (1.118 s);
+  - app e processos do WebView congelados com `SIGSTOP` por 60 s, 10 s depois de iniciar um foco de 5 min (o substituto da suspensão): no `SIGCONT`, `03:49`, com 229 s esperados, e 2 s depois ainda igual ao Rust;
+  - CPU: as threads do tokio (o laço) gastaram 0 tick de CPU em 30 s antes de qualquer sessão e em 30 s depois de encerrar; com a contagem correndo, 0,2% (o controle de que a medida enxerga o laço). O processo inteiro fica em 0,6% a 0,8% por causa do próprio teste (`WAYLAND_DEBUG` e a sonda);
+  - captura em `docs/capturas/m16-contagem.png`.
+- **Sessão real, 1 minuto:** o binário de debug aberto e fechado sozinho (limite de 60 s), sem sessão: `top -b -d 5` por 30 s mostrou 0,0% no `tomatito`, no `WebKitWebProcess` e no `WebKitNetworkProcess` em todas as amostras depois da primeira.
+- `cargo fmt --all --check`, `cargo clippy --workspace -- -D warnings`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`, `cargo test -p tomatito --release`, `npm run build` e `npm test` passam; a checagem cruzada `cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings` (com o `llvm-rc` do LLVM 21 no PATH) também.
+
+### Para conferir (uns 15 minutos, quase todos esperando)
+
+1. [ ] `cd ~/dev/tomatito && npm run tauri dev`. Na tela Foco, o cartão "Pronto para focar" mostra `00:00` e "Nenhuma sessão em andamento".
+2. [ ] Clique em **Iniciar 25 min**: aparece `25:00` e, em seguida, `24:59`, `24:58`... A linha de baixo diz "Período de foco 1 de 1".
+3. [ ] **Minimizar 6 min:** anote o tempo na tela, minimize a janela, espere 6 min no relógio do sistema e volte pela barra de tarefas (ou Alt+Tab). O número deve ser o anotado menos 6 min (± 1 s), já no primeiro quadro, sem "pular" depois.
+4. [ ] Clique em **Encerrar** e depois em **Iniciar 5 min**. Espere uns 30 s e anote o tempo.
+5. [ ] **Suspensão:** num terminal, `systemctl suspend`; acorde o computador depois de 1 min pelo relógio do celular. Na volta, o tempo deve ser o anotado menos o tempo que passou (≈ 1 min e pouco), e não o anotado. Se a fase tiver vencido durante a suspensão, a tela mostra "Sessão concluída".
+6. [ ] **CPU parado:** clique em **Encerrar**, abra outro terminal e rode `top -p $(pgrep -x tomatito)`. Depois de uns 10 s, a coluna `%CPU` fica em `0,0` (no máximo um `0,3` de vez em quando). Com uma sessão correndo, fica um pouco acima.
+7. [ ] Feche o `tauri dev` (Ctrl+C no terminal).

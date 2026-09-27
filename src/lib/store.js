@@ -1,0 +1,125 @@
+// O estado do foco no JS (PLANO.md, 3.1 e 3.2). Quem manda é o Rust: o store
+// só guarda o último retrato (`tt://state`, `get_state` e a resposta dos
+// comandos) e corrige a contagem com o `tt://tick`.
+//
+// Entre dois ticks, o restante é estimado pelo relógio de parede do JS:
+// `restante = restante do último retrato ou tick − (agora − quando chegou) ×
+// velocidade`. Com o relógio de parede (Date.now), um minimizar ou uma
+// suspensão já saem descontados na primeira leitura, mesmo antes da
+// ressincronização; a velocidade é a do `TOMATITO_SPEED` (1 fora do debug).
+//
+// Ressincroniza (get_state) ao abrir, no `visibilitychange` e quando a janela
+// ganha foco: o WebView escondido pode ter perdido eventos ou ter sido
+// recarregado.
+//
+// Os retratos levam `seq` (events.rs): um retrato mais velho que o atual é
+// descartado, e um tick de uma transição que o JS não viu pede um get_state.
+
+import * as ipc from './ipc.js';
+
+/** Estados em que uma fase corre e a contagem anda. */
+export const CORRENDO = Object.freeze(['focus', 'break']);
+
+/**
+ * Cria o store. `ipc` precisa de `obterEstado()` e `ouvir(evento, cb)`, e
+ * `foco.*` para os comandos (o lib/ipc.js; os testes passam um falso).
+ * `agora` é o relógio de parede em ms.
+ */
+export function criarStore({ ipc, eventos, agora = () => Date.now() }) {
+  let foco = null;
+  let velocidade = 1;
+  // Base da estimativa: { restanteMs, em } com uma fase correndo; senão null.
+  let base = null;
+  let pedido = null;
+  const ouvintes = new Set();
+
+  function aplicarFoco(dto) {
+    if (!dto || (foco && dto.seq < foco.seq)) return false;
+    foco = dto;
+    const s = dto.session;
+    base = s && s.endsAt != null ? { restanteMs: s.remainingMs, em: agora() } : null;
+    for (const f of ouvintes) f(foco);
+    return true;
+  }
+
+  function aplicarTick(t) {
+    if (!foco || t.seq < foco.seq) return;
+    const s = foco.session;
+    const mesmaFase = s && s.endsAt != null && s.id === t.sessionId && s.phaseIndex === t.phaseIndex;
+    if (t.seq > foco.seq || !mesmaFase) {
+      void sincronizar();
+      return;
+    }
+    base = { restanteMs: t.remainingMs, em: agora() };
+  }
+
+  /** get_state. Chamadas seguidas dividem o mesmo pedido. */
+  function sincronizar() {
+    pedido ??= Promise.resolve(ipc.obterEstado())
+      .then((estado) => {
+        if (Number.isFinite(estado?.speed) && estado.speed > 0) velocidade = estado.speed;
+        aplicarFoco(estado?.focus);
+      })
+      .finally(() => {
+        pedido = null;
+      });
+    return pedido;
+  }
+
+  const store = {
+    get foco() {
+      return foco;
+    },
+    get velocidade() {
+      return velocidade;
+    },
+    /** Se uma fase corre (a contagem anda). */
+    get correndo() {
+      return base !== null;
+    },
+    /** O restante da fase atual em ms, agora; null sem sessão. */
+    restanteMs() {
+      if (!foco?.session) return null;
+      if (!base) return foco.session.remainingMs;
+      return Math.max(0, base.restanteMs - Math.max(0, agora() - base.em) * velocidade);
+    },
+    /** `cb(foco)` a cada retrato novo. Devolve a função que desliga. */
+    assinar(cb) {
+      ouvintes.add(cb);
+      return () => ouvintes.delete(cb);
+    },
+    aplicarFoco,
+    aplicarTick,
+    sincronizar,
+    /**
+     * Um comando do foco (`iniciar`, `pausar`, `retomar`, `pular`, `parar`):
+     * aplica o retrato da resposta. Um comando recusado (o estado mudou por
+     * outro caminho) pede um get_state e rejeita com o erro do Rust.
+     */
+    async comando(nome, ...args) {
+      try {
+        aplicarFoco(await ipc.foco[nome](...args));
+      } catch (erro) {
+        void sincronizar();
+        throw erro;
+      }
+    },
+    /**
+     * Ouve os eventos e as mudanças de visibilidade e foco da janela, e faz
+     * o primeiro get_state.
+     */
+    async ligar({ doc = globalThis.document, janela = globalThis.window } = {}) {
+      await Promise.all([ipc.ouvir(eventos.estado, aplicarFoco), ipc.ouvir(eventos.tick, aplicarTick)]);
+      doc?.addEventListener('visibilitychange', () => {
+        if (doc.visibilityState === 'visible') void sincronizar();
+      });
+      janela?.addEventListener('focus', () => void sincronizar());
+      await sincronizar();
+    },
+  };
+  return store;
+}
+
+// O store do app, ligado ao Rust pelo lib/ipc.js. O main.js chama `ligar()`
+// no boot; as telas só leem e assinam.
+export const store = criarStore({ ipc, eventos: ipc.EVENTOS });

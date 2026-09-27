@@ -4,13 +4,18 @@
 // só, a mesma ordem do HTML. Por enquanto, cada cartão tem só o título: o de
 // sessão ganha o conteúdo no M17, o de progresso no M27 e o de tarefas no M30.
 import t from '../../lib/i18n/pt-BR.js';
+import { store as storeDoApp } from '../../lib/store.js';
+import * as contagem from './contagem.js';
 
 // Colunas da grade, com os cartões na ordem de leitura (e do Tab).
 export const COLUNAS = Object.freeze([Object.freeze(['sessao', 'tarefas']), Object.freeze(['progresso'])]);
 
+// M16: o cartão de sessão ganha a contagem provisória (contagem.js).
+const conteudo = { sessao: contagem.marcacao };
+
 const cartao = (id) =>
   `<section class="tt-card" data-cartao="${id}" aria-labelledby="foco-${id}">` +
-  `<h2 id="foco-${id}" class="tt-t-subtitle">${t.foco[id]}</h2></section>`;
+  `<h2 id="foco-${id}" class="tt-t-subtitle">${t.foco[id]}</h2>${conteudo[id]?.() ?? ''}</section>`;
 
 /** HTML da tela. */
 export function marcacao() {
@@ -21,6 +26,9 @@ export function marcacao() {
   );
 }
 
-export function montar(raiz) {
+/** `store` é o de lib/store.js; os testes passam outro, ou null para só desenhar. */
+export function montar(raiz, { store = storeDoApp } = {}) {
   raiz.innerHTML = marcacao();
+  if (!store) return null;
+  return contagem.ligar(raiz.querySelector('[data-cartao="sessao"]'), store);
 }

@@ -26,5 +26,20 @@ export default Object.freeze({
     sessao: 'Pronto para focar',
     progresso: 'Progresso diário',
     tarefas: 'Tarefas',
+    // M16: a contagem provisória do cartão de sessão (views/focus/contagem.js),
+    // até o cartão de verdade do M17 e do M18.
+    provisorio: Object.freeze({
+      minutos: Object.freeze([5, 25]),
+      iniciar: (m) => `Iniciar ${m} min`,
+      pausar: 'Pausar',
+      retomar: 'Retomar',
+      pular: 'Pular',
+      parar: 'Encerrar',
+      ocioso: 'Nenhuma sessão em andamento',
+      concluida: 'Sessão concluída',
+      focus: (n, total) => `Período de foco ${n} de ${total}`,
+      break: (n, total) => `Intervalo ${n} de ${total}`,
+      pausado: (fase) => `Pausado: ${fase}`,
+    }),
   }),
 });

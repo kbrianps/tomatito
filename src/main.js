@@ -24,6 +24,7 @@ import { ligarDicas } from './components/dica.js';
 import { montarNavegacao } from './components/nav-view.js';
 import { ligarAtalhosDeNavegacao, ligarEscDasListas } from './lib/keys.js';
 import { iniciarRoteador } from './router.js';
+import { store } from './lib/store.js';
 import * as foco from './views/focus/index.js';
 import * as temporizador from './views/timers.js';
 import * as cronometro from './views/stopwatch.js';
@@ -56,6 +57,9 @@ try {
   // Painel e primeira tela (M09): o roteador desenha a tela do hash (ou a
   // Foco) já na chamada. Vêm antes da espera pelas fontes: o index.html não
   // tem texto próprio, e é este texto que faz o WebView pedir a Inter.
+  // M16: o estado do foco vem do Rust (get_state e eventos). Começa agora e
+  // entra na espera do primeiro quadro: a janela já abre com a contagem certa.
+  const ligado = store.ligar().catch((erro) => console.error('[store]', erro));
   const nav = montarNavegacao(document.querySelector('.tt-nav'), {
     icone,
     navegar: (rota) => roteador.navegar(rota),
@@ -74,7 +78,7 @@ try {
   // document.fonts.ready (sem isso, o ready poderia resolver antes de o
   // WebView pedir a Inter, e a janela abriria com a fonte de reserva).
   void document.body.offsetHeight;
-  const pronto = Promise.all([...USADOS.map((t) => customElements.whenDefined(t)), document.fonts.ready]);
+  const pronto = Promise.all([...USADOS.map((t) => customElements.whenDefined(t)), document.fonts.ready, ligado]);
   await Promise.race([pronto, new Promise((r) => setTimeout(r, 2000))]);   // nunca deixar a janela presa escondida
 
   await montarBarraDeTitulo(document.querySelector('.tt-titlebar'), win);

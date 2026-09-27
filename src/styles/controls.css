@@ -27,6 +27,7 @@ button{
   cursor:default; white-space:nowrap;
   transition:background-color var(--tt-dur-fast) linear;
 }
+button[hidden]{ display:none; }   /* M16: o display acima venceria o [hidden] do navegador */
 button:hover{ background:var(--tt-ctl-hover); }
 button:active{ background:var(--tt-ctl-press); border-color:var(--tt-ctl-stroke-top); }
 

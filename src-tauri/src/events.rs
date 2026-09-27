@@ -1,0 +1,301 @@
+//! O que vai para as janelas (PLANO.md, 3.5): os nomes dos eventos e o formato
+//! JSON dos retratos, em camelCase.
+//!
+//! O núcleo (`tomatito-core`) não conhece o `serde`: os tipos daqui são a
+//! tradução dos retratos dele para o fio, feita num lugar só. Assim o formato
+//! que o JS lê (`src/lib/store.js`) fica todo neste arquivo, e mudar um nome
+//! no núcleo não muda o contrato com as janelas sem passar por aqui.
+//!
+//! Horários em ms desde a época Unix (UTC), como no núcleo; durações em ms
+//! (`remainingMs`) ou em s (`durationS`, `focusS`), com a unidade no nome.
+
+use serde::Serialize;
+use tomatito_core::{
+    ChangeCause, EpochMs, FocusSnapshot, Phase, PhaseChange, PhaseKind, SessionSnapshot, Status,
+};
+
+/// Retrato completo, a cada transição (iniciar, pausar, retomar, pular,
+/// parar e fim de fase).
+pub const STATE: &str = "tt://state";
+/// 1 Hz com uma fase correndo: o prazo e o restante, só para corrigir desvio.
+pub const TICK: &str = "tt://tick";
+/// Troca de fase, para o anúncio `aria-live` (M19).
+pub const PHASE: &str = "tt://phase";
+
+fn ms(t: EpochMs) -> i64 {
+    t.0
+}
+
+/// Estado do foco, na linguagem do fio. A fase de uma pausa vem em
+/// `session.phase`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum StatusDto {
+    Idle,
+    Focus,
+    Break,
+    Paused,
+    Completed,
+}
+
+impl From<Status> for StatusDto {
+    fn from(s: Status) -> Self {
+        match s {
+            Status::Idle => Self::Idle,
+            Status::Focus { .. } => Self::Focus,
+            Status::Break { .. } => Self::Break,
+            Status::Paused { .. } => Self::Paused,
+            Status::Completed => Self::Completed,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PhaseKindDto {
+    Focus,
+    Break,
+}
+
+impl From<PhaseKind> for PhaseKindDto {
+    fn from(k: PhaseKind) -> Self {
+        match k {
+            PhaseKind::Focus => Self::Focus,
+            PhaseKind::Break => Self::Break,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PhaseDto {
+    pub kind: PhaseKindDto,
+    pub n: u32,
+    pub duration_s: u64,
+}
+
+impl From<Phase> for PhaseDto {
+    fn from(p: Phase) -> Self {
+        Self {
+            kind: p.kind.into(),
+            n: p.n,
+            duration_s: p.duration_s,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionDto {
+    pub id: i64,
+    /// T, em minutos.
+    pub minutes: u32,
+    pub skip_breaks: bool,
+    pub task_id: Option<i64>,
+    pub focus_minutes: u32,
+    pub break_minutes: u32,
+    pub started_at: i64,
+    pub blocks: u32,
+    pub intervals: u32,
+    pub phase_index: u32,
+    pub phase: PhaseDto,
+    pub phase_started_at: i64,
+    /// O prazo, só com a fase correndo.
+    pub ends_at: Option<i64>,
+    /// Quanto falta em `at` (o instante do retrato).
+    pub remaining_ms: u64,
+    pub next: Option<PhaseDto>,
+    pub focus_s: u64,
+    pub completed_at: Option<i64>,
+}
+
+impl From<&SessionSnapshot> for SessionDto {
+    fn from(s: &SessionSnapshot) -> Self {
+        Self {
+            id: s.id,
+            minutes: s.config.minutes,
+            skip_breaks: s.config.skip_breaks,
+            task_id: s.config.task_id,
+            focus_minutes: s.config.settings.focus_minutes,
+            break_minutes: s.config.settings.break_minutes,
+            started_at: ms(s.started_at),
+            blocks: s.blocks,
+            intervals: s.intervals,
+            phase_index: s.phase_index,
+            phase: s.phase.into(),
+            phase_started_at: ms(s.phase_started_at),
+            ends_at: s.ends_at.map(ms),
+            remaining_ms: s.remaining_ms,
+            next: s.next.map(Into::into),
+            focus_s: s.focus_s,
+            completed_at: s.completed_at.map(ms),
+        }
+    }
+}
+
+/// O retrato do foco (`tt://state` e o `focus` do `get_state`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FocusDto {
+    /// Número da transição: cresce a cada `tt://state` do processo. O JS
+    /// descarta um retrato mais velho que o que já tem (um evento que chegou
+    /// depois da resposta de um `get_state`, por exemplo). Começa em 0.
+    pub seq: u64,
+    pub status: StatusDto,
+    /// O instante do retrato, no relógio do motor.
+    pub at: i64,
+    pub session: Option<SessionDto>,
+}
+
+impl From<&FocusSnapshot> for FocusDto {
+    fn from(s: &FocusSnapshot) -> Self {
+        Self {
+            seq: 0,
+            status: s.status.into(),
+            at: ms(s.at),
+            session: s.session.as_ref().map(Into::into),
+        }
+    }
+}
+
+/// `tt://tick`: o prazo e a fase de quem corre (3.5), mais o instante e o
+/// restante, para o JS corrigir a contagem sem pedir o retrato inteiro.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TickDto {
+    /// O `seq` do último `tt://state`: um tick com `seq` maior que o do
+    /// retrato do JS indica que ele perdeu uma transição.
+    pub seq: u64,
+    pub session_id: i64,
+    pub phase_index: u32,
+    pub phase: PhaseDto,
+    pub at: i64,
+    pub ends_at_ms: i64,
+    pub remaining_ms: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum CauseDto {
+    Started,
+    Ended,
+    Skipped,
+    Stopped,
+}
+
+/// `tt://phase`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PhaseEventDto {
+    pub cause: CauseDto,
+    /// Só em `ended`: a última fase venceu há mais de 60 s.
+    pub late: bool,
+    pub status: StatusDto,
+    pub ended: Option<PhaseDto>,
+}
+
+impl From<&PhaseChange> for PhaseEventDto {
+    fn from(c: &PhaseChange) -> Self {
+        let (cause, late) = match c.cause {
+            ChangeCause::Started => (CauseDto::Started, false),
+            ChangeCause::Ended { late } => (CauseDto::Ended, late),
+            ChangeCause::Skipped => (CauseDto::Skipped, false),
+            ChangeCause::Stopped => (CauseDto::Stopped, false),
+        };
+        Self {
+            cause,
+            late,
+            status: c.status.into(),
+            ended: c.ended.map(Into::into),
+        }
+    }
+}
+
+/// Resposta do `get_state`. As configurações (M17 em diante, com o
+/// `settings.rs`) e os `recursos` (M39) entram aqui quando existirem.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StateDto {
+    pub focus: FocusDto,
+    /// Velocidade do relógio do motor: 1, ou a do `TOMATITO_SPEED` num build
+    /// de debug. O JS a usa para contar entre dois ticks.
+    pub speed: f64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use tomatito_core::{FakeEffects, Focus, SessionConfig};
+
+    #[test]
+    fn retrato_em_camel_case_com_as_unidades_no_nome() {
+        let mut fx = FakeEffects::new();
+        let mut focus = Focus::new();
+        let t0 = EpochMs(1_790_000_000_000);
+        focus.start(t0, SessionConfig::new(60), &mut fx).unwrap();
+        let dto = FocusDto::from(&focus.snapshot(t0.plus_ms(1_500)));
+        let v = serde_json::to_value(&dto).unwrap();
+        assert_eq!(v["status"], "focus");
+        assert_eq!(v["at"], 1_790_000_001_500i64);
+        let s = &v["session"];
+        assert_eq!(s["minutes"], 60);
+        assert_eq!(s["skipBreaks"], false);
+        assert_eq!(s["taskId"], json!(null));
+        assert_eq!(s["blocks"], 2);
+        assert_eq!(s["intervals"], 1);
+        assert_eq!(
+            s["phase"],
+            json!({"kind": "focus", "n": 1, "durationS": 1650})
+        );
+        assert_eq!(s["endsAt"], 1_790_000_000_000i64 + 1_650_000);
+        assert_eq!(s["remainingMs"], 1_650_000 - 1_500);
+        assert_eq!(
+            s["next"],
+            json!({"kind": "break", "n": 1, "durationS": 300})
+        );
+        assert_eq!(s["focusMinutes"], 25);
+        assert_eq!(s["breakMinutes"], 5);
+    }
+
+    #[test]
+    fn ocioso_e_pausado() {
+        let mut fx = FakeEffects::new();
+        let mut focus = Focus::new();
+        let t0 = EpochMs(1_000_000);
+        let v = serde_json::to_value(FocusDto::from(&focus.snapshot(t0))).unwrap();
+        assert_eq!(
+            v,
+            json!({"seq": 0, "status": "idle", "at": 1_000_000, "session": null})
+        );
+        focus.start(t0, SessionConfig::new(5), &mut fx).unwrap();
+        focus.pause(t0.plus_ms(60_000), &mut fx).unwrap();
+        let v = serde_json::to_value(FocusDto::from(&focus.snapshot(t0.plus_ms(90_000)))).unwrap();
+        assert_eq!(v["status"], "paused");
+        assert_eq!(v["session"]["endsAt"], json!(null));
+        assert_eq!(v["session"]["remainingMs"], 240_000);
+    }
+
+    #[test]
+    fn evento_de_fase() {
+        let mut fx = FakeEffects::new();
+        let mut focus = Focus::new();
+        let t0 = EpochMs(0);
+        focus.start(t0, SessionConfig::new(5), &mut fx).unwrap();
+        focus.advance_to(t0.plus_ms(5 * 60_000 + 61_000), &mut fx);
+        let c = fx.phase_changes();
+        let v: Vec<_> = c
+            .iter()
+            .map(|c| serde_json::to_value(PhaseEventDto::from(c)).unwrap())
+            .collect();
+        assert_eq!(
+            v[0],
+            json!({"cause": "started", "late": false, "status": "focus", "ended": null})
+        );
+        assert_eq!(
+            v[1],
+            json!({"cause": "ended", "late": true, "status": "completed",
+                   "ended": {"kind": "focus", "n": 1, "durationS": 300}})
+        );
+    }
+}

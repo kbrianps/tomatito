@@ -29,15 +29,20 @@ test('cada cartão é uma <section> com o título do catálogo em Subtitle, e a 
   for (const id of ['sessao', 'tarefas', 'progresso']) {
     const re = new RegExp(
       `<section class="tt-card" data-cartao="${id}" aria-labelledby="foco-${id}">` +
-        `<h2 id="foco-${id}" class="tt-t-subtitle">${t.foco[id]}</h2></section>`,
+        `<h2 id="foco-${id}" class="tt-t-subtitle">${t.foco[id]}</h2>` +
+        // M16: só o cartão de sessão tem conteúdo (a contagem provisória).
+        (id === 'sessao' ? '<div class="tt-contagem">.*</div>' : '') +
+        '</section>',
     );
     assert.match(html, re);
   }
-  assert.deepEqual({ ...t.foco }, { sessao: 'Pronto para focar', progresso: 'Progresso diário', tarefas: 'Tarefas' });
+  const { provisorio, ...titulos } = t.foco;
+  assert.ok(provisorio);
+  assert.deepEqual(titulos, { sessao: 'Pronto para focar', progresso: 'Progresso diário', tarefas: 'Tarefas' });
 });
 
 test('montar(raiz) desenha a marcação', () => {
   const raiz = { innerHTML: '' };
-  montar(raiz);
+  assert.equal(montar(raiz, { store: null }), null);
   assert.equal(raiz.innerHTML, marcacao());
 });

@@ -196,6 +196,12 @@
   .tt-foco-grade{ grid-template-columns:repeat(2, minmax(0,1fr)); }
 }
 
+/* Contagem provisória do cartão de sessão (M16; sai no M17). O tempo usa o
+   Display do Relógio (68/92, Semibold), com algarismos de largura fixa. */
+.tt-contagem{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+.tt-contagem-tempo{ font:var(--tt-type-display); margin:0; }
+.tt-contagem > p{ margin:0; }
+
 /* Amostra do M06 (#/dev) */
 .tt-amostra{
   display:flex; flex-direction:column; gap:var(--tt-gap);
