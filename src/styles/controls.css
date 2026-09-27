@@ -1,0 +1,52 @@
+/* src/styles/controls.css: controles feitos à mão (botões, cartão, anel) e o
+   ajuste fino dos componentes Fluent. Só lê tokens --tt-*.
+   M06: o básico para a amostra (botão padrão e de destaque em repouso, hover e
+   pressionado; cartão; anel). O M13 completa os botões (sutil, circular,
+   desabilitado e o anel de foco duplo). */
+
+/* Botões: <button> nativo, medidas do Button do WinUI (32 px, raio 4, texto normal) */
+button{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  height:32px; padding:0 11px;
+  border:1px solid var(--tt-ctl-stroke-top); border-bottom-color:var(--tt-ctl-stroke-bottom);
+  border-radius:var(--tt-r-ctl);
+  background:var(--tt-ctl); color:var(--tt-fg-1);
+  cursor:default; white-space:nowrap;
+  transition:background-color var(--tt-dur-fast) linear;
+}
+button:hover{ background:var(--tt-ctl-hover); }
+button:active{ background:var(--tt-ctl-press); }
+
+button.tt-accent{ background:var(--tt-accent); color:var(--tt-fg-on-accent); border-color:transparent; }
+button.tt-accent:hover{ background:var(--tt-accent-hover); }
+button.tt-accent:active{ background:var(--tt-accent-pressed); }
+
+/* Cartão */
+.tt-card{
+  display:flex; flex-direction:column; gap:12px; min-width:0;
+  padding:var(--tt-pad-card);
+  background:var(--tt-bg-card); border:1px solid var(--tt-border); border-radius:var(--tt-r-card);
+}
+
+/* Agrupamentos simples */
+.tt-linha{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.tt-pilha{ display:flex; flex-direction:column; gap:12px; }
+
+/* Rótulo ao lado de switch ou radio. A cor vence o ::slotted() do fluent-radio-group,
+   que pintaria o rótulo de fg-2 (e de um cinza fora da ponte no hover). */
+.tt-opcao{ display:inline-flex; align-items:center; gap:12px; min-height:32px; color:var(--tt-fg-1); }
+/* Radios empilhados como no RadioButtons do WinUI: 32 px por item, sem o gap de 16 px do Fluent */
+fluent-radio-group{ gap:0; }
+fluent-radio-group .tt-opcao{ gap:8px; }
+
+/* Anel: trilho --tt-ring-track e arco --tt-ring-progress com ponta redonda */
+.tt-ring{ position:relative; width:min(100%, 200px); aspect-ratio:1; margin:4px auto 0; }
+.tt-ring svg{ display:block; width:100%; height:100%; }
+.tt-ring circle{ fill:none; stroke-width:8; }
+.tt-ring-track{ stroke:var(--tt-ring-track); }
+.tt-ring-arc{ stroke:var(--tt-ring-progress); stroke-linecap:round; }
+.tt-ring-rotulo{
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+}
+.tt-ring-tempo{ font:var(--tt-type-title-large); }

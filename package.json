@@ -8,6 +8,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "shot": "node scripts/preview/shot.mjs",
+    "shot:webkit": "node scripts/preview/webkit-shot.mjs",
     "test": "node --test"
   },
   "devDependencies": {

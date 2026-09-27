@@ -46,7 +46,7 @@ test('CSP da seção 3.8 no tauri.conf.json', () => {
 });
 
 test('HTML em pt-BR, sem <style> nem style="..." (senão o nonce anula o unsafe-inline)', () => {
-  assert.match(indexHtml, /<html lang="pt-BR">/);
+  assert.match(indexHtml, /<html lang="pt-BR"[\s>]/);
   assert.doesNotMatch(indexHtml, /<style[\s>]/i);
   assert.doesNotMatch(indexHtml, /\sstyle\s*=/i);
 });
@@ -100,4 +100,51 @@ test('manifesto do Windows (Common Controls v6) que o build.rs passa ao linker',
   const build = ler('src-tauri/build.rs');
   assert.match(build, /WindowsAttributes::new_without_app_manifest\(\)/);
   assert.match(build, /\/MANIFESTINPUT:/);
+});
+
+// M06: folhas de estilo, componentes Fluent e fonte (seções 3.7, 4.2 e 1.1).
+const jsDoApp = readdirSync(new URL('../src', import.meta.url), { recursive: true })
+  .filter((arquivo) => arquivo.endsWith('.js'))
+  .map((arquivo) => ({ arquivo: `src/${arquivo}`, texto: ler(`src/${arquivo}`) }));
+
+test('folhas de estilo como <link> no index.html, na ordem da seção 4.2, e nunca por import no JS', () => {
+  const ordem = ['fluent-tokens.gen.css', 'tokens.css', 'bridge.css', 'fonts.css', 'base.css', 'shell.css', 'controls.css'];
+  const links = [...indexHtml.matchAll(/<link rel="stylesheet" href="\/src\/styles\/([^"]+)"/g)].map((m) => m[1]);
+  for (const folha of ['tokens.css', 'bridge.css', 'fonts.css', 'base.css']) {
+    assert.ok(links.includes(folha), `falta o <link> do ${folha}`);
+  }
+  assert.deepEqual(links, ordem.filter((folha) => links.includes(folha)), 'ordem diferente da seção 4.2');
+  const head = indexHtml.slice(0, indexHtml.indexOf('</head>'));
+  assert.equal(links.length, [...head.matchAll(/<link rel="stylesheet"/g)].length, 'todas as folhas ficam no <head>');
+  for (const { arquivo, texto } of jsDoApp) {
+    assert.doesNotMatch(texto, /import\s*['"][^'"]+\.css['"]/, `${arquivo} importa CSS (no dev, entraria depois do script)`);
+  }
+});
+
+test('todo fluent-* usado tem o seu import (o base.css esconde o que não foi definido)', () => {
+  const importados = new Set();
+  for (const { texto } of jsDoApp) {
+    for (const m of texto.matchAll(/['"]@fluentui\/web-components\/([a-z-]+)\.js['"]/g)) importados.add(`fluent-${m[1]}`);
+  }
+  const usados = new Set();
+  for (const texto of [indexHtml, ...jsDoApp.map((j) => j.texto)]) {
+    for (const m of texto.matchAll(/<(fluent-[a-z-]+)/g)) usados.add(m[1]);
+  }
+  assert.ok(usados.size > 0);
+  for (const tag of usados) assert.ok(importados.has(tag), `<${tag}> sem import de @fluentui/web-components/${tag.slice(7)}.js`);
+  assert.match(ler('src/styles/base.css'), /:not\(:defined\)\s*\{\s*visibility:\s*hidden;?\s*\}/);
+});
+
+test('fonts.css só com a Inter latin e latin-ext em opsz (sem cirílico, grego nem vietnamita)', () => {
+  const css = ler('src/styles/fonts.css');
+  const urls = [...css.matchAll(/url\("([^"]+)"\)/g)].map((m) => m[1]).sort();
+  assert.deepEqual(urls, [
+    '@fontsource-variable/inter/files/inter-latin-ext-opsz-normal.woff2',
+    '@fontsource-variable/inter/files/inter-latin-opsz-normal.woff2',
+  ]);
+  assert.doesNotMatch(css, /@import/);
+  for (const { arquivo, texto } of jsDoApp) {
+    assert.doesNotMatch(texto, /@fontsource/, `${arquivo} importa o pacote inteiro da fonte`);
+  }
+  assert.ok(pkg.dependencies['@fontsource-variable/inter'], 'a fonte vem do @fontsource-variable/inter');
 });

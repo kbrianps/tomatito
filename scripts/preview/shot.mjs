@@ -14,19 +14,31 @@
 // Passos (repetíveis, executados em ordem):
 //   --eval "expr"         avalia na página e imprime o resultado em JSON
 //   --click "seletor"     clique real do mouse no centro do elemento
+//   --fonts "seletor"     fontes da plataforma usadas no texto do elemento
+//                         (CSS.getPlatformFontsForNode), com o nº de glifos
 //   --wait 300            espera, em ms
 //   --shot arquivo.png    captura a viewport
 //
 // Sem nenhum --shot, salva uma captura em $TMPDIR/tomatito-preview.png.
 // O Chrome vem de $CHROME ou, por padrão, google-chrome.
+//
+// Encerramento: além da porta, o Chrome recebe --remote-debugging-pipe. O pipe
+// serve de cordão: se o Node morrer de qualquer jeito (até SIGKILL), o Chrome
+// vê o fim do pipe e fecha sozinho. No fim normal, ou num Ctrl+C ou SIGTERM, o
+// Node pede Browser.close pelo pipe, espera o Chrome sair e espera também
+// todos os processos que citam o perfil (inclusive o chrome_crashpad_handler,
+// que sai do grupo de processos); os que sobrarem recebem SIGTERM e SIGKILL.
+// Só então o perfil temporário é apagado, com novas tentativas. Uma falha na
+// limpeza vira aviso e não muda o código de saída. Se o Node morrer com
+// SIGKILL, o Chrome fecha pelo pipe, mas a pasta fica; a próxima execução
+// apaga os perfis tomatito-chrome-* parados há mais de 2 min e sem processo.
 import { spawn } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { createServer } from 'vite';
-import previewConfig from './vite.config.js';
+import { startPreviewServer } from './servidor.mjs';
 
-const STEP_KINDS = ['eval', 'click', 'wait', 'shot'];
+const STEP_KINDS = ['eval', 'click', 'fonts', 'wait', 'shot'];
 
 function parseArgs(argv) {
   const opts = { size: '1000x700', scheme: 'dark', path: '/' };
@@ -54,14 +66,20 @@ function launchChrome(profileDir) {
     [
       '--headless=new',
       '--remote-debugging-port=0',
+      '--remote-debugging-pipe',
       `--user-data-dir=${profileDir}`,
       '--no-first-run',
       '--no-default-browser-check',
       '--hide-scrollbars',
       'about:blank',
     ],
-    { stdio: ['ignore', 'ignore', 'pipe'] },
+    // fd 3: comandos para o Chrome; fd 4: respostas (--remote-debugging-pipe).
+    { stdio: ['ignore', 'ignore', 'pipe', 'pipe', 'pipe'] },
   );
+  const exited = new Promise((res) => proc.once('exit', res));
+  const [, , , toChrome, fromChrome] = proc.stdio;
+  toChrome.on('error', () => {}); // o Chrome pode sair antes de ler
+  fromChrome.resume(); // as respostas do pipe não interessam; só não podem encher o buffer
   const wsUrl = new Promise((res, rej) => {
     let buf = '';
     const timer = setTimeout(() => rej(new Error('o Chrome não abriu em 20 s')), 20000);
@@ -78,7 +96,94 @@ function launchChrome(profileDir) {
       rej(new Error(`o Chrome saiu com código ${code}\n${buf}`));
     });
   });
-  return { proc, wsUrl };
+  return { proc, wsUrl, exited, toChrome };
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const alive = (chrome) => chrome.proc.exitCode === null && chrome.proc.signalCode === null;
+
+// PIDs cuja linha de comando cita o perfil (Chrome, filhos e crashpad handler).
+function pidsUsing(dir) {
+  if (!existsSync('/proc')) return [];
+  const pids = [];
+  for (const name of readdirSync('/proc')) {
+    if (!/^\d+$/.test(name) || Number(name) === process.pid) continue;
+    try {
+      if (readFileSync(`/proc/${name}/cmdline`, 'utf8').includes(dir)) pids.push(Number(name));
+    } catch {
+      // o processo saiu entre o readdir e a leitura
+    }
+  }
+  return pids;
+}
+
+async function waitUntil(done, ms) {
+  const limit = Date.now() + ms;
+  while (!done()) {
+    if (Date.now() > limit) return false;
+    await sleep(50);
+  }
+  return true;
+}
+
+function signalAll(pids, signal) {
+  for (const pid of pids) {
+    try {
+      process.kill(pid, signal);
+    } catch {
+      // já saiu
+    }
+  }
+}
+
+async function stopChrome(chrome, profileDir) {
+  if (alive(chrome)) {
+    // Pedido educado pelo pipe; fechar o pipe logo depois também encerra o Chrome.
+    chrome.toChrome.write(JSON.stringify({ id: 1, method: 'Browser.close' }) + '\0');
+    chrome.toChrome.end();
+    await Promise.race([chrome.exited, sleep(5000)]);
+  }
+  if (alive(chrome)) chrome.proc.kill('SIGTERM');
+  // Filhos e o chrome_crashpad_handler ainda podem estar gravando no perfil.
+  const gone = () => !alive(chrome) && pidsUsing(profileDir).length === 0;
+  for (const [signal, ms] of [[null, 5000], ['SIGTERM', 3000], ['SIGKILL', 3000]]) {
+    if (signal) {
+      if (alive(chrome)) chrome.proc.kill(signal);
+      signalAll(pidsUsing(profileDir), signal);
+    }
+    if (await waitUntil(gone, ms)) return;
+  }
+  throw new Error(`processos do Chrome ainda usam ${profileDir}: ${pidsUsing(profileDir).join(', ')}`);
+}
+
+function sweepStaleProfiles() {
+  const base = tmpdir();
+  const limit = Date.now() - 2 * 60_000;
+  for (const name of readdirSync(base)) {
+    if (!name.startsWith('tomatito-chrome-')) continue;
+    const dir = join(base, name);
+    try {
+      if (statSync(dir).mtimeMs > limit || pidsUsing(dir).length > 0) continue;
+      rmSync(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+      console.error(`perfil antigo apagado: ${dir}`);
+    } catch {
+      // outra execução pode estar apagando a mesma pasta
+    }
+  }
+}
+
+async function removeProfile(dir) {
+  let last;
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+      if (!existsSync(dir)) return;
+    } catch (err) {
+      last = err;
+    }
+    await sleep(250 * attempt);
+  }
+  console.error(`aviso: o perfil temporário do Chrome ficou em ${dir} (${last?.code ?? 'motivo desconhecido'})`);
 }
 
 function connect(url) {
@@ -135,14 +240,41 @@ function formatRemote(arg) {
 
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
+  sweepStaleProfiles();
   const profileDir = mkdtempSync(join(tmpdir(), 'tomatito-chrome-'));
   let server;
   let chrome;
   let page;
+  // Limpeza única, chamada no fim normal, em erro ou num sinal (Ctrl+C, timeout,
+  // kill). Um sinal mandado só ao Node não chega ao Chrome; sem isto, o Chrome
+  // só fecharia pelo pipe e o perfil ficaria. A limpeza nunca derruba a
+  // captura: cada etapa só avisa.
+  let cleaning;
+  const cleanup = () =>
+    (cleaning ??= (async () => {
+      page?.close();
+      if (chrome) await stopChrome(chrome, profileDir).catch((err) => console.error(`aviso: ${err.message}`));
+      await server?.close().catch((err) => console.error(`aviso: ${err.message}`));
+      await removeProfile(profileDir);
+    })());
+  // Com o terminal ou o pipe fechado, escrever no stdout/stderr dá EPIPE; isso
+  // não pode interromper a limpeza.
+  for (const stream of [process.stdout, process.stderr]) stream.on('error', () => {});
+  // `on`, e não `once`: o `timeout` manda o sinal ao filho e de novo ao grupo, e um
+  // segundo SIGTERM sem ouvinte mataria o Node no meio da limpeza. A limpeza tem
+  // prazo (uns 15 s no pior caso), então os sinais repetidos só esperam por ela.
+  let signaled = false;
+  for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143], ['SIGHUP', 129]]) {
+    process.on(signal, () => {
+      if (signaled) return;
+      signaled = true;
+      console.error(`${signal} recebido; fechando o Chrome e o Vite`);
+      cleanup().finally(() => process.exit(code));
+    });
+  }
   try {
-    server = await createServer({ ...previewConfig, logLevel: 'warn' });
-    await server.listen();
-    const origin = server.resolvedUrls.local[0].replace(/\/$/, '');
+    let origin;
+    ({ server, origin } = await startPreviewServer());
 
     chrome = launchChrome(profileDir);
     const port = new URL(await chrome.wsUrl).port;
@@ -221,6 +353,17 @@ async function main() {
         }
         await settle();
         console.log(`clique em ${value} (${Math.round(pt.x)}, ${Math.round(pt.y)})`);
+      } else if (kind === 'fonts') {
+        await page.send('DOM.enable');
+        await page.send('CSS.enable');
+        const { root } = await page.send('DOM.getDocument', { depth: 0 });
+        const { nodeId } = await page.send('DOM.querySelector', { nodeId: root.nodeId, selector: value });
+        if (!nodeId) throw new Error(`elemento não encontrado: ${value}`);
+        const { fonts } = await page.send('CSS.getPlatformFontsForNode', { nodeId });
+        const desc = fonts
+          .map((f) => `${f.familyName}${f.isCustomFont ? ' (web font)' : ' (do sistema)'}: ${f.glyphCount} glifos`)
+          .join('; ');
+        console.log(`fontes em ${value}: ${desc || 'nenhuma (o elemento não tem texto próprio)'}`);
       } else if (kind === 'shot') {
         const { data } = await page.send('Page.captureScreenshot', { format: 'png' });
         const file = resolve(value);
@@ -231,15 +374,7 @@ async function main() {
     }
     if (failed) process.exitCode = 1;
   } finally {
-    page?.close();
-    if (chrome) {
-      const exited = new Promise((r) => chrome.proc.once('exit', r));
-      chrome.proc.kill('SIGTERM');
-      await Promise.race([exited, new Promise((r) => setTimeout(r, 3000))]);
-      if (chrome.proc.exitCode === null) chrome.proc.kill('SIGKILL');
-    }
-    await server?.close();
-    rmSync(profileDir, { recursive: true, force: true });
+    await cleanup();
   }
 }
 

@@ -1,0 +1,24 @@
+/* src/styles/bridge.css: ponte dos tokens do Tomatito para os do Fluent (PLANO 4.3).
+   Carrega depois do fluent-tokens.gen.css (a partir do M11): mesma especificidade, a
+   ordem decide. O (0,1,0) daqui também vence o html{} (0,0,1) que o setTheme
+   provisório grava numa folha adotada (M01 a M11). */
+
+[data-theme]{
+  --colorNeutralBackground1:var(--tt-bg-card); --colorNeutralBackground2:var(--tt-bg-surface);
+  --colorNeutralBackground3:var(--tt-bg-app);  --colorNeutralForeground1:var(--tt-fg-1);
+  --colorNeutralForeground3:var(--tt-fg-2);    --colorNeutralStroke2:var(--tt-border);
+  --colorNeutralStrokeAccessible:var(--tt-stroke-control);
+  --colorBrandBackground:var(--tt-accent); --colorBrandBackgroundHover:var(--tt-accent-hover);
+  --colorBrandBackgroundPressed:var(--tt-accent-pressed);
+  --colorCompoundBrandBackground:var(--tt-accent); --colorCompoundBrandBackgroundHover:var(--tt-accent-hover);
+  --colorCompoundBrandBackgroundPressed:var(--tt-accent-pressed); --colorCompoundBrandStroke:var(--tt-accent);
+  --colorNeutralForegroundOnBrand:var(--tt-fg-on-accent);
+  --colorBrandForeground1:var(--tt-accent-fg); --colorBrandForegroundLink:var(--tt-accent-fg);
+  --colorBrandStroke1:var(--tt-accent-fg); --colorStrokeFocus2:var(--tt-fg-1);
+  --fontFamilyBase:var(--tt-font-text);
+  --borderRadiusMedium:var(--tt-r-ctl); --borderRadiusXLarge:var(--tt-r-card);
+  /* componentes do app */
+  --tt-ring-progress:var(--tt-accent-fg); --tt-nav-indicator:var(--tt-accent-fg);
+  --tt-titlebar-bg:transparent; --tt-session-card-bg:var(--tt-bg-card);
+  --tt-focus-outer:var(--tt-fg-1); --tt-focus-inner:var(--tt-bg-card);   /* anel duplo: 2 px + 1 px */
+}

@@ -1,0 +1,25 @@
+/* src/styles/base.css: base visual (depois de tokens, ponte e fontes) */
+html,body{ margin:0; height:100%; background:var(--tt-bg-app); color:var(--tt-fg-1);
+  font:var(--tt-type-body); font-optical-sizing:auto; }
+body{ -webkit-user-select:none; user-select:none; }                   /* como app nativo */
+.tt-selectable,input,textarea{ -webkit-user-select:text; user-select:text; }
+.tt-num{ font-variant-numeric:tabular-nums; }
+::selection{ background:var(--tt-accent); color:var(--tt-fg-on-accent); }
+:not(:defined){ visibility:hidden; }                                  /* sem custom element sem estilo */
+.tt-no-transition *{ transition:none !important; }
+
+/* Acréscimos do M06 ao bloco da seção 4.2: margens zeradas e a rampa de tipos
+   (tokens --tt-type-*) como classes, para as telas não repetirem o font. */
+*,*::before,*::after{ box-sizing:border-box; }
+h1,h2,h3,h4,p,figure{ margin:0; }
+button{ font:inherit; }
+.tt-t-caption{ font:var(--tt-type-caption); }
+.tt-t-body{ font:var(--tt-type-body); }
+.tt-t-body-strong{ font:var(--tt-type-body-strong); }
+.tt-t-body-large{ font:var(--tt-type-body-large); }
+.tt-t-subtitle{ font:var(--tt-type-subtitle); }
+.tt-t-title{ font:var(--tt-type-title); }
+.tt-t-title-large{ font:var(--tt-type-title-large); }
+.tt-t-display{ font:var(--tt-type-display); }
+.tt-fg-2{ color:var(--tt-fg-2); }
+.tt-accent-fg{ color:var(--tt-accent-fg); }

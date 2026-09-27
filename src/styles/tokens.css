@@ -1,0 +1,120 @@
+/* Tomatito: tokens. Seletores [data-theme] (e não :root) para permitir prévia aninhada:
+   <div data-theme="suave"> dentro de <html data-theme="lite">. */
+
+/* 1. PRIMITIVOS (iguais em todos os temas) */
+:root{
+  --tt-tomato-10:#210201; --tt-tomato-20:#350403; --tt-tomato-30:#4B0905; --tt-tomato-40:#610F09;
+  --tt-tomato-50:#78180E; --tt-tomato-60:#902013; --tt-tomato-70:#A52E1E; --tt-tomato-80:#B8402D;
+  --tt-tomato-90:#CA523C; --tt-tomato-100:#DD634B; --tt-tomato-110:#F0745A; --tt-tomato-120:#F78F77;
+  --tt-tomato-130:#F8AA96; --tt-tomato-140:#FAC3B5; --tt-tomato-150:#FCDBD2; --tt-tomato-160:#FEF2EF;
+  --tt-caption-close:#C42B1C;                 /* hover do X da barra, glifo branco (convenção do sistema) */
+  --tt-smoke:rgb(0 0 0/.30);                  /* fundo atrás de diálogos */
+
+  --tt-font-text:"Segoe UI Variable Text","Segoe UI Variable","Segoe UI","Inter Variable",system-ui,sans-serif;
+  --tt-font-display:"Segoe UI Variable Display","Segoe UI Variable","Segoe UI","Inter Variable",system-ui,sans-serif;
+  --tt-type-caption:400 12px/16px var(--tt-font-text);
+  --tt-type-body:400 14px/20px var(--tt-font-text);
+  --tt-type-body-strong:600 14px/20px var(--tt-font-text);
+  --tt-type-body-large:400 18px/24px var(--tt-font-text);
+  --tt-type-subtitle:600 20px/28px var(--tt-font-display);
+  --tt-type-title:600 28px/36px var(--tt-font-display);
+  --tt-type-title-large:600 40px/52px var(--tt-font-display);
+  --tt-type-display:600 68px/92px var(--tt-font-display);
+  --tt-w-semilight:350;                       /* número do mostrador */
+
+  --tt-r-ctl:4px; --tt-r-card:8px; --tt-pad-card:16px; --tt-gap:16px;
+  --tt-dur-fast:83ms; --tt-dur-out:167ms; --tt-dur-in:250ms; --tt-dur-page:300ms;
+  --tt-ease-decel:cubic-bezier(0,0,0,1); --tt-ease-point:cubic-bezier(.55,.55,0,1);
+}
+
+/* 2. DERIVADOS PADRÃO (antes dos temas; cada tema pode sobrescrever) */
+[data-theme]{
+  --tt-subtle-press:var(--tt-subtle-hover);
+  --tt-dial-tick:var(--tt-ring-track);        /* traços do mostrador: Lite, Suave e Claro ajustados a olho no M18 */
+  --tt-timer-overdue:var(--tt-accent-fg);     /* temporizador em negativo (M32); o Lite sobrescreve */
+  --tt-fg-2-on-ctl:var(--tt-fg-2);            /* texto 2 sobre input, hover ou selecionado; o Lite sobrescreve */
+  --tt-ctl:var(--tt-input-bg);                /* controles: repouso e traços; Claro e Escuro sobrescrevem */
+  --tt-ctl-stroke-top:var(--tt-border); --tt-ctl-stroke-bottom:var(--tt-stroke-control);
+}
+
+/* 3. SEMÂNTICOS: um bloco por tema */
+:is([data-theme="lite"],[data-theme="full"]){ color-scheme:dark;          /* Tomatito Lite (padrão) */
+  --tt-bg-app:#A5342B; --tt-bg-surface:#AA392F; --tt-bg-card:#AF4135; --tt-border:#BD6359;
+  --tt-stroke-control:#E1B7B2; --tt-fg-1:#FFF8F6; --tt-fg-2:#FBE4DC;
+  --tt-accent:#FFF4EE; --tt-accent-hover:#FDE8E0; --tt-accent-pressed:#F8D7CC;
+  --tt-fg-on-accent:#972620; --tt-accent-fg:#FFF4EE; --tt-ring-track:#B9615A;
+  --tt-subtle-hover:rgb(255 255 255/.06); --tt-subtle-selected:rgb(255 255 255/.10);
+  --tt-input-bg:rgb(255 255 255/.08);
+  --tt-critical:var(--tt-fg-1);   /* vermelho sobre vermelho some: erro = ícone + texto creme (a confirmar) */
+  --tt-fg-2-on-ctl:var(--tt-fg-1);            /* fg-2 cai para 3,94–4,25 sobre input, hover e selecionado */
+  --tt-timer-overdue:var(--tt-fg-1);          /* accent-fg fica a 1,03:1 do fg-1; o rótulo "Encerrado há" distingue */
+  --tt-ctl-hover:rgb(255 255 255/.10); --tt-ctl-press:rgb(255 255 255/.05);   /* fg-1: 4,57 e 5,04 */
+  --tt-fg-disabled:rgb(255 248 246/.45); --tt-accent-disabled:rgb(255 255 255/.16);   /* a olho no M13 */
+}
+[data-theme="suave"]{ color-scheme:light;                                    /* Tomatito Suave */
+  --tt-bg-app:#F6ECE9; --tt-bg-surface:#FAF3F1; --tt-bg-card:#FFFAF9; --tt-border:#EEDAD5;
+  --tt-stroke-control:#8A6F6A; --tt-fg-1:#22110E; --tt-fg-2:#6A514C;
+  --tt-accent:var(--tt-tomato-80); --tt-accent-hover:var(--tt-tomato-70); --tt-accent-pressed:var(--tt-tomato-60);
+  --tt-fg-on-accent:#FFFFFF; --tt-accent-fg:var(--tt-tomato-70); --tt-ring-track:#F1DCD6;
+  --tt-subtle-hover:rgb(165 46 30/.05); --tt-subtle-selected:rgb(165 46 30/.08);
+  --tt-input-bg:#FFFFFF;
+  --tt-critical:#C42B1C;
+  --tt-ctl-hover:#FAF5F4; --tt-ctl-press:#FAF5F4;   /* input ⊕ subtle-hover/press; hoje iguais: a olho no M13 */
+  --tt-fg-disabled:rgb(34 17 14/.36); --tt-accent-disabled:rgb(0 0 0/.216);          /* a olho no M13 */
+}
+[data-theme="light"]{ color-scheme:light;                                    /* Claro */
+  --tt-bg-app:#F3F3F3; --tt-bg-surface:#F9F9F9; --tt-bg-card:#FBFBFB; --tt-border:#ECECEC;
+  --tt-stroke-control:#616161; --tt-fg-1:#1A1A1A; --tt-fg-2:#5C5C5C;
+  --tt-accent:var(--tt-tomato-80); --tt-accent-hover:var(--tt-tomato-70); --tt-accent-pressed:var(--tt-tomato-60);
+  --tt-fg-on-accent:#FFFFFF; --tt-accent-fg:var(--tt-tomato-80); --tt-ring-track:#E0E0E0;
+  --tt-subtle-hover:rgb(0 0 0/.035); --tt-subtle-press:rgb(0 0 0/.024);
+  --tt-subtle-selected:rgb(0 0 0/.035);       /* a confirmar com a captura do Relógio no M09 */
+  --tt-input-bg:rgb(255 255 255/.70);
+  --tt-critical:#C42B1C;                      /* erro sempre com ícone + texto */
+  --tt-ctl:rgb(255 255 255/.70); --tt-ctl-hover:rgb(249 249 249/.50); --tt-ctl-press:rgb(249 249 249/.30);
+  --tt-ctl-stroke-top:rgb(0 0 0/.059); --tt-ctl-stroke-bottom:rgb(0 0 0/.161);
+  --tt-fg-disabled:rgb(0 0 0/.36); --tt-accent-disabled:#00000037;
+}
+[data-theme="dark"]{ color-scheme:dark;                                      /* Escuro */
+  --tt-bg-app:#202020; --tt-bg-surface:#282828; --tt-bg-card:#2B2B2B; --tt-border:#3A3A3A;
+  --tt-stroke-control:#ADADAD; --tt-fg-1:#FFFFFF; --tt-fg-2:#CCCCCC;
+  --tt-accent:var(--tt-tomato-100); --tt-accent-hover:var(--tt-tomato-110); --tt-accent-pressed:var(--tt-tomato-90);
+  --tt-fg-on-accent:#000000; --tt-accent-fg:var(--tt-tomato-110); --tt-ring-track:#3D3D3D;
+  --tt-subtle-hover:rgb(255 255 255/.059); --tt-subtle-press:rgb(255 255 255/.039);
+  --tt-subtle-selected:rgb(255 255 255/.059); /* a confirmar com a captura do Relógio no M09 */
+  --tt-input-bg:rgb(255 255 255/.059);
+  --tt-critical:#FF99A4;
+  --tt-dial-tick:#4A4A4D;                     /* medido no Relógio */
+  --tt-ctl:rgb(255 255 255/.059); --tt-ctl-hover:rgb(255 255 255/.082); --tt-ctl-press:rgb(255 255 255/.031);
+  --tt-ctl-stroke-top:rgb(255 255 255/.094); --tt-ctl-stroke-bottom:rgb(255 255 255/.07);
+  --tt-fg-disabled:rgb(255 255 255/.365); --tt-accent-disabled:#FFFFFF28;
+}
+
+/* 4. TOMATE (Full): valores do protótipo; prevalecem sobre o #B13B30 de propostas antigas */
+[data-theme="full"]{
+  --tt-bg-app:transparent;
+  --tt-tomato-body-hi:#CE3E2F; --tt-tomato-body-mid:#C4342A; --tt-tomato-body-lo:#A1271E;
+  --tt-tomato-ink:#FFFFFF; --tt-tomato-ink-2:rgb(255 255 255/.90);
+  --tt-tomato-ring:#FFF4EE; --tt-tomato-ring-track:rgb(255 255 255/.24);
+  --tt-tomato-btn-bg:#FFF6F1; --tt-tomato-btn-bg-hover:#FFFFFF; --tt-tomato-btn-bg-pressed:#F6E9E4;
+  --tt-tomato-btn-ink:#A3261C;
+  --tt-tomato-calyx:#35603C; --tt-tomato-calyx-vein:#447A4B; --tt-tomato-stem:#56683A;
+  --tt-tomato-shadow:#3A0D08;
+}
+[data-theme="full"] .stage[data-state="break"]{
+  --tt-tomato-body-hi:#943A31; --tt-tomato-body-mid:#8A3129; --tt-tomato-body-lo:#6F2520;
+  --tt-tomato-ring:#CFE3C4; --tt-tomato-btn-ink:#6F2520; }
+[data-theme="full"] .stage[data-state="paused"]{
+  --tt-tomato-body-hi:#A4534A; --tt-tomato-body-mid:#9C4A42; --tt-tomato-body-lo:#7E3A34;
+  --tt-tomato-ring:rgb(255 255 255/.80); --tt-tomato-btn-ink:#7E3A34; }
+/* Windows: a região é binária e cortaria a sombra, então sem sombra. Linux: a sombra fica fora da região de entrada */
+[data-theme="full"][data-platform="windows"] .art .shadowed{ filter:none; }
+/* Plano B3 (fullMode=opaque): janela quadrada e opaca; corpo/fundo = 3,61:1 */
+[data-theme="full"][data-full-mode="opaque"]{ --tt-bg-app:var(--tt-tomato-10); }
+
+/* 5. PREFERÊNCIAS DO SISTEMA (só tokens; a base visual está no base.css) */
+@media (forced-colors:active){ [data-theme]{
+  --tt-accent:Highlight; --tt-fg-on-accent:HighlightText; --tt-accent-fg:LinkText; --tt-ring-track:GrayText; } }
+@media (prefers-contrast:more){ [data-theme]{
+  --tt-border:var(--tt-stroke-control); --tt-dial-tick:var(--tt-stroke-control); } }
+@media (prefers-reduced-motion:reduce){ :root{ --tt-dur-out:83ms; --tt-dur-in:83ms; --tt-dur-page:83ms; } }

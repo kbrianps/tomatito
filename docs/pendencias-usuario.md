@@ -25,6 +25,7 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 6. **Conferir o spike A na tela** (desde o M04). Uns 3 minutos, com os passos em `docs/verificacao-manual.md`, seção M04. O teste automático (num GNOME Shell aninhado, com o mesmo Mutter 50.1) e uma abertura rápida na sessão real já conferiram transparência, arraste e botões. O que falta é o seu olho na tela de verdade. Não bloqueia o M05; cantos pretos ou brancos mudariam o veredito para B3.
 7. **Conferir o spike B na tela** (desde o M05). Uns 4 minutos, com os passos em `docs/verificacao-manual.md`, seção M05; dá para fazer junto com o item 6, na mesma abertura da `spike/full`. O teste aninhado e o comando do "Pronto quando" na sessão real já conferiram a região, o clique atravessando, o arraste e os botões, e o veredito ficou A. Falta ver o clique atravessar para um terminal de verdade. Não bloqueia os próximos marcos (o Full só volta no M50); se o clique não atravessar, o veredito cai para B1 e a fase 10 muda (plano, 5.8).
 8. **(Opcional) Monitor externo na NVIDIA** (desde o M05). O passo 8 da seção M05 de `docs/verificacao-manual.md`. É o gatilho do risco #10702 (Error 71). Não bloqueia nada agora; vale fazer antes do M50.
+9. **Conferir o M06 na tela** (desde o M06). Uns 3 minutos, com os passos em `docs/verificacao-manual.md`, seção M06. As cores, os componentes, os cliques e a fonte já foram conferidos no WebKitGTK de verdade (numa janela fora da tela e numa abertura do `tauri dev`); falta o seu olho. Não bloqueia o M06b nem o M07.
 
 ## Resolvidas
 

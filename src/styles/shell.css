@@ -1,0 +1,15 @@
+/* src/styles/shell.css: estrutura da janela main.
+   M07 traz a barra de título e a borda de 1 px no Linux; M09, a navegação;
+   M10, a camada de conteúdo e o responsivo. Por enquanto, só a página da
+   amostra do M06, que vai para a rota #/dev no M09. */
+
+.tt-amostra{
+  display:flex; flex-direction:column; gap:var(--tt-gap);
+  max-width:1120px; margin:0 auto; padding:28px 32px 40px;
+}
+.tt-amostra-topo{ display:flex; flex-direction:column; gap:4px; }
+.tt-amostra-grade{
+  display:grid; gap:var(--tt-gap); align-items:start;
+  grid-template-columns:repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+}
+@media (max-width:600px){ .tt-amostra{ padding:20px 16px 32px; } }

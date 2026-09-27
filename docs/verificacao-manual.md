@@ -117,3 +117,37 @@ A "caixa" do tomate é o quadrado invisível de 280 px em volta dele. Os cantos 
 8. [ ] (Opcional, NVIDIA) Com o monitor externo na HDMI, que está na NVIDIA: repita o passo 1, arraste o tomate para o monitor externo e repita os passos 3 a 5 lá. Anote em `docs/decisoes.md`, no spike B, se aparecerem cantos pretos, se o clique não atravessar ou se o app cair com `Error 71 (Protocol error) dispatching to Wayland display` no terminal (risco #10702).
 
 Se nos passos 3 e 4 o clique ficar no tomate (o terminal não fica ativo), o veredito cai para B1 (plano, 5.8): anote em `docs/decisoes.md`, no spike B.
+
+## M06. Tokens, ponte e amostra do Lite
+
+A amostra fica direto no `index.html` (a rota `#/dev` entra no M09). A janela ainda é a do template (800×600, com a moldura do sistema); a barra própria vem no M07.
+
+### O que já foi conferido sem olhar a tela (26/09/2026)
+
+- **Nos dois motores, com os mesmos valores:** Chrome headless (`npm run shot`) e o WebKitGTK 2.52.6 de verdade, numa janela fora da tela (`npm run shot:webkit`, novo neste marco).
+
+  | Item | Valor medido |
+  |---|---|
+  | Fundo da página / cartão | `#A5342B` / `#AF4135` |
+  | Botão de destaque | fundo `#FFF4EE`, texto `#972620` |
+  | Botão padrão | fundo branco a 8%, borda de cima `#BD6359`, de baixo `#E1B7B2` |
+  | Switch ligado / radio marcado | `#FFF4EE` / ponto e borda `#FFF4EE` |
+  | Anel | arco `#FFF4EE` sobre o trilho `#B9615A` |
+  | Componentes Fluent | os 6 da página definidos; um `fluent-inexistente` de teste fica com `visibility: hidden` (a regra `:not(:defined)`) |
+  | Fonte | Chrome: `CSS.getPlatformFontsForNode` diz "Inter (web font)" no título, nos botões e nos rótulos. WebKitGTK: `document.fonts.check('14px "Inter Variable"')` é `true`, o arquivo `latin` está `loaded`, e a largura de um texto de teste com a pilha do tema é igual à da Inter (189,1 px) e diferente da `sans-serif` do sistema (181,3 px) |
+  | Cliques | clicar em "10 minutos" marca o radio; clicar no segundo switch o liga |
+  | Largura | sem rolagem horizontal em 1000 e em 480 px |
+
+- **Build:** o `dist/` leva só os dois `woff2` (206 KB). Servido pelo `vite preview` e aberto no WebKitGTK, carrega só o `latin` e mede igual.
+- **App real (`tauri dev`, sessão Wayland):** uma sonda fora do repositório, injetada só no servidor do teste, rodou na janela `main` e devolveu os mesmos valores da tabela (tema `lite`, fundo, cartão, botão, switch, radio, anel, nenhum `fluent-*` indefinido, Inter carregada e com a mesma largura). A janela ficou aberta uns 4 min, e não segundos, por um erro no roteiro de encerramento (ver `docs/decisoes.md`, M06, item 9); foi fechada, sem processo sobrando.
+- **Captura:** `docs/capturas/m06-amostra-lite.png`, tirada no WebKitGTK, em 1000×700.
+
+### Passos para você (uns 3 minutos)
+
+1. [ ] Em `~/dev/tomatito`, rode `npm run tauri dev`. A janela "Tomatito" abre com o título "Amostra do tema" sobre o fundo vermelho-tomate.
+2. [ ] Compare com `docs/capturas/m06-amostra-lite.png`: fundo vermelho, cartões um pouco mais claros com borda fina, texto creme. Não aparece nada branco nem azul. O único detalhe escuro é a bolinha do switch ligado ("Tocar som no fim do foco"), esperado até o M22 (`docs/decisoes.md`, M06, item 5).
+3. [ ] No cartão "Opções", os três radios aparecem (círculos com borda creme), com "5 minutos" marcado. Clique no texto "10 minutos": o ponto creme passa para ele.
+4. [ ] Clique em "Pular intervalos": o switch fica creme, e a bolinha desliza para a direita.
+5. [ ] Passe o mouse sobre "Iniciar sessão de foco" (fica um pouco mais rosado) e sobre "Cancelar" (fica um pouco mais claro). Segurando o clique, os dois mudam de novo.
+6. [ ] A letra é a Inter, a mesma da captura (o "25:00" do cartão "Texto" e o "16:00" do anel com números da mesma largura). Para conferir pelo console: botão direito → **Inspecionar** → Console, e digite `document.fonts.check('14px "Inter Variable"')`. A resposta é `true`.
+7. [ ] Feche a janela e encerre o `tauri dev` com Ctrl+C no terminal.
