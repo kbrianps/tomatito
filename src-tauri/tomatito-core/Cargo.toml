@@ -10,5 +10,6 @@ publish = false
 
 # Regra de isolamento (PLANO.md, 3.2): nada de tauri, wry, tao, gtk ou webkit2gtk
 # aqui, nem direta nem indiretamente. `cargo test -p tomatito-core` compila só o
-# núcleo. O teste em src/lib.rs confere as dependências diretas.
+# núcleo. O teste em tests/isolamento.rs confere a árvore inteira, pelo
+# `cargo tree -p tomatito-core --target all -e normal,build,dev`.
 [dependencies]

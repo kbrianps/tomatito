@@ -411,3 +411,19 @@ O `#/dev` agora mostra todos os botões do app (padrão, destaque, sutil de 32 �
 10. [ ] Feche a janela no X e, no terminal, Ctrl+C se o `tauri dev` não sair sozinho.
 
 Se algo não bater, anote qual passo e o que apareceu.
+
+## M14. Regra dos intervalos
+
+Nada a conferir na tela neste marco: é só o `tomatito-core`, sem janela. O que foi conferido de forma automática (27/09/2026):
+
+- `cargo test -p tomatito-core plan` (o "Pronto quando"): 10 testes do `plan.rs`, todos ok. Com um `CARGO_TARGET_DIR` vazio, compila só o `tomatito-core`.
+- `cargo test -p tomatito-core`: também os 2 testes de `tests/isolamento.rs`, que leem a árvore do `cargo tree` (todos os sistemas; dependências normais, de build e de desenvolvimento).
+- Mutações: 4 na regra (cada uma derruba de 1 a 3 testes) e 5 no `Cargo.toml` do núcleo, numa cópia (a forma de tabela, uma dependência indireta, uma só do Windows, uma de desenvolvimento e uma de build: todas reprovadas; o controle com `serde` passa). Detalhes em `docs/decisoes.md`, M14, itens 5 e 6.
+- `cargo fmt --all --check`, `cargo clippy --workspace -- -D warnings`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace` e `npm test` passam; a checagem cruzada `cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings` (com o `llvm-rc` do LLVM 21 no PATH) também.
+
+### Se quiser rodar (1 minuto)
+
+1. [ ] `cd ~/dev/tomatito/src-tauri && cargo test -p tomatito-core plan`: `test result: ok. 10 passed`.
+2. [ ] `cargo test -p tomatito-core --test isolamento`: `test result: ok. 2 passed`.
+3. [ ] No CI do Windows (quando o repositório existir; `docs/pendencias-usuario.md`, item 2), o passo **5. cargo test** lista também `Running tests\isolamento.rs` com `test result: ok. 2 passed`. É a primeira vez que o teste roda o `cargo tree` no Windows.
+
