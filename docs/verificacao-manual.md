@@ -427,3 +427,24 @@ Nada a conferir na tela neste marco: é só o `tomatito-core`, sem janela. O que
 2. [ ] `cargo test -p tomatito-core --test isolamento`: `test result: ok. 2 passed`.
 3. [ ] No CI do Windows (quando o repositório existir; `docs/pendencias-usuario.md`, item 2), o passo **5. cargo test** lista também `Running tests\isolamento.rs` com `test result: ok. 2 passed`. É a primeira vez que o teste roda o `cargo tree` no Windows.
 
+
+## M15. Relógio e máquina de estados
+
+Nada a conferir na tela neste marco: é só o `tomatito-core`, sem janela, som nem notificação de verdade (o som e o aviso são pedidos ao `FakeEffects`, que só anota). O que foi conferido de forma automática (27/09/2026):
+
+- `cargo test -p tomatito-core` (o "Pronto quando"): 21 testes nos módulos (10 do `plan.rs` e 11 do `clock.rs`), 22 em `tests/foco.rs` e 2 em `tests/isolamento.rs`, todos ok. Os três itens do marco estão em `tests/foco.rs`:
+  - iniciar, pausar, retomar, pular e parar: `iniciar_*`, `pausar_guarda_o_restante_e_o_tempo_pausado_nao_conta`, `pular_*` e `parar_*`;
+  - o relógio pulando 40 min fecha a fase: `relogio_pulando_40_min_fecha_a_fase`;
+  - o relógio pulando 2 h numa sessão de 60 min: `relogio_pulando_2_h_numa_sessao_de_60_min_termina_concluida` (Concluído, 2 focos e 1 intervalo gravados, um único aviso "atrasado", nenhum som).
+- `cargo test -p tomatito-core --release`: 15 + 20 + 2 testes; sem `debug_assertions`, o `ScaledClock` e os 8 testes dele ficam de fora, e o resto passa.
+- Mutações: 21, numa cópia do núcleo (19 na máquina de estados e 2 no relógio), todas reprovadas. Lista em `docs/decisoes.md`, M15, item 18.
+- `cargo fmt --all --check`, `cargo clippy --workspace -- -D warnings`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo clippy -p tomatito-core --all-targets --release -- -D warnings`, `cargo test --workspace` e `npm test` passam; a checagem cruzada `cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings` (com o `llvm-rc` do LLVM 21 no PATH) também.
+
+O som tocando, a notificação aparecendo e a contagem na tela chegam no M16 (contagem), no M20 (som) e no M21 (notificação), com as conferências de cada um.
+
+### Se quiser rodar (1 minuto)
+
+1. [ ] `cd ~/dev/tomatito/src-tauri && cargo test -p tomatito-core`: as linhas `test result: ok.` mostram `21 passed`, `22 passed` e `2 passed` (e `0 passed` dos doc-tests).
+2. [ ] `cargo test -p tomatito-core --test foco relogio_pulando`: `test result: ok. 2 passed` (o salto de 40 min e o de 2 h).
+3. [ ] `cargo test -p tomatito-core --release`: `15 passed`, `20 passed` e `2 passed` (o modo acelerado não existe no release).
+4. [ ] No CI do Windows (quando o repositório existir; `docs/pendencias-usuario.md`, item 2), o passo **5. cargo test** lista `Running tests\foco.rs` com `test result: ok. 22 passed`.
