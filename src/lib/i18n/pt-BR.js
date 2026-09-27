@@ -20,4 +20,11 @@ export default Object.freeze({
     cronometro: 'Cronômetro',
     configuracoes: 'Configurações',
   }),
+  // Tela Foco (M10: a grade e os títulos dos cartões; o conteúdo de cada um
+  // chega no M17, no M27 e no M30). Títulos da seção 2.1 do plano.
+  foco: Object.freeze({
+    sessao: 'Pronto para focar',
+    progresso: 'Progresso diário',
+    tarefas: 'Tarefas',
+  }),
 });

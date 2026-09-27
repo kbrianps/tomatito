@@ -216,7 +216,7 @@ test('barra de título: região de arraste no index.html, borda do Linux e glifo
 
 // M09: navegação (seções 3.7, 3.8 e o marco M09).
 test('navegação: <nav> e <main> vazios no index.html, com a amostra do M06 fora dele (vai para o #/dev)', () => {
-  assert.match(indexHtml, /<nav class="tt-nav"><\/nav>\s*<main class="tt-conteudo"><\/main>/);
+  assert.match(indexHtml, /<nav class="tt-nav"><\/nav>\s*<main class="tt-conteudo"><div class="tt-rolagem"><\/div><\/main>/);
   assert.doesNotMatch(indexHtml, /tt-amostra|<fluent-/, 'a amostra mora no src/views/dev-catalog.js');
   const main = ler('src/main.js');
   const telas = main.match(/telas: \{ ([^}]+) \}/);
@@ -249,4 +249,51 @@ test('navegação: medidas do NavigationView e tokens da seção M09 no shell.cs
   assert.match(nav, /getPropertyValue\('--tt-ease-point'\)/, 'com --tt-ease-point');
   assert.match(nav, /prefers-reduced-motion: reduce[\s\S]*duracao\('--tt-dur-fast'\)/, 'e vira fade de 83 ms com movimento reduzido');
   assert.doesNotMatch(nav, /\.style\.(?!setProperty)/, 'sem estilo em linha além de variáveis (3.8)');
+});
+
+// M10: camada de conteúdo e responsivo.
+test('camada de conteúdo: fundo, borda de 1 px em cima e à esquerda, canto de 8 px, e a rolagem por dentro', () => {
+  const css = ler('src/styles/shell.css');
+  const regra = (sel) => {
+    const m = css.match(new RegExp(`(?:^|\\n)${sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\{([^}]*)\\}`));
+    assert.ok(m, `falta a regra ${sel}`);
+    return m[1];
+  };
+  const camada = regra('.tt-conteudo');
+  assert.match(camada, /background:var\(--tt-bg-surface\)/);
+  assert.match(camada, /border-top:1px solid var\(--tt-border\); border-left:1px solid var\(--tt-border\)/);
+  assert.doesNotMatch(camada, /border-(right|bottom)|border:/, 'sem borda à direita nem embaixo');
+  assert.match(camada, /border-top-left-radius:var\(--tt-r-card\)/);
+  assert.match(ler('src/styles/tokens.css'), /--tt-r-card:8px;/);
+  // A camada é o contêiner das consultas e não rola; quem rola é a .tt-rolagem
+  // (docs/decisoes.md, M10): a largura consultada não muda com a barra.
+  assert.match(camada, /overflow:hidden/);
+  assert.match(camada, /container:conteudo \/ inline-size/);
+  assert.match(regra('.tt-rolagem'), /overflow:auto/);
+  assert.match(ler('src/main.js'), /raiz: document\.querySelector\('\.tt-rolagem'\)/, 'o roteador desenha as telas na área que rola');
+});
+
+test('responsivo: painel compacto de 48 px abaixo de 860 px e grade da Foco em 2 colunas a partir de 560 px de área', () => {
+  const css = ler('src/styles/shell.css');
+  const bloco = (inicio) => {
+    const i = css.indexOf(inicio);
+    assert.ok(i >= 0, `falta ${inicio}`);
+    let nivel = 0;
+    for (let j = css.indexOf('{', i); j < css.length; j++) {
+      if (css[j] === '{') nivel++;
+      else if (css[j] === '}' && --nivel === 0) return css.slice(i, j + 1);
+    }
+    throw new Error(`bloco sem fim: ${inicio}`);
+  };
+  const compacto = bloco('@media (width < 860px){');
+  assert.match(compacto, /\.tt-nav\{ width:48px; \}/);
+  assert.match(compacto, /\.tt-nav-rotulo\{[^}]*clip-path:inset\(50%\)/, 'o rótulo sai da tela, mas não da árvore de acessibilidade');
+  assert.doesNotMatch(compacto, /\.tt-nav-rotulo\{[^}]*display:none/);
+  assert.match(compacto, /\.tt-nav-dica\{[^}]*display:block/);
+  assert.match(css, /(?:^|\n)\.tt-nav-dica\{ display:none; \}/, 'fora do painel compacto, a dica não existe');
+  assert.equal(css.match(/@media \(width < 860px\)/g).length, 1, 'um limite só para o painel');
+  const grade = bloco('@container conteudo (width >= 560px){');
+  assert.match(grade, /\.tt-foco-grade\{ grid-template-columns:repeat\(2, minmax\(0,1fr\)\); \}/);
+  assert.match(css, /\.tt-foco-grade\{[^}]*grid-template-columns:minmax\(0,1fr\)[^}]*gap:var\(--tt-gap\)/, 'uma coluna abaixo, com gap de 16');
+  assert.match(ler('src/styles/tokens.css'), /--tt-gap:16px;/);
 });

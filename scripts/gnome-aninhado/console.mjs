@@ -35,6 +35,19 @@ const ESTADO = `(async () => {
     fontesStatus: document.fonts.status,
     interCarregada: document.fonts.check('14px "Inter Variable"'),
     csp,
+    // M10: o layout que a janela abriu (largura, painel, camada e colunas da Foco).
+    layout: (() => {
+      const c = document.querySelector('.tt-conteudo');
+      const g = document.querySelector('.tt-foco-grade');
+      const cs = c && getComputedStyle(c);
+      return {
+        janela: innerWidth,
+        painel: document.querySelector('.tt-nav')?.getBoundingClientRect().width ?? null,
+        camada: cs && [cs.backgroundColor, cs.borderTopWidth + ' ' + cs.borderTopColor, cs.borderLeftWidth, cs.borderTopLeftRadius],
+        colunas: g ? getComputedStyle(g).gridTemplateColumns : null,
+        rolagemHorizontal: h.scrollWidth > h.clientWidth,
+      };
+    })(),
   });
 })()`;
 // Um <script> inline sem hash, posto pela página: a CSP do build o recusa. (Um

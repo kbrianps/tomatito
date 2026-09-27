@@ -14,9 +14,14 @@ import base from '../../vite.config.js';
 const LOG = process.env.SONDA_LOG;
 const COMANDO = process.env.TT_OUT ? `${process.env.TT_OUT}/comando.json` : null;
 // TT_CONTROLE (M08) liga um controle negativo na sonda; ver sonda.js.
+// M10: a sonda leva junto as medidas de layout da prévia
+// (scripts/preview/medidas.js: __ttMedidas, __ttMedir e __ttTema), para o
+// roteiro pedir por comando.
 const SONDA =
   `const CONTROLE = ${JSON.stringify(process.env.TT_CONTROLE ?? '')};\n` +
-  readFileSync(new URL('./sonda.js', import.meta.url), 'utf8');
+  readFileSync(new URL('./sonda.js', import.meta.url), 'utf8') +
+  '\n' +
+  readFileSync(new URL('../preview/medidas.js', import.meta.url), 'utf8');
 
 export default {
   ...base,

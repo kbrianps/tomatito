@@ -54,3 +54,16 @@ test('o atributo focusgroup e a definição do polyfill dizem a mesma coisa', ()
   assert.equal(!tokens.includes('nomemory'), DEFINICAO.memory);
   assert.deepEqual(DEFINICAO, { behavior: 'toolbar', axis: 'block', wrap: false, memory: false });
 });
+
+test('M10: cada item traz a dica do painel compacto, decorativa e com o mesmo texto do rótulo', () => {
+  const html = marcacao('foco', iconeFalso);
+  const itens = [...html.matchAll(/<a\b[^>]*>(.*?)<\/a>/g)].map(([, dentro]) => dentro);
+  assert.equal(itens.length, 4);
+  for (const dentro of itens) {
+    const rotulo = dentro.match(/<span class="tt-nav-rotulo">([^<]*)<\/span>/)?.[1];
+    const dica = dentro.match(/<span class="tt-nav-dica" aria-hidden="true">([^<]*)<\/span>/)?.[1];
+    assert.ok(rotulo, 'o rótulo continua no link (é o nome dele)');
+    assert.equal(dica, rotulo, 'a dica repete o rótulo e fica fora da árvore de acessibilidade');
+    assert.ok(dentro.indexOf('tt-nav-rotulo') < dentro.indexOf('tt-nav-dica'), 'a dica vem depois do rótulo');
+  }
+});

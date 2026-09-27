@@ -6,7 +6,28 @@
    sozinho. */
 .tt-janela{ display:grid; grid-template-rows:32px minmax(0,1fr); height:100%; }
 .tt-corpo{ display:flex; min-height:0; }
-.tt-conteudo{ flex:1; min-width:0; overflow:auto; }
+/* Camada de conteúdo (M10), como o ContentGrid do NavigationView do WinUI
+   (NavigationView_themeresources.xaml): fundo LayerFillColorDefault
+   (--tt-bg-surface), borda CardStrokeColorDefault (--tt-border) de 1 px só em
+   cima e à esquerda (NavigationViewContentGridBorderThickness 1,1,0,0) e o
+   canto superior esquerdo de 8 px (NavigationViewContentGridCornerRadius
+   8,0,0,0).
+   É também o contêiner "conteudo" das consultas de largura das telas (a
+   grade da Foco, abaixo): elas medem a área de conteúdo, e não a janela. Por
+   isso a camada não rola: quem rola é a .tt-rolagem, por dentro dela (e
+   recortada pelo canto). Assim a largura consultada é sempre a janela menos o
+   painel e a borda, com ou sem barra de rolagem: uma barra clássica (WebView2
+   no Windows, ou o WebKitGTK com GTK_OVERLAY_SCROLLING=0) não muda
+   o número de colunas, e o layout não depende de a tela rolar ou não
+   (docs/decisoes.md, M10). */
+.tt-conteudo{
+  display:flex; flex:1; min-width:0; overflow:hidden;
+  background:var(--tt-bg-surface);
+  border-top:1px solid var(--tt-border); border-left:1px solid var(--tt-border);
+  border-top-left-radius:var(--tt-r-card);
+  container:conteudo / inline-size;
+}
+.tt-rolagem{ flex:1; min-width:0; overflow:auto; }
 
 /* Barra de título (src/components/title-bar.js) */
 .tt-titlebar{
@@ -101,16 +122,79 @@
   outline:2px solid var(--tt-focus-outer); outline-offset:0;
   box-shadow:inset 0 0 0 1px var(--tt-focus-inner);
 }
+/* Dica do painel compacto (abaixo). Fora dele, não existe. */
+.tt-nav-dica{ display:none; }
 /* Alto contraste (Windows): o fundo do indicador viraria Canvas. */
 @media (forced-colors:active){
   .tt-nav-indicador{ forced-color-adjust:none; background:Highlight; }
   .tt-nav-item:focus-visible{ outline-color:Highlight; box-shadow:none; }
 }
 
+/* Painel compacto (M10): abaixo de 860 px de janela, o painel fica com 48 px
+   (NavigationViewCompactPaneLength), só com os ícones, como o LeftCompact do
+   NavigationView. Os itens continuam com 36 px e as margens de 4 e 2, o que
+   deixa o ícone centrado nos 48 px (x = 16) e o indicador no mesmo lugar. Sem
+   botão de expandir: o painel volta a 280 px quando a janela passa de 860.
+   O rótulo sai da tela, mas continua sendo o nome do link para o leitor de
+   tela; quem mostra o nome ao mouse e ao teclado é a dica. */
+@media (width < 860px){
+  .tt-nav{ width:48px; }
+  .tt-nav-item{ padding:0 12px; }
+  .tt-nav-rotulo{
+    position:absolute; width:1px; height:1px; overflow:hidden;
+    clip-path:inset(50%); white-space:nowrap;
+  }
+  /* Dica: à direita do item, centrada na altura, no desenho da dica do Fluent
+     (fundo do cartão, texto Caption, raio 4 e a sombra de 8), com borda em
+     --tt-border para se separar da camada no Lite. Aparece 250 ms depois de
+     o mouse parar no item ou de o foco do teclado chegar nele (o atraso do
+     fluent-tooltip) e some ao apertar o item, com Esc (nav-view.js) e quando
+     outro item está sob o mouse. É decorativa (aria-hidden): o nome do link já
+     é o rótulo. Faz parte do link, então o mouse pode passar para cima dela
+     sem ela sumir (WCAG 1.4.13); o ::before cobre o vão de 8 px até o item. */
+  .tt-nav-dica{
+    display:block; position:absolute; z-index:10;
+    left:calc(100% + 8px); top:50%; translate:0 -50%;
+    padding:5px 8px 7px;
+    font:var(--tt-type-caption); white-space:nowrap;
+    background:var(--tt-bg-card); color:var(--tt-fg-1);
+    border:1px solid var(--tt-border); border-radius:var(--tt-r-ctl);
+    box-shadow:var(--shadow8);
+    visibility:hidden; opacity:0;
+    transition:opacity var(--tt-dur-fast) linear, visibility 0s linear var(--tt-dur-fast);
+  }
+  .tt-nav-dica::before{ content:""; position:absolute; top:-1px; bottom:-1px; right:100%; width:9px; }
+  .tt-nav-item:is(:hover, :focus-visible) > .tt-nav-dica{
+    visibility:visible; opacity:1;
+    transition:opacity var(--tt-dur-fast) linear 250ms, visibility 0s linear 250ms;
+  }
+  .tt-nav:has(.tt-nav-item:hover) .tt-nav-item:not(:hover) > .tt-nav-dica,
+  .tt-nav-item:active > .tt-nav-dica,
+  .tt-nav-sem-dica .tt-nav-item > .tt-nav-dica{
+    visibility:hidden; opacity:0; transition:none;
+  }
+}
+
 /* Telas. O título recebe o foco quando a tela troca com o foco dentro da tela
    anterior (src/router.js); o foco ali não precisa de anel. */
 .tt-pagina{ padding:28px 32px 40px; }
 .tt-conteudo h1[tabindex="-1"]:focus{ outline:none; }
+
+/* Grade da tela Foco (M10): duas colunas quando a área de conteúdo tem 560 px
+   ou mais, e uma abaixo disso (docs/decisoes.md, M10). As colunas são
+   independentes, como no Relógio: a primeira empilha a sessão e as tarefas, a
+   segunda o progresso, e cada cartão tem a própria altura. Numa coluna só, a
+   ordem é a mesma do HTML (sessão, tarefas, progresso), e o Tab segue a
+   leitura nos dois arranjos. Cada coluna tem no máximo 446 px, a largura dos
+   cartões nas capturas do Relógio; o M17 confere a posição de tudo. */
+.tt-foco-grade{
+  display:grid; grid-template-columns:minmax(0,1fr); gap:var(--tt-gap); align-items:start;
+  max-width:908px; margin-top:var(--tt-gap);
+}
+.tt-foco-coluna{ display:flex; flex-direction:column; gap:var(--tt-gap); min-width:0; }
+@container conteudo (width >= 560px){
+  .tt-foco-grade{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+}
 
 /* Amostra do M06 (#/dev) */
 .tt-amostra{

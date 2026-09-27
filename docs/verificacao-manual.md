@@ -284,3 +284,33 @@ O painel de 280 px com Foco, Temporizador e Cronômetro em cima e Configuraçõe
 7. [ ] Feche a janela no X e, no terminal, Ctrl+C se o `tauri dev` não sair sozinho.
 
 Se algo não bater, anote qual passo e o que apareceu.
+
+## M10. Camada de conteúdo e responsivo
+
+A área das telas virou uma camada (`--tt-bg-surface`) com borda de 1 px em cima e à esquerda e o canto superior esquerdo de 8 px; abaixo de 860 px de janela, o painel compacta para 48 px, só com os ícones e uma dica ao lado; a tela Foco ganhou a grade dos cartões (por enquanto só com os títulos), com 2 colunas a partir de 560 px de área e 1 abaixo. Captura: `docs/capturas/m10-responsivo.png`, toda tirada do app de verdade no teste aninhado: em cima, a janela com 1000, 859, 608 e 480 px; embaixo, o canto da camada ampliado no Lite e no Escuro, a dica com o mouse e com o teclado, e a janela de 480 px com zoom de 160%.
+
+### O que já foi conferido sem olhar a tela (27/09/2026)
+
+- **Teste num GNOME Shell aninhado** (Mutter 50.1, Wayland, o app de verdade com ponteiro e teclado virtuais; nada aparece na sua tela): `bash scripts/gnome-aninhado/rodar.sh responsivo`, 18 conferências, todas ok:
+  - a 1000 px: painel de 280, camada em x = 280 e y = 32, borda de 1 px só em cima e à esquerda, canto de 8 px e 2 colunas; nos pixels, Lite (painel `#A5342B`, camada `#AA392F`, borda `#BD6359`) e Escuro (`#202020`, `#282828`, `#3A3A3A`), com o fundo no vértice do canto;
+  - **estreitando a janela pela borda direita com o ponteiro**, de 1000 px até passar do mínimo, com 18 paradas: nenhuma rolagem horizontal em nenhuma; painel de 280 até 860 px e de 48 em 859; 2 colunas até 609 px e 1 em 608; a janela para em 480;
+  - a 480 px, as cinco telas (Foco, Temporizador, Cronômetro, Configurações e `#/dev`) sem rolagem horizontal, também com a tela forçada a rolar na vertical; e com zoom de 120%, 140% e 160% (Ctrl+=), que deixam a página com 400, 343 e 300 px CSS; Ctrl+0 volta;
+  - a dica do painel compacto: aparece uns 250 ms depois de o mouse parar no item (265 ms medidos pela página), à direita dele e centrada; some com Esc e volta no item seguinte; some ao apertar o item e não volta com o mouse parado; acompanha o foco do teclado (Tab e ↓) e some com Esc; não aparece no painel largo;
+  - nenhum erro na página; o app sai sozinho quando a janela fecha.
+- **Nos dois motores, sem janela** (`node scripts/preview/responsivo.mjs`): 15 larguras (1000, 880, 861, 860, 859, 700, 610, 609, 608, 560 e 480, e 480 com zoom de 120% a 160%) × 5 telas no Chrome headless e no WebKitGTK fora da tela, e de novo nos dois com barras de rolagem clássicas e a tela forçada a rolar (como no Windows; no WebKitGTK, com `GTK_OVERLAY_SCROLLING=0`): nenhuma rolagem horizontal, painel e colunas nos limites certos, e a camada certa nos quatro temas normais. No Chrome, também as dicas com mouse, teclado e Esc. O rótulo continua sendo o nome do link no painel compacto (`link "Foco"`, sem descrição repetida).
+- **Regressões:** os roteiros do M07 (36 conferências), do M08 (10 partidas no dev e 10 no build de debug, sem quadro fora do Lite e sem "Refused to") e do M09 (25) continuam passando.
+- **Na sua sessão, rápido e sem mexer na janela:** o build de debug abriu com o inspetor remoto; o console veio vazio, e o layout de 1000 px veio com o painel de 280, a camada com a borda e o canto, e 2 colunas; o app foi fechado logo em seguida, sem processo sobrando.
+- `npm test` (56 testes, 8 novos), `node scripts/contrast.mjs` (com a tabela nova da camada), `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace` e a checagem cruzada do Windows passam.
+
+### Passos para você (uns 4 minutos)
+
+1. [ ] Em `~/dev/tomatito`, rode `npm run tauri dev` e espere a janela (uns 5 s).
+2. [ ] **A camada:** à direita do painel, a área das telas é um vermelho um pouco mais claro que o do painel, separada dele por uma linha fina em cima e à esquerda, com o canto de cima à esquerda arredondado. Na tela Foco, três cartões só com o título: "Pronto para focar" e "Tarefas" à esquerda, "Progresso diário" à direita.
+3. [ ] **Estreitar:** puxe a borda direita da janela devagar para a esquerda, até ela parar (480 px). Em nenhum momento aparece barra de rolagem horizontal. Quando a janela fica mais estreita que uns 860 px, o painel vira uma coluna só com os ícones; os cartões continuam em duas colunas até uns 610 px e depois ficam um embaixo do outro. Volte a alargar: tudo volta ao que era.
+4. [ ] **Dica:** com o painel só com ícones, pare o mouse sobre o ícone da ampulheta: em um quarto de segundo aparece "Temporizador" ao lado. Aperte **Esc**: a dica some sem você mover o mouse. Clique no ícone: a tela troca, e a dica não volta enquanto o mouse fica parado ali.
+5. [ ] **Teclado:** clique na área vazia da direita e aperte **Tab**: o ícone da tela atual ganha o contorno e, logo depois, a dica com o nome. **↑** e **↓** levam o contorno e a dica aos outros ícones.
+6. [ ] **Zoom:** com a janela estreita, aperte **Ctrl+=** três vezes. Tudo cresce, os títulos dos cartões quebram em duas linhas, e continua sem barra de rolagem horizontal. **Ctrl+0** volta.
+7. [ ] (Opcional) Em Configurações do GNOME → Acessibilidade, ligue a opção de sempre mostrar as barras de rolagem, abra o `#/dev` (botão direito → Inspecionar → Console: `location.hash = '#/dev'`), que é mais alto que a janela, e repita o passo 3. Se a barra vertical aparecer (o teste automático só conseguiu ligá-la pela variável `GTK_OVERLAY_SCROLLING=0`, e não se sabe se o WebKitGTK segue a opção do GNOME), ela fica dentro da camada, e ainda assim nada rola na horizontal. Desligue a opção depois.
+8. [ ] Feche a janela no X e, no terminal, Ctrl+C se o `tauri dev` não sair sozinho.
+
+Se algo não bater, anote qual passo e o que apareceu.

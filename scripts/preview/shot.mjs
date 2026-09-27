@@ -11,6 +11,8 @@
 //   --size 1000x700       viewport (padrão 1000x700, o tamanho da main)
 //   --scheme dark|light   prefers-color-scheme emulado (padrão dark)
 //   --motion reduce       prefers-reduced-motion emulado (padrão: sem preferência)
+//   --scrollbars classic  barras de rolagem clássicas, que ocupam espaço, como
+//                         no WebView2 do Windows (padrão: hidden, sem barras)
 //   --path /#/foco        caminho aberto (padrão /)
 // Passos (repetíveis, executados em ordem):
 //   --eval "expr"         avalia na página e imprime o resultado em JSON
@@ -25,6 +27,11 @@
 //                         acessibilidade para cada elemento do seletor
 //   --fonts "seletor"     fontes da plataforma usadas no texto do elemento
 //                         (CSS.getPlatformFontsForNode), com o nº de glifos
+//   --resize 480x500@1.5  muda a viewport no meio da prévia (M10); o "@1.5",
+//                         opcional, simula o zoom do app (Ctrl +): a página
+//                         passa a ter 480/1,5 × 500/1,5 px CSS, desenhados com
+//                         densidade 1,5, que é o que o zoom do WebView faz com
+//                         o layout
 //   --wait 300            espera, em ms
 //   --shot arquivo.png    captura a viewport
 //
@@ -47,10 +54,19 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { startPreviewServer } from './servidor.mjs';
 
-const STEP_KINDS = ['eval', 'click', 'hover', 'press', 'key', 'ax', 'fonts', 'wait', 'shot'];
+const STEP_KINDS = ['eval', 'click', 'hover', 'press', 'key', 'ax', 'fonts', 'resize', 'wait', 'shot'];
+
+/** "480x500" ou "480x500@1.5" → { width, height, zoom }. */
+function lerTamanho(texto) {
+  const m = /^(\d+)x(\d+)(?:@(\d+(?:\.\d+)?))?$/.exec(texto);
+  if (!m || !Number(m[1]) || !Number(m[2])) throw new Error(`tamanho inválido: ${texto} (use 480x500 ou 480x500@1.5)`);
+  const zoom = m[3] ? Number(m[3]) : 1;
+  if (!(zoom > 0)) throw new Error(`zoom inválido: ${texto}`);
+  return { width: Number(m[1]), height: Number(m[2]), zoom };
+}
 
 function parseArgs(argv) {
-  const opts = { size: '1000x700', scheme: 'dark', motion: '', path: '/' };
+  const opts = { size: '1000x700', scheme: 'dark', motion: '', path: '/', scrollbars: 'hidden' };
   const steps = [];
   for (let i = 0; i < argv.length; i += 2) {
     const key = argv[i].replace(/^--/, '');
@@ -65,10 +81,11 @@ function parseArgs(argv) {
   }
   const [width, height] = opts.size.split('x').map(Number);
   if (!width || !height) throw new Error(`--size inválido: ${opts.size}`);
+  if (!['hidden', 'classic'].includes(opts.scrollbars)) throw new Error(`--scrollbars inválido: ${opts.scrollbars}`);
   return { ...opts, width, height, steps };
 }
 
-function launchChrome(profileDir) {
+function launchChrome(profileDir, scrollbars) {
   const bin = process.env.CHROME ?? 'google-chrome';
   const proc = spawn(
     bin,
@@ -79,7 +96,7 @@ function launchChrome(profileDir) {
       `--user-data-dir=${profileDir}`,
       '--no-first-run',
       '--no-default-browser-check',
-      '--hide-scrollbars',
+      ...(scrollbars === 'hidden' ? ['--hide-scrollbars'] : []),
       'about:blank',
     ],
     // fd 3: comandos para o Chrome; fd 4: respostas (--remote-debugging-pipe).
@@ -314,7 +331,7 @@ async function main() {
     let origin;
     ({ server, origin } = await startPreviewServer());
 
-    chrome = launchChrome(profileDir);
+    chrome = launchChrome(profileDir, opts.scrollbars);
     const port = new URL(await chrome.wsUrl).port;
     const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
     const target = targets.find((t) => t.type === 'page');
@@ -446,6 +463,16 @@ async function main() {
           .map((f) => `${f.familyName}${f.isCustomFont ? ' (web font)' : ' (do sistema)'}: ${f.glyphCount} glifos`)
           .join('; ');
         console.log(`fontes em ${value}: ${desc || 'nenhuma (o elemento não tem texto próprio)'}`);
+      } else if (kind === 'resize') {
+        const { width, height, zoom } = lerTamanho(value);
+        await page.send('Emulation.setDeviceMetricsOverride', {
+          width: Math.round(width / zoom),
+          height: Math.round(height / zoom),
+          deviceScaleFactor: zoom,
+          mobile: false,
+        });
+        await settle();
+        console.log(`viewport ${value}`);
       } else if (kind === 'shot') {
         const { data } = await page.send('Page.captureScreenshot', { format: 'png' });
         const file = resolve(value);

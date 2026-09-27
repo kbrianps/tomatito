@@ -30,6 +30,7 @@ const R = { passos: [], checagens: {} };
 
 // Cores do Lite (src/styles/tokens.css).
 const BG_APP = [0xa5, 0x34, 0x2b];
+const CAMADA = [0xaa, 0x39, 0x2f]; // --tt-bg-surface, a camada de conteúdo (M10)
 const BORDA = [0xbd, 0x63, 0x59];
 const FECHAR = [0xc4, 0x2b, 0x1c];
 
@@ -226,19 +227,21 @@ async function principal() {
   mover(960, 1070);
   await sleep(500);
 
-  // Borda de 1 px (Linux) e fundo por dentro.
+  // Borda de 1 px (Linux) e o que fica logo dentro dela: o fundo #A5342B em
+  // cima (barra de título) e à esquerda (painel), e a camada de conteúdo
+  // #AA392F embaixo e à direita (desde o M10; no M07 era o fundo nos quatro).
   await captura('janela.png', { x: r.x - 20, y: r.y - 20, w: r.w + 40, h: r.h + 40 });
   await captura('tela.png');
   let px = leitorDePixels('tela.png');
   const bordas = {
-    cima: [px(r.x + 600, r.y), px(r.x + 600, r.y + 1)],
-    baixo: [px(r.x + 500, r.y + r.h - 1), px(r.x + 500, r.y + r.h - 2)],
-    esquerda: [px(r.x, r.y + 350), px(r.x + 1, r.y + 350)],
-    direita: [px(r.x + r.w - 1, r.y + 350), px(r.x + r.w - 2, r.y + 350)],
+    cima: [px(r.x + 600, r.y), px(r.x + 600, r.y + 1), BG_APP],
+    baixo: [px(r.x + 500, r.y + r.h - 1), px(r.x + 500, r.y + r.h - 2), CAMADA],
+    esquerda: [px(r.x, r.y + 350), px(r.x + 1, r.y + 350), BG_APP],
+    direita: [px(r.x + r.w - 1, r.y + 350), px(r.x + r.w - 2, r.y + 350), CAMADA],
   };
   checar(
-    'borda de 1 px em --tt-border (#BD6359) nos quatro lados, com o fundo #A5342B logo dentro',
-    Object.values(bordas).every(([b, d]) => perto(b, BORDA) && perto(d, BG_APP)),
+    'borda de 1 px em --tt-border (#BD6359) nos quatro lados, com o fundo #A5342B logo dentro em cima e à esquerda e a camada #AA392F embaixo e à direita',
+    Object.values(bordas).every(([b, d, quer]) => perto(b, BORDA) && perto(d, quer)),
     Object.fromEntries(Object.entries(bordas).map(([k, [b, d]]) => [k, `${hex(b)} / ${hex(d)}`])),
   );
 

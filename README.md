@@ -34,6 +34,8 @@ npm run shot -- --path "/?plataforma=linux" --shot /tmp/previa.png   # prévia n
 bash scripts/gnome-aninhado/rodar.sh barra-de-titulo                 # a janela de verdade num GNOME Shell aninhado (Linux)
 bash scripts/gnome-aninhado/rodar.sh partida-a-frio                  # 10 aberturas, quadro a quadro, e o console do DevTools
 bash scripts/gnome-aninhado/rodar.sh navegacao                       # painel, atalhos, teclado e o indicador deslizando
+bash scripts/gnome-aninhado/rodar.sh responsivo                      # estreitar a janela até 480 px, zoom e dicas do painel
+node scripts/preview/responsivo.mjs                                  # o layout em 15 larguras, no Chrome e no WebKitGTK
 ```
 
 O CI (`.github/workflows/ci.yml`) roda o build, os testes, o `cargo fmt` e o `cargo clippy` no Linux e no Windows a cada push.

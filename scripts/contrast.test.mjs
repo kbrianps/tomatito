@@ -131,6 +131,20 @@ test('mutações: token abaixo do mínimo falha; token mudado sem atualizar a ta
   assert.deepEqual([fora.falhas, fora.divergencias], [[], []]);
 });
 
+test('M10: texto sobre a camada de conteúdo, fora da tabela 4.4, conferido contra o mínimo', () => {
+  const original = lerArquivos();
+  const r = conferir(original);
+  const linha = (par) => r.camada.find((l) => l.par === par).celulas;
+  assert.deepEqual(linha('Texto 1 / camada'), ['6,00', '16,59', '16,53', '14,74']);
+  assert.deepEqual(linha('Texto 2 / camada'), ['5,17', '6,62', '6,35', '9,18']);
+  // uma camada clara demais no Lite derruba o texto creme, mesmo sem linha na tabela
+  const clara = original.map((f) =>
+    f.texto.includes('--tt-bg-surface:#AA392F;') ? { ...f, texto: f.texto.replace('--tt-bg-surface:#AA392F;', '--tt-bg-surface:#D98A80;') } : f,
+  );
+  const falhas = conferir(clara).falhas.join('\n');
+  assert.match(falhas, /Lite, Texto 1 \/ camada: \d,\d\d < 4,5/);
+});
+
 test('node scripts/contrast.mjs termina com 0 e imprime a tabela 4.4', () => {
   const r = spawnSync(process.execPath, [script], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
@@ -138,6 +152,7 @@ test('node scripts/contrast.mjs termina com 0 e imprime a tabela 4.4', () => {
   assert.match(r.stdout, /^\| Par \| Lite \| Suave \| Claro \| Escuro \| Mínimo \|$/m);
   assert.match(r.stdout, /^\| Erro \(`--tt-critical`\) \/ cartão \| 5,51 \| 5,47 \| 5,47 \| 6,97 \| 4,5 \|$/m);
   assert.match(r.stdout, /^\| Pausado \| 6,05 \(5,36\) \| 5,24 \| 4,51 \| 7,75 \|$/m);
+  assert.match(r.stdout, /^\| Texto 1 \/ camada \| 6,00 \| 16,59 \| 16,53 \| 14,74 \| 4,5 \|$/m);
   assert.match(r.stdout, /iguais à tabela 4\.4 do plano\.$/m);
   assert.equal(spawnSync(process.execPath, [script, '--xpto'], { encoding: 'utf8' }).status, 2);
 });

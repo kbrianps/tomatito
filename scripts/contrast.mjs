@@ -406,6 +406,18 @@ export const LINHAS = [
     ref: [[5.51], [5.47], [5.47], [6.97]] },
 ];
 
+// Camada de conteúdo (M10): as telas passaram a ficar sobre o --tt-bg-surface,
+// que não tem linha na tabela 4.4. Os pares de texto sobre a camada são
+// conferidos só contra o mínimo (sem `ref`), numa tabela à parte. A borda da
+// camada sobre o fundo é decorativa, como a do cartão.
+export const LINHAS_CAMADA = [
+  { par: 'Texto 1 / camada', frente: '--tt-fg-1', fundos: [['--tt-bg-surface']], min: 4.5 },
+  { par: 'Texto 2 / camada', frente: '--tt-fg-2', fundos: [['--tt-bg-surface']], min: 4.5 },
+  { par: 'Accent como texto / camada', frente: '--tt-accent-fg', fundos: [['--tt-bg-surface']], min: 4.5 },
+  { par: 'Borda da camada / fundo', frente: '--tt-border', fundos: [['--tt-bg-app']], min: null,
+    minTexto: 'decorativa, como no WinUI' },
+];
+
 // Tomate (Full), medido sobre o corpo, nos três estados da .stage.
 export const ESTADOS = [
   ['focus', 'Foco'],
@@ -490,16 +502,19 @@ export function conferir(css, { referencia = true } = {}) {
   const porTema = TEMAS.map(([tema]) =>
     computar(regras, [{ tag: 'html', atributos: { 'data-theme': tema, 'data-platform': 'linux' } }]),
   );
-  const linhas = LINHAS.map((linha) => {
-    const celulas = TEMAS.map(([, nome], t) => {
-      const medida = medir(porTema[t], linha);
-      avaliar(nome, linha, medida, linha.ref?.[t]);
-      if (medida.mesmaCor) return lista(medida.direto);
-      return `${lista(medida.direto)}: usa ${medida.rotulo} (${lista(medida.usado)})`;
+  const tabelaPorTema = (lista_) =>
+    lista_.map((linha) => {
+      const celulas = TEMAS.map(([, nome], t) => {
+        const medida = medir(porTema[t], linha);
+        avaliar(nome, linha, medida, linha.ref?.[t]);
+        if (medida.mesmaCor) return lista(medida.direto);
+        return `${lista(medida.direto)}: usa ${medida.rotulo} (${lista(medida.usado)})`;
+      });
+      const minimo = linha.minTexto ?? minimoTexto(linha.min);
+      return { par: linha.par, celulas, minimo };
     });
-    const minimo = linha.minTexto ?? minimoTexto(linha.min);
-    return { par: linha.par, celulas, minimo };
-  });
+  const linhas = tabelaPorTema(LINHAS);
+  const camada = tabelaPorTema(LINHAS_CAMADA);
 
   const cadeiaTomate = (estado, extra = {}) => [
     { tag: 'html', atributos: { 'data-theme': 'full', 'data-platform': 'linux', ...extra } },
@@ -525,14 +540,14 @@ export function conferir(css, { referencia = true } = {}) {
     return { par: nota.par, valor: virgula(medida.direto[0]), nota: nota.nota };
   });
 
-  return { linhas, tomate, notas, falhas, divergencias };
+  return { linhas, camada, tomate, notas, falhas, divergencias };
 }
 
 // ---------------------------------------------------------------------------
 // 6. Saída
 // ---------------------------------------------------------------------------
 
-export function formatar({ linhas, tomate, notas }) {
+export function formatar({ linhas, camada, tomate, notas }) {
   const tabela = (cabecalho, corpo) =>
     [cabecalho, cabecalho.map(() => '---'), ...corpo].map((l) => `| ${l.join(' | ')} |`).join('\n');
   return [
@@ -541,6 +556,13 @@ export function formatar({ linhas, tomate, notas }) {
     tabela(
       ['Par', ...TEMAS.map(([, nome]) => nome), 'Mínimo'],
       linhas.map((l) => [l.par, ...l.celulas, l.minimo]),
+    ),
+    '',
+    'Camada de conteúdo (M10), fora da tabela 4.4: conferida só contra o mínimo.',
+    '',
+    tabela(
+      ['Par', ...TEMAS.map(([, nome]) => nome), 'Mínimo'],
+      camada.map((l) => [l.par, ...l.celulas, l.minimo]),
     ),
     '',
     'Tomate (Full), medido sobre o corpo:',
@@ -574,9 +596,9 @@ function principal(argv) {
   console.log(formatar(resultado));
   const { falhas, divergencias } = resultado;
   const pares =
-    `${LINHAS.length * TEMAS.length + COLUNAS_TOMATE.length * ESTADOS.length + NOTAS_TOMATE.length} pares ` +
-    `(${LINHAS.length} × ${TEMAS.length} temas, ${COLUNAS_TOMATE.length} × ${ESTADOS.length} estados do tomate ` +
-    `e ${NOTAS_TOMATE.length} medidas soltas)`;
+    `${(LINHAS.length + LINHAS_CAMADA.length) * TEMAS.length + COLUNAS_TOMATE.length * ESTADOS.length + NOTAS_TOMATE.length} pares ` +
+    `(${LINHAS.length} × ${TEMAS.length} temas, mais ${LINHAS_CAMADA.length} × ${TEMAS.length} da camada de conteúdo, ` +
+    `${COLUNAS_TOMATE.length} × ${ESTADOS.length} estados do tomate e ${NOTAS_TOMATE.length} medidas soltas)`;
   console.log('');
   if (falhas.length) console.error(`Abaixo do mínimo (${falhas.length}):\n${falhas.map((f) => `  - ${f}`).join('\n')}`);
   if (divergencias.length) {

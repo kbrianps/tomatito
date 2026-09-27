@@ -18,6 +18,9 @@
 //   (Web Animations, sem estilo em linha) parte de onde o indicador anterior
 //   estava, inclusive no meio de outra animação. Com prefers-reduced-motion,
 //   no lugar do deslize, um fade de 83 ms (--tt-dur-fast).
+// - M10: abaixo de 860 px de janela, o painel compacta para 48 px, só com os
+//   ícones (shell.css). Cada item traz a sua dica, que só existe no painel
+//   compacto; este arquivo só cuida de dispensá-la (ligarDicas).
 import { FocusGroup } from '@microsoft/focusgroup-polyfill/shadowless';
 import t from '../lib/i18n/pt-BR.js';
 import { hashDaRota } from '../router.js';
@@ -35,11 +38,15 @@ export const RODAPE = Object.freeze([Object.freeze({ rota: 'configuracoes', icon
 export const FOCUSGROUP = 'toolbar block nomemory';
 export const DEFINICAO = Object.freeze({ behavior: 'toolbar', axis: 'block', wrap: false, memory: false });
 
+// A dica (M10) repete o rótulo e só aparece no painel compacto (shell.css). É
+// aria-hidden: o nome do link continua vindo do rótulo, que no painel compacto
+// sai da tela sem sair da árvore de acessibilidade.
 const item = ({ rota, icone: nome }, atual, icone) =>
   `<li><a class="tt-nav-item" href="${hashDaRota(rota)}" data-rota="${rota}" draggable="false"` +
   `${rota === atual ? ' aria-current="page" focusgroupstart' : ''}>` +
   '<span class="tt-nav-indicador" aria-hidden="true"></span>' +
-  `${icone(nome)}<span class="tt-nav-rotulo">${t.navegacao[rota]}</span></a></li>`;
+  `${icone(nome)}<span class="tt-nav-rotulo">${t.navegacao[rota]}</span>` +
+  `<span class="tt-nav-dica" aria-hidden="true">${t.navegacao[rota]}</span></a></li>`;
 
 /**
  * HTML interno do painel. `icone(nome)` devolve o SVG de um ícone (o
@@ -74,6 +81,49 @@ function animarIndicador(indDe, indPara, topoDe) {
   indPara.animate([{ transform: `translateY(${dy}px)` }, { transform: 'translateY(0)' }], {
     duration: duracao('--tt-dur-in'),
     easing,
+  });
+}
+
+const itemDe = (el) => (el instanceof Element ? el.closest('a.tt-nav-item') : null);
+
+/**
+ * Dicas do painel compacto (M10). Quando e onde elas aparecem está no
+ * shell.css; aqui fica só o que o CSS não sabe fazer: dispensar. A dica some ao
+ * apertar o item (como no WinUI) e com Esc, sem mover o mouse nem o foco (WCAG
+ * 1.4.13), e continua dispensada até o mouse sair daquele item ou chegar a
+ * outro, ou até o foco do teclado ir para outro item.
+ */
+function ligarDicas(nav) {
+  let dispensada = null;
+  const dispensar = (a) => {
+    dispensada = a;
+    nav.classList.add('tt-nav-sem-dica');
+  };
+  const liberar = () => {
+    dispensada = null;
+    nav.classList.remove('tt-nav-sem-dica');
+  };
+  nav.addEventListener('pointerdown', (e) => {
+    const a = itemDe(e.target);
+    if (a) dispensar(a);
+  });
+  nav.addEventListener('pointerover', (e) => {
+    const a = itemDe(e.target);
+    if (a && a !== dispensada) liberar();
+  });
+  nav.addEventListener('pointerout', (e) => {
+    const a = itemDe(e.target);
+    if (a && a === dispensada && itemDe(e.relatedTarget) !== a) liberar();
+  });
+  nav.addEventListener('focusin', (e) => {
+    const a = itemDe(e.target);
+    if (a && a !== dispensada) liberar();
+  });
+  // Esc vale com o foco em qualquer lugar: a dica do mouse aparece sem foco.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const a = nav.querySelector('.tt-nav-item:hover') ?? nav.querySelector('.tt-nav-item:focus-visible');
+    if (a) dispensar(a);
   });
 }
 
@@ -120,6 +170,7 @@ export function montarNavegacao(nav, { icone, navegar }) {
   nav.addEventListener('auxclick', (e) => {
     if (e.target.closest('a')) e.preventDefault();
   });
+  ligarDicas(nav);
 
   return {
     /** Marca o item da rota (nenhum, no #/dev) e anima o indicador. */

@@ -11,6 +11,8 @@
 // clássico que o vite.config.js desta pasta põe antes dele.
 import { emit } from '@tauri-apps/api/event';
 import { mockIPC, mockWindows } from '@tauri-apps/api/mocks';
+// Medidas do layout (M10): __ttMedidas, __ttMedir e __ttTema, para o --eval.
+import './medidas.js';
 
 const params = new URLSearchParams(location.search);
 

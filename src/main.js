@@ -43,7 +43,7 @@ try {
     navegar: (rota) => roteador.navegar(rota),
   });
   const roteador = iniciarRoteador({
-    raiz: document.querySelector('.tt-conteudo'),
+    raiz: document.querySelector('.tt-rolagem'),
     telas: { foco, temporizador, cronometro, configuracoes, dev },
     aoMudar: (rota, anterior) => nav.selecionar(rota, { animar: anterior !== null }),
   });

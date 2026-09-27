@@ -8,7 +8,8 @@ porque a janela fora da tela não consegue contexto GL no Wayland; para CSS,
 fontes e layout, o resultado é o mesmo do app.
 
 Entrada: um JSON em argv[1] com url, width, height, scheme, motion e steps
-([["eval", "expr"], ["wait", "300"], ["shot", "arquivo.png"]]).
+([["eval", "expr"], ["resize", "480x500@1.5"], ["wait", "300"],
+["shot", "arquivo.png"]]).
 Saída: uma linha por passo no stdout; o console.error/warn e os erros da página
 vão para o stderr. Código 1 se a página lançar erro ou um passo falhar.
 """
@@ -98,6 +99,35 @@ def next_step():
             next_step()
 
         run_js(value, done)
+    elif kind == "resize":
+        # "480x500" ou "480x500@1.5": tamanho da janela fora da tela e zoom do
+        # WebView. O pedido de tamanho da view é o mínimo da janela, então
+        # os dois mudam juntos; depois, dois quadros para o layout assentar.
+        size, _, zoom = value.partition("@")
+        w, h = (int(n) for n in size.split("x"))
+        view.set_size_request(w, h)
+        win.set_default_size(w, h)
+        win.resize(w, h)
+        win.queue_resize()
+        view.set_zoom_level(float(zoom or 1))
+
+        def settled(_r, err):
+            if err:
+                print(f"resize {value} => erro: {err}", file=sys.stderr)
+                return finish(1)
+            print(f"viewport {value}", flush=True)
+            next_step()
+
+        GLib.timeout_add(
+            100,
+            lambda: (
+                run_js(
+                    "new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))",
+                    settled,
+                ),
+                False,
+            )[1],
+        )
     elif kind == "shot":
 
         def snap_done(_obj, res):

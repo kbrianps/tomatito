@@ -16,6 +16,9 @@
 //   --path /#/foco        caminho aberto (padrão /)
 // Passos (repetíveis, executados em ordem):
 //   --eval "expr"         avalia na página (promessas são esperadas) e imprime o JSON
+//   --resize 480x500@1.5  muda o tamanho da janela fora da tela (M10); o "@1.5",
+//                         opcional, é o zoom do WebView (webkit_web_view_set_zoom_level,
+//                         o mesmo que o Ctrl + do app usa)
 //   --wait 300            espera, em ms
 //   --shot arquivo.png    captura a viewport
 //
@@ -27,7 +30,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startPreviewServer } from './servidor.mjs';
 
-const STEP_KINDS = ['eval', 'wait', 'shot'];
+const STEP_KINDS = ['eval', 'resize', 'wait', 'shot'];
 const HELPER = fileURLToPath(new URL('./webkit-shot.py', import.meta.url));
 
 function parseArgs(argv) {

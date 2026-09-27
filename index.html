@@ -26,9 +26,10 @@ if(tomato&&w.__TT_FULL_MODE__==='opaque')h.dataset.fullMode='opaque';})();</scri
       <div class="tt-titlebar" data-tauri-drag-region="deep"></div>
       <div class="tt-corpo">
         <!-- Painel de navegação (M09): o conteúdo, o rótulo e o focusgroup vêm do
-             src/components/nav-view.js; a tela, do src/router.js. -->
+             src/components/nav-view.js; a tela, do src/router.js, dentro da
+             área que rola (.tt-rolagem), por baixo da camada de conteúdo (M10). -->
         <nav class="tt-nav"></nav>
-        <main class="tt-conteudo"></main>
+        <main class="tt-conteudo"><div class="tt-rolagem"></div></main>
       </div>
     </div>
     <script type="module" src="/src/main.js"></script>
