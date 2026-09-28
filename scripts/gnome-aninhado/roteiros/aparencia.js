@@ -158,10 +158,14 @@ function capturar(W, nome) {
   const p = pb.get_pixels();
   const rs = pb.get_rowstride();
   const n = pb.get_n_channels();
-  return (x, y) => [p[y * rs + x * n], p[y * rs + x * n + 1], p[y * rs + x * n + 2]];
+  const w = pb.get_width();
+  const h = pb.get_height();
+  // Fora da captura (uma prévia abaixo da dobra, por exemplo) é null, e a
+  // checagem falha com o motivo em vez de derrubar o roteiro.
+  return (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? null : [p[y * rs + x * n], p[y * rs + x * n + 1], p[y * rs + x * n + 2]]);
 }
 const perto = (a, b, tol = 3) => a && a.every((v, i) => Math.abs(v - b[i]) <= tol);
-const hex = (c) => '#' + c.map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+const hex = (c) => !c ? 'fora da captura' : '#' + c.map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase();
 
 let W = null;
 let proc = null;
@@ -202,8 +206,20 @@ async function irParaConfiguracoes() {
   await sleep(600);
   return ler();
 }
+// Rola a página até a opção `tema` caber inteira na janela e relê as caixas
+// (em janelas baixas, a última linha da grade pode ficar abaixo da dobra).
+async function mostrar(tema) {
+  await comando(`(document.querySelector('.tt-tema[data-tema="${tema}"]').scrollIntoView({ block: 'nearest' }), 'ok')`);
+  await sleep(400);
+  return ler();
+}
+const cabe = (e, tema) => {
+  const [, y, , h] = e.molduras[tema];
+  return y >= 0 && y + h + 30 <= e.inner[1];
+};
 // Clica no centro da moldura da prévia `tema` (coordenadas da página + a janela).
 async function clicarNaPrevia(e, tema) {
+  if (!cabe(e, tema)) e = await mostrar(tema);
   const [x, y, w, h] = e.molduras[tema];
   const r = W.get_frame_rect();
   mover(r.x + x + Math.round(w / 2) - 10, r.y + y + Math.round(h / 2) - 10); // entra na janela antes do clique
@@ -245,9 +261,17 @@ async function principal() {
   // Cada prévia pinta o próprio tema: o canto de baixo à esquerda de cada
   // miniatura é o fundo do app do tema; no Sistema, o de baixo à direita é a
   // camada do Escuro.
-  const px = capturar(W, 'm24-configuracoes-lite.png');
+  let px = capturar(W, 'm24-configuracoes-lite.png');
   const amostras = {};
-  for (const [tema, [x, y, w, h]] of Object.entries(e.molduras)) {
+  R.p1_dobra = Object.keys(e.molduras).filter((t) => !cabe(e, t));
+  checar('a 1000×700, as cinco opções cabem na janela sem rolar', R.p1_dobra.length === 0, { fora: R.p1_dobra, inner: e.inner });
+  for (const tema of Object.keys(e.molduras)) {
+    // Uma prévia fora da janela é rolada para dentro e capturada de novo.
+    if (!cabe(e, tema)) {
+      e = await mostrar(tema);
+      px = capturar(W, `m24-configuracoes-lite-${tema}.png`);
+    }
+    const [x, y, w, h] = e.molduras[tema];
     const esq = px(x + 4, y + h - 4);
     const dir = px(x + w - 4, y + h - 4);
     amostras[tema] = { esquerda: hex(esq), direita: hex(dir) };
@@ -295,6 +319,7 @@ async function principal() {
   e = await irParaConfiguracoes();
   // O foco vai para o rádio marcado (Escuro) por um clique no nome dele, e as
   // setas para a esquerda andam até o Lite (Escuro → Claro → Suave → Lite).
+  if (!cabe(e, 'dark')) e = await mostrar('dark');
   const [x, y, w, h] = e.molduras.dark;
   const r = W.get_frame_rect();
   await clicar(r.x + x + 30, r.y + y + h + 14);

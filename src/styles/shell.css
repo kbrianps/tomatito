@@ -285,7 +285,7 @@
 .tt-config-textos{ display:flex; flex-direction:column; min-width:0; }
 .tt-config-descricao{ color:var(--tt-fg-2); }
 fluent-radio-group.tt-temas{
-  display:grid; grid-template-columns:repeat(auto-fill, minmax(156px, 220px)); gap:16px 12px;
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(156px, 1fr)); gap:16px 12px;
   padding:16px 16px 16px 58px; border-top:1px solid var(--tt-border);
 }
 @container conteudo (width < 560px){ fluent-radio-group.tt-temas{ padding-left:16px; } }
