@@ -189,7 +189,8 @@ test('nenhuma janela no tauri.conf.json: a main nasce no setup, com o builder da
 // M23: configurações só no Rust (seção 3.3), lidas antes da main (4.7).
 test('configurações no Rust: settings_get, settings_set e tt://settings, sem o plugin do store', () => {
   const lib = ler('src-tauri/src/lib.rs');
-  assert.match(lib, /SettingsStore::load\(app\.path\(\)\.app_data_dir\(\)\?\)[\s\S]*build_main\(app\.handle\(\), &s\)/,
+  // M26: a pasta de dados é lida uma vez (`dados`) e serve ao stats.sqlite também.
+  assert.match(lib, /let dados = app\.path\(\)\.app_data_dir\(\)\?;[\s\S]*SettingsStore::load\(dados\)[\s\S]*build_main\(app\.handle\(\), &s\)/,
     'o settings.json é lido antes de a main nascer, e ela recebe as configurações');
   assert.match(lib, /commands::settings_get,\s*commands::settings_set,/);
   // Um generate_context! só (ele embute a página), e o linuxX11 lido antes do Builder.
@@ -201,6 +202,22 @@ test('configurações no Rust: settings_get, settings_set e tt://settings, sem o
   assert.match(ipcJs, /invoke\('settings_set', \{ patch \}\)/);
   assert.doesNotMatch(ler('src-tauri/Cargo.toml'), /tauri-plugin-store/);
   assert.ok(!pkg.dependencies['@tauri-apps/plugin-store'] && !pkg.devDependencies['@tauri-apps/plugin-store']);
+});
+
+// M26: estatísticas no SQLite do Rust (3.3), sem o tauri-plugin-sql.
+test('estatísticas: rusqlite com bundled, banco aberto antes do motor e stats_get registrado', () => {
+  const cargo = ler('src-tauri/Cargo.toml');
+  assert.match(cargo, /^rusqlite = \{ version = "=0\.40\.2", features = \["bundled"\] \}$/m);
+  assert.doesNotMatch(cargo, /tauri-plugin-sql/);
+  assert.ok(!pkg.dependencies['@tauri-apps/plugin-sql'] && !pkg.devDependencies['@tauri-apps/plugin-sql']);
+  const lib = ler('src-tauri/src/lib.rs');
+  assert.match(lib, /stats::Stats::open\(&dados\)[\s\S]*engine::Engine::new\(/, 'o banco abre antes do motor');
+  assert.match(lib, /TauriSink::new\(app\.handle\(\)\.clone\(\), som, stats\)/);
+  assert.match(lib, /commands::stats_get,/);
+  // Os dias ficam no núcleo, com o jiff; o app não calcula datas por conta própria.
+  assert.match(ler('src-tauri/tomatito-core/src/days.rs'), /use jiff::/);
+  assert.match(ler('src-tauri/src/stats.rs'), /PRAGMA user_version|"user_version"/);
+  assert.match(ler('src/lib/ipc.js'), /invoke\('stats_get'\)/);
 });
 
 test('capabilities/main.json com as permissões da seção 3.8, só para a main', () => {

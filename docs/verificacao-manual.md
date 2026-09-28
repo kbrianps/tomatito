@@ -687,3 +687,22 @@ O que não dá para conferir daqui: o painel de Configurações do GNOME de verd
 6. [ ] Escolha **Tomatito Suave** e troque o estilo do GNOME: o app continua rosado e o menu do botão direito continua claro.
 7. [ ] Volte a **Usar configuração do sistema**, feche o app (Ctrl+C no terminal), mude o estilo do GNOME e abra de novo: nasce no tema do GNOME. Feche e abra mais uma vez: nenhum quadro da cor antiga.
 8. [ ] Deixe o GNOME e o Tomatito como preferir; para limpar: `rm ~/.local/share/io.github.kbrianps.tomatito.dev/settings*.json`.
+
+
+## M26. Estatísticas
+
+O que foi conferido de forma automática (28/09/2026):
+
+- `cargo test --workspace`: os dias e a semana (`days.rs`), com a meia-noite, a hora de zerar às 04:00, a semana de segunda a domingo e o horário de verão; o `stats.sqlite` (migração, regra de soma, reabrir, arquivo corrompido) e o motor gravando os períodos pelo `Effects`.
+- Roteiro aninhado `estatisticas` (app de verdade, `TOMATITO_SPEED=60`, 14 conferências): sessão concluída e sessões encerradas no banco e no `stats_get`, e os números iguais depois de fechar e reabrir.
+
+Ainda não há tela (o card "Progresso diário" é do M27); a conferência é pelo DevTools.
+
+### Para conferir (uns 3 minutos)
+
+1. [ ] `cd ~/dev/tomatito && TOMATITO_SPEED=60 npm run dev:app`. Clique com o botão direito na página, **Inspecionar elemento**, aba **Console**.
+2. [ ] No console: `await window.__TAURI_INTERNALS__.invoke('stats_get')`. Anote o `todayS` (na primeira vez, 0) e confira `dailyGoalMinutes: 120` e `resetHour: 0`.
+3. [ ] Inicie uma sessão de 5 min pela tela e espere uns 6 s (ela termina sozinha, com som). Repita o comando do passo 2: o `todayS` e o `weekS` subiram 300.
+4. [ ] Feche o app (Ctrl+C no terminal) e abra de novo com o mesmo comando. Repita o passo 2: os mesmos números.
+5. [ ] O arquivo existe: `ls -l ~/.local/share/io.github.kbrianps.tomatito.dev/stats.sqlite`.
+6. [ ] Para zerar: feche o app e `rm ~/.local/share/io.github.kbrianps.tomatito.dev/stats.sqlite`.

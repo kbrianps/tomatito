@@ -6,6 +6,7 @@ mod i18n;
 mod notify;
 mod persist;
 mod settings;
+mod stats;
 mod window;
 
 use std::sync::Arc;
@@ -30,6 +31,11 @@ pub fn run() {
         .setup(|app| {
             // O motor nasce antes das janelas: o laço roda com ou sem elas
             // (PLANO.md, 3.2), e o primeiro `get_state` do JS já o encontra.
+            let dados = app.path().app_data_dir()?;
+            // O banco das estatísticas antes do motor: ele grava os períodos
+            // desde a primeira fase (M26).
+            let stats = Arc::new(stats::Stats::open(&dados));
+            app.manage(stats.clone());
             let (clock, speed) = engine::clock_from_env();
             // A thread de som sobe junto: o motor e o `sound_test` usam a mesma.
             let som = Arc::new(audio::Som::iniciar());
@@ -37,14 +43,14 @@ pub fn run() {
             let motor = Arc::new(engine::Engine::new(
                 clock,
                 speed,
-                engine::TauriSink::new(app.handle().clone(), som),
+                engine::TauriSink::new(app.handle().clone(), som, stats),
             ));
             app.manage(motor.clone());
             tauri::async_runtime::spawn(motor.run());
 
             // As configurações antes das janelas: o tema escolhe a cor de
             // fundo e o que o script de inicialização passa à página (4.7).
-            let store = settings::SettingsStore::load(app.path().app_data_dir()?);
+            let store = settings::SettingsStore::load(dados);
             let s = store.get();
             app.manage(store);
 
@@ -64,6 +70,7 @@ pub fn run() {
             commands::focus_skip,
             commands::focus_stop,
             commands::sound_test,
+            commands::stats_get,
         ])
         .run(context)
         .expect("error while building tauri application");

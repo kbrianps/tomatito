@@ -28,10 +28,16 @@ tokio = { version = "1.53", features = ["time", "sync", "macros"] }
 # Som (audio.rs, M20). Só a saída (cpal) e o WAV pelo hound: sem os
 # decodificadores do symphonia nem a gravação (docs/decisoes.md, M20).
 rodio = { version = "0.22.2", default-features = false, features = ["playback", "hound"] }
+# Estatísticas (stats.rs, M26): o SQLite vem compilado junto (`bundled`),
+# para não depender da versão do sistema nem de uma DLL no Windows (3.3).
+rusqlite = { version = "=0.40.2", features = ["bundled"] }
 
 [dev-dependencies]
 # Testes do laço com o tempo do tokio parado (start_paused).
 tokio = { version = "1.53", features = ["rt", "macros", "test-util"] }
+# Fusos fixos nos testes das estatísticas (stats.rs); no app, o jiff só
+# entra pelo tomatito-core.
+jiff = "0.2.37"
 
 # Notificações (notify.rs, M21), sempre do Rust e sem o pacote do JS (3.6).
 # No Windows, pelo plugin (um toast). No Linux, uma chamada própria ao

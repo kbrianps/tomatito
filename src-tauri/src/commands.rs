@@ -9,12 +9,13 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, State};
-use tomatito_core::Sound;
+use tomatito_core::{Sound, TimeZone};
 
 use crate::audio::Som;
 use crate::engine::{CommandError, Engine, TauriSink};
 use crate::events::{self, FocusDto, StateDto};
 use crate::settings::{Settings, SettingsError, SettingsStore};
+use crate::stats::{Stats, StatsDto};
 
 pub type AppEngine = Arc<Engine<TauriSink>>;
 
@@ -121,4 +122,25 @@ pub fn sound_test(som: State<'_, Arc<Som>>, sound: Option<SoundDto>) {
     for s in sons {
         som.tocar(s);
     }
+}
+
+/// `stats_get` (M26): o foco de ontem, de hoje e desta semana, com a meta e a
+/// hora de zerar lidas das configurações (3.5). Os dias são os do fuso do
+/// sistema, lido a cada chamada, e do relógio do motor.
+#[tauri::command]
+pub fn stats_get(
+    engine: State<'_, AppEngine>,
+    stats: State<'_, Arc<Stats>>,
+    settings: State<'_, SettingsStore>,
+) -> StatsDto {
+    // Fecha o que venceu antes de somar, como o `get_state`: com a janela
+    // voltando de uma suspensão, o card já sai com o período novo.
+    engine.state();
+    let s = settings.get();
+    stats.summary(
+        engine.now(),
+        &TimeZone::system(),
+        s.reset_hour,
+        s.daily_goal_minutes,
+    )
 }

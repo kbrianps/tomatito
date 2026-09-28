@@ -68,6 +68,9 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 41. **Conferir o M25 no seu GNOME** (desde o M25). Uns 4 minutos, com os passos em `docs/verificacao-manual.md`, seção M25: no modo "Usar configuração do sistema", trocar o estilo em Configurações do GNOME > Aparência e ver o app acompanhar em até 1 s; num tema explícito, ver que nada muda e que o console não mostra `ThemeChanged` repetido. O teste aninhado já fez isso com um portal falso que fala como o do GNOME (18 conferências ok, `docs/decisoes.md`, M25); falta o painel de verdade, que eu não mexi para não trocar o estilo da sua sessão. Não bloqueia o M26.
 42. **Seguir o sistema no Windows** (desde o M25). No Windows, o sinal é o `onThemeChanged` da janela (o caminho do Linux é outro, `docs/decisoes.md`, M25, item 1). Repetir os passos 2 a 7 da seção M25 com Configurações > Personalização > Cores > "Escolha seu modo" (Claro/Escuro). Entra na ida ao Windows do M48.
 
+43. **Conferir o M26 pelo DevTools** (desde o M26). Uns 3 minutos, com os passos em `docs/verificacao-manual.md`, seção M26: uma sessão acelerada soma 300 s no `stats_get`, e os números sobrevivem a fechar e reabrir. O teste aninhado já fez isso com o app de verdade (14 conferências); o card com o anel é do M27. Não bloqueia o M27.
+44. **Estatísticas no Windows** (desde o M26). O SQLite vem compilado junto (`rusqlite` com `bundled`), e esta máquina não compila C para o Windows; a checagem cruzada do Rust passa pulando o C (`docs/decisoes.md`, M26, item 9). No Windows: rodar o `cargo test --workspace` (os testes do `stats.rs` usam a pasta temporária do sistema), repetir os passos 1 a 5 da seção M26 com o arquivo em `%APPDATA%\io.github.kbrianps.tomatito.dev\stats.sqlite`, e conferir que "ontem" e "hoje" seguem o fuso do Windows. O CI no `windows-latest` compila o SQLite com o MSVC. Entra na ida ao Windows do M48.
+
 ## Resolvidas
 
 - **Nome** (1.2, item 1): continua "Tomatito".

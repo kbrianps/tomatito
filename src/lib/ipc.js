@@ -51,5 +51,16 @@ export const configuracoes = Object.freeze({
   gravar: (patch) => invoke('settings_set', { patch }),
 });
 
+/**
+ * Estatísticas (src-tauri/src/stats.rs, M26). `obter` resolve com
+ * `{ yesterdayS, todayS, weekS, dailyGoalMinutes, resetHour }`: os segundos
+ * de foco de ontem, de hoje e desta semana (segunda a domingo), contados pela
+ * hora de zerar, e a meta (0 = desativada) lida das configurações. A meta e a
+ * hora de zerar se gravam pelo `configuracoes.gravar` (M28).
+ */
+export const estatisticas = Object.freeze({
+  obter: () => invoke('stats_get'),
+});
+
 /** Ouve um evento do Rust; `cb` recebe só o conteúdo. Devolve o `unlisten`. */
 export const ouvir = (evento, cb) => listen(evento, (e) => cb(e.payload));

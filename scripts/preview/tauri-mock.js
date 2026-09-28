@@ -201,6 +201,15 @@ const handlers = {
     window.__TOMATITO_PREVIEW_COMANDOS__.push(`sound_test:${sound ?? 'ambos'}`);
     return null;
   },
+  // M26: números fixos, ou os da URL (?hoje=1500&ontem=...&semana=..., em
+  // segundos), com a meta e a hora de zerar das configurações.
+  stats_get: () => ({
+    yesterdayS: Number(params.get('ontem') ?? 0),
+    todayS: Number(params.get('hoje') ?? 0),
+    weekS: Number(params.get('semana') ?? params.get('hoje') ?? 0),
+    dailyGoalMinutes: configuracoes.dailyGoalMinutes,
+    resetHour: configuracoes.resetHour,
+  }),
   'plugin:window|is_maximized': () => janela.maximizada,
   'plugin:window|toggle_maximize': () => {
     janela.maximizada = !janela.maximizada;

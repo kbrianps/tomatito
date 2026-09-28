@@ -21,9 +21,8 @@
 //! transições.
 //!
 //! O som (M20) vai para a thread do `audio.rs`, sem esperar, e a notificação
-//! (M21), para o `notify.rs`, que também não espera. A gravação (M26) ainda
-//! não existe: por enquanto, o `TauriSink` só registra esse pedido no stderr
-//! (em debug).
+//! (M21), para o `notify.rs`, que também não espera. Os períodos (M26) vão
+//! para o `stats.rs`, uma linha no SQLite por fase que termina.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -40,6 +39,7 @@ use tomatito_core::{
 use crate::audio::Som;
 use crate::events::{self, FocusDto, PhaseEventDto, SetupDto, StateDto, TickDto};
 use crate::notify::Notificador;
+use crate::stats::Stats;
 
 /// O ritmo do laço (3.2).
 pub const TICK_EVERY: Duration = Duration::from_millis(250);
@@ -238,6 +238,12 @@ impl<S: Sink> Engine<S> {
         self.inner.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
+    /// O "agora" do motor (acelerado no modo `TOMATITO_SPEED`): o
+    /// `stats_get` vê os dias pelo mesmo relógio que gravou os períodos.
+    pub fn now(&self) -> EpochMs {
+        self.clock.now()
+    }
+
     pub fn is_running(&self) -> bool {
         self.lock().focus.is_running()
     }
@@ -399,15 +405,17 @@ pub struct TauriSink {
     app: tauri::AppHandle,
     som: Arc<Som>,
     notificador: Notificador,
+    stats: Arc<Stats>,
 }
 
 impl TauriSink {
-    pub fn new(app: tauri::AppHandle, som: Arc<Som>) -> Self {
+    pub fn new(app: tauri::AppHandle, som: Arc<Som>, stats: Arc<Stats>) -> Self {
         let notificador = Notificador::new(app.clone());
         Self {
             app,
             som,
             notificador,
+            stats,
         }
     }
 
@@ -438,9 +446,12 @@ impl Sink for TauriSink {
         // Também sem esperar: o plugin entrega numa tarefa à parte.
         self.notificador.mostrar(notice);
     }
-    fn period(&self, _period: &Period) {
-        #[cfg(debug_assertions)]
-        eprintln!("[tomatito] período (M26): {_period:?}");
+    fn period(&self, period: &Period) {
+        // Síncrono, com o motor travado: um INSERT leva menos de 1 ms, e
+        // assim o `stats_get` que vier depois do `tt://state` já vê a linha.
+        if let Err(e) = self.stats.record(period) {
+            eprintln!("[tomatito] estatísticas: período não gravado ({e}): {period:?}");
+        }
     }
 }
 
