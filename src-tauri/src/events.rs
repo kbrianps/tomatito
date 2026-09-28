@@ -21,6 +21,9 @@ pub const STATE: &str = "tt://state";
 pub const TICK: &str = "tt://tick";
 /// Troca de fase, para o anúncio `aria-live` (M19).
 pub const PHASE: &str = "tt://phase";
+/// Depois de cada gravação do `settings_set` (M23): as configurações
+/// inteiras, no formato do `settings.json` (`settings.rs`).
+pub const SETTINGS: &str = "tt://settings";
 
 fn ms(t: EpochMs) -> i64 {
     t.0
@@ -242,8 +245,8 @@ impl From<&PhaseChange> for PhaseEventDto {
     }
 }
 
-/// Resposta do `get_state`. As configurações (com o `settings.rs`) e os
-/// `recursos` (M39) entram aqui quando existirem.
+/// O retrato do motor. O `get_state` o manda junto com as configurações
+/// (`commands.rs`); os `recursos` (M39) entram quando existirem.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StateDto {

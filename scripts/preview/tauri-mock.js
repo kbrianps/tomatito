@@ -153,8 +153,35 @@ const preparo =
 window.__TOMATITO_PREVIEW_INICIOS__ = [];
 window.__TOMATITO_PREVIEW_COMANDOS__ = [];
 
+// M23: as configurações (src-tauri/src/settings.rs), com os padrões da 3.3 e
+// o tema das globais da prévia. O settings_set faz a mesma fusão e as mesmas
+// regras de tema do Rust, mas sem conferir faixas; emite tt://settings.
+const configuracoes = {
+  schemaVersion: 1, theme: window.__TT_PREF__ ?? 'lite', lastNormalTheme: window.__TT_LAST__ ?? 'lite',
+  resolvedTheme: 'lite', focusMinutes: 25, breakMinutes: 5, sounds: { focusEnd: true, breakEnd: true },
+  volume: 80, closeToTray: true, trayTime: false, dailyGoalMinutes: 120, resetHour: 0, tomatoSize: 280,
+  tomatoOnTop: true, fullMode: 'auto', fullValidated: '', linuxX11: false,
+};
+function normalizarConfiguracoes(c) {
+  if (c.theme !== 'full') c.lastNormalTheme = c.theme;
+  const fixo = ['lite', 'suave', 'light', 'dark'].includes(c.lastNormalTheme) ? c.lastNormalTheme : null;
+  c.resolvedTheme = fixo ?? (c.resolvedTheme === 'dark' ? 'dark' : 'light');
+}
+normalizarConfiguracoes(configuracoes);
+window.__TOMATITO_PREVIEW_CONFIGURACOES__ = configuracoes;
+
 const handlers = {
-  get_state: () => ({ focus: retratoFoco(), speed: velocidade, setup: preparo }),
+  get_state: () => ({ focus: retratoFoco(), speed: velocidade, setup: preparo, settings: structuredClone(configuracoes) }),
+  settings_get: () => structuredClone(configuracoes),
+  settings_set: ({ patch }) => {
+    const { sounds, ...resto } = patch ?? {};
+    Object.assign(configuracoes, resto);
+    if (sounds) Object.assign(configuracoes.sounds, sounds);
+    normalizarConfiguracoes(configuracoes);
+    window.__TOMATITO_PREVIEW_COMANDOS__.push(`settings_set:${JSON.stringify(patch)}`);
+    setTimeout(() => emit('tt://settings', structuredClone(configuracoes)));
+    return structuredClone(configuracoes);
+  },
   focus_start: ({ minutes, skipBreaks }) => {
     window.__TOMATITO_PREVIEW_INICIOS__.push({ minutes, skipBreaks });
     iniciarFoco(minutes, null, Boolean(skipBreaks));

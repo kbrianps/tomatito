@@ -178,12 +178,29 @@ test('nenhuma janela no tauri.conf.json: a main nasce no setup, com o builder da
     '.decorations(false)',
     '.shadow(true)',
     '.zoom_hotkeys_enabled(true)',
-    '.background_color(background_for(prefs.resolved_theme))',
+    '.background_color(background_for(s.resolved_theme))',
     '.visible(false)',
-    '.initialization_script(init_script(prefs))',
+    '.initialization_script(init_script(s))',
   ];
   for (const c of chamadas) assert.ok(main.includes(c), `main_window.rs sem ${c}`);
   assert.match(main, /pub const LABEL: &str = "main";/);
+});
+
+// M23: configurações só no Rust (seção 3.3), lidas antes da main (4.7).
+test('configurações no Rust: settings_get, settings_set e tt://settings, sem o plugin do store', () => {
+  const lib = ler('src-tauri/src/lib.rs');
+  assert.match(lib, /SettingsStore::load\(app\.path\(\)\.app_data_dir\(\)\?\)[\s\S]*build_main\(app\.handle\(\), &s\)/,
+    'o settings.json é lido antes de a main nascer, e ela recebe as configurações');
+  assert.match(lib, /commands::settings_get,\s*commands::settings_set,/);
+  // Um generate_context! só (ele embute a página), e o linuxX11 lido antes do Builder.
+  assert.equal(lib.match(/generate_context!\(\)/g)?.length, 1);
+  assert.match(lib, /usar_x11_se_pedido\(&context\.config\(\)\.identifier\);\s*let builder = tauri::Builder::default\(\);/);
+  assert.match(ler('src-tauri/src/events.rs'), /pub const SETTINGS: &str = "tt:\/\/settings";/);
+  const ipcJs = ler('src/lib/ipc.js');
+  assert.match(ipcJs, /configuracoes: 'tt:\/\/settings'/);
+  assert.match(ipcJs, /invoke\('settings_set', \{ patch \}\)/);
+  assert.doesNotMatch(ler('src-tauri/Cargo.toml'), /tauri-plugin-store/);
+  assert.ok(!pkg.dependencies['@tauri-apps/plugin-store'] && !pkg.devDependencies['@tauri-apps/plugin-store']);
 });
 
 test('capabilities/main.json com as permissões da seção 3.8, só para a main', () => {

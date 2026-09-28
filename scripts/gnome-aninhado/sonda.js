@@ -15,7 +15,8 @@
 // fontes carregadas no momento em que a janela aparece. Com CONTROLE =
 // "tema-errado" (definida pelo sonda.config.mjs a partir de TT_CONTROLE), a
 // sonda estraga o boot de propósito: pinta o tema Claro e mostra a janela
-// antes do main.js, e só volta ao Lite 600 ms depois. Serve de controle
+// antes do main.js, e só volta ao tema certo 600 ms depois (M23: o Escuro,
+// quando o certo é o Claro). Serve de controle
 // negativo do roteiro partida-a-frio: a captura precisa acusar os quadros.
 const t0 = performance.now();
 const janela = window.__TAURI_INTERNALS__?.metadata?.currentWindow?.label ?? '?';
@@ -140,7 +141,11 @@ enviar('pagina', { quando: 'sonda', ...pagina() });
 document.addEventListener('visibilitychange', () => enviar('pagina', { quando: 'visibilitychange', ...pagina() }));
 
 if (CONTROLE === 'tema-errado') {
-  document.documentElement.dataset.theme = 'light';
+  // M23: volta ao tema que o boot escolheu (o do settings.json), e o errado
+  // é o Claro, ou o Escuro quando o certo é o Claro.
+  const h = document.documentElement;
+  const certo = h.dataset.theme;
+  h.dataset.theme = certo === 'light' ? 'dark' : 'light';
   window.__TAURI_INTERNALS__.invoke('plugin:window|show', { label: janela });
-  setTimeout(() => (document.documentElement.dataset.theme = 'lite'), 600);
+  setTimeout(() => (h.dataset.theme = certo), 600);
 }

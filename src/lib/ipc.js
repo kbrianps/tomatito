@@ -8,9 +8,11 @@ export const EVENTOS = Object.freeze({
   estado: 'tt://state',
   tick: 'tt://tick',
   fase: 'tt://phase',
+  // M23: as configurações inteiras, depois de cada `settings_set`.
+  configuracoes: 'tt://settings',
 });
 
-/** `get_state`: `{ focus, speed }`. */
+/** `get_state`: `{ focus, speed, setup, settings }`. */
 export const obterEstado = () => invoke('get_state');
 
 /**
@@ -33,6 +35,20 @@ export const foco = Object.freeze({
  */
 export const sons = Object.freeze({
   testar: (som) => invoke('sound_test', som ? { sound: som } : {}),
+});
+
+/**
+ * Configurações (src-tauri/src/settings.rs, M23): o formato do
+ * `settings.json`, em camelCase. O Rust é o único dono: `gravar` manda só as
+ * chaves que mudam (`sounds` pode ir pela metade), resolve com as
+ * configurações inteiras depois das regras de tema, e o Rust emite
+ * `tt://settings` para todas as janelas. Uma chave desconhecida ou um valor
+ * inválido rejeita o patch inteiro com `{ code, message }` (`unknownKey`,
+ * `invalidValue`, `invalidPatch` ou `writeFailed`).
+ */
+export const configuracoes = Object.freeze({
+  obter: () => invoke('settings_get'),
+  gravar: (patch) => invoke('settings_set', { patch }),
 });
 
 /** Ouve um evento do Rust; `cb` recebe só o conteúdo. Devolve o `unlisten`. */

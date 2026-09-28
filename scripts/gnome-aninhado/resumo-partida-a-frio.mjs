@@ -14,6 +14,8 @@ import { existsSync, readFileSync } from 'node:fs';
 const pasta = process.argv[2];
 const ler = (nome) => (existsSync(`${pasta}/${nome}`) ? readFileSync(`${pasta}/${nome}`, 'utf8') : '');
 const r = JSON.parse(ler('resultado.json') || '{}');
+// M23: o tema da rodada (TT_TEMA); rodadas antigas, sem o campo, são do Lite.
+const tema = r.tema ?? 'lite';
 const partidas = r.partidas ?? [];
 const pct = (v) => `${(100 * v).toFixed(2)}%`;
 
@@ -23,7 +25,7 @@ const boot = html.match(/<script>([\s\S]*?)<\/script>/)?.[1] ?? '';
 const hashBoot = `'sha256-${createHash('sha256').update(boot.replace(/\r\n?/g, '\n')).digest('base64')}'`;
 
 console.log(`rodada: ${pasta}`);
-console.log(`modo: ${r.modo}${r.controle ? ` (controle: ${r.controle})` : ''}; binário: ${r.binario}`);
+console.log(`tema: ${tema}; modo: ${r.modo}${r.controle ? ` (controle: ${r.controle})` : ''}; binário: ${r.binario}`);
 if (r.erro) console.log(`ERRO no roteiro: ${r.erro}`);
 
 const checagens = {};
@@ -56,18 +58,18 @@ checar(`${esperadas} partidas, todas com janela e quadros`, partidas.length === 
 checar('o app sai sozinho ao fechar a janela, em todas', partidas.every((P) => P.saida === 'saiu 0'));
 
 if (r.controle === 'tema-errado') {
-  const fora = partidas.filter((P) => P.quadros.some((x) => x.arq && x.veredito !== 'lite'));
-  checar('controle: a captura acusa quadros fora do Lite em todas as partidas', fora.length === partidas.length);
-  checar('controle: e o último quadro volta ao Lite', partidas.every((P) => P.quadros.filter((x) => x.arq).at(-1)?.veredito === 'lite'));
+  const fora = partidas.filter((P) => P.quadros.some((x) => x.arq && x.veredito !== tema));
+  checar(`controle: a captura acusa quadros fora do tema ${tema} em todas as partidas`, fora.length === partidas.length);
+  checar(`controle: e o último quadro volta ao tema ${tema}`, partidas.every((P) => P.quadros.filter((x) => x.arq).at(-1)?.veredito === tema));
 } else {
-  const ruins = todos.filter((x) => x.veredito !== 'lite');
+  const ruins = todos.filter((x) => x.veredito !== tema);
   checar(`nenhum quadro branco, escuro, transparente ou de outro tema (${todos.length} quadros)`, ruins.length === 0);
-  // Um quadro "liso" é só o fundo do Lite (a background_color da janela),
+  // Um quadro "liso" é só o fundo do tema (a background_color da janela),
   // antes de o WebView pintar a página. Depois dele, o primeiro quadro com
   // conteúdo já precisa ser o final (a janela aparece de uma vez). O limite de
   // 0,01% da amostra (uns 70 px) pega até um radio que só marca no quadro
   // seguinte (0,02%, o defeito que o Updates.process() do main.js corrigiu).
-  const liso = (x) => x.lite > 0.995;
+  const liso = (x) => (x.tema ?? x.lite) > 0.995;
   checar(
     'a janela aparece de uma vez: no máximo 1 quadro de fundo liso, e o 1º quadro com conteúdo já é o final',
     partidas.every((P) => {
@@ -77,10 +79,36 @@ if (r.controle === 'tema-errado') {
     }),
   );
   checar(
-    'atributos do boot na página: tema Lite e plataforma linux',
+    `atributos do boot na página: tema ${tema} e plataforma linux`,
     partidas.every((P) => {
       const d = P.console?.estado?.dataset ?? {};
-      return d.themePref === 'lite' && d.theme === 'lite' && d.platform === 'linux';
+      return d.themePref === tema && d.theme === tema && d.platform === 'linux';
+    }),
+  );
+  // M23: as configurações pelo IPC da página (console.mjs) e o arquivo que o
+  // app gravou, lido pelo roteiro depois de fechar.
+  checar(
+    `configurações: get_state e settings_get iguais, no tema ${tema} (resolvido e último também)`,
+    partidas.every((P) => {
+      const c = P.console?.configuracoes ?? {};
+      return c.antes && JSON.stringify(c.doEstado) === JSON.stringify(c.antes) &&
+        c.antes.theme === tema && c.antes.resolvedTheme === tema && c.antes.lastNormalTheme === tema;
+    }),
+  );
+  checar(
+    'configurações: settings_set grava o volume 37, recusa o 999 com invalidValue e emite um tt://settings só',
+    partidas.every((P) => {
+      const c = P.console?.configuracoes ?? {};
+      return c.depois?.volume === 37 && c.depois?.theme === tema && c.recusa?.code === 'invalidValue' &&
+        c.final?.volume === 37 && c.eventos?.length === 1 && c.eventos[0].volume === 37;
+    }),
+  );
+  checar(
+    'configurações: o settings.json no disco, depois de fechar, tem o volume 37 e o tema certo',
+    partidas.every((P) => {
+      const arquivos = Object.values(P.settingsNoDisco ?? {});
+      const gravado = arquivos.find((a) => a.volume === 37);
+      return gravado && gravado.theme === tema && gravado.resolvedTheme === tema && gravado.lastNormalTheme === tema;
     }),
   );
   checar('Inter carregada', partidas.every((P) => P.console?.estado?.interCarregada === true));

@@ -58,6 +58,10 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 
 35. **Olhar o tingimento do M22** (desde o M22). Uns 3 minutos, com os passos em `docs/verificacao-manual.md`, seção M22: no `#/dev`, passar o mouse e apertar os itens de menu e as opções das listas no Lite e no Suave (trocando o tema pelo DevTools até o M24). Diga se o hover do Lite (`#B75449`, o mesmo do hover dos botões) e os rosados do Suave (bem discretos, como o próprio tema) estão bons, e se a bolinha do switch ligado e o "✓" do checkbox marcado do Lite em vermelho (`#AD3D32`) agradam ou se prefere o vermelho do texto do botão creme (`#972620`, pela ponte, o que também deixaria a bolinha do Escuro preta; `docs/decisoes.md`, M22, item 3). A captura `docs/capturas/m22-tingimento.png` mostra o que as prévias viram.
 
+36. **Conferir o M23 na tela** (desde o M23). Uns 4 minutos, com os passos em `docs/verificacao-manual.md`, seção M23: trocar o `theme` à mão no `settings.json` da pasta `.dev` e reabrir o `npm run dev:app` em cada tema, sem clarão, e o arquivo estragado virando `settings.corrompido.json`. O teste aninhado já fez 3 partidas a frio em cada tema, quadro a quadro; falta o seu olho. Não bloqueia o M24.
+37. **Padrões "a confirmar" das configurações** (desde o M23; plano 1.2, item 7, e 3.3). Ficaram: tempo na bandeja (`trayTime`) **desligado**, meta diária de **2 horas** e volume de **80%**. Diga se quer outros; é trocar uma linha no `settings.rs` (`docs/decisoes.md`, M23, item 5). O `trayTime` bloqueia o M36; os outros, nada.
+38. **Configurações no Windows** (desde o M23). No Windows, o arquivo fica em `%APPDATA%\io.github.kbrianps.tomatito.dev\settings.json`. Repetir os passos 1 a 5 da seção M23 (com o Bloco de Notas) e conferir que a gravação pelo app (`settings_set`, o seletor de tema do M24) não deixa `settings.json.tmp` para trás. A checagem cruzada `cargo clippy --target x86_64-pc-windows-msvc` passa. Entra na ida ao Windows do M48.
+
 ## Resolvidas
 
 - **Nome** (1.2, item 1): continua "Tomatito".

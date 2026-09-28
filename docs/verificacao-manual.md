@@ -624,3 +624,22 @@ O que não dá para conferir daqui: o seu olho sobre os tons, com o mouse de ver
 5. [ ] No console, `document.documentElement.dataset.theme = 'suave'`. Repita os passos 2 e 3: os fundos do hover e do apertado são rosados bem claros (discretos, como o próprio tema), nunca um cinza neutro. O switch ligado fica vermelho com a bolinha quase branca.
 6. [ ] (Controle) `document.documentElement.dataset.theme = 'light'` e depois `'dark'`: aqui, os hovers continuam cinzas, como no Relógio do Windows. Diga o que achou (`docs/pendencias-usuario.md`, item 35) e feche o `dev:app` (Ctrl+C no terminal).
 
+## M23. Configurações no Rust
+
+O que foi conferido de forma automática (28/09/2026):
+
+- `cargo test --workspace`: os padrões, a chave desconhecida ignorada e o arquivo corrompido (vira padrão e fica em `settings.corrompido.json`), além da gravação atômica e das recusas do `settings_set`.
+- Roteiro aninhado `partida-a-frio` com `TT_TEMA=lite|suave|light|dark` (3 partidas a frio cada, `settings.json` com só o `theme` trocado): nenhum quadro de outro tema ou branco, e a página no tema do arquivo. O controle negativo e uma mutação (fundo da janela fixo no Lite) são acusados.
+- Uma abertura do `npm run dev:app` na sua sessão com `"theme": "dark"` à mão: a página abriu no Escuro (lido pelo inspetor remoto).
+
+O que não dá para conferir daqui: o seu olho vendo a janela nascer, sem clarão, na sua tela.
+
+### Para conferir (uns 4 minutos)
+
+1. [ ] Com o `dev:app` fechado: `mkdir -p ~/.local/share/io.github.kbrianps.tomatito.dev && printf '{\n  "theme": "dark"\n}\n' > ~/.local/share/io.github.kbrianps.tomatito.dev/settings.json`
+2. [ ] `cd ~/dev/tomatito && npm run dev:app`. A janela aparece já no **Escuro** (cinza-escuro), sem nenhum quadro vermelho ou branco antes. Feche (Ctrl+C no terminal).
+3. [ ] Troque `"dark"` por `"suave"` no arquivo (com o editor de texto) e abra de novo: nasce no **Suave** (rosado claro). Repita com `"light"` (**Claro**) e com `"lite"` (o vermelho, **Lite**).
+4. [ ] Troque para `"full"`: abre a janela normal no tema anterior (o tomate só existe a partir do M50).
+5. [ ] Estrague o arquivo de propósito (apague a última `}`) e abra: nasce no **Lite**, e `ls ~/.local/share/io.github.kbrianps.tomatito.dev/` mostra o `settings.corrompido.json` com o que você escreveu. O terminal mostra "`configurações ilegíveis`".
+6. [ ] Para limpar: `rm ~/.local/share/io.github.kbrianps.tomatito.dev/settings*.json`.
+

@@ -14,6 +14,9 @@
 //   - M12: vai ao #/dev e abre e fecha pelo JS os menus, as listas
 //     suspensas, as dicas e o diálogo (as mensagens desse trecho ficam em
 //     mensagensDoExercicio); M13: também a dica dos botões de ícone;
+//   - M23: pelo IPC da própria página, lê as configurações (get_state e
+//     settings_get), ouve o tt://settings, grava um patch válido (volume 37)
+//     e tenta um inválido (volume 999); o resultado fica em configuracoes;
 //   - roda um controle positivo (um <script> inline sem hash, que a CSP do
 //     build recusa), para provar que a CSP está ativa e que um "Refused to"
 //     chegaria até aqui. As mensagens do controle ficam à parte.
@@ -122,6 +125,24 @@ const EXERCICIO = `(async () => {
 // Um <script> inline sem hash, posto pela página: a CSP do build o recusa. (Um
 // new Function() não serve de controle: o que o inspetor avalia passa por fora
 // da regra de eval da CSP.)
+// M23: o IPC do Tauri direto pelo __TAURI_INTERNALS__ (a página não expõe o
+// @tauri-apps/api); o listen é o mesmo pedido que o listen() do pacote faz.
+const CONFIGURACOES = `(async () => {
+  const T = window.__TAURI_INTERNALS__;
+  if (!T) return JSON.stringify({ erro: 'sem __TAURI_INTERNALS__' });
+  const eventos = [];
+  const handler = T.transformCallback((e) => eventos.push(e.payload));
+  await T.invoke('plugin:event|listen', { event: 'tt://settings', target: { kind: 'Any' }, handler });
+  const doEstado = (await T.invoke('get_state')).settings;
+  const antes = await T.invoke('settings_get');
+  const depois = await T.invoke('settings_set', { patch: { volume: 37 } });
+  let recusa = null;
+  try { await T.invoke('settings_set', { patch: { volume: 999 } }); } catch (e) { recusa = e; }
+  const final = await T.invoke('settings_get');
+  await new Promise((r) => setTimeout(r, 300));
+  return JSON.stringify({ doEstado, antes, depois, recusa, final, eventos });
+})()`;
+
 const CONTROLE = `(() => {
   const s = document.createElement('script');
   s.textContent = 'window.__ttControle = 1';
@@ -145,7 +166,7 @@ async function alvo() {
   throw new Error(`nenhum alvo WebPage em http://${endereco}/`);
 }
 
-const resultado = { alvo: null, mensagens: [], estado: null, exercicio: null, mensagensDoExercicio: [], controle: null, mensagensDoControle: [] };
+const resultado = { alvo: null, mensagens: [], estado: null, configuracoes: null, exercicio: null, mensagensDoExercicio: [], controle: null, mensagensDoControle: [] };
 const salvar = () => writeFileSync(saida, JSON.stringify(resultado, null, 2));
 
 try {
@@ -203,6 +224,11 @@ try {
     ? await enviar('Runtime.awaitPromise', { promiseObjectId: p.result.objectId, returnByValue: true })
     : p;
   resultado.estado = typeof e?.result?.value === 'string' ? JSON.parse(e.result.value) : e;
+  const pc = await enviar('Runtime.evaluate', { expression: CONFIGURACOES });
+  const cf = pc?.result?.objectId
+    ? await enviar('Runtime.awaitPromise', { promiseObjectId: pc.result.objectId, returnByValue: true })
+    : pc;
+  resultado.configuracoes = typeof cf?.result?.value === 'string' ? JSON.parse(cf.result.value) : cf;
   fase = 'exercicio';
   const px = await enviar('Runtime.evaluate', { expression: EXERCICIO });
   const ex = px?.result?.objectId

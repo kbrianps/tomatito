@@ -13,12 +13,20 @@
 //   4. lê o console do DevTools pelo inspetor (console.mjs);
 //   5. fecha a janela pelo compositor (como o X do sistema) e espera o app
 //      sair.
-// Depois das partidas, cada quadro é classificado pelas cores: "lite" (fundo
-// e cartões do Lite), "branco", "escuro" (preto ou outro tema escuro) ou
-// "transparente". O resumo-partida-a-frio.mjs confere tudo.
+// Depois das partidas, cada quadro é classificado pelas cores: o nome do tema
+// (fundo e cartões dele; "lite" sem TT_TEMA), "branco", "escuro" (preto ou
+// outro tema escuro), "transparente" ou "outro". O resumo-partida-a-frio.mjs confere tudo.
 //
 // Variáveis: TT_PARTIDAS (padrão 10), TT_MODO (rótulo: build ou dev) e
 // TT_CONTROLE (repassada pelo rodar.sh à sonda do dev; ver sonda.js).
+//
+// M23: TT_TEMA=lite|suave|light|dark. Antes de cada partida, o roteiro grava
+// um settings.json do Lite com só o `theme` trocado (como uma troca à mão),
+// nas pastas de dados dos dois IDs (o de uso diário e o .dev), e os quadros
+// passam a ser classificados pelas cores desse tema. Sem TT_TEMA, nenhum
+// settings.json é escrito antes (o app nasce nos padrões, no Lite). Depois de
+// fechar, o roteiro lê o settings.json que o app gravou (o console.mjs grava
+// volume 37 pelo settings_set).
 import GdkPixbuf from 'gi://GdkPixbuf';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -35,7 +43,9 @@ const NODE = GLib.getenv('TT_NODE');
 const CONSOLE_MJS = GLib.getenv('TT_CONSOLE_MJS');
 const PARTIDAS = Number(GLib.getenv('TT_PARTIDAS') || 10);
 const CAPTURA_MS = 2500;
+const TEMA = GLib.getenv('TT_TEMA') || null;
 const R = {
+  tema: TEMA ?? 'lite',
   modo: GLib.getenv('TT_MODO') || '?',
   controle: GLib.getenv('TT_CONTROLE') || null,
   binario: BIN,
@@ -43,12 +53,43 @@ const R = {
   passos: [],
 };
 
-// Fundo, superfície e cartão do Lite (src/styles/tokens.css).
-const LITE = [
-  [0xa5, 0x34, 0x2b],
-  [0xaa, 0x39, 0x2f],
-  [0xaf, 0x41, 0x35],
-];
+// Fundo, superfície e cartão de cada tema (src/styles/tokens.css).
+const PALETAS = {
+  lite: [0xa5342b, 0xaa392f, 0xaf4135],
+  suave: [0xf6ece9, 0xfaf3f1, 0xfffaf9],
+  light: [0xf3f3f3, 0xf9f9f9, 0xfbfbfb],
+  dark: [0x202020, 0x282828, 0x2b2b2b],
+};
+const CORES = PALETAS[R.tema].map((c) => [c >> 16, (c >> 8) & 0xff, c & 0xff]);
+const IDS = ['io.github.kbrianps.tomatito', 'io.github.kbrianps.tomatito.dev'];
+// O settings.json dos padrões da 3.3 (settings.rs), com só o theme trocado.
+const settingsATrocar = (tema) =>
+  JSON.stringify({
+    schemaVersion: 1, theme: tema, lastNormalTheme: 'lite', resolvedTheme: 'lite', focusMinutes: 25,
+    breakMinutes: 5, sounds: { focusEnd: true, breakEnd: true }, volume: 80, closeToTray: true, trayTime: false,
+    dailyGoalMinutes: 120, resetHour: 0, tomatoSize: 280, tomatoOnTop: true, fullMode: 'auto',
+    fullValidated: '', linuxX11: false,
+  }, null, 2);
+function gravarSettings() {
+  if (!TEMA) return;
+  for (const id of IDS) {
+    const dir = `${GLib.get_user_data_dir()}/${id}`;
+    GLib.mkdir_with_parents(dir, 0o700);
+    GLib.file_set_contents(`${dir}/settings.json`, settingsATrocar(TEMA));
+  }
+}
+function lerSettings() {
+  const achados = {};
+  for (const id of IDS) {
+    try {
+      const [, bytes] = GLib.file_get_contents(`${GLib.get_user_data_dir()}/${id}/settings.json`);
+      achados[id] = JSON.parse(new TextDecoder().decode(bytes));
+    } catch {
+      // sem arquivo nesse ID
+    }
+  }
+  return achados;
+}
 
 const salvar = () => GLib.file_set_contents(`${OUT}/resultado.json`, JSON.stringify(R, null, 2));
 const sleep = (ms) =>
@@ -105,6 +146,7 @@ async function lerConsole(porta, i) {
 
 async function partida(i) {
   limparDadosDoApp();
+  gravarSettings();
   const porta = 9400 + i;
   const L = new Gio.SubprocessLauncher({ flags: Gio.SubprocessFlags.STDERR_MERGE });
   L.setenv('WAYLAND_DISPLAY', 'tt-aninhado', true);
@@ -203,6 +245,7 @@ async function partida(i) {
     await esperarProcesso(proc, 3000);
   }
   P.saida = saiu ? (proc.get_if_exited() ? `saiu ${proc.get_exit_status()}` : 'sinal') : 'forçado';
+  P.settingsNoDisco = lerSettings();
   passo(`partida ${i}: ${P.quadros.length} quadros distintos, ${P.saida}`);
   return P;
 }
@@ -218,7 +261,7 @@ function analisar(arq) {
   const amostra = [];
   let branco = 0;
   let escuro = 0;
-  let lite = 0;
+  let tema = 0;
   let transparente = 0;
   for (let y = 0; y < h; y += 2) {
     for (let x = 0; x < w; x += 2) {
@@ -228,16 +271,27 @@ function analisar(arq) {
       const b = px[k + 2];
       const a = n === 4 ? px[k + 3] : 255;
       amostra.push(r, g, b);
+      // O branco puro vem antes do tema: no Claro e no Suave, o cartão fica a
+      // menos de 8 do branco, e um quadro branco passaria por tema.
       if (a < 250) transparente++;
+      else if (Math.min(r, g, b) >= 254) branco++;
+      else if (CORES.some((c) => Math.abs(r - c[0]) <= 8 && Math.abs(g - c[1]) <= 8 && Math.abs(b - c[2]) <= 8)) tema++;
       else if (Math.min(r, g, b) >= 235) branco++;
       else if (Math.max(r, g, b) <= 64) escuro++;
-      else if (LITE.some((c) => Math.abs(r - c[0]) <= 8 && Math.abs(g - c[1]) <= 8 && Math.abs(b - c[2]) <= 8)) lite++;
     }
   }
   const tot = amostra.length / 3;
-  const q = { branco: branco / tot, escuro: escuro / tot, lite: lite / tot, transparente: transparente / tot };
+  const q = { branco: branco / tot, escuro: escuro / tot, tema: tema / tot, transparente: transparente / tot };
   q.veredito =
-    q.transparente > 0.2 ? 'transparente' : q.branco > 0.2 ? 'branco' : q.escuro > 0.2 ? 'escuro' : q.lite >= 0.5 ? 'lite' : 'outro';
+    q.transparente > 0.2
+      ? 'transparente'
+      : q.branco > 0.2
+        ? 'branco'
+        : q.escuro > 0.2 && !(R.tema === 'dark' && q.tema >= 0.5) // no Escuro, o fundo é escuro
+          ? 'escuro'
+          : q.tema >= 0.5
+            ? R.tema
+            : 'outro';
   return { q, amostra, w, h };
 }
 
@@ -281,7 +335,7 @@ function folhaDeContato(quadros, destino) {
 }
 
 async function principal() {
-  passo(`início: ${PARTIDAS} partidas (${R.modo}${R.controle ? `, controle ${R.controle}` : ''})`);
+  passo(`início: ${PARTIDAS} partidas no tema ${R.tema} (${R.modo}${R.controle ? `, controle ${R.controle}` : ''})`);
   Main.messageTray.bannerBlocked = true; // sem GDM, o shell avisa que não há bloqueio de tela
   // Sem as animações do shell: o get_image() pega a janela com a escala e a
   // opacidade da animação de abrir (que cresce a partir da base, em ~150 ms),
