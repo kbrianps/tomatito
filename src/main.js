@@ -22,7 +22,8 @@ import { montarBarraDeTitulo } from './components/title-bar.js';
 import { icone } from './components/icon.js';
 import { ligarDicas } from './components/dica.js';
 import { montarNavegacao } from './components/nav-view.js';
-import { ligarAtalhosDeNavegacao, ligarEscDasListas } from './lib/keys.js';
+import { ligarAtalhosDaJanela, ligarAtalhosDeNavegacao, ligarEscDasListas } from './lib/keys.js';
+import { ligarBloqueiosDeProducao, ligarRecargaDoDev } from './lib/producao.js';
 import { iniciarRoteador } from './router.js';
 import { store } from './lib/store.js';
 import * as ipc from './lib/ipc.js';
@@ -50,6 +51,12 @@ const USADOS = [
 ];
 const h = document.documentElement;
 const win = getCurrentWindow();
+// M37: no app de produção, sem o menu do WebView (fora dos campos de texto)
+// e sem recarregar pelo F5 ou pelo Ctrl+R. No `dev:app`, os dois continuam
+// (a recarga pelas teclas é nossa: o WebKitGTK não a tem). Antes de tudo,
+// para valer mesmo se a montagem abaixo falhar.
+if (import.meta.env.PROD) ligarBloqueiosDeProducao();
+else ligarRecargaDoDev();
 // Sem transições até o primeiro quadro: a página é montada com a janela
 // escondida, e uma troca de estilo aqui (o item atual do painel, por exemplo)
 // viraria uma transição que só começa depois do show(), com o primeiro quadro
@@ -97,6 +104,9 @@ try {
   });
   ligarAtalhosDeNavegacao((rota) => roteador.navegar(rota));
   ligarEscDasListas();
+  // M37: Ctrl+W fecha a janela (esconde, com "fechar para a bandeja" ligado)
+  // e Ctrl+Q sai do app (3.4 e 3.8).
+  ligarAtalhosDaJanela({ fechar: () => win.close(), sair: ipc.sair });
   // Dica dos botões só de ícone (M13): uma para a página inteira.
   ligarDicas();
 

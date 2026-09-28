@@ -260,8 +260,12 @@ export function ligar(cartao, store, { ipc = ipcDoApp, doc = cartao.ownerDocumen
     e.stopPropagation();
     fecharCampo();
   };
-  // Sair do campo vazio o fecha; com texto, ele fica aberto.
+  // Sair do campo vazio o fecha; com texto, ele fica aberto. Só conta a saída
+  // para outro lugar da página: quando é a janela que perde o foco (o menu de
+  // contexto do próprio campo, M37, ou outra janela), o campo continua o
+  // elemento ativo e fica aberto, para o "Colar" do menu cair nele.
   const aoSairDoCampo = () => {
+    if (doc?.activeElement === campo) return;
     if (!campo.value.trim()) fecharCampo({ devolver: false });
   };
 

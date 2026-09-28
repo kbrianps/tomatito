@@ -32,6 +32,11 @@ rodio = { version = "0.22.2", default-features = false, features = ["playback", 
 # Estatísticas (stats.rs, M26): o SQLite vem compilado junto (`bundled`),
 # para não depender da versão do sistema nem de uma DLL no Windows (3.3).
 rusqlite = { version = "=0.40.2", features = ["bundled"] }
+# Instância única e estado da janela (M37), nas versões da 3.6. O
+# single-instance fala pelo D-Bus no Linux (o mesmo zbus do notify.rs, com o
+# `tokio`) e por uma janela de mensagens no Windows.
+tauri-plugin-single-instance = "=2.4.5"
+tauri-plugin-window-state = "=2.4.1"
 
 [dev-dependencies]
 # Testes do laço com o tempo do tokio parado (start_paused).

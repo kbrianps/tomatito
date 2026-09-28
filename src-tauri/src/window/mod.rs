@@ -3,12 +3,25 @@
 
 pub mod main_window;
 
-use tauri::{AppHandle, Manager, Window};
+use std::sync::Arc;
 
+use tauri::{AppHandle, Manager, Window};
+use tauri_plugin_window_state::StateFlags;
+
+use crate::commands::AppEngine;
 use crate::settings::{SettingsStore, ThemePref};
+use crate::state_file::StateStore;
 
 /// Rótulo da janela do tomate (5.3), que nasce no M50.
 pub const TOMATO_LABEL: &str = "tomato";
+
+/// O que o `window-state` guarda da `main` (3.4, M37): tamanho, posição e
+/// maximizada. O padrão do plugin (`all()`) inclui `VISIBLE`, e sair com a
+/// janela escondida na bandeja faria o app reabrir invisível; `DECORATIONS`
+/// também fica de fora.
+pub const ESTADO_DA_JANELA: StateFlags = StateFlags::SIZE
+    .union(StateFlags::POSITION)
+    .union(StateFlags::MAXIMIZED);
 
 /// "Mostrar Tomatito" (3.4), da bandeja (M36) e da segunda instância (M37).
 /// Com `theme = full`, `unminimize` e `set_focus` na `tomato`, sem `hide` nem
@@ -47,4 +60,44 @@ pub fn fechar_para_bandeja(window: &Window) -> bool {
         eprintln!("[tomatito] janela não escondida: {e}");
     }
     ligado
+}
+
+/// "Sair" (3.4, "Fechar e sair"): o item da bandeja (M36), o `app_quit` do
+/// Ctrl+Q (M37) e o "Sair do Tomatito" das Configurações (M39).
+/// 1. Encerra a sessão de foco e registra o parcial (o `stop` do núcleo, o
+///    mesmo do "Encerrar sessão"). Sem sessão, o núcleo responde `NoSession`:
+///    nada a gravar.
+/// 2. Grava os temporizadores e o cronômetro no `state.json`. Cada transição
+///    já os grava (M33 e M34); esta gravação leva o retrato do momento da
+///    saída, com o mesmo formato.
+/// 3. Fecha o app com código 0. O `RunEvent::Exit` que o `exit` dispara faz o
+///    `window-state` gravar o tamanho da janela (mesmo escondida) e o
+///    `single-instance` soltar o nome no D-Bus.
+pub fn sair(app: &AppHandle) {
+    if let Some(motor) = app.try_state::<AppEngine>() {
+        let _ = motor.stop();
+        if let Some(estado) = app.try_state::<Arc<StateStore>>() {
+            let s = motor.state();
+            estado.save_timers(&s.timers);
+            estado.save_stopwatch(&s.stopwatch);
+        }
+    }
+    app.exit(0);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn estado_da_janela_sem_visivel_nem_decoracoes() {
+        // O `StateFlags` não tem `PartialEq`: compara os bits.
+        assert_eq!(
+            ESTADO_DA_JANELA.bits(),
+            (StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED).bits()
+        );
+        assert!(!ESTADO_DA_JANELA.contains(StateFlags::VISIBLE));
+        assert!(!ESTADO_DA_JANELA.contains(StateFlags::DECORATIONS));
+        assert!(!ESTADO_DA_JANELA.contains(StateFlags::FULLSCREEN));
+    }
 }

@@ -40,6 +40,15 @@ pub fn get_state(engine: State<'_, AppEngine>, settings: State<'_, SettingsStore
     }
 }
 
+/// `app_quit` (3.5): "Sair", pelo Ctrl+Q (M37) e pelo "Sair do Tomatito" das
+/// Configurações (M39). O mesmo caminho do item da bandeja
+/// (`window::sair`, 3.4): encerra a sessão com o parcial, grava o
+/// `state.json` e fecha o app.
+#[tauri::command]
+pub fn app_quit(app: AppHandle) {
+    crate::window::sair(&app);
+}
+
 /// `settings_get`: as configurações atuais, no formato do `settings.json`.
 #[tauri::command]
 pub fn settings_get(settings: State<'_, SettingsStore>) -> Settings {

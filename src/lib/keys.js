@@ -120,3 +120,42 @@ export function teclaLivre(e, letra) {
   if (typeof e.key !== 'string' || e.key.toLowerCase() !== letra.toLowerCase()) return false;
   return livre(e);
 }
+
+/**
+ * M37: os atalhos da janela (PLANO.md, 3.8), com as regras de "Fechar e
+ * sair" (3.4). Ctrl+W fecha a janela (o `close()` passa pelo mesmo
+ * CloseRequested do X e do Alt+F4: com "fechar para a bandeja" ligado, só
+ * esconde); Ctrl+Q sai do app (`app_quit`). Só Ctrl, sem Alt, Shift nem Meta.
+ *
+ * A letra é lida pelo caractere, como nos navegadores: no AZERTY, o Ctrl+Q é
+ * a tecla onde está o Q (a do A no QWERTY). Num teclado sem letras latinas
+ * (cirílico, grego), vale a posição da tecla (KeyW, KeyQ).
+ * @param {{ key: string, code?: string, repeat?: boolean, ctrlKey: boolean, altKey: boolean, shiftKey: boolean, metaKey: boolean }} e
+ * @returns {'fechar'|'sair'|null}
+ */
+export function acaoDaJanela(e) {
+  if (!e.ctrlKey || e.altKey || e.shiftKey || e.metaKey || e.repeat) return null;
+  const k = typeof e.key === 'string' ? e.key.toLowerCase() : '';
+  const letra = /^[a-z]$/.test(k) ? k : /^Key([A-Z])$/.exec(e.code ?? '')?.[1]?.toLowerCase();
+  if (letra === 'w') return 'fechar';
+  if (letra === 'q') return 'sair';
+  return null;
+}
+
+/**
+ * Liga o Ctrl+W e o Ctrl+Q no documento. `acoes` tem `fechar()` e `sair()`.
+ * Devolve uma função que desliga os atalhos.
+ */
+export function ligarAtalhosDaJanela(acoes, alvo = document) {
+  const aoTeclar = (e) => {
+    if (e.defaultPrevented) return;
+    const acao = acaoDaJanela(e);
+    if (!acao) return;
+    e.preventDefault();
+    Promise.resolve()
+      .then(() => acoes[acao]())
+      .catch((erro) => console.error(`[${acao}]`, erro));
+  };
+  alvo.addEventListener('keydown', aoTeclar);
+  return () => alvo.removeEventListener('keydown', aoTeclar);
+}

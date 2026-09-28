@@ -1,7 +1,7 @@
 // Testes dos atalhos de navegação (M09, seção 3.8 do plano).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { escDeListaAberta, espacoLivre, ligarAtalhosDeNavegacao, ligarEscDasListas, rotaDoAtalho } from './keys.js';
+import { acaoDaJanela, ligarAtalhosDaJanela, escDeListaAberta, espacoLivre, ligarAtalhosDeNavegacao, ligarEscDasListas, rotaDoAtalho } from './keys.js';
 
 const tecla = (code, key, mods = {}) => ({ code, key, ctrlKey: true, altKey: false, shiftKey: false, metaKey: false, ...mods });
 
@@ -114,4 +114,47 @@ test('M34: teclaLivre, o L do cronômetro, com as regras do Espaço', async () =
     assert.equal(teclaLivre(ev({ [m]: true }), 'l'), false, m);
   }
   assert.equal(teclaLivre({ code: 'KeyL', target: fora }, 'l'), false, 'sem key');
+});
+
+// M37: Ctrl+W e Ctrl+Q (3.4 e 3.8).
+test('Ctrl+W fecha e Ctrl+Q sai, pelo caractere, com a posição de reserva', () => {
+  assert.equal(acaoDaJanela(tecla('KeyW', 'w')), 'fechar');
+  assert.equal(acaoDaJanela(tecla('KeyQ', 'q')), 'sair');
+  assert.equal(acaoDaJanela(tecla('KeyQ', 'Q')), 'sair', 'Caps Lock ligado');
+  assert.equal(acaoDaJanela(tecla('KeyA', 'q')), 'sair', 'AZERTY: o Q fica na tecla do A');
+  assert.equal(acaoDaJanela(tecla('KeyQ', 'a')), null, 'AZERTY: a tecla do Q dá A');
+  assert.equal(acaoDaJanela(tecla('KeyQ', 'й')), 'sair', 'cirílico: vale a posição');
+  assert.equal(acaoDaJanela(tecla('KeyW', 'ц')), 'fechar');
+});
+
+test('Ctrl+W e Ctrl+Q só com Ctrl sozinho e sem repetição', () => {
+  assert.equal(acaoDaJanela(tecla('KeyQ', 'q', { ctrlKey: false })), null);
+  assert.equal(acaoDaJanela(tecla('KeyQ', 'Q', { shiftKey: true })), null);
+  assert.equal(acaoDaJanela(tecla('KeyW', 'w', { altKey: true })), null);
+  assert.equal(acaoDaJanela(tecla('KeyW', 'w', { metaKey: true })), null);
+  assert.equal(acaoDaJanela(tecla('KeyQ', 'q', { repeat: true })), null);
+  assert.equal(acaoDaJanela(tecla('KeyR', 'r')), null);
+});
+
+test('ligarAtalhosDaJanela chama a ação, cancela o padrão e respeita quem já tratou', async () => {
+  const alvo = new EventTarget();
+  const chamadas = [];
+  const desligar = ligarAtalhosDaJanela({ fechar: () => chamadas.push('fechar'), sair: () => chamadas.push('sair') }, alvo);
+  const disparar = (code, key, extra = {}) => {
+    const e = Object.assign(new Event('keydown', { cancelable: true }), tecla(code, key), extra);
+    alvo.dispatchEvent(e);
+    return e;
+  };
+  assert.equal(disparar('KeyQ', 'q').defaultPrevented, true);
+  assert.equal(disparar('KeyW', 'w').defaultPrevented, true);
+  assert.equal(disparar('KeyX', 'x').defaultPrevented, false);
+  const tratado = Object.assign(new Event('keydown', { cancelable: true }), tecla('KeyQ', 'q'));
+  tratado.preventDefault();
+  alvo.dispatchEvent(tratado);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(chamadas, ['sair', 'fechar']);
+  desligar();
+  disparar('KeyQ', 'q');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(chamadas, ['sair', 'fechar']);
 });

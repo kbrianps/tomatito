@@ -24,13 +24,32 @@ pub fn run() {
     // o backend quando o GTK inicia (3.3).
     #[cfg(target_os = "linux")]
     usar_x11_se_pedido(&context.config().identifier);
-    let builder = tauri::Builder::default();
-    // Plugins na ordem da 3.4: o single-instance (M37) entra antes deste. O
-    // de notificação só existe no Windows; no Linux, o `notify.rs` fala
+    // Plugins na ordem da 3.4. O single-instance é o primeiro (a documentação
+    // oficial pede): numa segunda abertura, ele avisa a instância que já roda
+    // e sai antes de qualquer outro plugin ou do `setup` (M37). A instância
+    // que roda aplica a regra de "Mostrar Tomatito" (3.4). No Linux, o aviso
+    // vai pelo D-Bus, com o nome do `identifier`: o `dev:app` (`.dev`) e o
+    // app instalado não se confundem.
+    let builder =
+        tauri::Builder::default().plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            window::mostrar(app)
+        }));
+    // O de notificação só existe no Windows; no Linux, o `notify.rs` fala
     // direto com o D-Bus (docs/decisoes.md, M21).
     #[cfg(windows)]
     let builder = builder.plugin(tauri_plugin_notification::init());
     builder
+        // O window-state com as flags restritas (3.4, M37): sem `VISIBLE`
+        // (quem sai com a janela escondida na bandeja reabriria sem janela) e
+        // sem `DECORATIONS` (a barra é própria). No Wayland, a posição não
+        // existe para o app: voltam o tamanho e o maximizado. A `tomato` fica
+        // de fora: o tamanho dela vem do `tomatoSize` (5).
+        .plugin(
+            tauri_plugin_window_state::Builder::new()
+                .with_state_flags(window::ESTADO_DA_JANELA)
+                .with_denylist(&[window::TOMATO_LABEL])
+                .build(),
+        )
         .setup(|app| {
             // O motor nasce antes das janelas: o laço roda com ou sem elas
             // (PLANO.md, 3.2), e o primeiro `get_state` do JS já o encontra.
@@ -53,6 +72,9 @@ pub fn run() {
             // A thread de som sobe junto: o motor e o `sound_test` usam a mesma.
             let som = Arc::new(audio::Som::iniciar());
             app.manage(som.clone());
+            // M37: o "Sair" também grava o `state.json` (`window::sair`).
+            let estado = Arc::new(state_file::StateStore::new(&dados));
+            app.manage(estado.clone());
             let motor = Arc::new(engine::Engine::new(
                 clock,
                 speed,
@@ -63,7 +85,7 @@ pub fn run() {
                     // M33: o `state.json`, gravado a cada transição dos
                     // temporizadores (e do cronômetro, M34); carregar ao
                     // abrir é do M40.
-                    Arc::new(state_file::StateStore::new(&dados)),
+                    estado.clone(),
                     bandeja.clone(),
                 ),
             ));
@@ -88,6 +110,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_state,
+            commands::app_quit,
             commands::settings_get,
             commands::settings_set,
             commands::focus_start,

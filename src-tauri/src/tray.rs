@@ -20,7 +20,7 @@
 //! funciona lá. No Windows, o tempo vai na dica (`set_tooltip`), porque o
 //! `set_title` não funciona lá. Sem o AppIndicator (GNOME puro), o ícone não
 //! aparece, e fechar continua escondendo a janela: abrir o app de novo a traz
-//! de volta (M37).
+//! de volta (a segunda instância, M37).
 
 use std::sync::{Mutex, OnceLock, PoisonError};
 
@@ -261,7 +261,7 @@ fn montar(app: &AppHandle) -> tauri::Result<Alcas> {
         .on_menu_event(|app, ev| match ev.id().as_ref() {
             ITEM_ACAO => alternar_foco(app),
             ITEM_MOSTRAR => crate::window::mostrar(app),
-            ITEM_SAIR => sair(app),
+            ITEM_SAIR => crate::window::sair(app),
             _ => {}
         })
         .build(app)?;
@@ -283,18 +283,6 @@ fn alternar_foco(app: &AppHandle) {
     if let Err(e) = r {
         eprintln!("[tomatito] bandeja: {e:?}");
     }
-}
-
-/// "Sair" (3.4): encerra a sessão de foco, registrando o parcial, e fecha o
-/// app. Os temporizadores e o cronômetro já estão no `state.json` (gravado a
-/// cada transição, M33 e M34). O `app_quit`, o Ctrl+Q e "Fechar e sair" são
-/// do M37 e vão chamar esta mesma função.
-pub fn sair(app: &AppHandle) {
-    if let Some(motor) = app.try_state::<AppEngine>() {
-        // Sem sessão, o núcleo responde `NoSession`: nada a gravar.
-        let _ = motor.stop();
-    }
-    app.exit(0);
 }
 
 #[cfg(test)]

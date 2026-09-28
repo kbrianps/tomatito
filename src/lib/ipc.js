@@ -20,6 +20,12 @@ export const EVENTOS = Object.freeze({
 export const obterEstado = () => invoke('get_state');
 
 /**
+ * `app_quit` (M37): "Sair" (3.4). Encerra a sessão de foco com o parcial,
+ * grava o `state.json` e fecha o app; o mesmo caminho do "Sair" da bandeja.
+ */
+export const sair = () => invoke('app_quit');
+
+/**
  * Comandos do foco. Cada um devolve o retrato novo (o mesmo do `tt://state`)
  * ou rejeita com `{ code, message }` (engine.rs, `CommandError`).
  */

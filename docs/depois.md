@@ -43,3 +43,4 @@ Formato: data, marco em que surgiu e uma linha sobre a ideia.
 - 28/09/2026, M30: trocar a tarefa no meio da sessão (exigiria um comando `focus_set_task` no núcleo e um período novo a partir da troca).
 - 28/09/2026, M30: renomear uma tarefa (duplo clique no título) e arrastar para reordenar. Hoje só adicionar, concluir, escolher e apagar.
 - 28/09/2026, M36: "Iniciar foco" da bandeja com a última duração usada na tela Foco (hoje, sempre 30 min, a duração com que o seletor abre). Exigiria guardar a última duração no `settings.json`.
+- 28/09/2026, M37: os outros atalhos de navegador do WebView2 no app de produção (no Chromium, Ctrl+P imprime e Ctrl+F abre a busca, entre outros). O M37 prende só o menu de contexto, o F5 e o Ctrl+R, como pede o plano; conferir os demais na ida ao Windows (M48) e decidir se entram no `producao.js` ou no `AreBrowserAcceleratorKeysEnabled` do WebView2.

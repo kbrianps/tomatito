@@ -909,3 +909,27 @@ O que só você consegue: clicar de verdade no ícone do painel, ouvir o som com
 7. [ ] Repita o passo 4 com Alt+F4 e depois com Ctrl+W, e traga a janela de volta por "Mostrar Tomatito" a cada vez.
 8. [ ] Tempo na bandeja (opcional; a opção na tela é do M39): no DevTools (botão direito → Inspecionar → Console), `await window.__TAURI_INTERNALS__.invoke('settings_set', { patch: { trayTime: true } })`. Inicie pela bandeja: ao lado do ícone aparece "30 min", que desce um por segundo a 60× ("Intervalo · N min" num intervalo, "Pausado · N min" no pausado). Volte com `{ trayTime: false }`: o texto some.
 9. [ ] "Sair" no menu: o app fecha e o terminal mostra o `tauri dev` terminando (ou Ctrl+C no terminal, se o Vite continuar).
+
+## M37. Instância única, Sair e estado da janela
+
+O que já foi conferido sem você:
+- `cargo test` e `npm test`: as flags do `window-state` (sem `VISIBLE`), o Ctrl+W e o Ctrl+Q (letra, modificadores, repetição), as teclas de recarga, o menu só nos campos e os bloqueios só em produção.
+- Roteiro aninhado `instancia` (app de verdade no GNOME Shell aninhado, com ponteiro e teclado virtuais): no `dev:app`, o menu do WebView e a recarga pelo F5 e pelo Ctrl+R; Ctrl+W esconde; abrir de novo traz a janela escondida de volta, ativa (minimizada, o GNOME aninhado deu o aviso de pronta), e a segunda abertura sai sozinha; Ctrl+Q com uma sessão correndo sai com código 0, regrava o `state.json` e deixa o parcial nas estatísticas; o tamanho e o "maximizada" voltam; sair com a janela escondida e reabrir mostra a janela. No `build:debug`: nenhum menu fora dos campos, menu no campo de texto, F5 e Ctrl+R sem recarregar (com um controle que recarrega de verdade), Ctrl+W, segunda abertura e Ctrl+Q.
+
+O que só você consegue: abrir o app de novo pelo seu terminal ou dock, ver a janela voltar (ou o aviso "Tomatito está pronto") e usar o botão direito e o F5 no build.
+
+### Para conferir (uns 8 minutos, 3 deles de compilação)
+
+1. [ ] `cd ~/dev/tomatito && npm run dev:app`. Arraste o canto da janela até um tamanho bem diferente do padrão.
+2. [ ] Botão direito no título "Foco": abre o menu do WebView (Voltar, Avançar, Parar, Recarregar, Inspecionar elemento). Esc fecha.
+3. [ ] Clique no título e aperte F5: a página recarrega (pisca e volta na mesma tela). Ctrl+R também.
+4. [ ] Ctrl+W: a janela some, e o ícone continua na bandeja.
+5. [ ] Em outro terminal: `/opt/cargo-target/tomatito/debug/tomatito`. O comando termina na hora e a janela volta (o GNOME pode só avisar "Tomatito está pronto"; clique no aviso).
+6. [ ] Minimize a janela (o "−" da barra) e repita o passo 5: a janela volta ou, mais provável, o GNOME avisa "Tomatito está pronto" (clique no aviso). Os dois são aceitos (3.4).
+7. [ ] Inicie uma sessão de foco, espere pouco mais de 1 minuto e aperte Ctrl+Q: o app fecha (se o terminal do `dev:app` continuar com o Vite, Ctrl+C nele).
+8. [ ] `npm run dev:app` de novo: a janela abre no tamanho do passo 1, sem sessão em andamento, e o "Concluído" do cartão "Progresso diário" conta o minuto da sessão encerrada.
+9. [ ] Ctrl+W e, no menu do ícone da bandeja, "Sair". `npm run dev:app` de novo: a janela aparece (não fica escondida). Feche o `dev:app` (Ctrl+Q e Ctrl+C no terminal).
+10. [ ] Build de produção: `npm run build:debug` (uns 3 minutos) e depois `/opt/cargo-target/tomatito/debug/tomatito`. Botão direito no título "Foco" e no painel da esquerda: nenhum menu abre.
+11. [ ] Copie um texto qualquer (em outro app). No cartão "Tarefas", clique no "+" e dê botão direito no campo vazio: abre o menu do campo (Recortar, Copiar, Colar...), e o campo continua aberto. "Colar": o texto entra no campo.
+12. [ ] Clique no título "Foco" e aperte F5 e depois Ctrl+R: nada acontece, e o texto colado continua no campo.
+13. [ ] Ctrl+Q fecha o app. (O próximo `npm run dev:app` recompila o binário de desenvolvimento.)

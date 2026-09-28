@@ -195,7 +195,8 @@ test('configurações no Rust: settings_get, settings_set e tt://settings, sem o
   assert.match(lib, /commands::settings_get,\s*commands::settings_set,/);
   // Um generate_context! só (ele embute a página), e o linuxX11 lido antes do Builder.
   assert.equal(lib.match(/generate_context!\(\)/g)?.length, 1);
-  assert.match(lib, /usar_x11_se_pedido\(&context\.config\(\)\.identifier\);\s*let builder = tauri::Builder::default\(\);/);
+  // M37: o Builder já nasce com o single-instance (o primeiro plugin, 3.4).
+  assert.match(lib, /usar_x11_se_pedido\(&context\.config\(\)\.identifier\);\s*(?:\/\/.*\n\s*)*let builder =\s*tauri::Builder::default\(\)/);
   assert.match(ler('src-tauri/src/events.rs'), /pub const SETTINGS: &str = "tt:\/\/settings";/);
   const ipcJs = ler('src/lib/ipc.js');
   assert.match(ipcJs, /configuracoes: 'tt:\/\/settings'/);
@@ -608,4 +609,34 @@ test('dica dos botões só de ícone: ligada no main.js, e todo data-dica do cat
   assert.match(ler('src/components/dica.js'), /export const ANCORA = '--tt-dica-alvo';/);
   assert.match(ler('src/components/dica.js'), /setAttribute\('popover', 'manual'\)/, 'popover manual: não fecha um menu aberto');
   assert.doesNotMatch(ler('src/components/dica.js'), /\.style\.(?!setProperty|removeProperty)/, 'sem estilo em linha além do anchor-name (3.8)');
+});
+
+// M37: instância única, Sair e estado da janela (3.4), e o app de produção
+// sem menu do WebView nem recarga (3.8).
+test('M37: single-instance primeiro, window-state restrito, app_quit e os bloqueios só em produção', () => {
+  const cargo = ler('src-tauri/Cargo.toml');
+  assert.match(cargo, /^tauri-plugin-single-instance = "=2\.4\.5"$/m);
+  assert.match(cargo, /^tauri-plugin-window-state = "=2\.4\.1"$/m);
+  const lib = ler('src-tauri/src/lib.rs');
+  // O single-instance é o primeiro plugin; depois vêm o de notificação e o window-state.
+  const plugins = [...lib.matchAll(/\.plugin\(\s*(tauri_plugin_\w+)/g)].map((m) => m[1]);
+  assert.deepEqual(plugins, ['tauri_plugin_single_instance', 'tauri_plugin_notification', 'tauri_plugin_window_state']);
+  assert.match(lib, /tauri_plugin_single_instance::init\(\s*\|app, _argv, _cwd\|\s*\{?\s*window::mostrar\(app\)/);
+  assert.match(lib, /\.with_state_flags\(window::ESTADO_DA_JANELA\)\s*\.with_denylist\(&\[window::TOMATO_LABEL\]\)/);
+  assert.match(lib, /commands::app_quit,/);
+  const janela = ler('src-tauri/src/window/mod.rs');
+  assert.match(janela, /ESTADO_DA_JANELA: StateFlags = StateFlags::SIZE\s*\.union\(StateFlags::POSITION\)\s*\.union\(StateFlags::MAXIMIZED\);/);
+  // Um "Sair" só: a bandeja, o app_quit (Ctrl+Q) e, no M39, as Configurações.
+  assert.match(janela, /pub fn sair\(app: &AppHandle\)[\s\S]*motor\.stop\(\)[\s\S]*save_timers[\s\S]*save_stopwatch[\s\S]*app\.exit\(0\)/);
+  assert.match(ler('src-tauri/src/tray.rs'), /ITEM_SAIR => crate::window::sair\(app\)/);
+  assert.match(ler('src-tauri/src/commands.rs'), /pub fn app_quit\(app: AppHandle\) \{\s*crate::window::sair\(&app\);/);
+  assert.match(ler('src/lib/ipc.js'), /export const sair = \(\) => invoke\('app_quit'\);/);
+  const main = ler('src/main.js');
+  assert.match(main, /^if \(import\.meta\.env\.PROD\) ligarBloqueiosDeProducao\(\);\nelse ligarRecargaDoDev\(\);$/m);
+  assert.match(main, /ligarAtalhosDaJanela\(\{ fechar: \(\) => win\.close\(\), sair: ipc\.sair \}\)/);
+  // Nenhum outro lugar liga os bloqueios.
+  for (const arq of readdirSync(new URL('../src/', import.meta.url), { recursive: true })) {
+    if (!/\.js$/.test(arq) || /\.test\.js$/.test(arq) || arq === 'main.js' || arq.endsWith('producao.js')) continue;
+    assert.doesNotMatch(ler(`src/${arq}`), /ligarBloqueiosDeProducao|ligarRecargaDoDev/, arq);
+  }
 });
