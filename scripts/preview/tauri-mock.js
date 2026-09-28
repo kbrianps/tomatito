@@ -28,6 +28,11 @@
 //                               min) com o estado dado: id@restante correndo,
 //                               id~restante pausado (ms; negativo depois do
 //                               zero, já com o fim disparado)
+//   ?validacao=asking|timeout|revert
+//                               M52: o retrato da validação do Full que o
+//                               full_validation_get devolve: a pergunta (10 s
+//                               a partir da abertura) ou a oferta do modo
+//                               opaco (depois do prazo ou do Reverter)
 //   ?cronometro=running@1870[&voltas=900,1500]
 //                               M34: o cronômetro correndo (ou paused@ms,
 //                               pausado) com o decorrido dado, em ms, e as
@@ -470,6 +475,36 @@ const handlers = {
     setTimeout(() => emit('tt://settings', structuredClone(configuracoes)));
     return null;
   },
+  // M52: a validação do Full (window/validacao.rs), sem o prazo: a pergunta
+  // fica até a resposta. As respostas seguem o Rust (Manter e o modo opaco
+  // fecham; Reverter vira a oferta do B3; "Agora não" fecha a oferta).
+  full_validation_get: () => structuredClone(validacao.retrato),
+  full_validation_answer: ({ answer }) => {
+    window.__TOMATITO_PREVIEW_COMANDOS__.push(`full_validation_answer:${answer}`);
+    const estado = validacao.retrato.state;
+    const trocar = (r) => {
+      validacao.retrato = { seq: validacao.retrato.seq + 1, ...r };
+      setTimeout(() => emit('tt://full-validation', structuredClone(validacao.retrato)));
+    };
+    if (answer === 'keep' && estado === 'asking') trocar({ state: 'none' });
+    else if (answer === 'revert' && estado === 'asking') trocar({ state: 'reverted', reason: 'revert' });
+    else if (answer === 'dismiss' && estado === 'reverted') trocar({ state: 'none' });
+    else if (answer === 'opaque') {
+      configuracoes.fullMode = 'opaque';
+      trocar({ state: 'none' });
+    }
+    return structuredClone(validacao.retrato);
+  },
+};
+
+// M52: o retrato inicial da validação (?validacao=).
+const validacao = {
+  retrato: (() => {
+    const p = params.get('validacao');
+    if (p === 'asking') return { seq: 1, state: 'asking', deadlineMs: Date.now() + 10000, seconds: 10 };
+    if (p === 'timeout' || p === 'revert') return { seq: 1, state: 'reverted', reason: p };
+    return { seq: 0, state: 'none' };
+  })(),
 };
 
 // M50: a página do tomate (/tomato.html) é a janela `tomato`.

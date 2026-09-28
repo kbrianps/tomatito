@@ -27,6 +27,13 @@ body {
   color: var(--tt-tomato-ink);
 }
 
+/* Plano B3 (fullMode=opaque; M52): a janela é um quadrado opaco, com o fundo
+   --tt-tomato-10 (o data-full-mode do tokens.css), e o arraste vale no
+   quadrado todo, e não só no que é pintado. */
+[data-full-mode='opaque'] .stage {
+  pointer-events: auto;
+}
+
 .art {
   position: absolute;
   inset: 0;

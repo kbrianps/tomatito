@@ -499,6 +499,25 @@ async function principal() {
   const f0 = await motor('main');
   checar('uma sessão de 60 min correndo antes das idas e voltas', f0.status === 'focus' && f0.session?.minutes === 60, { status: f0.status });
   await sleep(2500);
+  // M52: a primeira entrada pergunta (a validação com reversão). O "Manter"
+  // aqui valida a combinação, e as idas seguintes não perguntam.
+  await ipc('main', 'switch_window_mode', { full: true });
+  await esperar(() => tomate(), 12000, 'o tomate da validação');
+  await esperar(() => infos('tomato') > 0, 10000, 'a página do tomate');
+  const validou = await ipc('tomato', 'full_validation_answer', { answer: 'keep' });
+  await esperar(() => doApp().length === 1 && tomate(), 12000, 'o tomate validado');
+  Main.activateWindow(tomate());
+  await sleep(150);
+  await tecla(Clutter.KEY_Escape);
+  await esperar(() => !tomate() && main(), 6000, 'a main de volta depois da validação');
+  await sleep(1500);
+  const sv = await ipc('main', 'settings_get');
+  checar('a primeira entrada pergunta, e o Manter valida a combinação (M52)', validou?.state === 'none' && sv.fullValidated !== '' && sv.theme === 'lite', { validou, fullValidated: sv.fullValidated });
+  const mv = main();
+  if (mv.is_maximized()) mv.unmaximize();
+  mv.move_resize_frame(true, 960, 150, 900, 700);
+  await comando('main', "(location.hash = '#/configuracoes', 'ok')");
+  await sleep(1000);
   const memAntes = rssDaArvore(pid);
   R.medidas.memoriaAntes = memAntes;
   passo(`memória antes: ${memAntes.kb} KB (${memAntes.processos.join(', ')})`);

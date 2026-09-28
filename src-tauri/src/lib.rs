@@ -118,6 +118,8 @@ pub fn run() {
             commands::stopwatch_reset,
             commands::switch_window_mode,
             commands::show_main,
+            commands::full_validation_get,
+            commands::full_validation_answer,
         ])
         .run(context)
         .expect("error while building tauri application");

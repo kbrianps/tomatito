@@ -124,12 +124,19 @@ export const cronometro = Object.freeze({
  * fechar a `tomato`, na rota dada (`'#/configuracoes'`) ou na tela em que
  * estava. `avisarPronto(dados)` emite o `tt://tomato-ready` (só a página do
  * tomate), com `{ userAgent, renderer }`: libera o `show()` do tomate.
+ * M52: `validacao()` é o `full_validation_get` e `responderValidacao(r)` o
+ * `full_validation_answer{answer}` (`keep`, `revert`, `opaque` ou
+ * `dismiss`); os dois devolvem o retrato da validação com reversão (5.9),
+ * que também chega pelo `tt://full-validation` (window/validacao.rs).
  */
 export const full = Object.freeze({
   EVENTO_PRONTO: 'tt://tomato-ready',
+  EVENTO_VALIDACAO: 'tt://full-validation',
   trocarModo: (entrar) => invoke('switch_window_mode', { full: entrar }),
   mostrarMain: (rota = null) => invoke('show_main', { route: rota }),
   avisarPronto: (dados) => emit('tt://tomato-ready', dados),
+  validacao: () => invoke('full_validation_get'),
+  responderValidacao: (resposta) => invoke('full_validation_answer', { answer: resposta }),
 });
 
 /** Ouve um evento do Rust; `cb` recebe só o conteúdo. Devolve o `unlisten`. */

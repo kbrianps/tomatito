@@ -137,7 +137,8 @@ try {
   for (const url of lista) if ((await caminho(url)) !== '/tomato.html') main = url;
   if (!main) throw new Error(`sem a main entre os alvos: ${lista}`);
   const cm = await conectar(main);
-  R.abrir = await cm.avaliar("window.__TAURI_INTERNALS__.invoke('switch_window_mode', { full: true }).then(() => 'aberto', (e) => 'erro: ' + e)");
+  // M52: o "Manter" da validação com reversão, que senão fecharia o tomate em 10 s.
+  R.abrir = await cm.avaliar("window.__TAURI_INTERNALS__.invoke('switch_window_mode', { full: true }).then(() => window.__TAURI_INTERNALS__.invoke('full_validation_answer', { answer: 'keep' })).then(() => 'aberto', (e) => 'erro: ' + e)");
   cm.fechar();
   let tomato = null;
   for (let i = 0; i < 40 && !tomato; i++) {

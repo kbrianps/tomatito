@@ -33,6 +33,7 @@ import * as temporizador from './views/timers.js';
 import * as cronometro from './views/stopwatch.js';
 import * as configuracoes from './views/settings.js';
 import * as dev from './views/dev-catalog.js';
+import { ligar as ligarValidacaoDoFull } from './views/validacao-full.js';
 // Os tokens do Fluent vêm do fluent-tokens.gen.css, um bloco por data-theme
 // (PLANO.md, 4.5): sem setTheme() em runtime desde o M11.
 
@@ -69,6 +70,9 @@ try {
   // M24: o Rust é o dono das configurações, e a main reflete cada gravação
   // (tt://settings) nos atributos de tema do <html> (4.6).
   ligarTema({ ipc, h }).catch((erro) => console.error('[tema]', erro));
+  // M52: a validação com reversão do Full (5.9): a pergunta de 10 s e a
+  // oferta do modo opaco, num diálogo por cima de qualquer tela.
+  ligarValidacaoDoFull({ ipc }).pronto.catch((erro) => console.error('[validação do Full]', erro));
   // M25: seguir o sistema, com as guardas (a) e (b) da 4.6. A troca pela
   // interface passa pelo `durante`, que segura as conferências até ela acabar.
   const midia = matchMedia('(prefers-color-scheme: dark)');

@@ -282,5 +282,23 @@ export default Object.freeze({
     // O rótulo do tempo (role="timer"), uma vez por minuto (3.8), com os
     // plurais de foco.andamento.restantes: "18 minutos restantes".
     pausadoNoRotulo: (restantes) => `${restantes}, pausado`,
+    // M52: a validação com reversão (5.9), na janela principal, no padrão da
+    // troca de resolução de tela; e, depois de voltar, a oferta do modo opaco
+    // (o plano B3).
+    validacao: Object.freeze({
+      titulo: 'O tomate aparece com o fundo transparente?',
+      explicacao: 'Se ele aparece dentro de um quadrado preto, branco ou vazio, escolha Reverter.',
+      prazo: (s) => `Voltando ao tema anterior em ${s} ${s === 1 ? 'segundo' : 'segundos'}.`,
+      manter: 'Manter',
+      reverter: 'Reverter',
+      opacoTitulo: 'Usar o modo opaco?',
+      revertida: Object.freeze({
+        timeout: 'Sem resposta, o Tomatito voltou ao tema anterior.',
+        revert: 'O Tomatito voltou ao tema anterior.',
+      }),
+      opacoExplicacao: 'No modo opaco, o tomate aparece dentro de um quadrado escuro e não depende da transparência.',
+      usarOpaco: 'Usar o modo opaco',
+      agoraNao: 'Agora não',
+    }),
   }),
 });

@@ -299,3 +299,22 @@ pub async fn switch_window_mode(app: AppHandle, full: bool) -> Result<(), String
 pub async fn show_main(app: AppHandle, route: Option<String>) -> Result<(), String> {
     crate::window::mostrar_main(&app, route.as_deref()).map_err(|e| e.to_string())
 }
+
+/// `full_validation_get` (M52): o retrato da validação com reversão do Full
+/// (5.9), que a `main` pede ao ligar (depois, ela segue o
+/// `tt://full-validation`). Ver `window/validacao.rs`.
+#[tauri::command]
+pub fn full_validation_get(app: AppHandle) -> Value {
+    crate::window::validacao::atual(&app)
+}
+
+/// `full_validation_answer{answer}` (M52): `keep` ou `revert` na pergunta,
+/// `opaque` ou `dismiss` na oferta do B3. Async: reverter fecha a `tomato`, e
+/// o modo opaco a cria de novo (5.3). Devolve o retrato depois da resposta.
+#[tauri::command]
+pub async fn full_validation_answer(
+    app: AppHandle,
+    answer: crate::window::validacao::Resposta,
+) -> Result<Value, String> {
+    crate::window::validacao::responder(&app, answer).await
+}

@@ -658,18 +658,20 @@ test('tomate: duas entradas no Vite, janela da 5.3 e comandos async (M50 e M51)'
     '.title("Tomatito")',
     '.inner_size(size, size)',
     '.decorations(false)',
-    '.transparent(true)',
+    // M52: transparente, salvo no B3 (a janela opaca, com o fundo --tt-tomato-10).
+    '.transparent(!opaca)',
     '.shadow(false)',
     '.resizable(false)',
     '.maximizable(false)',
     '.always_on_top(s.tomato_on_top)',
     '.theme(Some(Theme::Dark))',
-    '.background_color(Color(0, 0, 0, 0))',
+    '.background_color(fundo)',
     '.visible(false)',
-    '.initialization_script(init_script())',
-    'builder.no_redirection_bitmap(true)',
+    '.initialization_script(init_script(modo))',
+    'builder.no_redirection_bitmap(!opaca)',
   ];
   for (const c of chamadas) assert.ok(tomato.includes(c), `tomato.rs sem ${c}`);
+  assert.match(tomato, /let fundo = if opaca \{\s*FUNDO_OPACO\s*\} else \{\s*Color\(0, 0, 0, 0\)\s*\};/);
   assert.match(tomato, /let size = f64::from\(s\.tomato_size\);/);
   const comandos = ler('src-tauri/src/commands.rs');
   assert.match(comandos, /pub async fn switch_window_mode\(app: AppHandle, full: bool\)/, 'criar janela num comando síncrono trava no Windows (5.3)');
@@ -691,12 +693,19 @@ test('Full: switch_window_mode pelo caminho do settings_set, tt://tomato-ready c
   // Entrar: grava o tema, cria escondida, espera o pronto, mostra, e só então esconde a main.
   const entrar = tomato.slice(tomato.indexOf('pub async fn entrar('), tomato.indexOf('pub async fn sair('));
   const ordem = (texto, partes) => partes.map((p) => texto.indexOf(p)).every((i, k, a) => i >= 0 && (k === 0 || i > a[k - 1]));
-  assert.ok(ordem(entrar, ['trava.lock().await', 'gravar_tema(app, ThemePref::Full.as_str())', 'criar_e_mostrar(app, &s)', 'm.hide()']), 'a ordem do "Entrar" (5.7)');
+  // M52: o modo do full_mode() e, na primeira entrada em cada combinação, a pergunta no lugar do hide.
+  assert.ok(
+    ordem(entrar, ['trava.lock().await', 'gravar_tema(app, ThemePref::Full.as_str())', 'let modo = full_mode(&s);', 'criar_e_mostrar(app, &s, modo)', 'chave_a_validar(&s, modo)', 'validacao::perguntar(app, chave)', 'e.esperar_pintura().await', 'm.hide()']),
+    'a ordem do "Entrar" (5.7)',
+  );
   const criar = tomato.slice(tomato.indexOf('async fn criar_e_mostrar('), tomato.indexOf('pub async fn entrar('));
-  assert.ok(ordem(criar, ['esperar_pronto()', 'build_tomato(app, s)', 'tokio::time::timeout(ESPERA_DO_PRONTO, rx.recv())', 'w.show()']), 'o ouvinte antes da janela, e o show depois do pronto ou do limite');
+  assert.ok(ordem(criar, ['esperar_pronto()', 'build_tomato(app, s, modo)', 'Entrada::mostrar(w, rx, t0)']), 'o ouvinte antes da janela');
+  const mostrar = tomato.slice(tomato.indexOf('async fn mostrar('), tomato.indexOf('async fn esperar_pintura('));
+  assert.ok(ordem(mostrar, ['tokio::time::timeout(ESPERA_DO_PRONTO, rx.recv())', 'janela.show()', 'tokio::time::Instant::now() + ESPERA_DA_PINTURA']), 'o show depois do pronto ou do limite');
   // A main só some quando o tomate avisa, já na tela, que pintou (docs/decisoes.md, M51, item 13).
   assert.match(tomato, /pub const ESPERA_DA_PINTURA: Duration = Duration::from_secs\(8\);/);
-  assert.ok(ordem(criar, ['w.show()', 'Instant::now() + ESPERA_DA_PINTURA', 'while !pintado', 'timeout_at(fim, rx.recv())', 'Ok((w, pronto))']), 'depois do show, a espera do aviso de pintado');
+  const pintura = tomato.slice(tomato.indexOf('async fn esperar_pintura('), tomato.indexOf('async fn chave_a_validar('));
+  assert.ok(ordem(pintura, ['while !self.pintado', 'timeout_at(self.fim_da_pintura, self.rx.recv())']), 'depois do show, a espera do aviso de pintado');
   // Sair: grava o lastNormalTheme, mostra a main (recriada se preciso) e fecha a tomato.
   const sair = tomato.slice(tomato.indexOf('pub async fn sair('), tomato.indexOf('async fn esperar_visivel('));
   assert.ok(ordem(sair, ['trava.lock().await', 'gravar_tema(app, atual.last_normal_theme.as_str())', 'm.show()', 'build_main(app, &s)', 't.destroy()']), 'a ordem do "Sair" (5.7)');
@@ -717,6 +726,55 @@ test('Full: switch_window_mode pelo caminho do settings_set, tt://tomato-ready c
   assert.match(js, /ipc\.full\.trocarModo\(false\)/);
   assert.match(ler('src/lib/ipc.js'), /trocarModo: \(entrar\) => invoke\('switch_window_mode', \{ full: entrar \}\)/);
   assert.match(ler('src/main.js'), /trocarModo: ipc\.full\.trocarModo,/);
+});
+
+// M52: a validação com reversão (5.9) e o plano B3 (fullMode=opaque e a variável do DMA-BUF, 5.6).
+test('Full: validação de 10 s pelo fullValidated, full_mode() com o WEBKIT_DISABLE_DMABUF_RENDERER e a tomato opaca', () => {
+  const tomato = ler('src-tauri/src/window/tomato.rs');
+  // O full_mode() da 5.6: lê a variável do ambiente, compara com "0" e decide só o modo.
+  assert.match(tomato, /pub fn full_mode\(s: &Settings\) -> FullMode \{\s*full_mode_com\(s, std::env::var_os\(VARIAVEL_DMABUF\)\.as_deref\(\)\)/);
+  assert.match(tomato, /pub const VARIAVEL_DMABUF: &str = "WEBKIT_DISABLE_DMABUF_RENDERER";/);
+  assert.match(tomato, /cfg!\(target_os = "linux"\) && dmabuf\.is_some_and\(\|v\| v\.to_str\(\) != Some\("0"\)\)/);
+  assert.match(tomato, /dmabuf_off \|\| s\.full_mode == settings::FullMode::Opaque/);
+  // Nunca exportar nem apagar a variável do usuário (5.6).
+  for (const arq of readdirSync(new URL('../src-tauri/src/', import.meta.url), { recursive: true }).filter((a) => a.endsWith('.rs'))) {
+    assert.doesNotMatch(ler(`src-tauri/src/${arq}`), /(set_var|remove_var)\((VARIAVEL_DMABUF|"WEBKIT_DISABLE_DMABUF_RENDERER")/, arq);
+  }
+  // O fundo da tomato opaca é o --tt-tomato-10 do tokens.css, e o B3 do tokens.css pinta o <html>.
+  const tokens = ler('src/styles/tokens.css');
+  const t10 = /--tt-tomato-10:#([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2});/i.exec(tokens).slice(1).map((h) => `0x${h.toUpperCase()}`);
+  assert.ok(tomato.includes(`pub const FUNDO_OPACO: Color = Color(${t10.join(', ')}, 0xFF);`), `FUNDO_OPACO = --tt-tomato-10 (${t10})`);
+  assert.match(tokens, /\[data-theme="full"\]\[data-full-mode="opaque"\]\{ --tt-bg-app:var\(--tt-tomato-10\); \}/);
+  assert.match(ler('src/styles/tomato.css'), /\[data-full-mode='opaque'\] \.stage \{\s*pointer-events: auto;/);
+  assert.match(tomato, /FullMode::Opaque => format!\("window\.__TT_FULL_MODE__=\{\};", json\("opaque"\)\)/);
+  // O início direto no Full também passa pelo full_mode() e pela validação.
+  const inicio = tomato.slice(tomato.indexOf('pub fn abrir_no_inicio('));
+  const ordem = (texto, partes) => partes.map((p) => texto.indexOf(p)).every((i, k, a) => i >= 0 && (k === 0 || i > a[k - 1]));
+  assert.ok(ordem(inicio, ['let modo = full_mode(s);', 'build_tomato(app, s, modo)', 'Entrada::mostrar(w, rx, t0)', 'drop(vez)', 'chave_a_validar(&s, modo)', 'validacao::perguntar(&app, chave)']));
+  // Só a janela transparente é validada, e só quando a chave difere do fullValidated (5.7, passo 5).
+  const chave = tomato.slice(tomato.indexOf('async fn chave_a_validar('), tomato.indexOf('fn registrar('));
+  assert.ok(ordem(chave, ['if modo == FullMode::Opaque', 'return None;', 'chave_de_validacao(', '(chave != s.full_validated).then_some(chave)']));
+  // Sair no meio cancela a pergunta.
+  const sair = tomato.slice(tomato.indexOf('pub async fn sair('), tomato.indexOf('async fn esperar_visivel('));
+  assert.ok(ordem(sair, ['trava.lock().await', 'validacao::cancelar(app)', 'gravar_tema(']));
+  // O prazo corre no Rust (10 s), e a reversão é o "Sair" da 5.7, antes da oferta do B3.
+  const val = ler('src-tauri/src/window/validacao.rs');
+  assert.match(val, /pub const PRAZO: Duration = Duration::from_secs\(10\);/);
+  assert.match(val, /pub const EVENTO: &str = "tt:\/\/full-validation";/);
+  assert.ok(ordem(val, ['tokio::time::sleep(PRAZO).await;', 'expirar(&app, id).await;']));
+  const reverter = val.slice(val.indexOf('async fn reverter('));
+  assert.ok(ordem(reverter, ['tomato::sair(app).await', 'avisar(app, Fase::Revertida(motivo))']));
+  assert.match(val, /gravar_configuracoes\(\s*app,\s*&store,\s*&json!\(\{ "fullValidated": chave \}\),?\s*\)/, 'Manter grava pelo caminho do settings_set');
+  assert.match(val, /gravar_configuracoes\(app, &store, &json!\(\{ "fullMode": "opaque" \}\)\)/, 'o B3 grava pelo caminho do settings_set');
+  const lib = ler('src-tauri/src/lib.rs');
+  assert.match(lib, /commands::full_validation_get,\s*commands::full_validation_answer,/);
+  assert.match(ler('src-tauri/src/commands.rs'), /pub async fn full_validation_answer\(/);
+  // A main liga o diálogo antes de aparecer (a pergunta de uma main recriada chega pelo get).
+  const main = ler('src/main.js');
+  assert.ok(main.indexOf('ligarValidacaoDoFull({ ipc })') > 0 && main.indexOf('ligarValidacaoDoFull({ ipc })') < main.indexOf('await win.show()'));
+  const ipc = ler('src/lib/ipc.js');
+  assert.match(ipc, /EVENTO_VALIDACAO: 'tt:\/\/full-validation'/);
+  assert.match(ipc, /responderValidacao: \(resposta\) => invoke\('full_validation_answer', \{ answer: resposta \}\)/);
 });
 
 test('capabilities/tomato.json com as permissões da seção 3.8, só para a tomato', () => {

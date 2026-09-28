@@ -3,6 +3,7 @@
 
 pub mod main_window;
 pub mod tomato;
+pub mod validacao;
 
 use tauri::{AppHandle, Manager, Window};
 

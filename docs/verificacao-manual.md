@@ -960,3 +960,26 @@ Desde o M51, o botão "Abrir o tomate" do `#/dev` (passo 1 da seção M50) escon
    ps -o rss= -p "$(pgrep -d, -f 'tomatito|WebKitWebProcess|WebKitNetworkProcess')" | awk '{s+=$1} END{print s" KB"}'
    ```
 9. [ ] Feche o app (Ctrl+C no terminal).
+
+## M52. Validação com reversão e B3
+
+O que já foi conferido sem você:
+- `npm test` e `cargo test`: o diálogo (a pergunta, a contagem, a oferta do modo opaco, o Esc, a ordem dos retratos e o foco que não volta ao rádio), o `full_mode()` com e sem a `WEBKIT_DISABLE_DMABUF_RENDERER` (`"1"`, vazia, `"0"`) e com `fullMode = opaque`, a janela opaca da 5.3 e a ordem da entrada com a pergunta.
+- Prévia no Chrome: o diálogo nas duas perguntas, com o foco no botão de destaque e o Esc levando da pergunta à oferta.
+- Roteiro aninhado `validacao` (o app de verdade no GNOME Shell 50.1 aninhado, 22 conferências): sem resposta, o tomate fechou 9,9 s depois de a pergunta aparecer, a janela principal voltou ao Lite e ofereceu o modo opaco, com a sessão de foco intacta; Reverter, o Esc, "Agora não", Manter (a chave gravada), a entrada seguinte sem pergunta, "Usar o modo opaco", o início direto no Full (a principal nasce com a pergunta) e, com `WEBKIT_DISABLE_DMABUF_RENDERER=1`, o tomate opaco sem pergunta e arrastável pelo canto. Capturas: `docs/capturas/m52-app-pergunta.png`, `m52-app-oferta.png` e `m52-app-opaco.png`.
+
+O que só você consegue: ver o tomate na sua área de trabalho enquanto a pergunta está na tela, e o modo opaco com o seu olho.
+
+O `settings.json` do app de desenvolvimento fica em `~/.local/share/io.github.kbrianps.tomatito.dev/`. Os comandos `sed` abaixo só mexem nele, e só com o app fechado.
+
+### Para conferir (uns 6 minutos)
+
+1. [ ] Com o app fechado, zere a validação (se o arquivo ainda não existe, pule): `sed -i 's/"fullValidated": *"[^"]*"/"fullValidated": ""/; s/"fullMode": *"opaque"/"fullMode": "auto"/' ~/.local/share/io.github.kbrianps.tomatito.dev/settings.json`. Rode `cd ~/dev/tomatito-full && npm run dev:app` (depois da junção, em `~/dev/tomatito`).
+2. [ ] Em Configurações, clique em "Tomatito Full": o tomate aparece **com o fundo transparente** e a janela principal **continua na tela**, com "O tomate aparece com o fundo transparente?", Manter, Reverter e "Voltando ao tema anterior em 10 segundos." contando.
+3. [ ] Não responda: em 10 s o tomate fecha, a janela principal fica no tema de antes e pergunta "Usar o modo opaco?" com "Sem resposta, o Tomatito voltou ao tema anterior.". Clique em "Agora não": o diálogo fecha e **nada mais acontece** (o Full não abre de novo).
+4. [ ] Clique em "Tomatito Full" de novo e em Reverter: a volta é na hora, com a mesma oferta. Aperte Esc: a oferta fecha.
+5. [ ] Clique em "Tomatito Full" e, com a pergunta na tela, aperte Esc: é o mesmo que Reverter.
+6. [ ] Clique em "Tomatito Full" e em Manter: a janela principal some e fica só o tomate. Aperte Esc no tomate e entre no Full de novo: **sem pergunta**, como no M51.
+7. [ ] Feche o app. Zere de novo a validação (o comando do passo 1), abra o app, entre no Full, clique em Reverter e em "Usar o modo opaco": o tomate aparece **dentro de um quadrado escuro** (vinho quase preto), sem pergunta. Arraste pelo canto do quadrado: o tomate anda junto. Aperte Esc.
+8. [ ] Feche o app e volte ao transparente: `sed -i 's/"fullMode": *"opaque"/"fullMode": "auto"/' ~/.local/share/io.github.kbrianps.tomatito.dev/settings.json`. Rode `WEBKIT_DISABLE_DMABUF_RENDERER=1 npm run dev:app` e entre no Full: o tomate abre opaco, sem pergunta, como no passo 7. (A janela principal pode sair em branco com essa variável; se sair, anote e siga.)
+9. [ ] Feche o app (Ctrl+C no terminal).

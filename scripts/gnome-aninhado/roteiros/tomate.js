@@ -113,8 +113,11 @@ const lerMain = async () => JSON.parse(await comando('main', LER_MAIN));
 
 // M51: o tomate abre pelo switch_window_mode (que esconde a main), e o
 // show_main traz a main de volta, para o roteiro do M50 seguir com as duas.
+// M52: a primeira entrada pergunta (a validação com reversão, que reverteria
+// em 10 s); o "Manter" pelo full_validation_answer valida a combinação, e as
+// aberturas seguintes não perguntam (um "keep" sem pergunta não faz nada).
 const ABRIR =
-  "window.__TAURI_INTERNALS__.invoke('switch_window_mode', { full: true }).then(() => window.__TAURI_INTERNALS__.invoke('show_main', { route: null })).then(() => 'aberto', (e) => 'erro: ' + e)";
+  "window.__TAURI_INTERNALS__.invoke('switch_window_mode', { full: true }).then(() => window.__TAURI_INTERNALS__.invoke('full_validation_answer', { answer: 'keep' })).then(() => window.__TAURI_INTERNALS__.invoke('show_main', { route: null })).then(() => 'aberto', (e) => 'erro: ' + e)";
 
 const segundos = (mmss) => {
   const [m, s] = mmss.split(':').map(Number);
