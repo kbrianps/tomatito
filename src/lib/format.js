@@ -1,9 +1,9 @@
 // Formatos de tempo e de números da interface (PLANO.md, 3.8). M16: o mm:ss
 // (a contagem provisória do M16, que saiu no M18). M18: os minutos
 // arredondados para cima do mostrador. M17: os plurais (Intl.PluralRules) e a regra dos
-// intervalos da frase do cartão "Pronto para focar". hh:mm:ss, -hh:mm:ss,
-// hh:mm:ss,cc e as durações por extenso ("2,5 horas") chegam com as telas que
-// os usam.
+// intervalos da frase do cartão "Pronto para focar". M27: as durações do
+// cartão "Progresso diário" ("45 minutos", "2,5 horas"). hh:mm:ss, -hh:mm:ss
+// e hh:mm:ss,cc chegam com as telas que os usam.
 import t from './i18n/pt-BR.js';
 
 const dois = (n) => String(n).padStart(2, '0');
@@ -58,4 +58,44 @@ export function intervalos(minutos, { focusMinutes, breakMinutes }, pular = fals
 export function fraseDosIntervalos(n) {
   const p = t.foco.preparo;
   return n > 0 ? plurais(n, p.intervalos) : p.semIntervalos;
+}
+
+/**
+ * A categoria de plural de `n` para uma quantidade medida (M27). Igual ao
+ * Intl.PluralRules('pt-BR'), menos o zero: o CLDR põe o 0 em "one" ("0
+ * minuto"), e a interface diz "0 minutos", como o andamento.js já fazia no
+ * rótulo do mostrador. O 1,5 continua em "one" ("1,5 hora"), a regra do CLDR
+ * e da norma (docs/decisoes.md, M27).
+ */
+export const categoria = (n) => (n === 0 ? 'other' : plural.select(n));
+
+const decimal = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1, useGrouping: false });
+
+/**
+ * Uma duração do cartão "Progresso diário" (PLANO.md, 3.8), a partir de
+ * segundos: até 59 min, "N minutos"; a partir de 60, horas com uma casa
+ * decimal ("2,5 horas"), sem o ",0" ("1 hora", "2 horas"). Arredonda sempre
+ * para baixo (minutos inteiros e décimos de hora): o cartão nunca mostra mais
+ * do que foi feito (119 min são "1,9 hora", e não "2 horas"). Devolve o número
+ * e a unidade separados (o cartão os empilha) e o texto inteiro. Negativo ou
+ * inválido vale 0.
+ */
+export function duracao(segundos) {
+  const min = Number.isFinite(segundos) && segundos > 0 ? Math.floor(segundos / 60) : 0;
+  const u = t.unidades.palavras;
+  if (min < 60) {
+    const unidade = u.minutos[categoria(min)] ?? u.minutos.other;
+    return { numero: String(min), unidade, texto: `${min} ${unidade}` };
+  }
+  const horas = Math.floor(min / 6) / 10;
+  const numero = decimal.format(horas);
+  const unidade = u.horas[categoria(horas)] ?? u.horas.other;
+  return { numero, unidade, texto: `${numero} ${unidade}` };
+}
+
+/** Minutos inteiros por extenso, com o zero no plural ("0 minutos", "135 minutos"). */
+export function minutosInteiros(segundos) {
+  const min = Number.isFinite(segundos) && segundos > 0 ? Math.floor(segundos / 60) : 0;
+  const u = t.unidades.palavras.minutos;
+  return `${min} ${u[categoria(min)] ?? u.other}`;
 }

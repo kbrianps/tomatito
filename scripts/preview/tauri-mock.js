@@ -15,6 +15,9 @@
 //                               (o TOMATITO_SPEED do debug)
 //   ?debug=1                    M17: o preparo do build de debug (seletor de
 //                               1 em 1, a partir de 1 min)
+//   ?hoje=&ontem=&semana=       M26: os segundos de foco do stats_get
+//   ?meta=N                     M27: a meta diária (dailyGoalMinutes; 0 =
+//                               desativada)
 // As globais do initialization_script (?pref, ?ultimo e ?plataforma) não são
 // daqui: precisam existir antes do script de boot do <head>, e vêm do script
 // clássico que o vite.config.js desta pasta põe antes dele.
@@ -101,12 +104,33 @@ function transicao(causa = null) {
   return r;
 }
 window.__TOMATITO_PREVIEW_FASES__ = [];
+// M27: o que o stats_get soma, como o stats.rs: cada foco que termina conta o
+// tempo corrido, se completo ou com pelo menos 1 min (3.3). Começa nos
+// números da URL (?hoje=, ?ontem=, ?semana=, em segundos).
+const somas = {
+  ontem: Number(params.get('ontem') ?? 0),
+  hoje: Number(params.get('hoje') ?? 0),
+  semana: Number(params.get('semana') ?? params.get('hoje') ?? 0),
+};
+function registrarFoco(completo) {
+  const s = motor.sessao;
+  const fase = s?.fases[s.indice];
+  if (!fase || fase.kind !== 'focus') return;
+  const restante = motor.pausadoMs ?? Math.max(0, s.endsAt - agoraMotor());
+  const corrido = completo ? fase.durationS : Math.floor((fase.durationS * 1000 - restante) / 1000);
+  if (!completo && corrido < 60) return;
+  somas.hoje += corrido;
+  somas.semana += corrido;
+}
 // A fase vence no prazo: passa para a seguinte ou volta ao ocioso.
 function agendarFim() {
   clearTimeout(motor.prazo);
   const s = motor.sessao;
   if (!s || motor.pausadoMs != null) return;
-  motor.prazo = setTimeout(() => (proximaFase(), transicao('ended')), Math.max(0, (s.endsAt - agoraMotor()) / velocidade));
+  motor.prazo = setTimeout(
+    () => (registrarFoco(true), proximaFase(), transicao('ended')),
+    Math.max(0, (s.endsAt - agoraMotor()) / velocidade),
+  );
 }
 function proximaFase() {
   const s = motor.sessao;
@@ -167,6 +191,7 @@ function normalizarConfiguracoes(c) {
   const fixo = ['lite', 'suave', 'light', 'dark'].includes(c.lastNormalTheme) ? c.lastNormalTheme : null;
   c.resolvedTheme = fixo ?? (c.resolvedTheme === 'dark' ? 'dark' : 'light');
 }
+if (params.has('meta')) configuracoes.dailyGoalMinutes = Number(params.get('meta'));
 normalizarConfiguracoes(configuracoes);
 window.__TOMATITO_PREVIEW_CONFIGURACOES__ = configuracoes;
 
@@ -189,9 +214,10 @@ const handlers = {
   },
   focus_pause: () => ((motor.pausadoMs = retratoFoco().session.remainingMs), transicao()),
   focus_resume: () => ((motor.sessao.endsAt = agoraMotor() + motor.pausadoMs), (motor.pausadoMs = null), transicao()),
-  focus_skip: () => (window.__TOMATITO_PREVIEW_COMANDOS__.push('focus_skip'), proximaFase(), transicao('skipped')),
+  focus_skip: () => (window.__TOMATITO_PREVIEW_COMANDOS__.push('focus_skip'), registrarFoco(false), proximaFase(), transicao('skipped')),
   focus_stop: () => {
     window.__TOMATITO_PREVIEW_COMANDOS__.push('focus_stop');
+    registrarFoco(false);
     motor.faseAnterior = motor.sessao?.fases[motor.sessao.indice] ?? null;
     motor.sessao = null;
     return transicao('stopped');
@@ -201,15 +227,19 @@ const handlers = {
     window.__TOMATITO_PREVIEW_COMANDOS__.push(`sound_test:${sound ?? 'ambos'}`);
     return null;
   },
-  // M26: números fixos, ou os da URL (?hoje=1500&ontem=...&semana=..., em
-  // segundos), com a meta e a hora de zerar das configurações.
-  stats_get: () => ({
-    yesterdayS: Number(params.get('ontem') ?? 0),
-    todayS: Number(params.get('hoje') ?? 0),
-    weekS: Number(params.get('semana') ?? params.get('hoje') ?? 0),
-    dailyGoalMinutes: configuracoes.dailyGoalMinutes,
-    resetHour: configuracoes.resetHour,
-  }),
+  // M26: os números da URL (?hoje=1500&ontem=...&semana=..., em segundos),
+  // com a meta e a hora de zerar das configurações. M27: mais os focos que o
+  // motor simulado termina (registrarFoco).
+  stats_get: () => {
+    window.__TOMATITO_PREVIEW_COMANDOS__.push('stats_get');
+    return {
+      yesterdayS: somas.ontem,
+      todayS: somas.hoje,
+      weekS: somas.semana,
+      dailyGoalMinutes: configuracoes.dailyGoalMinutes,
+      resetHour: configuracoes.resetHour,
+    };
+  },
   'plugin:window|is_maximized': () => janela.maximizada,
   'plugin:window|toggle_maximize': () => {
     janela.maximizada = !janela.maximizada;

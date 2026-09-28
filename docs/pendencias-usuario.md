@@ -71,6 +71,10 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 43. **Conferir o M26 pelo DevTools** (desde o M26). Uns 3 minutos, com os passos em `docs/verificacao-manual.md`, seção M26: uma sessão acelerada soma 300 s no `stats_get`, e os números sobrevivem a fechar e reabrir. O teste aninhado já fez isso com o app de verdade (14 conferências); o card com o anel é do M27. Não bloqueia o M27.
 44. **Estatísticas no Windows** (desde o M26). O SQLite vem compilado junto (`rusqlite` com `bundled`), e esta máquina não compila C para o Windows; a checagem cruzada do Rust passa pulando o C (`docs/decisoes.md`, M26, item 9). No Windows: rodar o `cargo test --workspace` (os testes do `stats.rs` usam a pasta temporária do sistema), repetir os passos 1 a 5 da seção M26 com o arquivo em `%APPDATA%\io.github.kbrianps.tomatito.dev\stats.sqlite`, e conferir que "ontem" e "hoje" seguem o fuso do Windows. O CI no `windows-latest` compila o SQLite com o MSVC. Entra na ida ao Windows do M48.
 
+45. **Conferir o M27 no seu GNOME** (desde o M27). Uns 3 minutos, com os passos em `docs/verificacao-manual.md`, seção M27: o arco do anel andando suave ao fim de uma sessão acelerada e os números depois de reabrir. O teste aninhado já conferiu isso pelo DOM e por capturas (14 conferências ok); falta o olho humano na animação e, se quiser, o Orca. Não bloqueia o M28.
+46. **"1,5 hora" ou "1,5 horas"?** (desde o M27). As durações a partir de 1 h usam o plural do `Intl.PluralRules('pt-BR')`, que deixa 1,5 no singular ("1,5 hora", a regra da norma); o zero ficou no plural ("0 minutos"). Se preferir "1,5 horas" (mais comum no dia a dia), é uma linha na função `categoria` do `src/lib/format.js` (`docs/decisoes.md`, M27, item 5).
+47. **Anel no Windows** (desde o M27). No WebView2: repetir os passos 1 a 5 da seção M27 de `docs/verificacao-manual.md` e conferir, com escala de 125% e 150%, que o arco e o trilho ficam nítidos e que as pontas redondas não passam das 12 h de forma estranha. O Chrome headless (o mesmo Chromium) já passou nas mesmas conferências. Entra na ida ao Windows do M48.
+
 ## Resolvidas
 
 - **Nome** (1.2, item 1): continua "Tomatito".

@@ -268,6 +268,61 @@
   .tt-andamento[data-pausado] .tt-mostrador-numero{ color:GrayText; }
 }
 
+/* M27: anel de progresso (src/components/ring.js). Trilho e arco com a mesma
+   espessura; o arco tem as pontas redondas e anda em 1 s, linear. Com
+   movimento reduzido, 83 ms (3.8). */
+.tt-anel{ position:relative; aspect-ratio:1; }
+.tt-anel-svg{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+.tt-anel-trilho{ fill:none; stroke:var(--tt-ring-track); }
+.tt-anel-arco{ fill:none; stroke:var(--tt-ring-progress); stroke-linecap:round;
+  transition:stroke-dashoffset 1s linear; }
+.tt-anel-arco[data-vazio]{ visibility:hidden; }
+.tt-anel-arco[data-sem-transicao]{ transition:none; }
+@media (prefers-reduced-motion:reduce){ .tt-anel-arco{ transition-duration:var(--tt-dur-fast); } }
+.tt-anel-centro{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+@media (forced-colors:active){
+  .tt-anel-trilho{ stroke:GrayText; }
+  .tt-anel-arco{ stroke:Highlight; }
+}
+
+/* M27: cartão "Progresso diário" (src/views/focus/card-progress.js), com as
+   posições do cartão do Relógio (clock-focus-sessions-page.png, a 175%, em
+   relação ao canto do cartão de 448 × 309; docs/decisoes.md, M27): o título em
+   Body Strong, à esquerda, com as maiúsculas a 14 px do topo; o anel de 206
+   px (traço de 18) a 47 px do topo e centrado; as colunas Ontem e Esta semana
+   centradas a 55 px das bordas, com o número (34 px) no meio do anel; o
+   rodapé com a linha de base a 278 px. O título, o rótulo, o número e a
+   unidade do centro do anel ficam nas mesmas linhas das colunas. */
+.tt-card.tt-progresso{ gap:0; padding:9px 16px 26px; container-type:inline-size; }
+.tt-progresso > h2{ font:var(--tt-type-body-strong); }
+.tt-progresso-corpo{
+  display:grid; grid-template-columns:minmax(0,110px) auto minmax(0,110px); justify-content:space-between;
+  align-items:center; margin:18px -15px 0; text-align:center;
+}
+.tt-progresso-corpo[data-carregando] :is(dd, .tt-anel-centro, .tt-anel-arco){ visibility:hidden; }
+.tt-progresso-anel{ width:min(206px, calc(100cqi - 146px)); }
+.tt-progresso-lado{ margin:0; }
+.tt-progresso-coluna, .tt-progresso-lado dd{ display:flex; flex-direction:column; align-items:center; margin:0; }
+.tt-progresso-coluna > dt, .tt-progresso-rotulo{ white-space:nowrap; }
+.tt-progresso-numero{ margin-top:4px; font:600 34px/40px var(--tt-font-display); }
+.tt-progresso-unidade{ margin-top:1px; }
+/* Meta desativada (M28): sem o anel; as duas colunas ficam na mesma altura,
+   que o cartão guarda. */
+.tt-progresso-corpo[data-sem-meta]{ grid-template-columns:repeat(2, minmax(0,1fr)); min-height:min(206px, calc(100cqi - 146px)); }
+.tt-progresso-corpo[data-sem-meta] .tt-progresso-anel{ display:none; }
+.tt-progresso-rodape{ margin-top:9px; text-align:center; }
+/* O anel encolhe com o cartão para as colunas do lado guardarem 88 px (o
+   "Esta semana" numa linha só, com a Inter do WebKitGTK): 206 px a partir de
+   352 px de conteúdo, 138 px na janela de 1000 × 700 (cartão de 318 px).
+   Abaixo de 266 px de conteúdo (a janela mínima com zoom, por exemplo), o
+   anel ficaria menor que 120 px: ele vai para cima, até a largura do
+   cartão, e Ontem e Esta semana ficam lado a lado embaixo. */
+@container (width < 266px){
+  .tt-progresso-corpo{ grid-template-columns:repeat(2, minmax(0,1fr)); grid-template-areas:"anel anel"; row-gap:12px; margin-inline:0; }
+  .tt-progresso-anel{ grid-area:anel; justify-self:center; width:min(206px, 100%); }
+  .tt-progresso-corpo[data-sem-meta]{ min-height:0; }
+}
+
 /* M24: Configurações (src/views/settings.js). A seção tem o cabeçalho e os
    cartões do Relógio (clock-focus-sessions-settings.png): o título da seção em
    Body Strong, 30 px abaixo do que vem antes e 6 px acima do cartão, e o

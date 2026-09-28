@@ -86,6 +86,18 @@ export default Object.freeze({
       concluida: 'Sessão de foco concluída.',
       encerrada: 'Sessão de foco encerrada.',
     }),
+    // M27: o conteúdo do cartão "Progresso diário" (views/focus/card-progress.js):
+    // Ontem, o anel com a meta e Esta semana, e o rodapé. "Sequência" virou
+    // "Esta semana" (1.1, sem gamificação). As durações vêm do format.js.
+    diario: Object.freeze({
+      ontem: 'Ontem',
+      meta: 'Meta diária',
+      semana: 'Esta semana',
+      concluido: (texto) => `Concluído: ${texto}`,
+      // O rótulo do anel (role="img"): a meta, o que foi feito hoje e a
+      // fração da meta, que pode passar de 100% (o anel para no círculo cheio).
+      anel: (meta, hoje, pct) => `Meta diária de ${meta}. Concluído hoje: ${hoje}, ${pct}% da meta.`,
+    }),
   }),
   // Tela Configurações. M24: a seção Aparência (views/settings.js), com o
   // cartão do tema, como o SettingsCard do Relógio (ícone, título e
@@ -108,5 +120,11 @@ export default Object.freeze({
   // (format.js): o aria-valuetext do seletor de minutos ("25 minutos").
   unidades: Object.freeze({
     minutos: Object.freeze({ one: (n) => `${n} minuto`, other: (n) => `${n} minutos` }),
+    // M27: só a palavra, para o cartão "Progresso diário", que empilha o
+    // número e a unidade (format.js, `duracao`).
+    palavras: Object.freeze({
+      minutos: Object.freeze({ one: 'minuto', other: 'minutos' }),
+      horas: Object.freeze({ one: 'hora', other: 'horas' }),
+    }),
   }),
 });

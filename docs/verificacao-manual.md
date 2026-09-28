@@ -706,3 +706,24 @@ Ainda não há tela (o card "Progresso diário" é do M27); a conferência é pe
 4. [ ] Feche o app (Ctrl+C no terminal) e abra de novo com o mesmo comando. Repita o passo 2: os mesmos números.
 5. [ ] O arquivo existe: `ls -l ~/.local/share/io.github.kbrianps.tomatito.dev/stats.sqlite`.
 6. [ ] Para zerar: feche o app e `rm ~/.local/share/io.github.kbrianps.tomatito.dev/stats.sqlite`.
+
+
+## M27. Card "Progresso diário"
+
+O que foi conferido de forma automática (28/09/2026):
+
+- Prévia no Chrome headless e no WebKitGTK fora da tela (`node scripts/preview/progresso.mjs`): posições contra a captura do Relógio, cores dos quatro temas, o arco andando em ~1 s numa sessão acelerada, meta desativada, acima da meta, movimento reduzido e janela estreita.
+- Roteiro aninhado `progresso` (app de verdade, `TOMATITO_SPEED=60`): o anel avança ao concluir uma sessão e os números sobrevivem a fechar e reabrir.
+
+O que só você consegue ver: a animação suave do arco na sua tela e a leitura pelo Orca.
+
+### Para conferir (uns 3 minutos)
+
+1. [ ] `cd ~/dev/tomatito && TOMATITO_SPEED=60 npm run dev:app`. Na tela Foco, o cartão "Progresso diário" mostra Ontem, o anel com "Meta diária 2 horas" dentro, Esta semana e "Concluído: X minutos".
+2. [ ] Escolha 5 min no seletor e clique em "Iniciar sessão de foco". Em uns 5 s a sessão termina (com som): o arco sai das 12 h e cresce no sentido horário, suave, em cerca de 1 s; o rodapé soma 5 minutos, e Esta semana também.
+3. [ ] Repita algumas vezes com 30 min (30 s cada) e veja o arco avançar de novo a cada fim; as pontas do arco são redondas.
+4. [ ] Feche o app (Ctrl+C no terminal) e abra de novo com o mesmo comando: o cartão abre com os mesmos números e o arco já no lugar, sem encher de novo.
+5. [ ] Troque o tema em Configurações (Lite, Suave, Claro, Escuro) e volte à Foco: o trilho e o arco mudam de cor com o tema, e o arco continua visível sobre o trilho.
+6. [ ] (Opcional, Orca ligado: Super+Alt+S) Com o Tab ou as setas do Orca, chegue ao anel: ele é lido como imagem, com "Meta diária de 2 horas. Concluído hoje: N minutos, P% da meta."
+7. [ ] Para zerar: feche o app e `rm ~/.local/share/io.github.kbrianps.tomatito.dev/stats.sqlite`.
+

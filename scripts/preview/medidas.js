@@ -786,4 +786,84 @@
     const s = getComputedStyle(el);
     return { fundo: s.backgroundColor, cor: s.color, hover: el.matches(':hover'), ativo: el.matches(':active') };
   };
+
+  // M27: o cartão "Progresso diário". __ttProgresso() devolve o que se vê: os
+  // números e as unidades das três colunas, o rodapé, o anel (papel, rótulo,
+  // stroke-dashoffset calculado, transição, pontas e cores, com as esperadas)
+  // e as caixas em px CSS do cartão. __ttSerieDoAnel(ms, passo) anota o
+  // stroke-dashoffset calculado a cada `passo` ms (o arco andando).
+  // __ttSabotarProgresso() desce o anel 6 px (o controle negativo das
+  // posições).
+  window.__ttProgresso = () => {
+    const cartao = document.querySelector('[data-cartao="progresso"]');
+    const corpo = cartao.querySelector('[data-progresso]');
+    const anel = cartao.querySelector('[data-anel]');
+    const arco = anel.querySelector('.tt-anel-arco');
+    const trilho = anel.querySelector('.tt-anel-trilho');
+    const c = cartao.getBoundingClientRect();
+    const cx = (el) => {
+      const b = el.getBoundingClientRect();
+      return [b.x - c.x, b.y - c.y, b.width, b.height].map((v) => Math.round(v * 10) / 10);
+    };
+    const col = (sel) => {
+      const el = cartao.querySelector(sel);
+      return { numero: el.querySelector('[data-numero]').textContent, unidade: el.querySelector('[data-unidade]').textContent };
+    };
+    const s = getComputedStyle(arco);
+    return {
+      titulo: cartao.querySelector('h2').textContent,
+      rotulos: [...cartao.querySelectorAll('dt, .tt-progresso-rotulo')].map((e) => e.textContent),
+      alturasDosRotulos: [...cartao.querySelectorAll('dt, .tt-progresso-rotulo')].map((e) => Math.round(e.getBoundingClientRect().height)),
+      ontem: col('[data-coluna="ontem"]'),
+      semana: col('[data-coluna="semana"]'),
+      meta: col('.tt-anel-centro'),
+      rodape: cartao.querySelector('[data-concluido]').textContent,
+      semMeta: corpo.hasAttribute('data-sem-meta'),
+      carregando: corpo.hasAttribute('data-carregando'),
+      anelVisivel: getComputedStyle(anel).display !== 'none',
+      papel: anel.getAttribute('role'),
+      rotulo: anel.getAttribute('aria-label'),
+      arco: {
+        deslocamento: Math.round(parseFloat(s.strokeDashoffset) * 1000) / 1000,
+        tracejado: s.strokeDasharray,
+        vazio: arco.hasAttribute('data-vazio'),
+        visivel: s.visibility === 'visible',
+        pontas: s.strokeLinecap,
+        transicao: [s.transitionProperty, s.transitionDuration, s.transitionTimingFunction],
+        girado: arco.getAttribute('transform'),
+      },
+      cores: {
+        trilho: getComputedStyle(trilho).stroke,
+        arco: s.stroke,
+        esperado: { trilho: window.__ttCor('--tt-ring-track', 'color'), arco: window.__ttCor('--tt-ring-progress', 'color') },
+      },
+      larguras: [getComputedStyle(trilho).strokeWidth, s.strokeWidth],
+      caixas: {
+        cartao: [c.x, c.y, c.width, c.height],
+        anel: cx(anel),
+        ontem: cx(cartao.querySelector('[data-coluna="ontem"]')),
+        semana: cx(cartao.querySelector('[data-coluna="semana"]')),
+        rodape: cx(cartao.querySelector('[data-concluido]')),
+      },
+      transborda: cartao.scrollWidth > cartao.clientWidth + 0.5,
+      pedidos: (window.__TOMATITO_PREVIEW_COMANDOS__ ?? []).filter((x) => x === 'stats_get').length,
+    };
+  };
+  window.__ttSerieDoAnel = async (ms, passo = 100) => {
+    const serie = [];
+    const t0 = performance.now();
+    while (performance.now() - t0 <= ms) {
+      const p = window.__ttProgresso();
+      serie.push({ t: Math.round(performance.now() - t0), d: p.arco.deslocamento, rodape: p.rodape });
+      await new Promise((r) => setTimeout(r, passo));
+    }
+    return serie;
+  };
+  window.__ttSabotarProgresso = async () => {
+    const folha = new CSSStyleSheet();
+    folha.replaceSync('.tt-progresso-anel { margin-top: 12px !important; }');
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, folha];
+    await doisQuadros();
+    return document.adoptedStyleSheets.length;
+  };
 })();

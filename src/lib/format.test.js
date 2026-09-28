@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fraseDosIntervalos, intervalos, minutosPorExtenso, minutosRestantes, mmss, plurais } from './format.js';
+import { categoria, duracao, fraseDosIntervalos, intervalos, minutosInteiros, minutosPorExtenso, minutosRestantes, mmss, plurais } from './format.js';
 
 test('mm:ss arredonda o segundo para cima', () => {
   assert.equal(mmss(25 * 60_000), '25:00');
@@ -89,4 +89,41 @@ test('M18: minutos restantes do mostrador, arredondados para cima', () => {
   assert.equal(minutosRestantes(59_999), 1);
   assert.equal(minutosRestantes(240 * 60_000), 240);
   for (const v of [0, -5, NaN, null, undefined, Infinity]) assert.equal(minutosRestantes(v), 0, String(v));
+});
+
+// M27: as durações do cartão "Progresso diário" (PLANO.md, 3.8).
+test('duração: até 59 min, "N minutos"; o zero no plural', () => {
+  const d = (s) => duracao(s).texto;
+  assert.equal(d(0), '0 minutos');
+  assert.equal(d(59), '0 minutos', 'minutos inteiros, para baixo');
+  assert.equal(d(60), '1 minuto');
+  assert.equal(d(45 * 60), '45 minutos');
+  assert.equal(d(59 * 60 + 59), '59 minutos');
+  for (const v of [-5, NaN, null, undefined]) assert.equal(d(v), '0 minutos', String(v));
+});
+
+test('duração: a partir de 60 min, horas com uma casa decimal, sem o ",0", arredondadas para baixo', () => {
+  const d = (s) => duracao(s).texto;
+  assert.equal(d(60 * 60), '1 hora');
+  assert.equal(d(90 * 60), '1,5 hora', 'CLDR: 1,5 fica no singular (docs/decisoes.md, M27)');
+  assert.equal(d(119 * 60), '1,9 hora', 'nunca mostra mais do que foi feito');
+  assert.equal(d(120 * 60), '2 horas');
+  assert.equal(d(150 * 60), '2,5 horas');
+  assert.equal(d(155 * 60), '2,5 horas');
+  assert.equal(d(1200 * 60), '20 horas');
+  assert.equal(d(100_000 * 60), '1666,6 horas', 'sem separador de milhar');
+});
+
+test('duração: número e unidade separados, para empilhar no cartão', () => {
+  assert.deepEqual(duracao(150 * 60), { numero: '2,5', unidade: 'horas', texto: '2,5 horas' });
+  assert.deepEqual(duracao(0), { numero: '0', unidade: 'minutos', texto: '0 minutos' });
+});
+
+test('minutos inteiros e a categoria com o zero no plural', () => {
+  assert.equal(minutosInteiros(0), '0 minutos');
+  assert.equal(minutosInteiros(60), '1 minuto');
+  assert.equal(minutosInteiros(135 * 60 + 59), '135 minutos');
+  assert.equal(categoria(0), 'other');
+  assert.equal(categoria(1), 'one');
+  assert.equal(categoria(2), 'other');
 });

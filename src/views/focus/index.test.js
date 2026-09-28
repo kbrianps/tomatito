@@ -27,18 +27,21 @@ test('cada cartão é uma <section> com o título do catálogo em Subtitle, e a 
   const html = marcacao();
   assert.match(html, /^<div class="tt-pagina"><h1 class="tt-t-title" tabindex="-1">Foco<\/h1>/);
   for (const id of ['sessao', 'tarefas', 'progresso']) {
+    const classe = { sessao: ' tt-sessao', progresso: ' tt-progresso' }[id] ?? '';
+    const conteudo = {
+      // M17: o preparo e, durante a sessão, o mostrador do M18.
+      sessao: '<div class="tt-preparo" data-preparo>.*</div><div data-andamento hidden>.*</div>',
+      // M27: as três colunas e o rodapé.
+      progresso: '<div class="tt-progresso-corpo"[^>]*data-progresso>.*</div><p class="tt-progresso-rodape" data-concluido>.*</p>',
+    }[id] ?? '';
     const re = new RegExp(
-      `<section class="tt-card${id === 'sessao' ? ' tt-sessao' : ''}" data-cartao="${id}" aria-labelledby="foco-${id}">` +
-        `<h2 id="foco-${id}" class="tt-t-subtitle">${t.foco[id]}</h2>` +
-        // M17: só o cartão de sessão tem conteúdo (o preparo e, durante a
-        // sessão, o mostrador do M18).
-        (id === 'sessao' ? '<div class="tt-preparo" data-preparo>.*</div><div data-andamento hidden>.*</div>' : '') +
-        '</section>',
+      `<section class="tt-card${classe}" data-cartao="${id}" aria-labelledby="foco-${id}">` +
+        `<h2 id="foco-${id}" class="tt-t-subtitle">${t.foco[id]}</h2>${conteudo}</section>`,
     );
     assert.match(html, re);
   }
-  const { andamento, preparo, fases, ...titulos } = t.foco;
-  assert.ok(andamento && preparo && fases);
+  const { andamento, preparo, fases, diario, ...titulos } = t.foco;
+  assert.ok(andamento && preparo && fases && diario);
   assert.deepEqual(titulos, { sessao: 'Pronto para focar', progresso: 'Progresso diário', tarefas: 'Tarefas' });
 });
 
@@ -52,5 +55,8 @@ test('M17: os ícones vêm do contexto (play no botão, chevrons no seletor; M18
   const icone = (nome) => `<svg data-icone="${nome}"></svg>`;
   const html = marcacao({ icone });
   assert.deepEqual([...html.matchAll(/data-icone="(\w+)"/g)].map((m) => m[1]), ['chevron_up', 'chevron_down', 'play', 'pause', 'more_horizontal']);
-  assert.doesNotMatch(marcacao().replace(/<svg class="tt-mostrador-svg".*?<\/svg>/, ''), /<svg/, 'sem contexto, sem ícone (node --test); o SVG do mostrador é do dial.js');
+  const semDesenhos = marcacao()
+    .replace(/<svg class="tt-mostrador-svg".*?<\/svg>/, '')
+    .replace(/<svg class="tt-anel-svg".*?<\/svg>/, '');
+  assert.doesNotMatch(semDesenhos, /<svg/, 'sem contexto, sem ícone (node --test); os SVGs do mostrador e do anel são do dial.js e do ring.js');
 });
