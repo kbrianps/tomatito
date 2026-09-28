@@ -67,9 +67,9 @@ pub fn fechar_para_bandeja(window: &Window) -> bool {
 /// 1. Encerra a sessão de foco e registra o parcial (o `stop` do núcleo, o
 ///    mesmo do "Encerrar sessão"). Sem sessão, o núcleo responde `NoSession`:
 ///    nada a gravar.
-/// 2. Grava os temporizadores e o cronômetro no `state.json`. Cada transição
-///    já os grava (M33 e M34); esta gravação leva o retrato do momento da
-///    saída, com o mesmo formato.
+/// 2. Grava o foco (sem sessão em andamento), os temporizadores e o
+///    cronômetro no `state.json`. Cada transição já os grava (M33, M34 e
+///    M40); esta gravação leva o retrato do momento da saída.
 /// 3. Fecha o app com código 0. O `RunEvent::Exit` que o `exit` dispara faz o
 ///    `window-state` gravar o tamanho da janela (mesmo escondida) e o
 ///    `single-instance` soltar o nome no D-Bus.
@@ -77,9 +77,9 @@ pub fn sair(app: &AppHandle) {
     if let Some(motor) = app.try_state::<AppEngine>() {
         let _ = motor.stop();
         if let Some(estado) = app.try_state::<Arc<StateStore>>() {
-            let s = motor.state();
-            estado.save_timers(&s.timers);
-            estado.save_stopwatch(&s.stopwatch);
+            // M40: as três partes numa gravação só (o foco já sem sessão em
+            // andamento).
+            estado.save_all(&motor.state());
         }
     }
     app.exit(0);

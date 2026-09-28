@@ -975,3 +975,20 @@ O que só você consegue: ver o tempo ao lado do ícone no seu painel, fechar a 
 6. [ ] Desative "Fechar para a bandeja" e feche pelo X: o app fecha de vez (o ícone some do painel). Se o terminal continuar com o Vite, Ctrl+C nele.
 7. [ ] `npm run dev:app` de novo: em Configurações, "Fechar para a bandeja" continua desativado. Ative de novo (é o padrão).
 8. [ ] Clique em "Sair" (cartão "Sair do Tomatito"): o app fecha, e o ícone some do painel (Ctrl+C no terminal, se o Vite continuar).
+
+## M40. Retomada
+
+O que já foi conferido sem você:
+- `cargo test` e `npm test`: a sessão, os temporizadores e o cronômetro voltando do `state.json` no formato do núcleo; a retomada no meio do foco sem efeito nenhum; a fase vencida há mais de 60 s gravada, com o aviso "concluída às …" e sem som; até 60 s, o fim normal com som; os arquivos ilegíveis ou de outra versão; a ordem no `setup`.
+- Roteiro aninhado `retomada` (app de verdade no GNOME Shell aninhado, relógio a 1×, sem saída de áudio, com SIGKILL de verdade): `kill -9` no meio de uma sessão e a sessão continuando com o mesmo prazo (e os minutos certos na tela Foco); o "Chá" e o cronômetro voltando iguais; `kill -9` numa sessão de 1 min, o app fechado até o prazo vencer há mais de 60 s, e a reabertura gravando o período (o "Concluído" sobe 1 min) e avisando "Sessão concluída às HH:MM", sem nenhum som pedido; e "Sair" e reabrir com a lista e o cronômetro iguais.
+
+O que só você consegue: ver a notificação no seu painel, ouvir que nada toca na reabertura atrasada e olhar a tela.
+
+### Para conferir (uns 6 minutos, 2 deles esperando)
+
+1. [ ] `cd ~/dev/tomatito && npm run dev:app`. Na tela Foco, ponha **3 minutos** no seletor (no `dev:app` ele anda de 1 em 1) e inicie. Em Temporizador (Ctrl+2), inicie o de 10 min. Em Cronômetro (Ctrl+3), inicie e marque uma volta (L).
+2. [ ] Noutro terminal: `pkill -9 -x tomatito`. A janela some de uma vez (se o terminal do `dev:app` continuar com o Vite, Ctrl+C nele). Espere uns 20 s.
+3. [ ] `npm run dev:app` de novo. Na tela Foco, a sessão continua em andamento, com uns 20 s a menos do que quando o app foi morto (o número do mostrador e o menu "..." como antes). O temporizador de 10 min e o cronômetro continuam correndo, e a volta está lá. Nenhum som nem notificação ao abrir.
+4. [ ] Encerre a sessão ("..." → "Encerrar sessão"), ponha **1 minuto** no seletor e inicie. Noutro terminal, `pkill -9 -x tomatito` logo em seguida, e anote a hora em que a sessão terminaria (1 min depois do início).
+5. [ ] Espere **mais de 2 minutos** e abra de novo com `npm run dev:app`. Aparece a notificação **"Sessão concluída às HH:MM"** (a hora do passo 4), **sem som**. Na tela Foco, o cartão "Progresso diário" soma 1 min a mais que antes.
+6. [ ] Ctrl+Q, e `npm run dev:app` de novo: o temporizador de 10 min e o cronômetro continuam correndo, com a volta. Para terminar: redefina os dois e Ctrl+Q (e Ctrl+C no terminal, se o Vite continuar).

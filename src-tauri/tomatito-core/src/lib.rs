@@ -24,13 +24,16 @@ pub use clock::{Clock, EpochMs, FakeClock, SystemClock, TimeZone, epoch_ms};
 pub use clock::{MAX_SPEED, SPEED_ENV, ScaledClock, SpeedError, parse_speed};
 pub use countdown::{
     CountdownEffects, CountdownError, DEFAULT_MINUTES, FakeCountdownEffects, MAX_DURATION_MS,
-    MAX_NAME_CHARS, MIN_DURATION_MS, TimerEnded, TimerId, TimerSnapshot, TimerStatus, Timers,
-    TimersSnapshot, clean_name,
+    MAX_NAME_CHARS, MIN_DURATION_MS, TimerEnded, TimerId, TimerRecord, TimerRunRecord,
+    TimerSnapshot, TimerStatus, Timers, TimersSnapshot, clean_name,
 };
 pub use days::{DayRange, StatsRanges, day_range, logical_date, stats_ranges, week_range};
 pub use effects::{ChangeCause, Effect, Effects, FakeEffects, Notice, Period, PhaseChange, Sound};
 pub use focus::{
-    Focus, FocusError, FocusSnapshot, LATE_AFTER_MS, SessionConfig, SessionSnapshot, Status,
+    Focus, FocusError, FocusSnapshot, LATE_AFTER_MS, RestoreError, RunRecord, SessionConfig,
+    SessionRecord, SessionSnapshot, Status,
 };
 pub use plan::{Phase, PhaseKind, Plan, PlanError, PlanSettings};
-pub use stopwatch::{MAX_LAPS, Stopwatch, StopwatchError, StopwatchSnapshot, StopwatchStatus};
+pub use stopwatch::{
+    MAX_LAPS, Stopwatch, StopwatchError, StopwatchRecord, StopwatchSnapshot, StopwatchStatus,
+};

@@ -657,7 +657,8 @@ test('M37: single-instance primeiro, window-state restrito, app_quit e os bloque
   const janela = ler('src-tauri/src/window/mod.rs');
   assert.match(janela, /ESTADO_DA_JANELA: StateFlags = StateFlags::SIZE\s*\.union\(StateFlags::POSITION\)\s*\.union\(StateFlags::MAXIMIZED\);/);
   // Um "Sair" só: a bandeja, o app_quit (Ctrl+Q) e, no M39, as Configurações.
-  assert.match(janela, /pub fn sair\(app: &AppHandle\)[\s\S]*motor\.stop\(\)[\s\S]*save_timers[\s\S]*save_stopwatch[\s\S]*app\.exit\(0\)/);
+  // M40: o foco, os temporizadores e o cronômetro numa gravação só (`save_all`).
+  assert.match(janela, /pub fn sair\(app: &AppHandle\)[\s\S]*motor\.stop\(\)[\s\S]*save_all\(&motor\.state\(\)\)[\s\S]*app\.exit\(0\)/);
   assert.match(ler('src-tauri/src/tray.rs'), /ITEM_SAIR => crate::window::sair\(app\)/);
   assert.match(ler('src-tauri/src/commands.rs'), /pub fn app_quit\(app: AppHandle\) \{\s*crate::window::sair\(&app\);/);
   assert.match(ler('src/lib/ipc.js'), /export const sair = \(\) => invoke\('app_quit'\);/);
@@ -669,4 +670,28 @@ test('M37: single-instance primeiro, window-state restrito, app_quit e os bloque
     if (!/\.js$/.test(arq) || /\.test\.js$/.test(arq) || arq === 'main.js' || arq.endsWith('producao.js')) continue;
     assert.doesNotMatch(ler(`src/${arq}`), /ligarBloqueiosDeProducao|ligarRecargaDoDev/, arq);
   }
+});
+
+// M40: a retomada. O setup lê o state.json antes do motor e o entrega depois
+// do `configurar` (os sons das configurações valem num fim no horário), antes
+// da bandeja, das janelas e do laço; cada transição do foco vai para o arquivo.
+test('M40: state.json carregado ao abrir, antes da bandeja e do laço, e o foco gravado a cada transição', () => {
+  const lib = ler('src-tauri/src/lib.rs');
+  const ordem = [
+    'let restaurado = estado.load();',
+    'engine::Engine::new(',
+    'motor.configurar(',
+    'motor.restaurar(restaurado);',
+    'estado.save_all(&motor.state());',
+    'bandeja.criar_icone(',
+    'spawn(motor.run())',
+    'build_main(',
+  ].map((t) => [t, lib.indexOf(t)]);
+  for (const [t, i] of ordem) assert.ok(i >= 0, t);
+  for (let k = 1; k < ordem.length; k++) assert.ok(ordem[k - 1][1] < ordem[k][1], `${ordem[k - 1][0]} antes de ${ordem[k][0]}`);
+  const motor = ler('src-tauri/src/engine.rs');
+  assert.match(motor, /self\.emit\(events::STATE, focus\);[\s\S]{0,400}self\.estado\.save_focus\(focus\);\s*\}/);
+  assert.match(motor, /pub fn restaurar\(&self, r: Restored\)[\s\S]*focus\.advance_to\(now[\s\S]*timers\.advance_to\(/);
+  // Nenhum tick grava o arquivo: o laço só emite o tt://tick.
+  assert.doesNotMatch(motor.slice(motor.indexOf('fn tick(&self, tick: &TickDto)'), motor.indexOf('fn phase(&self')), /estado/);
 });

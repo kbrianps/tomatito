@@ -9,7 +9,7 @@
 //! Horários em ms desde a época Unix (UTC), como no núcleo; durações em ms
 //! (`remainingMs`) ou em s (`durationS`, `focusS`), com a unidade no nome.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tomatito_core::{
     ChangeCause, EpochMs, FocusSnapshot, Phase, PhaseChange, PhaseKind, SessionSnapshot, Status,
     StopwatchSnapshot, StopwatchStatus, TimerSnapshot, TimerStatus, TimersSnapshot,
@@ -254,8 +254,9 @@ impl From<&PhaseChange> for PhaseEventDto {
     }
 }
 
-/// Estado de um temporizador no fio (M32).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+/// Estado de um temporizador no fio (M32) e no `state.json` (M33, lido de
+/// volta desde o M40).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum TimerStatusDto {
     /// Parado na duração cheia: o "Redefinir" fica desabilitado.
@@ -330,8 +331,8 @@ impl From<&TimersSnapshot> for TimersDto {
     }
 }
 
-/// Estado do cronômetro no fio (M34).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+/// Estado do cronômetro no fio (M34) e no `state.json` (lido desde o M40).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum StopwatchStatusDto {
     /// Zerado: "Voltas" e "Redefinir" desabilitados.

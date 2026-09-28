@@ -44,6 +44,13 @@
 //! centésimos da tela são contados pelo JS a partir do retrato. Cada
 //! transição (iniciar, pausar, volta, redefinir) sai em `tt://stopwatch` e vai
 //! para o `state.json`.
+//!
+//! **Retomada (M40).** Ao abrir, o `setup` entrega ao motor o que o
+//! `state.json` trouxe ([`Engine::restaurar`]): a sessão de foco, os
+//! temporizadores e o cronômetro voltam como estavam, e o `advance_to(now)`
+//! fecha o que venceu com o app fechado (um `kill -9`, um desligamento), com a
+//! regra do atraso: mais de 60 s depois do prazo, sem som e com o aviso
+//! "concluída às …".
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -64,7 +71,7 @@ use crate::events::{
 };
 use crate::notify::Notificador;
 use crate::settings::Settings;
-use crate::state_file::StateStore;
+use crate::state_file::{Restored, StateStore};
 use crate::stats::Stats;
 use crate::tray::Bandeja;
 
@@ -387,8 +394,8 @@ impl<S: Sink> Engine<S> {
     /// fase sairia "atrasado" (docs/decisoes.md, M15, item 16).
     pub fn new(clock: Box<dyn Clock>, speed: f64, sink: S) -> Self {
         let mut focus = Focus::new();
-        // M32: os padrões de 1, 3, 5 e 10 min. Carregar a lista gravada
-        // (M33) ao abrir é do M40.
+        // M32: os padrões de 1, 3, 5 e 10 min, até o `restaurar` (M40) trazer
+        // a lista gravada, se houver.
         let mut timers = Timers::with_defaults();
         if speed > 1.0 {
             let late = (LATE_AFTER_MS as f64 * speed).round() as u64;
@@ -435,6 +442,55 @@ impl<S: Sink> Engine<S> {
     /// sessão em andamento continua com o F e o B com que começou.
     pub fn configurar(&self, prefs: Preferencias) {
         self.lock().prefs = prefs;
+    }
+
+    /// M40: a retomada, no `setup`, antes do laço e das janelas (e depois do
+    /// `configurar`: um fim no horário toca o som das configurações). Cada
+    /// parte do `state.json` volta à sua máquina; ausente ou recusada, fica o
+    /// padrão, com a causa no registro. Depois, o `advance_to(now)` do foco e
+    /// dos temporizadores: o que venceu com o app fechado é gravado e avisado
+    /// ali, com a regra do atraso do núcleo (mais de 60 s: sem som, e um aviso
+    /// só, "Sessão concluída às 14:32").
+    pub fn restaurar(&self, r: Restored) {
+        let mut g = self.lock();
+        let now = self.clock.now();
+        if let Some((last_session_id, sessao)) = r.focus
+            && let Err(e) = g.focus.restore(last_session_id, sessao)
+        {
+            eprintln!("[tomatito] retomada: {e}; o foco fica ocioso");
+        }
+        if let Some(lista) = r.timers {
+            let recusados = g.timers.restore(lista);
+            if recusados > 0 {
+                eprintln!("[tomatito] retomada: {recusados} temporizador(es) recusado(s)");
+            }
+        }
+        if let Some(c) = r.stopwatch
+            && !g.stopwatch.restore(c)
+        {
+            eprintln!("[tomatito] retomada: cronômetro incoerente no state.json; fica zerado");
+        }
+        let Inner {
+            focus,
+            seq,
+            timers,
+            timers_seq,
+            prefs,
+            ..
+        } = &mut *g;
+        focus.advance_to(now, &mut Outbox::new(&self.sink, seq, *prefs));
+        timers.advance_to(
+            now,
+            &mut TimersOutbox {
+                sink: &self.sink,
+                seq: timers_seq,
+            },
+        );
+        let active = g.active();
+        drop(g);
+        if active {
+            self.wake.notify_one();
+        }
     }
 
     /// O "agora" do motor (acelerado no modo `TOMATITO_SPEED`): o
@@ -794,6 +850,9 @@ impl Sink for TauriSink {
         // M36: "Iniciar foco" vira "Pausar foco" (só posta; não espera a
         // thread principal com o motor travado, tray.rs).
         self.bandeja.foco(focus);
+        // M40: cada transição do foco vai para o `state.json`, como as dos
+        // temporizadores (M33): nunca num tick, que não passa por aqui.
+        self.estado.save_focus(focus);
     }
     fn tick(&self, tick: &TickDto) {
         self.emit(events::TICK, tick);
@@ -1642,5 +1701,123 @@ mod tests {
         assert_eq!(s.stopwatch.elapsed_ms, 60_000);
         assert_eq!(s.focus.session.as_ref().unwrap().remaining_ms, 240_000);
         assert_eq!(s.timers.timers[0].remaining_ms, 0);
+    }
+
+    // --- M40: a retomada, com o `state.json` de verdade numa pasta de teste.
+
+    /// Fecha `antes` (o `state.json` fica com o retrato do instante, como
+    /// depois de um `kill -9`) e abre um motor novo, com o relógio em
+    /// `abre_em`, que carrega o arquivo e roda a retomada.
+    fn reabrir(antes: &Engine<Anota>, abre_em: EpochMs) -> (Arc<Engine<Anota>>, FakeClock) {
+        let d = crate::persist::tests::PastaDeTeste::nova("retomada");
+        StateStore::new(&d.0).save_all(&antes.state());
+        let clock = FakeClock::new(abre_em);
+        let e = Arc::new(Engine::new(Box::new(clock.clone()), 1.0, Anota::default()));
+        e.restaurar(StateStore::new(&d.0).load());
+        (e, clock)
+    }
+
+    #[test]
+    fn retomada_no_meio_do_foco_continua_no_tempo_certo_sem_efeito() {
+        let (a, clock) = motor();
+        a.start(5, false, None).unwrap();
+        clock.advance_ms(60_000);
+        let (b, _) = reabrir(&a, T0.plus_ms(90_000));
+        assert!(b.sink().tirar().is_empty(), "nada venceu: nada emitido");
+        let s = b.state().focus;
+        assert_eq!(s.status, StatusDto::Focus);
+        let sessao = s.session.unwrap();
+        assert_eq!(sessao.remaining_ms, 210_000);
+        assert_eq!(sessao.ends_at, Some(T0.0 + 300_000));
+        assert!(b.is_running(), "o laço acorda para a sessão retomada");
+    }
+
+    #[test]
+    fn retomada_depois_do_prazo_grava_e_avisa_concluida_sem_som() {
+        let (a, clock) = motor();
+        a.start(5, false, None).unwrap();
+        clock.advance_ms(30_000);
+        let (b, _) = reabrir(&a, T0.plus_ms(7 * 60_000));
+        let out = b.sink().tirar();
+        assert!(!out.iter().any(|o| matches!(o, Out::Sound(_))), "sem som");
+        assert!(out.iter().any(|o| matches!(
+            o,
+            Out::Period(p) if p.completed && p.actual_s == 300 && p.ended_at == T0.plus_ms(300_000)
+        )));
+        let avisos: Vec<_> = out
+            .iter()
+            .filter_map(|o| match o {
+                Out::Notice(n) => Some(*n),
+                _ => None,
+            })
+            .collect();
+        assert!(matches!(
+            avisos[..],
+            [Notice::Late { session_completed: true, ended_at, .. }] if ended_at == T0.plus_ms(300_000)
+        ));
+        assert_eq!(b.state().focus.status, StatusDto::Completed);
+        assert!(!b.is_running());
+    }
+
+    #[test]
+    fn retomada_dos_temporizadores_e_do_cronometro() {
+        let (a, clock) = motor();
+        a.timer_create("Chá", 240_000).unwrap();
+        a.timer_delete(1).unwrap();
+        a.timer_start(5).unwrap();
+        a.timer_start(2).unwrap(); // 3 min: zera com o app fechado
+        a.stopwatch_start().unwrap();
+        clock.advance_ms(10_000);
+        a.stopwatch_lap().unwrap();
+        let (b, _) = reabrir(&a, T0.plus_ms(5 * 60_000 + 1_000));
+        let t = b.state().timers;
+        assert_eq!(
+            t.timers.iter().map(|t| t.id).collect::<Vec<_>>(),
+            [2, 3, 4, 5],
+            "a lista gravada, e não os padrões"
+        );
+        let cha = &t.timers[3];
+        assert_eq!(cha.name, "Chá");
+        assert_eq!(cha.ends_at, Some(T0.0 + 240_000));
+        assert_eq!(cha.remaining_ms, -61_000);
+        let out = b.sink().tirar();
+        let fins: Vec<_> = out
+            .iter()
+            .filter_map(|o| match o {
+                Out::TimerNotice(e) => Some((e.id, e.late)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            fins,
+            [(2, true), (5, true)],
+            "zeraram há mais de 60 s: atrasados"
+        );
+        assert!(!out.iter().any(|o| matches!(o, Out::Sound(_))));
+        assert!(b.sink().tirar().is_empty());
+        b.state();
+        assert!(b.sink().tirar().is_empty(), "o fim não dispara de novo");
+        let c = b.state().stopwatch;
+        assert_eq!(c.elapsed_ms, 301_000);
+        assert_eq!(c.laps, [10_000]);
+        assert_eq!(
+            b.timer_create("", 60_000)
+                .unwrap()
+                .timers
+                .last()
+                .unwrap()
+                .id,
+            6
+        );
+    }
+
+    #[test]
+    fn retomada_sem_arquivo_fica_nos_padroes() {
+        let (e, _) = motor();
+        e.restaurar(Restored::default());
+        assert!(e.sink().tirar().is_empty());
+        let s = e.state();
+        assert_eq!(s.focus.status, StatusDto::Idle);
+        assert_eq!(s.timers.timers.len(), 4);
     }
 }

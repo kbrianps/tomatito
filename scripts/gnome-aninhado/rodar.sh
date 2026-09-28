@@ -26,6 +26,7 @@
 #   TT_BIN_BUILD=<cópia do build:debug> bash scripts/gnome-aninhado/rodar.sh instancia   # M37: segunda instância, Ctrl+W, Ctrl+Q, window-state e o build sem menu nem recarga
 #   bash scripts/gnome-aninhado/rodar.sh configuracoes     # M38: períodos, sons e volume, do clique ao fim de fase (sem saída de áudio)
 #   bash scripts/gnome-aninhado/rodar.sh config-sistema    # M39: fechar para a bandeja, tempo na bandeja, Sair, Sobre e os recursos
+#   TT_LIMITE=480 bash scripts/gnome-aninhado/rodar.sh retomada   # M40: kill -9 no meio do foco, fase vencida com o app fechado, e fechar e reabrir
 #   bash scripts/gnome-aninhado/instalado.sh               # o Tomatito instalado (M21b)
 #
 # Pré-requisito: o binário de debug atualizado (`cd src-tauri && cargo build`).

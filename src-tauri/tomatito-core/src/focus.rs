@@ -26,6 +26,12 @@
 //!
 //! **Relógio para trás** (mudado à mão ou pelo NTP; aceito na v1): nada vence,
 //! e o tempo restante nunca passa da duração da fase.
+//!
+//! **Retomada (M40).** O app grava a sessão no `state.json` a cada transição
+//! e, ao abrir, a devolve com [`Focus::restore`] (sem efeito nenhum) e roda o
+//! `advance_to(now)`: as fases que venceram com o app fechado são gravadas, e
+//! a regra do atraso decide entre o fim normal (até 60 s) e o aviso
+//! "concluída às …", sem som.
 
 use std::fmt;
 
@@ -164,6 +170,54 @@ pub struct SessionSnapshot {
     /// Quando a sessão terminou, em Concluído.
     pub completed_at: Option<EpochMs>,
 }
+
+/// M40: uma sessão como fica guardada (o `state.json` do app), o bastante
+/// para recriá-la ao abrir. O plano sai de novo do `config`, porque a regra
+/// dos intervalos (3.2) é determinística.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SessionRecord {
+    pub id: i64,
+    pub config: SessionConfig,
+    pub started_at: EpochMs,
+    pub phase_index: u32,
+    pub phase_started_at: EpochMs,
+    pub run: RunRecord,
+    /// O foco já feito, somando os períodos de foco fechados.
+    pub focus_s: u64,
+}
+
+/// M40: como estava a fase atual quando a sessão foi guardada.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunRecord {
+    /// Correndo: o prazo continua valendo com o app fechado.
+    Running { ends_at: EpochMs },
+    /// Pausada: o que faltava.
+    Paused { remaining_ms: u64 },
+    /// Concluída em `at`.
+    Completed { at: EpochMs },
+}
+
+/// M40: um [`SessionRecord`] que não descreve uma sessão possível.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RestoreError {
+    /// T, F ou B iguais a zero.
+    Plan(PlanError),
+    /// O índice da fase passa do fim do plano.
+    PhaseOutOfRange { index: u32 },
+}
+
+impl fmt::Display for RestoreError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Plan(erro) => write!(f, "plano da sessão guardada recusado: {erro}"),
+            Self::PhaseOutOfRange { index } => {
+                write!(f, "a fase {index} da sessão guardada não existe no plano")
+            }
+        }
+    }
+}
+
+impl std::error::Error for RestoreError {}
 
 /// Como está a fase atual da sessão.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -357,6 +411,57 @@ impl Focus {
 
     pub fn late_after_ms(&self) -> u64 {
         self.late_after_ms
+    }
+
+    /// O id da última sessão começada (0 antes da primeira). O M40 o guarda
+    /// no `state.json` para os ids não se repetirem entre aberturas.
+    pub fn last_session_id(&self) -> i64 {
+        self.last_session_id
+    }
+
+    /// M40: volta à sessão guardada (`None`: ocioso), sem pedir efeito
+    /// nenhum e sem mexer no limite do atraso. Quem chama roda o
+    /// [`Self::advance_to`] logo depois, com o "agora" da abertura: as fases
+    /// que venceram com o app fechado são gravadas ali, com a regra do atraso.
+    ///
+    /// Recusado, fica ocioso (com o `last_session_id` guardado). Pausada, o
+    /// restante para na duração da fase, como no retrato.
+    pub fn restore(
+        &mut self,
+        last_session_id: i64,
+        record: Option<SessionRecord>,
+    ) -> Result<(), RestoreError> {
+        self.session = None;
+        self.last_session_id = last_session_id;
+        let Some(r) = record else {
+            return Ok(());
+        };
+        let plan = Plan::new(r.config.minutes, r.config.settings, r.config.skip_breaks)
+            .map_err(RestoreError::Plan)?;
+        let phase = plan
+            .phase(r.phase_index)
+            .ok_or(RestoreError::PhaseOutOfRange {
+                index: r.phase_index,
+            })?;
+        let run = match r.run {
+            RunRecord::Running { ends_at } => Run::Running { ends_at },
+            RunRecord::Paused { remaining_ms } => Run::Paused {
+                remaining_ms: remaining_ms.min(duration_ms(phase)),
+            },
+            RunRecord::Completed { at } => Run::Completed { at },
+        };
+        self.last_session_id = last_session_id.max(r.id);
+        self.session = Some(Session {
+            id: r.id,
+            config: r.config,
+            plan,
+            started_at: r.started_at,
+            index: r.phase_index,
+            phase_started_at: r.phase_started_at,
+            run,
+            focus_s: r.focus_s,
+        });
+        Ok(())
     }
 
     pub fn status(&self) -> Status {

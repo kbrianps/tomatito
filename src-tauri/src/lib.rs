@@ -76,6 +76,8 @@ pub fn run() {
             app.manage(som.clone());
             // M37: o "Sair" também grava o `state.json` (`window::sair`).
             let estado = Arc::new(state_file::StateStore::new(&dados));
+            // M40: o que estava em andamento quando o app fechou.
+            let restaurado = estado.load();
             app.manage(estado.clone());
             let motor = Arc::new(engine::Engine::new(
                 clock,
@@ -85,8 +87,7 @@ pub fn run() {
                     som,
                     stats,
                     // M33: o `state.json`, gravado a cada transição dos
-                    // temporizadores (e do cronômetro, M34); carregar ao
-                    // abrir é do M40.
+                    // temporizadores (do cronômetro, M34, e do foco, M40).
                     estado.clone(),
                     bandeja.clone(),
                 ),
@@ -94,6 +95,10 @@ pub fn run() {
             // M38: F, B e os sons de fim de fase das configurações; cada
             // `settings_set` os regrava.
             motor.configurar(engine::Preferencias::from(&s));
+            // M40: a retomada (`advance_to(now)` com a regra do atraso), antes
+            // da bandeja e das janelas; o arquivo passa a ser o do motor.
+            motor.restaurar(restaurado);
+            estado.save_all(&motor.state());
             app.manage(motor.clone());
             bandeja.criar_icone(&motor.state().focus);
             tauri::async_runtime::spawn(motor.run());

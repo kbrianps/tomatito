@@ -25,6 +25,12 @@
 //!
 //! **Relógio para trás** (aceito na v1): nada dispara, e o restante nunca
 //! passa da duração.
+//!
+//! **Retomada (M40).** O app grava a lista no `state.json` a cada transição e,
+//! ao abrir, a devolve com [`Timers::restore`] (sem efeito nenhum) e roda o
+//! `advance_to(now)`: um temporizador que chegou a zero com o app fechado
+//! dispara ali, atrasado (sem som); um que já tinha disparado não dispara de
+//! novo.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -193,6 +199,28 @@ impl CountdownEffects for FakeCountdownEffects {
     fn timers_changed(&mut self, snapshot: &TimersSnapshot) {
         self.changes.push(snapshot.clone());
     }
+}
+
+/// M40: um temporizador como fica guardado (o `state.json` do app).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TimerRecord {
+    pub id: TimerId,
+    pub name: String,
+    pub duration_ms: u64,
+    pub run: TimerRunRecord,
+    /// O fim já disparou: não dispara de novo ao abrir.
+    pub ended: bool,
+}
+
+/// M40: como estava o temporizador quando foi guardado.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TimerRunRecord {
+    /// Parado na duração cheia.
+    Idle,
+    /// Correndo: o prazo continua valendo com o app fechado.
+    Running { ends_at: EpochMs },
+    /// Pausado: o que faltava (negativo depois do zero).
+    Paused { remaining_ms: i64 },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -380,6 +408,51 @@ impl Timers {
 
     fn timer_mut(&mut self, id: TimerId) -> Result<&mut Timer, CountdownError> {
         self.timers.get_mut(&id).ok_or(CountdownError::NotFound(id))
+    }
+
+    /// M40: troca a lista pela guardada, na ordem dos ids, sem pedir efeito
+    /// nenhum e sem mexer no limite do atraso. Quem chama roda o
+    /// [`Self::advance_to`] logo depois, com o "agora" da abertura.
+    ///
+    /// Cada registro passa pelas regras de criar: id 0 ou repetido, duração
+    /// fora dos limites e nome longo demais são recusados (os outros entram), e
+    /// a função devolve quantos foram. Os ids novos continuam depois do maior.
+    /// Parado, o fim fica armado; pausado, o restante para na duração.
+    pub fn restore(&mut self, records: Vec<TimerRecord>) -> usize {
+        self.timers.clear();
+        self.last_id = 0;
+        let mut refused = 0;
+        for r in records {
+            let name = match clean_name(&r.name) {
+                Ok(name) if r.id != 0 && !self.timers.contains_key(&r.id) => name,
+                _ => {
+                    refused += 1;
+                    continue;
+                }
+            };
+            if check_duration(r.duration_ms).is_err() {
+                refused += 1;
+                continue;
+            }
+            let run = match r.run {
+                TimerRunRecord::Idle => Run::Idle,
+                TimerRunRecord::Running { ends_at } => Run::Running { ends_at },
+                TimerRunRecord::Paused { remaining_ms } => Run::Paused {
+                    remaining_ms: remaining_ms.min(as_i64(r.duration_ms)),
+                },
+            };
+            self.last_id = self.last_id.max(r.id);
+            self.timers.insert(
+                r.id,
+                Timer {
+                    name,
+                    duration_ms: r.duration_ms,
+                    ended: r.ended && run != Run::Idle,
+                    run,
+                },
+            );
+        }
+        refused
     }
 
     /// Dispara o fim de cada temporizador que correndo chegou a zero até

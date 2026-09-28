@@ -19,6 +19,10 @@
 //!
 //! **Relógio para trás** (aceito na v1): o trecho atual nunca fica negativo,
 //! e o decorrido nunca diminui dentro de um trecho medido pelo mesmo relógio.
+//!
+//! **Retomada (M40).** O app grava o cronômetro no `state.json` a cada
+//! transição e, ao abrir, o devolve com [`Stopwatch::restore`]: correndo, o
+//! `started_at` guardado continua valendo, e o tempo com o app fechado conta.
 
 use std::fmt;
 
@@ -73,6 +77,16 @@ pub struct StopwatchSnapshot {
     /// O decorrido em `at`: o acumulado mais o trecho atual.
     pub elapsed_ms: u64,
     /// O decorrido total em cada volta marcada, em ordem.
+    pub laps: Vec<u64>,
+}
+
+/// M40: o cronômetro como fica guardado (o `state.json` do app).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StopwatchRecord {
+    pub status: StopwatchStatus,
+    /// O começo do trecho atual, só correndo.
+    pub started_at: Option<EpochMs>,
+    pub accumulated_ms: u64,
     pub laps: Vec<u64>,
 }
 
@@ -177,6 +191,29 @@ impl Stopwatch {
             .max(self.laps.last().copied().unwrap_or(0));
         self.laps.push(total);
         Ok(self.laps.len())
+    }
+
+    /// M40: volta ao cronômetro guardado. Um registro incoerente (correndo
+    /// sem `started_at`, mais de [`MAX_LAPS`] voltas, voltas fora de ordem)
+    /// deixa o cronômetro zerado e devolve `false`. Zerado, o acumulado e as
+    /// voltas guardados não contam.
+    pub fn restore(&mut self, record: StopwatchRecord) -> bool {
+        *self = Self::new();
+        let run = match (record.status, record.started_at) {
+            (StopwatchStatus::Idle, _) => return true,
+            (StopwatchStatus::Running, Some(started_at)) => Run::Running { started_at },
+            (StopwatchStatus::Running, None) => return false,
+            (StopwatchStatus::Paused, _) => Run::Paused,
+        };
+        if record.laps.len() > MAX_LAPS || record.laps.windows(2).any(|v| v[1] < v[0]) {
+            return false;
+        }
+        *self = Self {
+            run,
+            accumulated_ms: record.accumulated_ms,
+            laps: record.laps,
+        };
+        true
     }
 
     /// Zera (`stopwatch_reset`), em qualquer estado, e apaga as voltas.
