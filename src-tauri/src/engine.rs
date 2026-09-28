@@ -20,9 +20,10 @@
 //! Tudo é emitido com o motor travado, para os eventos saírem na ordem das
 //! transições.
 //!
-//! O som (M20) vai para a thread do `audio.rs`, sem esperar. Notificação (M21)
-//! e gravação (M26) ainda não existem: por enquanto, o `TauriSink` só registra
-//! esses pedidos no stderr (em debug).
+//! O som (M20) vai para a thread do `audio.rs`, sem esperar, e a notificação
+//! (M21), para o `notify.rs`, que também não espera. A gravação (M26) ainda
+//! não existe: por enquanto, o `TauriSink` só registra esse pedido no stderr
+//! (em debug).
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -38,6 +39,7 @@ use tomatito_core::{
 
 use crate::audio::Som;
 use crate::events::{self, FocusDto, PhaseEventDto, SetupDto, StateDto, TickDto};
+use crate::notify::Notificador;
 
 /// O ritmo do laço (3.2).
 pub const TICK_EVERY: Duration = Duration::from_millis(250);
@@ -391,15 +393,22 @@ pub fn clock_from_env() -> (Box<dyn Clock>, f64) {
     (Box::new(SystemClock), 1.0)
 }
 
-/// O [`Sink`] do app: emite os eventos para todas as janelas e pede os sons.
+/// O [`Sink`] do app: emite os eventos para todas as janelas e pede os sons
+/// e as notificações.
 pub struct TauriSink {
     app: tauri::AppHandle,
     som: Arc<Som>,
+    notificador: Notificador,
 }
 
 impl TauriSink {
     pub fn new(app: tauri::AppHandle, som: Arc<Som>) -> Self {
-        Self { app, som }
+        let notificador = Notificador::new(app.clone());
+        Self {
+            app,
+            som,
+            notificador,
+        }
     }
 
     fn emit<T: Serialize + Clone>(&self, event: &str, payload: &T) {
@@ -425,9 +434,9 @@ impl Sink for TauriSink {
         // que espera o som acabar, com o volume que ela guarda.
         self.som.tocar(sound);
     }
-    fn notice(&self, _notice: Notice) {
-        #[cfg(debug_assertions)]
-        eprintln!("[tomatito] aviso (M21): {_notice:?}");
+    fn notice(&self, notice: Notice) {
+        // Também sem esperar: o plugin entrega numa tarefa à parte.
+        self.notificador.mostrar(notice);
     }
     fn period(&self, _period: &Period) {
         #[cfg(debug_assertions)]

@@ -19,6 +19,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+pub use jiff::tz::TimeZone;
+
 /// Um instante do relógio de parede: milissegundos desde a época Unix, em UTC
 /// (o `ends_at_ms` do plano). Negativo só antes de 1970, num relógio muito
 /// errado.
@@ -50,6 +52,24 @@ impl EpochMs {
     pub const fn ms_since_or_zero(self, earlier: Self) -> u64 {
         let ms = self.ms_since(earlier);
         if ms < 0 { 0 } else { ms as u64 }
+    }
+
+    /// Hora e minuto deste instante no fuso `tz`, em 24 h (3.8: "Horas:
+    /// formato de 24 h"; datas e horas locais pelo `jiff`). Os segundos são
+    /// cortados, como num relógio: 14:35:40 é 14:35. `None` só fora da faixa
+    /// do `jiff` (anos -9999 a 9999), num relógio muito errado.
+    ///
+    /// É o "às 14:35" das notificações (M21). O app passa o fuso do sistema
+    /// ([`TimeZone::system`]) a cada aviso, então uma troca de fuso com o app
+    /// aberto já vale no aviso seguinte.
+    #[must_use]
+    pub fn hour_minute_in(self, tz: &TimeZone) -> Option<(u8, u8)> {
+        let ts = jiff::Timestamp::from_millisecond(self.0).ok()?;
+        let dt = tz.to_datetime(ts);
+        Some((
+            u8::try_from(dt.hour()).ok()?,
+            u8::try_from(dt.minute()).ok()?,
+        ))
     }
 }
 
@@ -290,6 +310,31 @@ mod tests {
     use super::*;
 
     const INICIO: EpochMs = EpochMs(1_790_000_000_000);
+
+    #[test]
+    fn hora_e_minuto_no_fuso() {
+        // 1_790_000_000_000 ms = 2026-09-21 14:13:20 UTC.
+        let utc = TimeZone::UTC;
+        assert_eq!(INICIO.hour_minute_in(&utc), Some((14, 13)));
+        let sp = TimeZone::fixed(jiff::tz::offset(-3));
+        assert_eq!(INICIO.hour_minute_in(&sp), Some((11, 13)));
+        // Os segundos são cortados: 14:13:59,999 ainda é 14:13.
+        assert_eq!(INICIO.plus_ms(39_999).hour_minute_in(&utc), Some((14, 13)));
+        assert_eq!(INICIO.plus_ms(40_000).hour_minute_in(&utc), Some((14, 14)));
+        // Meia-noite em 24 h, e antes de 1970.
+        assert_eq!(EpochMs(0).hour_minute_in(&utc), Some((0, 0)));
+        assert_eq!(EpochMs(-60_000).hour_minute_in(&utc), Some((23, 59)));
+        assert_eq!(EpochMs(i64::MAX).hour_minute_in(&utc), None);
+    }
+
+    #[test]
+    fn hora_e_minuto_com_horario_de_verao() {
+        // Nova York: 2026-03-08 06:59 UTC é 01:59 EST; 07:00 UTC é 03:00 EDT.
+        let ny = TimeZone::get("America/New_York").unwrap();
+        let antes = EpochMs(1_772_953_140_000);
+        assert_eq!(antes.hour_minute_in(&ny), Some((1, 59)));
+        assert_eq!(antes.plus_ms(60_000).hour_minute_in(&ny), Some((3, 0)));
+    }
 
     #[test]
     fn epoch_ms_converte_antes_e_depois_de_1970() {

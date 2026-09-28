@@ -13,7 +13,7 @@ pub mod effects;
 pub mod focus;
 pub mod plan;
 
-pub use clock::{Clock, EpochMs, FakeClock, SystemClock, epoch_ms};
+pub use clock::{Clock, EpochMs, FakeClock, SystemClock, TimeZone, epoch_ms};
 #[cfg(debug_assertions)]
 pub use clock::{MAX_SPEED, SPEED_ENV, ScaledClock, SpeedError, parse_speed};
 pub use effects::{ChangeCause, Effect, Effects, FakeEffects, Notice, Period, PhaseChange, Sound};

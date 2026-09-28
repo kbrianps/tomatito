@@ -13,3 +13,6 @@ publish = false
 # núcleo. O teste em tests/isolamento.rs confere a árvore inteira, pelo
 # `cargo tree -p tomatito-core --target all -e normal,build,dev`.
 [dependencies]
+# Horas e datas locais (3.6 e 3.8): o "às 14:35" das notificações (M21) e,
+# depois, os dias com a hora de zerar (days.rs).
+jiff = "0.2.37"

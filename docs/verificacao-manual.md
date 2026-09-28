@@ -562,3 +562,25 @@ O que não dá para conferir daqui: **ouvir** os sons e **trocar a saída** (est
 5. [ ] Com o som do sistema **mudo**, clique em Testar: nada toca e o app segue normal.
 6. [ ] **Fim de fase:** feche o `tauri dev` e abra com `TOMATITO_SPEED=60 npm run tauri dev`. Na Foco, ponha **60** no seletor e inicie: uns 27 s depois, o fim do foco toca as duas notas; uns 5 s depois, o fim do intervalo toca a nota só; uns 27 s depois, o fim da sessão toca as duas notas de novo. Repita com a janela **minimizada**: os sons tocam do mesmo jeito.
 7. [ ] Feche o `tauri dev` (Ctrl+C no terminal).
+
+## M21. Notificações
+
+O que foi conferido de forma automática (28/09/2026):
+
+- **"Pronto quando" no app de verdade** (`TOMATITO_SPEED=60 TT_PIPEWIRE=/run/user/$UID bash scripts/gnome-aninhado/rodar.sh notificacoes`, GNOME Shell 50.1 aninhado, com o motor, o som a 1% e as notificações de verdade): uma sessão de 60 min começa e a janela é minimizada; no fim do foco (uns 27,5 s), no fim do intervalo (5 s depois) e no fim da sessão, chega ao shell uma notificação com os textos do plano ("Período de foco concluído" / "Intervalo de 5 min. Próximo foco às HH:MM.", com a hora batendo com o prazo do intervalo no fuso local; "Intervalo concluído" / "Período de foco 2 de 2, 27 min."; "Sessão de foco concluída" / "60 min de foco."), com a janela ainda minimizada, o balão na tela (e ainda lá 1,5 s depois) e um som no PipeWire junto de cada uma. Captura dos dois balões em `docs/capturas/m21-baloes.png`.
+- **"Não perturbe"** (o `show-banners` desligado, como o botão do GNOME faz): uma sessão de 5 min, minimizada, termina com a notificação na lista, nenhum balão e o som tocando. Nenhuma notificação do app some da lista durante a rodada.
+- **Fim atrasado:** o app congelado (`SIGSTOP`) por 66 s numa sessão de 5 min (a 60×, passa do limite do atraso) dá, na volta, um aviso só, "Sessão concluída às HH:MM", sem corpo e sem som; a sessão termina concluída. 25 conferências ok, e o app sai sozinho depois de a janela fechar.
+- `cargo test --workspace` (os textos no `i18n.rs` e as horas locais no núcleo), `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`, a checagem cruzada `cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings` (com o `llvm-rc` do LLVM 21 no PATH), `npm test` (131) e `npm run build` passam. Regressões: os roteiros aninhados `sons` e `fases` passam. Numa primeira rodada do `sons`, o primeiro som foi para o fone Bluetooth (a saída padrão no começo) e os outros para a saída interna, porque o fone desconectou no meio; a segunda rodada passou inteira. Sem querer, foi a troca de saída do M20 funcionando.
+
+O que não dá para conferir daqui: ver os balões no **seu** GNOME, ouvir os sons junto e o botão "Não perturbe" de verdade (o teste mexe só no GSettings do shell aninhado, que fica em memória).
+
+### Para conferir (uns 5 minutos)
+
+1. [ ] `cd ~/dev/tomatito && TOMATITO_SPEED=60 npm run tauri dev`. Na tela Foco, ponha **60** no seletor (no `tauri dev`, as setas andam de 1 em 1), clique em **Iniciar sessão de foco** e **minimize** a janela (o botão "–" da barra de título). Deixe outra janela qualquer na frente.
+2. [ ] Uns 27 s depois: as duas notas tocam e aparece no alto da tela o balão **Período de foco concluído**, com **Intervalo de 5 min. Próximo foco às HH:MM.** A hora sai adiantada no modo acelerado (o relógio do app anda 60× mais rápido); no uso normal, é a hora de verdade. O balão fica alguns segundos e não some na hora.
+3. [ ] Uns 5 s depois: uma nota e o balão **Intervalo concluído**, com **Período de foco 2 de 2, 27 min.**
+4. [ ] Uns 27 s depois: as duas notas e o balão **Sessão de foco concluída**, com **60 min de foco.** (diga se prefere o foco de fato, "55 min de foco."; `docs/pendencias-usuario.md`, item 31).
+5. [ ] Clique no relógio do painel de cima: as três notificações estão na lista, sob "tomatito" (no `tauri dev` não há `.desktop`; no instalado, "Tomatito" com o ícone). Ao voltar para a janela do Tomatito, o GNOME tira as notificações dele da lista; é regra do shell.
+6. [ ] **Não perturbe:** no mesmo menu do relógio, ligue **Não perturbe**. Volte à janela, ponha **5** no seletor, inicie e minimize. Uns 5 s depois: as duas notas tocam e **nenhum** balão aparece; no menu do relógio, a notificação **Sessão de foco concluída** / **5 min de foco.** está na lista. Desligue o Não perturbe.
+7. [ ] (Opcional) **Fim atrasado:** com **5** no seletor, inicie e, no mesmo segundo, num terminal, `kill -STOP $(pgrep -f 'debug/tomatito$')`. Espere 70 s e `kill -CONT $(pgrep -f 'debug/tomatito$')`: nenhum som, e um balão só, **Sessão concluída às HH:MM** (hora adiantada, como no passo 2).
+8. [ ] Feche o `tauri dev` (Ctrl+C no terminal).

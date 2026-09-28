@@ -2,6 +2,8 @@ mod audio;
 mod commands;
 mod engine;
 mod events;
+mod i18n;
+mod notify;
 mod window;
 
 use std::sync::Arc;
@@ -10,7 +12,13 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // Plugins na ordem da 3.4: o single-instance (M36) entra antes deste. O
+    // de notificação só existe no Windows; no Linux, o `notify.rs` fala
+    // direto com o D-Bus (docs/decisoes.md, M21).
+    #[cfg(windows)]
+    let builder = builder.plugin(tauri_plugin_notification::init());
+    builder
         .setup(|app| {
             // O motor nasce antes das janelas: o laço roda com ou sem elas
             // (PLANO.md, 3.2), e o primeiro `get_state` do JS já o encontra.
