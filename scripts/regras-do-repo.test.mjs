@@ -238,6 +238,20 @@ test('tarefas: tasks.rs no banco das estatísticas e os quatro comandos task_* r
   assert.match(ipcJs, /invoke\('task_delete', \{ id \}\)/);
 });
 
+// M30: o cartão "Tarefas" na tela Foco, e a tarefa escolhida indo no focus_start.
+test('cartão Tarefas: card-tasks.js ligado na tela Foco e a escolhida no focus_start', () => {
+  const index = ler('src/views/focus/index.js');
+  assert.match(index, /import \* as tarefas from '\.\/card-tasks\.js';/);
+  assert.match(index, /tarefas\.ligar\(raiz\.querySelector\('\[data-cartao="tarefas"\]'\)/);
+  assert.match(index, /sessao\.ligar\(.*\{ icone, tarefa: tarefas\.escolhida \}\)/);
+  assert.match(ler('src/views/focus/card-session.js'), /store\.comando\('iniciar', sel\.valor, \{ pularIntervalos: marcado\(\), tarefa: tarefa\(\) \?\? null \}\)/);
+  const cartao = ler('src/views/focus/card-tasks.js');
+  // O título vem do usuário: só entra no HTML escapado.
+  assert.match(cartao, /\$\{escapar\(tarefa\.title\)\}/);
+  assert.doesNotMatch(cartao.replace(/escapar\(tarefa\.title\)/g, ''), /\$\{[^}]*\.title\b/);
+  assert.doesNotMatch(cartao, /Pomodoro/i);
+});
+
 test('capabilities/main.json com as permissões da seção 3.8, só para a main', () => {
   const arquivos = readdirSync(new URL('../src-tauri/capabilities', import.meta.url)).sort();
   assert.ok(!arquivos.includes('default.json'), 'o default.json do template sai');

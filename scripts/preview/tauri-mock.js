@@ -21,6 +21,8 @@
 //   ?zerar=H                    M28: a hora de zerar (resetHour)
 //   ?tarefas=A|B*|C             M29: as tarefas iniciais, separadas por "|";
 //                               um "*" no fim marca a concluída
+//   ?tarefa=N                   M30: com ?foco=, a sessão já aberta tem a
+//                               tarefa N (taskId)
 // M28: com window.__TOMATITO_PREVIEW_RECUSAR_CONFIGURACOES__ = true (pelo
 // --eval), o settings_set rejeita como o Rust quando não consegue gravar.
 // As globais do initialization_script (?pref, ?ultimo e ?plataforma) não são
@@ -77,7 +79,7 @@ function retratoFoco() {
     status: motor.pausadoMs == null ? fase.kind : 'paused',
     at: agora,
     session: {
-      id: s.id, minutes: s.minutos, skipBreaks: s.pular, taskId: null, focusMinutes: 25, breakMinutes: 5,
+      id: s.id, minutes: s.minutos, skipBreaks: s.pular, taskId: s.tarefa ?? null, focusMinutes: 25, breakMinutes: 5,
       startedAt: s.id, blocks: s.blocos, intervals: s.intervalos, phaseIndex: s.indice,
       phase: fase, phaseStartedAt: s.inicioDaFase,
       endsAt: motor.pausadoMs == null ? s.endsAt : null, remainingMs: restante,
@@ -124,6 +126,7 @@ function registrarFoco(completo) {
   const restante = motor.pausadoMs ?? Math.max(0, s.endsAt - agoraMotor());
   const corrido = completo ? fase.durationS : Math.floor((fase.durationS * 1000 - restante) / 1000);
   if (!completo && corrido < 60) return;
+  window.__TOMATITO_PREVIEW_PERIODOS__.push({ kind: 'focus', actualS: corrido, completed: completo, taskId: s.tarefa ?? null });
   somas.hoje += corrido;
   somas.semana += corrido;
 }
@@ -150,12 +153,15 @@ function proximaFase() {
   s.endsAt = s.inicioDaFase + s.fases[s.indice].durationS * 1000;
   motor.pausadoMs = null;
 }
-function iniciarFoco(minutos, restante = null, pular = false) {
+// M30: os períodos de foco que o motor simulado grava, com o task_id, como o
+// stats.rs (só os focos; para as conferências do cartão de tarefas).
+window.__TOMATITO_PREVIEW_PERIODOS__ = [];
+function iniciarFoco(minutos, restante = null, pular = false, tarefa = null) {
   const agora = agoraMotor();
   const plano = planejar(minutos, pular);
   const d = plano.fases[0].durationS * 1000;
   motor.sessao = {
-    id: Date.now(), minutos, pular, blocos: plano.blocos, intervalos: plano.intervalos, fases: plano.fases,
+    id: Date.now(), minutos, pular, tarefa, blocos: plano.blocos, intervalos: plano.intervalos, fases: plano.fases,
     indice: 0, inicioDaFase: agora - (d - Math.min(restante ?? d, d)), endsAt: agora + Math.min(restante ?? d, d),
   };
   motor.pausadoMs = null;
@@ -163,7 +169,7 @@ function iniciarFoco(minutos, restante = null, pular = false) {
 if (params.has('foco')) {
   const minutos = Number(params.get('foco'));
   const restante = params.has('restante') ? Number(params.get('restante')) : null;
-  iniciarFoco(minutos, restante, params.get('pular') === '1');
+  iniciarFoco(minutos, restante, params.get('pular') === '1', params.has('tarefa') ? Number(params.get('tarefa')) : null);
   // ?fase=N começa na fase N (0 = o primeiro foco, 1 = o primeiro intervalo...).
   for (let i = Number(params.get('fase') ?? 0); i > 0; i--) proximaFase();
   if (restante != null) motor.sessao.endsAt = agoraMotor() + Math.min(restante, motor.sessao.fases[motor.sessao.indice].durationS * 1000);
@@ -238,9 +244,9 @@ const handlers = {
     setTimeout(() => emit('tt://settings', structuredClone(configuracoes)));
     return structuredClone(configuracoes);
   },
-  focus_start: ({ minutes, skipBreaks }) => {
-    window.__TOMATITO_PREVIEW_INICIOS__.push({ minutes, skipBreaks });
-    iniciarFoco(minutes, null, Boolean(skipBreaks));
+  focus_start: ({ minutes, skipBreaks, taskId = null }) => {
+    window.__TOMATITO_PREVIEW_INICIOS__.push({ minutes, skipBreaks, taskId });
+    iniciarFoco(minutes, null, Boolean(skipBreaks), taskId);
     return transicao('started');
   },
   focus_pause: () => ((motor.pausadoMs = retratoFoco().session.remainingMs), transicao()),

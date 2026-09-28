@@ -152,6 +152,22 @@ fluent-dialog.tt-dialogo-meta::part(dialog){ width:320px; max-width:calc(100vw -
 .tt-dialogo-meta-erro[hidden]{ display:none; }
 .tt-dialogo-meta-erro .tt-icone{ flex:none; width:16px; height:16px; margin-top:2px; fill:var(--tt-critical); }
 
+/* M30: caixa de texto (o TextBox do WinUI): 32 px de altura, raio 4, fundo
+   --tt-input-bg, borda --tt-border com o sublinhado --tt-stroke-control; com
+   o foco, o sublinhado vira 2 px do accent e o fundo fica o do cartão (o
+   TextControlBackgroundFocused). O texto de dica fica em --tt-fg-2-on-ctl. */
+.tt-texto{
+  box-sizing:border-box; height:32px; padding:0 11px;
+  font:var(--tt-type-body); color:var(--tt-fg-1);
+  background:var(--tt-input-bg);
+  border:1px solid var(--tt-border); border-bottom-color:var(--tt-stroke-control);
+  border-radius:var(--tt-r-ctl); outline:none;
+}
+.tt-texto::placeholder{ color:var(--tt-fg-2-on-ctl); opacity:1; }
+.tt-texto:hover{ background:var(--tt-ctl-hover); }
+.tt-texto:focus{ background:var(--tt-bg-card); border-bottom:2px solid var(--tt-accent); padding-bottom:0; }
+@media (forced-colors:active){ .tt-texto:focus{ border-bottom-color:Highlight; } }
+
 /* M13: desabilitados dos componentes Fluent. As cores vêm da ponte
    (--colorNeutral*Disabled); aqui, o rótulo ao lado do controle desabilitado
    (TextFillColorDisabled, como o texto de um CheckBox desabilitado do WinUI)

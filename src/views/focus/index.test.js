@@ -27,12 +27,14 @@ test('cada cartão é uma <section> com o título do catálogo em Subtitle, e a 
   const html = marcacao();
   assert.match(html, /^<div class="tt-pagina"><h1 class="tt-t-title" tabindex="-1">Foco<\/h1>/);
   for (const id of ['sessao', 'tarefas', 'progresso']) {
-    const classe = { sessao: ' tt-sessao', progresso: ' tt-progresso' }[id] ?? '';
+    const classe = { sessao: ' tt-sessao', progresso: ' tt-progresso', tarefas: ' tt-tarefas' }[id] ?? '';
     const conteudo = {
       // M17: o preparo e, durante a sessão, o mostrador do M18.
       sessao: '<div class="tt-preparo" data-preparo>.*</div><div data-andamento hidden>.*</div>',
       // M27: as três colunas e o rodapé; M28: o lápis antes delas.
       progresso: '<button type="button" class="tt-sutil tt-progresso-editar" aria-label="Editar meta diária" data-dica data-editar-meta></button><div class="tt-progresso-corpo"[^>]*data-progresso>.*</div><p class="tt-progresso-rodape" data-concluido>.*</p>',
+      // M30: o "+" e o "…", e o corpo (subtítulo, lista, campo e estado vazio).
+      tarefas: '<div class="tt-tarefas-acoes">.*</fluent-menu></div><div class="tt-tarefas-corpo"[^>]*data-tarefas>.*</div></div>',
     }[id] ?? '';
     const re = new RegExp(
       `<section class="tt-card${classe}" data-cartao="${id}" aria-labelledby="foco-${id}">` +
@@ -40,8 +42,8 @@ test('cada cartão é uma <section> com o título do catálogo em Subtitle, e a 
     );
     assert.match(html, re);
   }
-  const { andamento, preparo, fases, diario, metaDiaria, ...titulos } = t.foco;
-  assert.ok(andamento && preparo && fases && diario && metaDiaria);
+  const { andamento, preparo, fases, diario, metaDiaria, listaDeTarefas, ...titulos } = t.foco;
+  assert.ok(andamento && preparo && fases && diario && metaDiaria && listaDeTarefas);
   assert.deepEqual(titulos, { sessao: 'Pronto para focar', progresso: 'Progresso diário', tarefas: 'Tarefas' });
 });
 
@@ -51,10 +53,15 @@ test('montar(raiz) desenha a marcação', () => {
   assert.equal(raiz.innerHTML, marcacao());
 });
 
-test('M17: os ícones vêm do contexto (play no botão, chevrons no seletor; M18: pause e "..." na sessão; M28: o lápis do progresso)', () => {
+test('M17: os ícones vêm do contexto (play no botão, chevrons no seletor; M18: pause e "..." na sessão; M28: o lápis do progresso; M30: as tarefas)', () => {
   const icone = (nome) => `<svg data-icone="${nome}"></svg>`;
   const html = marcacao({ icone });
-  assert.deepEqual([...html.matchAll(/data-icone="(\w+)"/g)].map((m) => m[1]), ['chevron_up', 'chevron_down', 'play', 'pause', 'more_horizontal', 'edit']);
+  assert.deepEqual(
+    [...html.matchAll(/data-icone="(\w+)"/g)].map((m) => m[1]),
+    ['chevron_up', 'chevron_down', 'play', 'pause', 'more_horizontal', 'checkmark_circle', 'add', 'more_horizontal', 'add', 'edit'],
+  );
+  // M30: o ícone do cartão de tarefas fica dentro do título, antes do texto.
+  assert.match(html, /<h2 id="foco-tarefas" class="tt-t-subtitle"><svg data-icone="checkmark_circle"><\/svg>Tarefas<\/h2>/);
   const semDesenhos = marcacao()
     .replace(/<svg class="tt-mostrador-svg".*?<\/svg>/, '')
     .replace(/<svg class="tt-anel-svg".*?<\/svg>/, '');

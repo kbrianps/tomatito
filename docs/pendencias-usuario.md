@@ -81,6 +81,9 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 
 51. **Conferir o M29 pelo DevTools** (desde o M29, opcional). Uns 3 minutos, com os passos em `docs/verificacao-manual.md`, seção M29: adicionar, concluir e apagar tarefas pelo console e ver a lista sobreviver ao reinício. Ainda não há tela (o cartão "Tarefas" é do M30), e o roteiro aninhado `tarefas` já passou nas mesmas conferências com o app de verdade (22 ok).
 52. **Onde fica a tarefa concluída?** (desde o M29). A lista segue a ordem de criação, e concluir não move a linha (ela fica no lugar, marcada, até a virada). Se preferir as concluídas no fim da lista, diga: é uma linha no `task_list` (`docs/decisoes.md`, M29, item 5).
+53. **Conferir o cartão "Tarefas"** (desde o M30). Uns 5 minutos, com os passos em `docs/verificacao-manual.md`, seção M30: adicionar três, escolher uma, iniciar, concluir, reabrir. O roteiro aninhado `cartao-tarefas` já fez o mesmo no app de verdade (19 ok); falta o seu olho no hover, no Tab e no Orca.
+54. **Textos do cartão fora do plano** (desde o M30): "Escolha uma tarefa para a sessão", "Sessão sem tarefa escolhida", a linha de apoio do estado vazio e "Apagar concluídas" (`docs/decisoes.md`, M30). Se quiser outros, é trocar em `t.foco.listaDeTarefas` (`src/lib/i18n/pt-BR.js`).
+55. **Cartão de tarefas no Windows** (desde o M30). No WebView2: repetir a seção M30 de `docs/verificacao-manual.md`, com o Narrador lendo o círculo como caixa de seleção com o título da tarefa. O Chrome headless já passou nas mesmas conferências. Entra na ida ao Windows do M48.
 
 ## Resolvidas
 

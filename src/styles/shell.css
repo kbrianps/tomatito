@@ -328,6 +328,74 @@
   .tt-progresso-corpo[data-sem-meta]{ min-height:0; }
 }
 
+/* M30: cartão "Tarefas" (src/views/focus/card-tasks.js), como o do Relógio
+   (clock-focus-sessions-page.png e microsoft-to-do-in-focus-sessions.png):
+   o título em Body Strong com o ícone de 20 px antes, na mesma linha do
+   título do progresso; o "+" e o "…" (sutis, 32 px) no canto de cima, à
+   direita, com 4 px entre eles; o subtítulo em --tt-fg-2; as linhas de 41 px,
+   raio 4 e fundo --tt-bg-surface, 4 px uma da outra. A altura mínima segue a
+   do cartão da captura, para o cartão não pular ao receber a lista. */
+.tt-card.tt-tarefas{ position:relative; gap:0; min-height:240px; padding:9px 16px 16px; }
+.tt-tarefas > h2{ display:flex; align-items:center; gap:10px; min-height:28px; padding-right:72px; font:var(--tt-type-body-strong); }
+.tt-tarefas > h2 > .tt-icone{ flex:none; width:20px; height:20px; fill:var(--tt-accent-fg); }
+.tt-tarefas-acoes{ position:absolute; top:2px; right:2px; display:flex; gap:4px; }
+.tt-tarefas-corpo[data-carregando] > *{ visibility:hidden; }
+.tt-tarefas-sub{ margin:10px 0 0; color:var(--tt-fg-2); }
+.tt-tarefas-sub[hidden]{ display:none; }
+.tt-tarefas-lista{ display:flex; flex-direction:column; gap:4px; margin:8px 0 0; padding:0; list-style:none; }
+.tt-tarefas-lista:empty{ display:none; }
+.tt-tarefa{
+  display:flex; align-items:center; gap:4px; min-height:41px; padding:0 4px;
+  background:var(--tt-bg-surface); border:1px solid var(--tt-border); border-radius:var(--tt-r-ctl);
+  color:var(--tt-fg-1);
+}
+/* O círculo: um botão sutil de 32 px com o desenho de 20 px (o CheckBox
+   redondo do To Do). A concluída tem o check preenchido no accent. */
+.tt-tarefa-check{ flex:none; width:32px; padding:0; background:transparent; border-color:transparent; color:inherit; }
+.tt-tarefa-check:hover{ background:var(--tt-subtle-hover); }
+.tt-tarefa-check:active{ background:var(--tt-subtle-press); border-color:transparent; }
+.tt-tarefa-check .tt-icone{ width:20px; height:20px; }
+.tt-tarefa[data-feita] .tt-tarefa-check{ color:var(--tt-accent-fg); }
+.tt-tarefa-titulo{ flex:1 1 50%; min-width:0; padding:8px 4px; overflow-wrap:break-word; }
+.tt-tarefa[data-feita] .tt-tarefa-titulo,
+.tt-tarefa[data-esmaecida]{ color:var(--tt-fg-2); }
+/* "Escolher para a sessão": um botão de texto no accent, sem fundo (o
+   HyperlinkButton do Relógio), que aparece com o mouse em cima da linha ou o
+   foco do teclado nela; o da escolhida fica sempre à vista. Fora disso, ele
+   e o "x" saem do layout (e não só da vista): o título fica com a linha
+   toda, como no Relógio. */
+.tt-tarefa-escolher{
+  flex:0 1 auto; max-width:50%; height:auto; min-height:32px; padding:4px 8px;
+  white-space:normal; text-align:right;
+  background:transparent; border-color:transparent; color:var(--tt-accent-fg);
+}
+.tt-tarefa-escolher:hover{ background:var(--tt-subtle-hover); }
+.tt-tarefa-escolher:active{ background:var(--tt-subtle-press); border-color:transparent; }
+.tt-tarefa-apagar{ flex:none; }
+.tt-tarefa:not(:hover, :focus-within) :is(.tt-tarefa-escolher[aria-pressed="false"], .tt-tarefa-apagar){ display:none; }
+/* A escolhida e, na sessão, a da sessão: a borda no accent, como a da
+   escolha do tema (M24). Na sessão, a borda marca a tarefa sem depender só da
+   cor do texto (no Lite, o fg-1 e o fg-2 ficam perto). */
+.tt-tarefa:is([data-escolhida], [data-focada]){ border-color:var(--tt-accent); box-shadow:inset 0 0 0 1px var(--tt-accent); }
+.tt-tarefa-escolher[aria-pressed="true"]{ font-weight:600; }
+/* No Lite, o fg-2 sobre o hover cai abaixo de 4,5:1 (4.4): o texto da linha
+   com o mouse em cima volta ao --tt-fg-2-on-ctl. */
+.tt-tarefa:hover{ background-image:linear-gradient(var(--tt-subtle-hover), var(--tt-subtle-hover)); }
+.tt-tarefa[data-esmaecida]:hover, .tt-tarefa[data-feita]:hover .tt-tarefa-titulo{ color:var(--tt-fg-2-on-ctl); }
+.tt-tarefa-nova{ margin-top:8px; }
+.tt-tarefa-nova[hidden]{ display:none; }
+.tt-tarefa-nova .tt-texto{ width:100%; }
+.tt-tarefas-erro{ margin:8px 0 0; color:var(--tt-fg-1); }
+.tt-tarefas-erro[hidden]{ display:none; }
+/* Sem tarefas: "Mantenha o rumo", uma linha de apoio e o botão, centrados. */
+.tt-tarefas-vazio{ display:flex; flex-direction:column; align-items:center; gap:4px; margin-top:36px; text-align:center; }
+.tt-tarefas-vazio[hidden]{ display:none; }
+.tt-tarefas-vazio-titulo{ margin:0; font:var(--tt-type-body-strong); }
+.tt-tarefas-vazio-texto{ margin:0 0 12px; max-width:320px; color:var(--tt-fg-2); }
+@media (forced-colors:active){
+  .tt-tarefa:is([data-escolhida], [data-focada]){ border-color:Highlight; box-shadow:inset 0 0 0 1px Highlight; }
+}
+
 /* M24: Configurações (src/views/settings.js). A seção tem o cabeçalho e os
    cartões do Relógio (clock-focus-sessions-settings.png): o título da seção em
    Body Strong, 30 px abaixo do que vem antes e 6 px acima do cartão, e o

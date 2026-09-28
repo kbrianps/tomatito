@@ -970,4 +970,121 @@
     await doisQuadros();
     return document.adoptedStyleSheets.length;
   };
+
+  // M30: o cartão "Tarefas" (src/views/focus/card-tasks.js). __ttTarefas()
+  // devolve o cabeçalho (ícone, título, "+" e "…"), o subtítulo, o estado
+  // vazio, o campo, o aviso e cada linha (título, marcada, escolhida, da
+  // sessão, altura, raio, fundo e cor do texto), mais as cores dos tokens
+  // resolvidas no cartão (para comparar), o que o foco do teclado tem, os
+  // focus_start e os períodos da prévia. __ttTarefasAdicionar('A', 'B') abre
+  // o campo pelo "+" e envia cada título como o Enter; __ttTarefasAcao(id,
+  // 'concluir'|'escolher'|'apagar') clica no botão da linha;
+  // __ttTarefasIniciar({ minimo, passos }) clica em "Iniciar sessão de foco"
+  // (com o seletor no mínimo e mais alguns passos, se pedido);
+  // __ttTarefasEsc() manda o Esc ao campo; __ttTarefasRolar() traz o cartão
+  // para o meio da tela (as capturas do roteiro aninhado).
+  const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+  window.__ttTarefas = () => {
+    const cartao = document.querySelector('[data-cartao="tarefas"]');
+    if (!cartao) return null;
+    const r1 = (v) => Math.round(v * 10) / 10;
+    const token = (nome) => {
+      const el = document.createElement('span');
+      el.style.color = `var(${nome})`;
+      cartao.append(el);
+      const c = getComputedStyle(el).color;
+      el.remove();
+      return c;
+    };
+    const visivel = (el) => Boolean(el) && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+    const h2 = cartao.querySelector('h2');
+    const sub = cartao.querySelector('[data-sub]');
+    const vazio = cartao.querySelector('[data-vazio]');
+    const campo = cartao.querySelector('[data-campo]');
+    const erro = cartao.querySelector('[data-erro]');
+    const ativo = document.activeElement;
+    return {
+      cabecalho: {
+        icone: h2.querySelector('svg')?.dataset?.icone ?? null,
+        titulo: h2.textContent,
+        botoes: [...cartao.querySelectorAll('.tt-tarefas-acoes button')].map((b) => ({ nome: b.getAttribute('aria-label'), icone: b.querySelector('svg')?.dataset?.icone ?? null })),
+      },
+      subtitulo: visivel(sub) ? sub.textContent : null,
+      corDoSubtitulo: getComputedStyle(sub).color,
+      vazio: visivel(vazio) ? [...vazio.querySelectorAll('p, button')].map((e) => e.textContent.trim()) : null,
+      campo: visivel(campo) ? { valor: campo.value, focado: ativo === campo, nome: campo.getAttribute('aria-label') } : null,
+      aviso: erro.hidden ? null : erro.textContent,
+      linhas: [...cartao.querySelectorAll('[data-tarefa]')].map((li) => {
+        const cs = getComputedStyle(li);
+        const check = li.querySelector('[data-acao="concluir"]');
+        const tit = li.querySelector('.tt-tarefa-titulo');
+        return {
+          id: Number(li.dataset.tarefa),
+          titulo: tit.textContent,
+          marcada: check.getAttribute('aria-checked') === 'true',
+          nomeDoCheck: document.getElementById(check.getAttribute('aria-labelledby'))?.textContent ?? null,
+          escolhida: li.hasAttribute('data-escolhida'),
+          daSessao: li.hasAttribute('data-focada'),
+          escolher: li.querySelector('[data-acao="escolher"]')?.textContent ?? null,
+          altura: r1(li.getBoundingClientRect().height),
+          raio: cs.borderTopLeftRadius,
+          fundo: cs.backgroundColor,
+          corDoTitulo: getComputedStyle(tit).color,
+          icone: check.querySelector('svg')?.dataset?.icone ?? null,
+          preenchido: Boolean(check.querySelector('svg[data-preenchido]')),
+        };
+      }),
+      tokens: { superficie: token('--tt-bg-surface'), fg1: token('--tt-fg-1'), fg2: token('--tt-fg-2') },
+      foco: ativo && ativo !== document.body ? (ativo.getAttribute('aria-label') ?? ativo.dataset?.acao ?? ativo.textContent?.trim() ?? ativo.localName) : null,
+      inicios: structuredClone(window.__TOMATITO_PREVIEW_INICIOS__ ?? []),
+      periodos: structuredClone(window.__TOMATITO_PREVIEW_PERIODOS__ ?? []),
+    };
+  };
+  window.__ttTarefasAdicionar = async (...titulos) => {
+    const cartao = document.querySelector('[data-cartao="tarefas"]');
+    const campo = cartao.querySelector('[data-campo]');
+    if (campo.closest('[hidden]')) cartao.querySelector('[data-adicionar]').click();
+    await doisQuadros();
+    for (const t of titulos) {
+      campo.value = t;
+      campo.form.requestSubmit();
+      await esperar(150);
+    }
+    await doisQuadros();
+    return window.__ttTarefas();
+  };
+  window.__ttTarefasAcao = async (id, acao) => {
+    document.querySelector(`[data-cartao="tarefas"] [data-tarefa="${id}"] [data-acao="${acao}"]`).click();
+    await esperar(200);
+    await doisQuadros();
+    return window.__ttTarefas();
+  };
+  window.__ttTarefasIniciar = async ({ minimo = false, passos = 0 } = {}) => {
+    // minimo: o seletor no mínimo (Home), 1 min no preparo do debug; passos:
+    // depois, quantos ↑ (de 1 em 1 min no debug).
+    const sel = document.querySelector('.tt-seletor-campo');
+    const tecla = (key) => sel.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    if (minimo) tecla('Home');
+    for (let i = 0; i < passos; i++) tecla('ArrowUp');
+    document.querySelector('[data-iniciar]').click();
+    await esperar(300);
+    await doisQuadros();
+    return window.__ttTarefas();
+  };
+  window.__ttTarefasRolar = async () => {
+    document.querySelector('[data-cartao="tarefas"]').scrollIntoView({ block: 'center' });
+    await doisQuadros();
+    return window.__ttTarefas();
+  };
+  window.__ttTarefasSabotar = async () => {
+    document.querySelectorAll('[data-esmaecida]').forEach((e) => e.removeAttribute('data-esmaecida'));
+    await doisQuadros();
+    return window.__ttTarefas();
+  };
+  window.__ttTarefasEsc = async () => {
+    const campo = document.querySelector('[data-cartao="tarefas"] [data-campo]');
+    campo.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await doisQuadros();
+    return window.__ttTarefas();
+  };
 })();

@@ -771,3 +771,28 @@ Ainda não há tela (o cartão "Tarefas" é do M30); a conferência é pelo DevT
 5. [ ] Feche o app (Ctrl+C no terminal) e abra de novo. `await i('task_list')` devolve as mesmas duas.
 6. [ ] (A virada, opcional) Anote a hora atual, por exemplo 14:37. `await i('settings_set', { patch: { resetHour: 15 } })` (a hora cheia seguinte) e, depois das 15:00, `await i('task_list')`: só a pendente. Volte com `resetHour: 0`.
 7. [ ] Para zerar: feche o app e `rm ~/.local/share/io.github.kbrianps.tomatito.dev/stats.sqlite`.
+
+
+
+## M30. Card "Tarefas"
+
+O que foi conferido de forma automática (28/09/2026):
+
+- Prévia (`node scripts/preview/tarefas.mjs`), no Chrome headless e no WebKitGTK: vazio, o campo, três tarefas pelo Enter, Esc, escolher, iniciar com o `taskId`, as cores na sessão, concluir, o período com o `taskId`, os quatro temas.
+- Roteiro aninhado `cartao-tarefas` (app de verdade, `TOMATITO_SPEED=60`, 19 conferências): o "Pronto quando" inteiro, com o banco lido de fora mostrando o período com o `task_id`, e a lista igual depois de reabrir.
+
+O que só você consegue ver: o hover revelando "Escolher para a sessão" e o "x" sem a linha pular demais, o Tab passando pelos botões da linha, e o leitor de tela.
+
+### Para conferir (uns 5 minutos)
+
+1. [ ] `cd ~/dev/tomatito && rm -f ~/.local/share/io.github.kbrianps.tomatito.dev/stats.sqlite && npm run dev:app` (o banco do `.dev` começa limpo). Role até o cartão "Tarefas": aparece "Mantenha o rumo" e o botão "Adicionar tarefa".
+2. [ ] Clique em "Adicionar tarefa". A caixa abre com o cursor. Digite "Ler o capítulo 3" e Enter; "Lista 2" e Enter; "Revisar as notas" e Enter. As três aparecem, na ordem, e a caixa continua aberta e vazia. Esc fecha a caixa e o foco vai para o "+".
+3. [ ] Passe o mouse sobre "Lista 2": aparecem "Escolher para a sessão" e o "x". Clique em "Escolher para a sessão": vira "Escolhida" e a linha ganha a borda na cor de destaque.
+4. [ ] No seletor, deixe 1 min (Home) e clique em "Iniciar sessão de foco". O subtítulo vira "Você está focando em"; "Lista 2" fica com a borda e as outras duas, com o texto mais apagado. O "Escolher" some das linhas.
+5. [ ] Clique no círculo de "Lista 2": vira o check preenchido e o texto fica apagado, no mesmo lugar.
+6. [ ] Espere a sessão acabar (1 min). O subtítulo volta a "Escolha uma tarefa para a sessão".
+7. [ ] Feche o app (Ctrl+C no terminal) e abra de novo. As três tarefas continuam, "Lista 2" marcada.
+8. [ ] (O `task_id` no banco, opcional) Com o app fechado: `python3 -c "import sqlite3,os; c=sqlite3.connect(os.path.expanduser('~/.local/share/io.github.kbrianps.tomatito.dev/stats.sqlite')); print(list(c.execute('SELECT kind, completed, task_id FROM periods')))"` mostra `[('focus', 1, 2)]`.
+9. [ ] Teclado: Tab a partir do "+" passa pelo "…", pelo círculo, "Escolher para a sessão" e o "x" de cada linha, com o anel de foco. Espaço no círculo marca e desmarca.
+10. [ ] (Opcional, Orca ligado: Super+Alt+S) O círculo é lido como caixa de seleção com o título da tarefa ("Ler o capítulo 3, caixa de seleção, não marcada").
+11. [ ] No "…", "Apagar concluídas" apaga "Lista 2". Para zerar: feche o app e apague o `stats.sqlite` do passo 1.

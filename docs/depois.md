@@ -40,3 +40,5 @@ Formato: data, marco em que surgiu e uma linha sobre a ideia.
 - 27/09/2026, M17: seletor de minutos como o NumberBox por completo: repetir o passo com o chevron apertado (o `RepeatButton`), a roda do mouse com o campo focado e a digitação de um valor. Hoje: teclas, chevrons e Home/End.
 - 27/09/2026, M18: "Pular o próximo intervalo" de dentro do foco (o foco atual continua e emenda no seguinte). Hoje o `focus_skip` pula a fase atual, e o item "Pular intervalo" do menu só vale num intervalo; exigiria um comando novo no núcleo.
 - 27/09/2026, M18: o botão de janela compacta que o Relógio mostra no canto do cartão em sessão. No Tomatito, o papel é do Full (M50 a M57); decidir lá se o cartão ganha um atalho para ele.
+- 28/09/2026, M30: trocar a tarefa no meio da sessão (exigiria um comando `focus_set_task` no núcleo e um período novo a partir da troca).
+- 28/09/2026, M30: renomear uma tarefa (duplo clique no título) e arrastar para reordenar. Hoje só adicionar, concluir, escolher e apagar.

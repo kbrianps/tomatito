@@ -10,21 +10,25 @@ import { arquivos, comparar, copiar, ICONES } from './copy-icons.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./copy-icons.mjs', import.meta.url));
 
-test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenchidos) mais o pincel do M24 e o aviso de erro do M28', () => {
+test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenchidos) mais o pincel do M24, o aviso de erro do M28 e o check preenchido do M30', () => {
   assert.deepEqual(
     ICONES.map((i) => i.nome),
     [
       'target', 'hourglass_half', 'timer', 'settings',
       'play', 'pause', 'stop',
       'flag', 'arrow_reset', 'more_horizontal', 'edit', 'add', 'chevron_up', 'chevron_down',
-      'circle', 'checkmark_circle', 'dismiss', 'save',
+      'circle', 'checkmark_circle', 'checkmark_circle', 'dismiss', 'save',
       'paint_brush',
       'error_circle',
     ],
   );
-  for (const { nome, estilo } of ICONES) {
-    assert.equal(estilo, ['play', 'pause', 'stop', 'error_circle'].includes(nome) ? 'filled' : 'regular', nome);
+  for (const [i, { nome, estilo }] of ICONES.entries()) {
+    // M30: o segundo checkmark_circle é o preenchido da tarefa concluída.
+    const preenchido = ['play', 'pause', 'stop', 'error_circle'].includes(nome) || (nome === 'checkmark_circle' && ICONES.findIndex((x) => x.nome === nome) !== i);
+    assert.equal(estilo, preenchido ? 'filled' : 'regular', nome);
   }
+  // M30: os desenhos das tarefas, na grade de 20.
+  for (const a of ['circle_20_regular.svg', 'checkmark_circle_20_regular.svg', 'checkmark_circle_20_filled.svg']) assert.ok(arquivos().includes(a), a);
   // M24: o ícone do cartão do tema, na grade de 20 do SettingsCard.
   assert.ok(arquivos().includes('paint_brush_20_regular.svg'));
   // Os do painel continuam os do M09 (a mesma grade de 16).
@@ -34,7 +38,7 @@ test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenc
 test('src/assets/icons/ está em dia com a lista e com o pacote (node scripts/copy-icons.mjs --conferir)', () => {
   const r = spawnSync(process.execPath, [SCRIPT, '--conferir'], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /em dia \(25 ícones\)/);
+  assert.match(r.stdout, /em dia \(28 ícones\)/);
 });
 
 test('copiar() numa pasta vazia, de novo sem mudar nada, e a conferência acusando cada diferença', () => {

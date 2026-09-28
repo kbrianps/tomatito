@@ -122,6 +122,26 @@ export default Object.freeze({
       cancelar: 'Cancelar',
       erro: 'Não foi possível salvar. Tente de novo.',
     }),
+    // M30: o conteúdo do cartão "Tarefas" (views/focus/card-tasks.js). O
+    // subtítulo muda na sessão ("Você está focando em"); o estado vazio é o
+    // "Mantenha o rumo" do Relógio.
+    listaDeTarefas: Object.freeze({
+      adicionar: 'Adicionar tarefa',
+      mais: 'Mais opções das tarefas',
+      escolha: 'Escolha uma tarefa para a sessão',
+      focando: 'Você está focando em',
+      semTarefa: 'Sessão sem tarefa escolhida',
+      vazio: 'Mantenha o rumo',
+      vazioTexto: 'Anote o que precisa fazer e escolha uma tarefa para cada sessão.',
+      campo: 'Nova tarefa',
+      dicaDoCampo: 'Adicionar uma tarefa',
+      escolher: 'Escolher para a sessão',
+      escolhida: 'Escolhida',
+      apagar: 'Apagar tarefa',
+      apagarConcluidas: 'Apagar concluídas',
+      erro: 'Não foi possível salvar a tarefa. Tente de novo.',
+      longa: 'O título pode ter até 255 caracteres.',
+    }),
   }),
   // Tela Configurações. M24: a seção Aparência (views/settings.js), com o
   // cartão do tema, como o SettingsCard do Relógio (ícone, título e

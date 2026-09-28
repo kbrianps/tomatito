@@ -46,8 +46,12 @@ export const ICONES = Object.freeze([
   { nome: 'add', estilo: 'regular', tamanhos: [16] },
   { nome: 'chevron_up', estilo: 'regular', tamanhos: [16] },
   { nome: 'chevron_down', estilo: 'regular', tamanhos: [16] },
-  { nome: 'circle', estilo: 'regular', tamanhos: [16] },
-  { nome: 'checkmark_circle', estilo: 'regular', tamanhos: [16] },
+  // M30: as tarefas. O círculo da pendente e o check preenchido da concluída
+  // na grade de 20 (o tamanho do CheckBox redondo do Relógio), e o contorno
+  // do check, na de 20, no cabeçalho do cartão
+  { nome: 'circle', estilo: 'regular', tamanhos: [16, 20] },
+  { nome: 'checkmark_circle', estilo: 'regular', tamanhos: [16, 20] },
+  { nome: 'checkmark_circle', estilo: 'filled', tamanhos: [20] },
   { nome: 'dismiss', estilo: 'regular', tamanhos: [16] },
   { nome: 'save', estilo: 'regular', tamanhos: [16] },
   // Configurações: o ícone do cartão "Tema do aplicativo" (M24), na grade de

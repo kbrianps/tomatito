@@ -84,9 +84,11 @@ export function acaoDoEspaco(foco) {
 
 /**
  * Liga o cartão já desenhado ao store. `icone` é o do components/icon.js (o
- * glifo do botão de pausar muda com o estado). Devolve a função de limpeza.
+ * glifo do botão de pausar muda com o estado). `tarefa()` (M30) devolve o id
+ * da tarefa escolhida no cartão de tarefas, ou null, e vai no `focus_start`.
+ * Devolve a função de limpeza.
  */
-export function ligar(cartao, store, { icone = () => '' } = {}) {
+export function ligar(cartao, store, { icone = () => '', tarefa = () => null } = {}) {
   const preparo = cartao.querySelector('[data-preparo]');
   const blocoAndamento = cartao.querySelector('[data-andamento]');
   const fraseEl = cartao.querySelector('[data-frase]');
@@ -109,7 +111,7 @@ export function ligar(cartao, store, { icone = () => '' } = {}) {
     if (iniciar.disabled) return;
     iniciar.disabled = true;
     try {
-      await store.comando('iniciar', sel.valor, { pularIntervalos: marcado() });
+      await store.comando('iniciar', sel.valor, { pularIntervalos: marcado(), tarefa: tarefa() ?? null });
     } catch (erro) {
       console.warn('[foco]', erro);
     } finally {
