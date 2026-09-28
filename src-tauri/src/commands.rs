@@ -16,6 +16,7 @@ use crate::engine::{CommandError, Engine, TauriSink};
 use crate::events::{self, FocusDto, StateDto};
 use crate::settings::{Settings, SettingsError, SettingsStore};
 use crate::stats::{Stats, StatsDto};
+use crate::tasks::{TaskDto, TaskError};
 
 pub type AppEngine = Arc<Engine<TauriSink>>;
 
@@ -143,4 +144,50 @@ pub fn stats_get(
         s.reset_hour,
         s.daily_goal_minutes,
     )
+}
+
+/// O "agora" e a hora de zerar que as tarefas usam: o relógio do motor
+/// (acelerado no `TOMATITO_SPEED`) e as configurações, como o `stats_get`.
+fn agora_e_zerar(engine: &AppEngine, settings: &SettingsStore) -> (tomatito_core::EpochMs, u8) {
+    (engine.now(), settings.get().reset_hour)
+}
+
+/// `task_list` (M29): as pendentes e as concluídas desde a virada de hoje,
+/// na ordem de criação (`tasks.rs`).
+#[tauri::command]
+pub fn task_list(
+    engine: State<'_, AppEngine>,
+    stats: State<'_, Arc<Stats>>,
+    settings: State<'_, SettingsStore>,
+) -> Result<Vec<TaskDto>, TaskError> {
+    let (agora, zerar) = agora_e_zerar(&engine, &settings);
+    stats.task_list(agora, &TimeZone::system(), zerar)
+}
+
+/// `task_add{title}` (M29): devolve a tarefa criada, pendente.
+#[tauri::command]
+pub fn task_add(
+    engine: State<'_, AppEngine>,
+    stats: State<'_, Arc<Stats>>,
+    title: String,
+) -> Result<TaskDto, TaskError> {
+    stats.task_add(&title, engine.now())
+}
+
+/// `task_complete{id, done}` (M29): `done` é opcional e vale `true`; com
+/// `false`, a tarefa volta a pendente. Devolve a tarefa como ficou.
+#[tauri::command]
+pub fn task_complete(
+    engine: State<'_, AppEngine>,
+    stats: State<'_, Arc<Stats>>,
+    id: i64,
+    done: Option<bool>,
+) -> Result<TaskDto, TaskError> {
+    stats.task_complete(id, done.unwrap_or(true), engine.now())
+}
+
+/// `task_delete{id}` (M29).
+#[tauri::command]
+pub fn task_delete(stats: State<'_, Arc<Stats>>, id: i64) -> Result<(), TaskError> {
+    stats.task_delete(id)
 }

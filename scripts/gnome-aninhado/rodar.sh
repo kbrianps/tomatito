@@ -16,6 +16,7 @@
 #   bash scripts/gnome-aninhado/rodar.sh estatisticas      # M26: períodos no SQLite e o stats_get
 #   bash scripts/gnome-aninhado/rodar.sh progresso         # M27: o cartão "Progresso diário" e o reinício
 #   bash scripts/gnome-aninhado/rodar.sh meta              # M28: o diálogo "Editar meta diária"
+#   bash scripts/gnome-aninhado/rodar.sh tarefas           # M29: os comandos task_* e a virada do dia
 #   bash scripts/gnome-aninhado/instalado.sh               # o Tomatito instalado (M21b)
 #
 # Pré-requisito: o binário de debug atualizado (`cd src-tauri && cargo build`).

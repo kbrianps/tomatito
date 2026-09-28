@@ -62,5 +62,22 @@ export const estatisticas = Object.freeze({
   obter: () => invoke('stats_get'),
 });
 
+/**
+ * Tarefas (src-tauri/src/tasks.rs, M29). Cada tarefa é
+ * `{ id, title, createdAt, doneAt }`, com os horários em ms UTC e `doneAt`
+ * nulo nas pendentes. `listar` traz as pendentes e as concluídas desde a
+ * virada de hoje (a hora de zerar), na ordem de criação: a concluída fica na
+ * lista, marcada, até a virada seguinte. `adicionar` e `concluir` resolvem
+ * com a tarefa como ficou; `concluir(id, false)` volta a pendente. Os erros
+ * vêm como `{ code, message }`, com `code` em `emptyTitle`, `titleTooLong`
+ * (mais de 255 caracteres), `notFound` ou `storage`.
+ */
+export const tarefas = Object.freeze({
+  listar: () => invoke('task_list'),
+  adicionar: (titulo) => invoke('task_add', { title: titulo }),
+  concluir: (id, feita = true) => invoke('task_complete', { id, done: feita }),
+  apagar: (id) => invoke('task_delete', { id }),
+});
+
 /** Ouve um evento do Rust; `cb` recebe só o conteúdo. Devolve o `unlisten`. */
 export const ouvir = (evento, cb) => listen(evento, (e) => cb(e.payload));

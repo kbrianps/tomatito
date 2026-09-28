@@ -7,6 +7,7 @@ mod notify;
 mod persist;
 mod settings;
 mod stats;
+mod tasks;
 mod window;
 
 use std::sync::Arc;
@@ -71,6 +72,10 @@ pub fn run() {
             commands::focus_stop,
             commands::sound_test,
             commands::stats_get,
+            commands::task_list,
+            commands::task_add,
+            commands::task_complete,
+            commands::task_delete,
         ])
         .run(context)
         .expect("error while building tauri application");

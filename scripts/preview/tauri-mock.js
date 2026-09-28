@@ -19,6 +19,8 @@
 //   ?meta=N                     M27: a meta diária (dailyGoalMinutes; 0 =
 //                               desativada)
 //   ?zerar=H                    M28: a hora de zerar (resetHour)
+//   ?tarefas=A|B*|C             M29: as tarefas iniciais, separadas por "|";
+//                               um "*" no fim marca a concluída
 // M28: com window.__TOMATITO_PREVIEW_RECUSAR_CONFIGURACOES__ = true (pelo
 // --eval), o settings_set rejeita como o Rust quando não consegue gravar.
 // As globais do initialization_script (?pref, ?ultimo e ?plataforma) não são
@@ -199,6 +201,27 @@ if (params.has('zerar')) configuracoes.resetHour = Number(params.get('zerar'));
 normalizarConfiguracoes(configuracoes);
 window.__TOMATITO_PREVIEW_CONFIGURACOES__ = configuracoes;
 
+// M29: as tarefas da prévia (?tarefas=A|B*|C).
+const tarefas = { proximo: 1, lista: [] };
+function tarefa(titulo, agora) {
+  const limpo = String(titulo ?? '').replace(/\p{Cc}/gu, ' ').trim();
+  if (!limpo) throw { code: 'emptyTitle', message: 'o título da tarefa está vazio' };
+  if ([...limpo].length > 255) throw { code: 'titleTooLong', message: 'o título passou de 255 caracteres' };
+  return { id: tarefas.proximo++, title: limpo, createdAt: agora, doneAt: null };
+}
+function acharTarefa(id) {
+  const t = tarefas.lista.find((x) => x.id === id);
+  if (!t) throw { code: 'notFound', message: `não existe a tarefa ${id}` };
+  return t;
+}
+for (const item of (params.get('tarefas') ?? '').split('|').filter(Boolean)) {
+  const feita = item.endsWith('*');
+  const t = tarefa(feita ? item.slice(0, -1) : item, Date.now());
+  if (feita) t.doneAt = Date.now();
+  tarefas.lista.push(t);
+}
+window.__TOMATITO_PREVIEW_TAREFAS__ = tarefas;
+
 const handlers = {
   get_state: () => ({ focus: retratoFoco(), speed: velocidade, setup: preparo, settings: structuredClone(configuracoes) }),
   settings_get: () => structuredClone(configuracoes),
@@ -247,6 +270,28 @@ const handlers = {
       dailyGoalMinutes: configuracoes.dailyGoalMinutes,
       resetHour: configuracoes.resetHour,
     };
+  },
+  // M29: as tarefas numa lista em memória, com as regras do tasks.rs (título
+  // limpo, de 1 a 255 caracteres; ordem de criação). A virada do dia não é
+  // simulada: as concluídas ficam na lista.
+  task_list: () => (window.__TOMATITO_PREVIEW_COMANDOS__.push('task_list'), structuredClone(tarefas.lista)),
+  task_add: ({ title }) => {
+    window.__TOMATITO_PREVIEW_COMANDOS__.push(`task_add:${title}`);
+    const t = tarefa(title, agoraMotor());
+    tarefas.lista.push(t);
+    return structuredClone(t);
+  },
+  task_complete: ({ id, done = true }) => {
+    window.__TOMATITO_PREVIEW_COMANDOS__.push(`task_complete:${id}:${done}`);
+    const t = acharTarefa(id);
+    t.doneAt = done ? (t.doneAt ?? agoraMotor()) : null;
+    return structuredClone(t);
+  },
+  task_delete: ({ id }) => {
+    window.__TOMATITO_PREVIEW_COMANDOS__.push(`task_delete:${id}`);
+    acharTarefa(id);
+    tarefas.lista = tarefas.lista.filter((t) => t.id !== id);
+    return null;
   },
   'plugin:window|is_maximized': () => janela.maximizada,
   'plugin:window|toggle_maximize': () => {

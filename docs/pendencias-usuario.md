@@ -79,6 +79,9 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 49. **Metas por extenso** (desde o M28). O plano lista as opções como "30 min, 1 h, 1 h 30, 2 h…"; o diálogo usa "30 minutos", "1 hora", "1 hora e 30 minutos", "2 horas"…, como o próprio cartão e o catálogo do M12 (`docs/decisoes.md`, M28, item 2). Se preferir a forma curta, é trocar os textos em `t.foco.metaDiaria.opcoes` (`src/lib/i18n/pt-BR.js`).
 50. **Diálogo da meta no Windows** (desde o M28). No WebView2: repetir a seção M28 de `docs/verificacao-manual.md`, com atenção ao Esc (a lista aberta fecha só a lista; o segundo Esc fecha o diálogo) e ao Narrador lendo "Editar meta diária, diálogo" e as duas listas pelo nome. O Chrome headless (o mesmo Chromium) já passou nas mesmas conferências, com teclas de verdade. Entra na ida ao Windows do M48.
 
+51. **Conferir o M29 pelo DevTools** (desde o M29, opcional). Uns 3 minutos, com os passos em `docs/verificacao-manual.md`, seção M29: adicionar, concluir e apagar tarefas pelo console e ver a lista sobreviver ao reinício. Ainda não há tela (o cartão "Tarefas" é do M30), e o roteiro aninhado `tarefas` já passou nas mesmas conferências com o app de verdade (22 ok).
+52. **Onde fica a tarefa concluída?** (desde o M29). A lista segue a ordem de criação, e concluir não move a linha (ela fica no lugar, marcada, até a virada). Se preferir as concluídas no fim da lista, diga: é uma linha no `task_list` (`docs/decisoes.md`, M29, item 5).
+
 ## Resolvidas
 
 - **Nome** (1.2, item 1): continua "Tomatito".

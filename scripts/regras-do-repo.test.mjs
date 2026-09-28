@@ -220,6 +220,24 @@ test('estatísticas: rusqlite com bundled, banco aberto antes do motor e stats_g
   assert.match(ler('src/lib/ipc.js'), /invoke\('stats_get'\)/);
 });
 
+// M29: as tarefas na tabela `tasks` do mesmo stats.sqlite, com os comandos task_* da 3.5.
+test('tarefas: tasks.rs no banco das estatísticas e os quatro comandos task_* registrados', () => {
+  const lib = ler('src-tauri/src/lib.rs');
+  assert.match(lib, /^mod tasks;$/m);
+  for (const c of ['task_list', 'task_add', 'task_complete', 'task_delete']) {
+    assert.match(lib, new RegExp(`commands::${c},`), `${c} registrado`);
+    assert.match(ler('src-tauri/src/commands.rs'), new RegExp(`pub fn ${c}\\(`));
+  }
+  const tasks = ler('src-tauri/src/tasks.rs');
+  assert.match(tasks, /impl Stats \{/, 'as tarefas usam a conexão do stats.sqlite');
+  assert.match(tasks, /done_at IS NULL OR done_at >= \?1/, 'as concluídas saem na virada do dia');
+  const ipcJs = ler('src/lib/ipc.js');
+  assert.match(ipcJs, /invoke\('task_list'\)/);
+  assert.match(ipcJs, /invoke\('task_add', \{ title: titulo \}\)/);
+  assert.match(ipcJs, /invoke\('task_complete', \{ id, done: feita \}\)/);
+  assert.match(ipcJs, /invoke\('task_delete', \{ id \}\)/);
+});
+
 test('capabilities/main.json com as permissões da seção 3.8, só para a main', () => {
   const arquivos = readdirSync(new URL('../src-tauri/capabilities', import.meta.url)).sort();
   assert.ok(!arquivos.includes('default.json'), 'o default.json do template sai');

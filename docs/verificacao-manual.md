@@ -751,3 +751,23 @@ O que só você consegue ver: o diálogo na sua tela, o Tab e o anel de foco, e 
 10. [ ] (Opcional, Orca ligado: Super+Alt+S) Ao abrir, o Orca lê "Editar meta diária, diálogo" e a lista "Meta diária" com o valor.
 11. [ ] Para voltar ao padrão: salve "2 horas" e "00:00".
 
+
+
+## M29. Tarefas: dados
+
+O que foi conferido de forma automática (28/09/2026):
+
+- `cargo test`: adicionar, concluir e desmarcar, títulos recusados, apagar, reabrir o arquivo e as concluídas sumindo na virada do dia (meia-noite e hora de zerar às 04:00).
+- Roteiro aninhado `tarefas` (app de verdade, `TOMATITO_SPEED=60`, 22 conferências): os quatro comandos, os erros, o período gravado com o `task_id`, a lista igual depois de reabrir e a virada acelerada (as concluídas somem, as pendentes ficam, o banco guarda tudo).
+
+Ainda não há tela (o cartão "Tarefas" é do M30); a conferência é pelo DevTools.
+
+### Para conferir (uns 3 minutos)
+
+1. [ ] `cd ~/dev/tomatito && npm run dev:app`. Clique com o botão direito na página, **Inspecionar elemento**, aba **Console**, e cole: `const i = window.__TAURI_INTERNALS__.invoke`.
+2. [ ] `await i('task_add', { title: 'Ler o capítulo 3' })` e `await i('task_add', { title: 'Lista 2' })`: cada um devolve a tarefa, com `doneAt: null`.
+3. [ ] `await i('task_complete', { id: 1 })` e depois `await i('task_list')`: as duas aparecem, a primeira com `doneAt` preenchido, no mesmo lugar.
+4. [ ] `await i('task_add', { title: '   ' })`: rejeita com `code: "emptyTitle"`.
+5. [ ] Feche o app (Ctrl+C no terminal) e abra de novo. `await i('task_list')` devolve as mesmas duas.
+6. [ ] (A virada, opcional) Anote a hora atual, por exemplo 14:37. `await i('settings_set', { patch: { resetHour: 15 } })` (a hora cheia seguinte) e, depois das 15:00, `await i('task_list')`: só a pendente. Volte com `resetHour: 0`.
+7. [ ] Para zerar: feche o app e `rm ~/.local/share/io.github.kbrianps.tomatito.dev/stats.sqlite`.
