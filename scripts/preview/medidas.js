@@ -377,6 +377,10 @@
   //   __ttDesabilitados()    as cores dos componentes Fluent desabilitados e
   //                          dos rótulos ao lado deles
   //   __ttSabotarDica()      controle negativo: a dica perde a âncora
+  //   __ttPintura('fluent-option')
+  //                          (M22) o fundo e o texto que o elemento pinta agora,
+  //                          e se ele está em :hover e :active (o ponteiro da
+  //                          prévia, --hover e --press)
   window.__ttCor = (token, prop = 'background-color') => {
     const el = document.createElement('div');
     el.style.setProperty(prop, `var(${token})`);
@@ -775,5 +779,11 @@
     await new Promise((r) => setTimeout(r, 50));
     await doisQuadros();
     return { cancelado: e.defaultPrevented, ...window.__ttEstadoDaSessao() };
+  };
+  window.__ttPintura = (seletor) => {
+    const el = document.querySelector(seletor);
+    if (!el) throw new Error(`elemento não encontrado: ${seletor}`);
+    const s = getComputedStyle(el);
+    return { fundo: s.backgroundColor, cor: s.color, hover: el.matches(':hover'), ativo: el.matches(':active') };
   };
 })();

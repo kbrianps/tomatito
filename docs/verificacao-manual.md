@@ -605,3 +605,22 @@ O que não dá para conferir daqui: o ícone e o nome no **seu** dock e no Alt+T
 5. [ ] Feche o `npm run dev:app` (Ctrl+C no terminal). A janela instalada continua aberta; feche-a pelo X.
 6. [ ] Para atualizar o de uso diário depois de outros marcos: `bash scripts/instalar-uso-diario.sh` (gera e reinstala; uns 2 min).
 
+## M22. Tingimento do Lite e do Suave
+
+O que foi conferido de forma automática (28/09/2026):
+
+- `npm test` (os testes do gerador e do `contrast.mjs`), `node scripts/contrast.mjs` (138 pares no mínimo ou acima, a tabela 4.4 igual à do plano e a tabela nova dos estados dos controles Fluent).
+- `node scripts/preview/tingimento.mjs`: no Chrome headless, com o ponteiro de verdade, o item de menu e a opção da lista no hover e apertados, nos cinco temas (20 conferências): vermelhos no Lite e no Full, rosados no Suave, os cinzas de fábrica no Claro e no Escuro, texto a 4,5:1 ou mais.
+- `node scripts/preview/temas-fluent.mjs`: os tokens gerados na página, no Chrome e no WebKitGTK fora da tela; a bolinha do switch ligado do Lite é `rgb(173, 61, 50)`.
+
+O que não dá para conferir daqui: o seu olho sobre os tons, com o mouse de verdade, no WebKitGTK do app.
+
+### Para conferir (uns 3 minutos)
+
+1. [ ] `cd ~/dev/tomatito && npm run dev:app`. Na janela, clique com o botão direito na área vazia → **Inspecionar** → aba **Console**, e rode `location.hash = '#/dev'`.
+2. [ ] No Lite (o padrão), role até **Menus** e clique em **Sessão**. Passe o mouse em **Encerrar sessão**: o fundo fica um vermelho um pouco mais claro que o cartão (o mesmo tom do hover dos botões), sem nenhum cinza. Aperte e segure o botão do mouse (sem soltar, e arraste para fora antes de soltar, para não encerrar nada): fica um pouco mais escuro que o hover, ainda vermelho.
+3. [ ] Em **Listas suspensas**, abra **Meta diária** e passe o mouse nas opções: o mesmo vermelho do hover. Aperte e segure uma opção: o fundo fica um vermelho mais escuro (o da camada de conteúdo). Solte fora da lista e feche com Esc.
+4. [ ] Em **Opções**, o switch ligado tem a bolinha **vermelha** sobre o creme (antes do M22, cinza-escura), e a caixa marcada de **Caixas de seleção**, o "✓" vermelho.
+5. [ ] No console, `document.documentElement.dataset.theme = 'suave'`. Repita os passos 2 e 3: os fundos do hover e do apertado são rosados bem claros (discretos, como o próprio tema), nunca um cinza neutro. O switch ligado fica vermelho com a bolinha quase branca.
+6. [ ] (Controle) `document.documentElement.dataset.theme = 'light'` e depois `'dark'`: aqui, os hovers continuam cinzas, como no Relógio do Windows. Diga o que achou (`docs/pendencias-usuario.md`, item 35) e feche o `dev:app` (Ctrl+C no terminal).
+

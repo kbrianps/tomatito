@@ -1,4 +1,4 @@
-// M11: tokens do Fluent gerados no build (PLANO.md, 4.5). O gerador é testado
+// M11 e M22: tokens do Fluent gerados no build e o tingimento (PLANO.md, 4.5). O gerador é testado
 // em memória e numa pasta temporária, sem depender do arquivo gerado no
 // repositório (que fica fora do git). A troca de tema na página de verdade é
 // conferida pelo scripts/preview/temas-fluent.mjs e pelo roteiro
@@ -11,7 +11,8 @@ import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createDarkTheme, createLightTheme } from '@fluentui/tokens';
-import { escrever, gerarCss, lerRampa, SAIDA } from './build-theme-css.mjs';
+import { ancorasDoTema, ehNeutroTingivel, escrever, gerarCss, lerRampa, SAIDA, temasFluent, tintNeutrals } from './build-theme-css.mjs';
+import { lerHex, oklabParaOklch, oklabParaSrgb, paraHex, srgbParaOklab } from './oklch.mjs';
 
 const ler = (caminho) => readFileSync(new URL(`../${caminho}`, import.meta.url), 'utf8');
 const tokensCss = ler('src/styles/tokens.css');
@@ -44,22 +45,135 @@ test('a rampa vem do :root do tokens.css e é a da seção 4.5', () => {
   assert.throws(() => lerRampa(tokensCss.replace('--tt-tomato-90:#CA523C;', '--tt-tomato-90:red;')), /não é #RRGGBB/);
 });
 
-test('M11: light e suave recebem o createLightTheme; dark, lite e full, o createDarkTheme, sem tingir', () => {
+test('M22: light recebe o createLightTheme e dark, o createDarkTheme; suave, lite e full, os tingidos', () => {
   const r = regras(gerarCss(tokensCss));
-  assert.equal(r.length, 2, 'um bloco por tema do Fluent');
-  assert.deepEqual(r[0].seletores, ['[data-theme="light"]', '[data-theme="suave"]']);
-  assert.deepEqual(r[1].seletores, ['[data-theme="dark"]', '[data-theme="lite"]', '[data-theme="full"]']);
+  assert.equal(r.length, 4, 'um bloco por fonte');
+  assert.deepEqual(r.map((b) => b.seletores), [
+    ['[data-theme="light"]'],
+    ['[data-theme="suave"]'],
+    ['[data-theme="dark"]'],
+    ['[data-theme="lite"]', '[data-theme="full"]'],
+  ]);
   const claro = createLightTheme(TOMATE);
   const escuro = createDarkTheme(TOMATE);
-  for (const [bloco, tema] of [[r[0].decl, claro], [r[1].decl, escuro]]) {
+  const temas = temasFluent(tokensCss);
+  for (const [bloco, tema] of [[r[0].decl, claro], [r[1].decl, temas.suave], [r[2].decl, escuro], [r[3].decl, temas.lite]]) {
     assert.deepEqual(Object.keys(bloco), Object.keys(tema), 'os mesmos tokens, na mesma ordem');
     for (const [k, v] of Object.entries(tema)) assert.equal(bloco[k], String(v), k);
   }
   assert.ok(Object.keys(claro).length > 400, `cerca de 470 tokens por tema (${Object.keys(claro).length})`);
-  // Os valores que a ponte não cobre e que o M06 anotou (docs/decisoes.md, M06, item 5).
-  assert.equal(r[1].decl.colorNeutralForegroundInverted, '#242424');
+  // Claro e Escuro continuam de fábrica (os valores que o M06 e o M11 anotaram).
+  assert.equal(r[2].decl.colorNeutralForegroundInverted, '#242424');
   assert.equal(r[0].decl.colorNeutralForegroundInverted, '#ffffff');
   assert.equal(r[0].decl.borderRadiusCircular, '10000px');
+  assert.match(gerarCss(tokensCss), /\/\* lite, full: tintNeutrals\(createDarkTheme\(--tt-tomato-\*\), cores do lite\) \*\//);
+});
+
+// Croma e matiz no OKLCH de uma cor opaca do gerado.
+const lch = (valor) => oklabParaOklch(srgbParaOklab(lerHex(valor)));
+
+test('M22: o tingimento só troca os neutros; o resto (rampa, status, sombras, medidas) fica igual', () => {
+  const temas = temasFluent(tokensCss);
+  for (const [fonte, base] of [['lite', createDarkTheme(TOMATE)], ['suave', createLightTheme(TOMATE)]]) {
+    let trocados = 0;
+    for (const [k, v] of Object.entries(base)) {
+      if (ehNeutroTingivel(k, v)) trocados++;
+      else assert.equal(temas[fonte][k], v, `${fonte}: ${k} não é neutro e não muda`);
+    }
+    assert.ok(trocados > 100, `${fonte}: ${trocados} neutros tingidos`);
+    assert.equal(temas[fonte].colorNeutralShadowAmbient, base.colorNeutralShadowAmbient);
+    assert.equal(temas[fonte].colorBrandBackground, base.colorBrandBackground);
+    assert.equal(temas[fonte].colorTransparentBackgroundHover, 'transparent');
+  }
+  // o alfa dos rgba fica
+  assert.equal(temas.lite.colorNeutralStrokeAlpha, 'rgba(255, 248, 246, 0.1)');
+  assert.match(temas.lite.colorNeutralBackgroundAlpha, /^rgba\(\d+, \d+, \d+, 0\.5\)$/);
+});
+
+test('M22: as âncoras caem nas cores do tema, as mesmas da ponte', () => {
+  const temas = temasFluent(tokensCss);
+  const esperado = {
+    lite: { colorNeutralBackground3: '#a5342b', colorNeutralBackground2: '#aa392f', colorNeutralBackground1: '#af4135',
+      colorNeutralForeground3: '#fbe4dc', colorNeutralForeground1: '#fff8f6',
+      // --tt-ctl-hover (branco a 10%) sobre o cartão, a âncora a mais do Lite
+      colorNeutralBackground1Hover: '#b75449' },
+    suave: { colorNeutralBackground3: '#f6ece9', colorNeutralBackground2: '#faf3f1', colorNeutralBackground1: '#fffaf9',
+      colorNeutralForeground3: '#6a514c', colorNeutralForeground1: '#22110e' },
+  };
+  for (const [fonte, tokens] of Object.entries(esperado)) {
+    for (const [k, v] of Object.entries(tokens)) assert.equal(temas[fonte][k], v, `${fonte}: ${k}`);
+    assert.deepEqual(ancorasDoTema(tokensCss, fonte).map(([k]) => k), Object.keys(tokens));
+  }
+  // a âncora acompanha o tokens.css
+  const outro = tokensCss.replace('--tt-bg-card:#AF4135;', '--tt-bg-card:#B04236;');
+  assert.equal(temasFluent(outro).lite.colorNeutralBackground1, '#b04236');
+});
+
+test('M22, "Pronto quando": hover, pressionado e selecionado avermelhados no Lite e rosados no Suave, sem cinza', () => {
+  const temas = temasFluent(tokensCss);
+  const ESTADOS = [
+    'colorNeutralBackground1Hover', 'colorNeutralBackground1Pressed', 'colorNeutralBackground1Selected',
+    'colorSubtleBackgroundHover', 'colorSubtleBackgroundPressed', 'colorSubtleBackgroundSelected',
+    'colorNeutralStroke1Hover', 'colorNeutralStroke1Pressed',
+    'colorNeutralStrokeAccessibleHover', 'colorNeutralStrokeAccessiblePressed',
+    'colorNeutralForeground3Hover', 'colorNeutralForeground3Pressed',
+  ];
+  for (const k of ESTADOS) {
+    const [, cLite, hLite] = lch(temas.lite[k]);
+    const [, cSuave, hSuave] = lch(temas.suave[k]);
+    // Lite: os fundos são vermelhos (croma de 0,13 a 0,15, como o cartão); os traços e textos claros, cremes.
+    assert.ok(cLite >= (k.includes('Background') ? 0.1 : 0.015), `Lite ${k} ${temas.lite[k]}: croma ${cLite.toFixed(3)}`);
+    assert.ok(hLite >= 20 && hLite <= 45, `Lite ${k}: matiz ${hLite.toFixed(0)}°`);
+    // Suave: croma baixo como o do próprio tema (o fundo #F6ECE9 tem 0,012), matiz rosado.
+    assert.ok(cSuave >= 0.01, `Suave ${k} ${temas.suave[k]}: croma ${cSuave.toFixed(3)}`);
+    assert.ok(hSuave >= 20 && hSuave <= 45, `Suave ${k}: matiz ${hSuave.toFixed(0)}°`);
+    // e nenhum sobrou igual ao cinza de fábrica
+    assert.notEqual(temas.lite[k], createDarkTheme(TOMATE)[k]);
+    assert.notEqual(temas.suave[k], createLightTheme(TOMATE)[k]);
+  }
+  // Nenhum neutro opaco ficou cinza. O branco do Suave vira o cartão (#FFFAF9, croma 0,0055);
+  // o preto puro (#000000, só no Suave: o foco de fábrica e véus a 5–50%) fica preto.
+  for (const [fonte, base] of [['lite', createDarkTheme(TOMATE)], ['suave', createLightTheme(TOMATE)]]) {
+    for (const [k, v] of Object.entries(base)) {
+      if (!ehNeutroTingivel(k, v) || !/^#/.test(v)) continue;
+      const [L, C, h] = lch(temas[fonte][k]);
+      if (fonte === 'suave' && v === '#000000') {
+        assert.equal(L < 0.01, true, k);
+        continue;
+      }
+      assert.ok(C >= 0.005 && h >= 20 && h <= 45, `${fonte}: ${k} ${v} → ${temas[fonte][k]} (croma ${C.toFixed(4)}, ${h.toFixed(0)}°)`);
+    }
+  }
+});
+
+test('tintNeutrals: interpola entre as âncoras no OKLab e recusa âncoras que não servem', () => {
+  const tema = { colorA: '#202020', colorB: '#808080', colorC: '#ffffff', colorD: 'rgba(128, 128, 128, 0.3)',
+    colorE: '#123456', colorNeutralShadowKey: 'rgba(0,0,0,0.28)', colorF: 'transparent', fontSize: '14px' };
+  const t = tintNeutrals(tema, [['colorA', '#a5342b'], ['colorC', '#fff8f6']]);
+  assert.equal(t.colorA, '#a5342b');
+  assert.equal(t.colorC, '#fff8f6');
+  const [L, , h] = lch(t.colorB);
+  const [La] = srgbParaOklab(lerHex('#a5342b'));
+  assert.ok(L > La && L < 0.99 && h > 20 && h < 45, `o meio fica entre o vermelho e o creme (${t.colorB})`);
+  assert.match(t.colorD, /^rgba\(\d+, \d+, \d+, 0\.3\)$/);
+  assert.equal(t.colorD.replace(/, 0\.3\)$/, ')').replace('rgba', 'rgb'), `rgb(${lerHex(t.colorB).join(', ')})`);
+  for (const k of ['colorE', 'colorNeutralShadowKey', 'colorF', 'fontSize']) assert.equal(t[k], tema[k], k);
+  assert.throws(() => tintNeutrals(tema, [['colorA', '#a5342b'], ['colorE', '#fff8f6']]), /não é um neutro opaco/);
+  assert.throws(() => tintNeutrals({ ...tema, colorG: '#202020' }, [['colorA', '#a5342b'], ['colorG', '#fff8f6']]), /mesmo L/);
+});
+
+test('OKLab à mão: valores de referência, ida e volta e croma reduzido fora da gama', () => {
+  const perto = (a, b, tol = 2e-4) => a.forEach((v, k) => assert.ok(Math.abs(v - b[k]) < tol, `${a} ≈ ${b}`));
+  perto(srgbParaOklab([255, 255, 255]), [1, 0, 0]);
+  perto(srgbParaOklab([0, 0, 0]), [0, 0, 0]);
+  perto(srgbParaOklab([255, 0, 0]), [0.62796, 0.22486, 0.12585]); // CSS Color 4
+  for (const hex of ['#a5342b', '#fff8f6', '#22110e', '#f6ece9', '#123456']) {
+    assert.equal(paraHex(oklabParaSrgb(srgbParaOklab(lerHex(hex)))), hex);
+  }
+  // um vermelho mais saturado que o sRGB: o L e o matiz ficam, o croma cai até caber
+  const [L, C, h] = oklabParaOklch([0.6, 0.3, 0.15]);
+  const [L2, C2, h2] = oklabParaOklch(srgbParaOklab(oklabParaSrgb([0.6, 0.3, 0.15])));
+  assert.ok(Math.abs(L2 - L) < 0.01 && Math.abs(h2 - h) < 2 && C2 < C, `${L2} ${C2} ${h2}`);
 });
 
 test('o gerado só tem tokens do Fluent: nenhum --tt-*, nada que feche a regra, sem :root nem html', () => {

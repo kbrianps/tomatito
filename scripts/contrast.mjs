@@ -5,7 +5,10 @@
 // na ordem da 4.2 e define o --tt-ring-progress), aplica a cascata num modelo
 // pequeno do DOM, resolve os var(), compõe os rgba sobre o cartão (ou sobre o
 // fundo, na navegação) e calcula a razão de contraste da WCAG 2.2 para cada par
-// da tabela 4.4, nos quatro temas normais e nos três estados do tomate.
+// da tabela 4.4, nos quatro temas normais e nos três estados do tomate. Desde o
+// M22, monta também o fluent-tokens.gen.css em memória (primeiro, como no
+// <head>) e confere o que os componentes Fluent pintam no hover, no
+// pressionado e no selecionado (LINHAS_FLUENT), contra o mínimo.
 //
 //   node scripts/contrast.mjs [--sem-referencia]
 //
@@ -20,6 +23,7 @@
 // a tabela. A luminância usa o limiar 0,04045 do sRGB (o mesmo do pal/lib.py).
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { gerarCss } from './build-theme-css.mjs';
 
 // ---------------------------------------------------------------------------
 // 1. CSS: regras e declarações
@@ -437,6 +441,32 @@ export const LINHAS_DESABILITADOS = [
     minTexto: 'isento (1.4.11)' },
 ];
 
+// Estados dos controles Fluent (M22): o hover, o pressionado e o selecionado
+// que os componentes pintam com os tokens do fluent-tokens.gen.css (tingidos no
+// Lite e no Suave, de fábrica no Claro e no Escuro), com o texto que o próprio
+// componente usa em cada estado (pela ponte, onde ela cobre). Fora da tabela
+// 4.4: só o mínimo conta. Os fundos são opacos no gerado.
+export const LINHAS_FLUENT = [
+  { par: 'Texto de item e opção / hover', frente: '--colorNeutralForeground2Hover',
+    fundos: [['--colorNeutralBackground1Hover']], min: 4.5 },
+  // pressionado: a opção usa o Background1Pressed, e o item de menu, o Background1Selected
+  { par: 'Texto pressionado / opção · item de menu', frente: '--colorNeutralForeground2Pressed',
+    fundos: [['--colorNeutralBackground1Pressed'], ['--colorNeutralBackground1Selected']], min: 4.5 },
+  { par: 'Texto 1 / fundo sutil (hover · pressionado · selecionado)', frente: '--colorNeutralForeground1',
+    fundos: [['--colorSubtleBackgroundHover'], ['--colorSubtleBackgroundPressed'], ['--colorSubtleBackgroundSelected']],
+    min: 4.5 },
+  { par: 'Traço de controle no hover / cartão', frente: '--colorNeutralStrokeAccessibleHover',
+    fundos: [['--tt-bg-card']], min: 3, minTexto: '3 (critério 1.4.11)' },
+  { par: 'Traço de controle pressionado / cartão', frente: '--colorNeutralStrokeAccessiblePressed',
+    fundos: [['--tt-bg-card']], min: 3, minTexto: '3 (critério 1.4.11)' },
+  { par: 'Bolinha do switch desligado no hover / cartão', frente: '--colorNeutralForeground3Hover',
+    fundos: [['--tt-bg-card']], min: 3, minTexto: '3 (critério 1.4.11)' },
+  { par: 'Bolinha e glifo marcados / accent (repouso · hover · pressionado)', frente: '--colorNeutralForegroundInverted',
+    fundos: [['--tt-accent'], ['--tt-accent-hover'], ['--tt-accent-pressed']], min: 3, minTexto: '3 (critério 1.4.11)' },
+  { par: 'Traço da lista suspensa / cartão', frente: '--colorNeutralStroke1',
+    fundos: [['--tt-bg-card']], min: null, minTexto: 'decorativo (o traço de baixo é o de controle)' },
+];
+
 // Tomate (Full), medido sobre o corpo, nos três estados da .stage.
 export const ESTADOS = [
   ['focus', 'Foco'],
@@ -535,6 +565,7 @@ export function conferir(css, { referencia = true } = {}) {
   const linhas = tabelaPorTema(LINHAS);
   const camada = tabelaPorTema(LINHAS_CAMADA);
   const desabilitados = tabelaPorTema(LINHAS_DESABILITADOS);
+  const fluent = regras.some((r) => r.origem === ORIGEM_GERADO) ? tabelaPorTema(LINHAS_FLUENT) : [];
 
   const cadeiaTomate = (estado, extra = {}) => [
     { tag: 'html', atributos: { 'data-theme': 'full', 'data-platform': 'linux', ...extra } },
@@ -560,18 +591,18 @@ export function conferir(css, { referencia = true } = {}) {
     return { par: nota.par, valor: virgula(medida.direto[0]), nota: nota.nota };
   });
 
-  return { linhas, camada, desabilitados, tomate, notas, falhas, divergencias };
+  return { linhas, camada, desabilitados, fluent, tomate, notas, falhas, divergencias };
 }
 
 // ---------------------------------------------------------------------------
 // 6. Saída
 // ---------------------------------------------------------------------------
 
-export function formatar({ linhas, camada, desabilitados = [], tomate, notas }) {
+export function formatar({ linhas, camada, desabilitados = [], fluent = [], tomate, notas }) {
   const tabela = (cabecalho, corpo) =>
     [cabecalho, cabecalho.map(() => '---'), ...corpo].map((l) => `| ${l.join(' | ')} |`).join('\n');
   return [
-    'Contrastes (WCAG 2.2), calculados de src/styles/tokens.css e bridge.css',
+    'Contrastes (WCAG 2.2), calculados de src/styles/tokens.css e bridge.css (e dos tokens do Fluent gerados)',
     '',
     tabela(
       ['Par', ...TEMAS.map(([, nome]) => nome), 'Mínimo'],
@@ -592,6 +623,17 @@ export function formatar({ linhas, camada, desabilitados = [], tomate, notas }) 
       desabilitados.map((l) => [l.par, ...l.celulas, l.minimo]),
     ),
     '',
+    ...(fluent.length
+      ? [
+          'Estados dos controles Fluent (M22), com os tokens gerados (tingidos no Lite e no Suave): conferidos só contra o mínimo.',
+          '',
+          tabela(
+            ['Par', ...TEMAS.map(([, nome]) => nome), 'Mínimo'],
+            fluent.map((l) => [l.par, ...l.celulas, l.minimo]),
+          ),
+          '',
+        ]
+      : []),
     'Tomate (Full), medido sobre o corpo:',
     '',
     tabela(['Estado', ...COLUNAS_TOMATE.map((c) => c.par)], tomate.map((t) => [t.estado, ...t.celulas])),
@@ -601,9 +643,13 @@ export function formatar({ linhas, camada, desabilitados = [], tomate, notas }) 
 }
 
 const ARQUIVOS = ['src/styles/tokens.css', 'src/styles/bridge.css'];
+// O fluent-tokens.gen.css fica fora do git (4.5): é gerado aqui, em memória, a
+// partir do mesmo tokens.css, e entra primeiro, como no <head> (4.2).
+export const ORIGEM_GERADO = 'src/styles/fluent-tokens.gen.css (gerado em memória)';
 
 export function lerArquivos(raiz = new URL('..', import.meta.url)) {
-  return ARQUIVOS.map((origem) => ({ origem, texto: readFileSync(new URL(origem, raiz), 'utf8') }));
+  const arquivos = ARQUIVOS.map((origem) => ({ origem, texto: readFileSync(new URL(origem, raiz), 'utf8') }));
+  return [{ origem: ORIGEM_GERADO, texto: gerarCss(arquivos[0].texto) }, ...arquivos];
 }
 
 function principal(argv) {
@@ -623,8 +669,9 @@ function principal(argv) {
   console.log(formatar(resultado));
   const { falhas, divergencias } = resultado;
   const pares =
-    `${(LINHAS.length + LINHAS_CAMADA.length) * TEMAS.length + COLUNAS_TOMATE.length * ESTADOS.length + NOTAS_TOMATE.length} pares ` +
+    `${(LINHAS.length + LINHAS_CAMADA.length + LINHAS_FLUENT.length) * TEMAS.length + COLUNAS_TOMATE.length * ESTADOS.length + NOTAS_TOMATE.length} pares ` +
     `(${LINHAS.length} × ${TEMAS.length} temas, mais ${LINHAS_CAMADA.length} × ${TEMAS.length} da camada de conteúdo, ` +
+    `${LINHAS_FLUENT.length} × ${TEMAS.length} dos estados dos controles Fluent, ` +
     `${COLUNAS_TOMATE.length} × ${ESTADOS.length} estados do tomate e ${NOTAS_TOMATE.length} medidas soltas)`;
   console.log('');
   if (falhas.length) console.error(`Abaixo do mínimo (${falhas.length}):\n${falhas.map((f) => `  - ${f}`).join('\n')}`);

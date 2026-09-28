@@ -15,8 +15,10 @@ import {
   lerCor,
   lerRegras,
   lerSeletor,
+  ORIGEM_GERADO,
   sobre,
 } from './contrast.mjs';
+import { gerarCss } from './build-theme-css.mjs';
 
 const script = fileURLToPath(new URL('./contrast.mjs', import.meta.url));
 const perto = (a, b, casas = 2) => Math.abs(a - b) < 10 ** -casas / 2;
@@ -115,9 +117,11 @@ test('mutações: token abaixo do mínimo falha; token mudado sem atualizar a ta
   const trocar = (de, para) =>
     original.map((f) => (f.texto.includes(de) ? { ...f, texto: f.texto.replace(de, para) } : f));
 
-  // o Lite deixa de usar o fg-1 sobre controles: o fg-2 fica em 3,94–4,25
+  // o Lite deixa de usar o fg-1 sobre controles: o fg-2 fica em 3,94–4,25 (e, desde o M22,
+  // o texto do item de menu pressionado, que a ponte liga ao --tt-fg-2-on-ctl, também cai)
   const semAjuste = conferir(trocar('--tt-fg-2-on-ctl:var(--tt-fg-1);', '--tt-fg-2-on-ctl:var(--tt-fg-2);'));
-  assert.equal(semAjuste.falhas.length, 3);
+  assert.equal(semAjuste.falhas.length, 4);
+  assert.match(semAjuste.falhas.join('\n'), /Lite, Texto pressionado \/ opção · item de menu: .* \(valor 2\)/);
   assert.match(semAjuste.falhas.join('\n'), /Lite, Texto 2 \/ cartão \+ selecionado: 3,94 < 4,5/);
 
   // um passo a mais no cinza do texto 2 do Claro: continua acima do mínimo, mas a tabela muda
@@ -171,4 +175,29 @@ test('M13: desabilitados, só de registro (sem mínimo), com o Lite e o Suave na
   assert.deepEqual(mudado.falhas, []);
   // ...mas a tabela mostra o 1,00.
   assert.equal(mudado.desabilitados.find((l) => l.par === 'Texto desabilitado / cartão').celulas[0], '1,00');
+});
+
+test('M22: estados dos controles Fluent, com os tokens gerados e tingidos, conferidos contra o mínimo', () => {
+  const arquivos = lerArquivos();
+  assert.equal(arquivos[0].origem, ORIGEM_GERADO, 'o gerado entra primeiro, como no <head>');
+  const r = conferir(arquivos);
+  assert.deepEqual(r.falhas, []);
+  const linha = (par) => r.fluent.find((l) => l.par === par).celulas;
+  // Lite: o hover cai no --tt-ctl-hover (4,57, como o botão); o pressionado do item de menu
+  // (o Background1Selected) fica entre ele e o cartão
+  assert.deepEqual(linha('Texto de item e opção / hover'), ['4,57', '15,67', '15,96', '10,86']);
+  assert.equal(linha('Texto pressionado / opção · item de menu')[0], '6,00 · 4,77');
+  assert.equal(linha('Bolinha e glifo marcados / accent (repouso · hover · pressionado)')[0], '5,57 · 5,10 · 4,46');
+  // Um hover de controle mais claro no Lite arrasta o hover do Fluent junto, e a conferência acusa
+  const tokens = arquivos.find((f) => f.origem.endsWith('tokens.css'));
+  const claro = tokens.texto.replace('--tt-ctl-hover:rgb(255 255 255/.10);', '--tt-ctl-hover:rgb(255 255 255/.20);');
+  assert.notEqual(claro, tokens.texto);
+  const mudado = conferir([
+    { origem: ORIGEM_GERADO, texto: gerarCss(claro) },
+    ...arquivos.slice(1).map((f) => (f === tokens ? { ...f, texto: claro } : f)),
+  ]);
+  assert.match(mudado.falhas.join('\n'), /Lite, Texto de item e opção \/ hover: \d,\d\d < 4,5/);
+  // sem o gerado, a tabela não sai (e a 4.4 continua a mesma)
+  const semGerado = conferir(arquivos.slice(1));
+  assert.deepEqual([semGerado.fluent, semGerado.falhas, semGerado.divergencias], [[], [], []]);
 });

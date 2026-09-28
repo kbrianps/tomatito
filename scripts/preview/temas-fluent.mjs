@@ -9,8 +9,8 @@
 // No #/dev, troca o data-theme do <html> entre lite, suave, light, dark e full
 // (a troca que se faz no DevTools) e confere, em cada tema:
 //   - os tokens do Fluent no <html> são exatamente os do bloco gerado para o
-//     tema (createLightTheme para light e suave; createDarkTheme para dark,
-//     lite e full), menos os que a ponte cobre, que valem o --tt-* do tema;
+//     tema (createLightTheme para light; createDarkTheme para dark; desde o
+//     M22, tintNeutrals deles para o suave e para o lite e o full), menos os que a ponte cobre, que valem o --tt-* do tema;
 //     nenhum token sobrando (como o do setTheme provisório, que saiu);
 //   - as cores que os fluent-switch e fluent-radio pintam (no elemento e no
 //     indicador dentro do shadow root) são as do tema;
@@ -25,13 +25,14 @@ import { spawn } from 'node:child_process';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { TEMAS as FONTES, lerRampa, temasFluent } from '../build-theme-css.mjs';
+import { TEMAS as FONTES, temasFluent } from '../build-theme-css.mjs';
 
 const AQUI = fileURLToPath(new URL('.', import.meta.url));
 const RAIZ = new URL('../..', import.meta.url);
 const ler = (caminho) => readFileSync(new URL(caminho, RAIZ), 'utf8');
-// Tema → "claro" ou "escuro", a mesma tabela do gerador (o teste dele confere
-// os seletores de cada bloco contra o plano).
+// Tema → fonte ("claro", "escuro" e, desde o M22, os tingidos "lite" e
+// "suave"), a mesma tabela do gerador (o teste dele confere os seletores de
+// cada bloco contra o plano).
 const FONTE = Object.fromEntries(FONTES);
 
 /** Tokens do Fluent que a ponte cobre: { colorNeutralBackground1: 'tt-bg-card', … }. */
@@ -43,7 +44,7 @@ export function lerPonte(css = ler('src/styles/bridge.css')) {
   return ponte;
 }
 
-const gerados = temasFluent(lerRampa(ler('src/styles/tokens.css')));
+const gerados = temasFluent(ler('src/styles/tokens.css'));
 const ponte = lerPonte();
 // Cada motor serializa os valores do seu jeito (o WebKitGTK troca aspas simples
 // por duplas nas listas de fontes); fora isso, o texto é o mesmo.
