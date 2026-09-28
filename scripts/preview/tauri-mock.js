@@ -28,6 +28,10 @@
 //                               min) com o estado dado: id@restante correndo,
 //                               id~restante pausado (ms; negativo depois do
 //                               zero, já com o fim disparado)
+//   ?cronometro=running@1870[&voltas=900,1500]
+//                               M34: o cronômetro correndo (ou paused@ms,
+//                               pausado) com o decorrido dado, em ms, e as
+//                               voltas (o total em cada uma)
 // M28: com window.__TOMATITO_PREVIEW_RECUSAR_CONFIGURACOES__ = true (pelo
 // --eval), o settings_set rejeita como o Rust quando não consegue gravar.
 // As globais do initialization_script (?pref, ?ultimo e ?plataforma) não são
@@ -297,8 +301,47 @@ const comandoDoTempo = (nome, f) => (args) => {
   return mudouTempos();
 };
 
+// M34: o cronômetro, como o stopwatch.rs e o engine.rs: started_at mais o
+// acumulado, no relógio do motor, com o tt://stopwatch a cada transição.
+const crono = { seq: 0, run: 'idle', inicio: null, acumulado: 0, voltas: [] };
+const decorridoDoCrono = (agora = agoraMotor()) => crono.acumulado + (crono.run === 'running' ? Math.max(0, agora - crono.inicio) : 0);
+function retratoDoCrono() {
+  const at = agoraMotor();
+  return { seq: crono.seq, at, status: crono.run, startedAt: crono.run === 'running' ? crono.inicio : null,
+    accumulatedMs: crono.acumulado, elapsedMs: decorridoDoCrono(at), laps: [...crono.voltas] };
+}
+{
+  const m = /^(running|paused)@(\d+)$/.exec(params.get('cronometro') ?? '');
+  if (m) {
+    Object.assign(crono, { seq: 1, run: m[1], acumulado: m[1] === 'paused' ? Number(m[2]) : 0, inicio: m[1] === 'running' ? agoraMotor() - Number(m[2]) : null });
+    crono.voltas = (params.get('voltas') ?? '').split(',').filter(Boolean).map(Number);
+  }
+}
+window.__TOMATITO_PREVIEW_CRONOMETRO__ = crono;
+const comandoDoCrono = (nome, f) => () => {
+  window.__TOMATITO_PREVIEW_COMANDOS__.push(nome);
+  f();
+  crono.seq++;
+  const r = retratoDoCrono();
+  setTimeout(() => emit('tt://stopwatch', r));
+  return r;
+};
+
 const handlers = {
-  get_state: () => ({ focus: retratoFoco(), speed: velocidade, setup: preparo, timers: retratoDosTempos(), settings: structuredClone(configuracoes) }),
+  get_state: () => ({ focus: retratoFoco(), speed: velocidade, setup: preparo, timers: retratoDosTempos(), stopwatch: retratoDoCrono(), settings: structuredClone(configuracoes) }),
+  stopwatch_start: comandoDoCrono('stopwatch_start', () => {
+    if (crono.run === 'running') throw { code: 'alreadyRunning', message: 'o cronômetro já está correndo' };
+    Object.assign(crono, { run: 'running', inicio: agoraMotor() });
+  }),
+  stopwatch_pause: comandoDoCrono('stopwatch_pause', () => {
+    if (crono.run !== 'running') throw { code: 'notRunning', message: 'o cronômetro não está correndo' };
+    Object.assign(crono, { acumulado: decorridoDoCrono(), run: 'paused', inicio: null });
+  }),
+  stopwatch_lap: comandoDoCrono('stopwatch_lap', () => {
+    if (crono.run !== 'running') throw { code: 'notRunning', message: 'o cronômetro não está correndo' };
+    crono.voltas.push(decorridoDoCrono());
+  }),
+  stopwatch_reset: comandoDoCrono('stopwatch_reset', () => Object.assign(crono, { run: 'idle', inicio: null, acumulado: 0, voltas: [] })),
   timer_start: comandoDoTempo('timer_start', ({ id }) => {
     const tm = acharTempo(id);
     if (tm.run === 'running') throw { code: 'alreadyRunning', message: 'o temporizador já está correndo' };

@@ -50,7 +50,8 @@ pub fn run() {
                     som,
                     stats,
                     // M33: o `state.json`, gravado a cada transição dos
-                    // temporizadores; carregar ao abrir é do M40.
+                    // temporizadores (e do cronômetro, M34); carregar ao
+                    // abrir é do M40.
                     Arc::new(state_file::StateStore::new(&dados)),
                 ),
             ));
@@ -90,6 +91,10 @@ pub fn run() {
             commands::timer_start,
             commands::timer_pause,
             commands::timer_reset,
+            commands::stopwatch_start,
+            commands::stopwatch_pause,
+            commands::stopwatch_lap,
+            commands::stopwatch_reset,
         ])
         .run(context)
         .expect("error while building tauri application");

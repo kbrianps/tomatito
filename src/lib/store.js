@@ -19,6 +19,15 @@
 // `timers` do get_state e a resposta dos comandos `timer_*`), com o `seq`
 // próprio. O restante de cada um que corre é estimado do mesmo jeito, e segue
 // negativo depois do zero (o Rust não manda tick de temporizador).
+//
+// M34: e o retrato do cronômetro (`tt://stopwatch`, o `stopwatch` do
+// get_state e a resposta dos comandos `stopwatch_*`), também com `seq`
+// próprio. Correndo, o decorrido sai do próprio retrato: `accumulatedMs +
+// (Date.now() − startedAt)`, o mesmo relógio de parede do Rust, sem
+// estimativa nem tick, e por isso não desvia nem perde tempo com a janela
+// escondida. Com o relógio acelerado (`TOMATITO_SPEED`, só no debug), o
+// relógio do Rust não é o do JS, e o decorrido é estimado como o dos
+// temporizadores.
 
 import * as ipc from './ipc.js';
 
@@ -55,6 +64,18 @@ export function criarStore({ ipc, eventos, agora = () => Date.now() }) {
   let temporizadores = null;
   const basesDosTemporizadores = new Map();
   const ouvintesDosTemporizadores = new Set();
+  // M34: o cronômetro e a base da estimativa (só usada no relógio acelerado).
+  let cronometro = null;
+  let baseDoCronometro = null;
+  const ouvintesDoCronometro = new Set();
+
+  function aplicarCronometro(dto) {
+    if (!dto || typeof dto.status !== 'string' || (cronometro && dto.seq < cronometro.seq)) return false;
+    cronometro = dto;
+    baseDoCronometro = dto.status === 'running' ? { decorridoMs: dto.elapsedMs, em: agora() } : null;
+    for (const f of ouvintesDoCronometro) f(cronometro);
+    return true;
+  }
 
   function aplicarTemporizadores(dto) {
     if (!dto || !Array.isArray(dto.timers) || (temporizadores && dto.seq < temporizadores.seq)) return false;
@@ -96,6 +117,7 @@ export function criarStore({ ipc, eventos, agora = () => Date.now() }) {
         if (preparoValido(estado?.setup)) preparo = Object.freeze({ ...estado.setup });
         aplicarFoco(estado?.focus);
         aplicarTemporizadores(estado?.timers);
+        aplicarCronometro(estado?.stopwatch);
       })
       .finally(() => {
         pedido = null;
@@ -162,6 +184,41 @@ export function criarStore({ ipc, eventos, agora = () => Date.now() }) {
         throw erro;
       }
     },
+    /** M34: o último retrato do cronômetro (null até o get_state). */
+    get cronometro() {
+      return cronometro;
+    },
+    /**
+     * M34: o decorrido do cronômetro em ms, agora; null sem retrato. Nunca
+     * menos que o decorrido do retrato.
+     */
+    decorridoDoCronometro() {
+      if (!cronometro) return null;
+      if (cronometro.status !== 'running') return cronometro.elapsedMs;
+      if (velocidade === 1 && Number.isFinite(cronometro.startedAt)) {
+        return Math.max(cronometro.elapsedMs, cronometro.accumulatedMs + Math.max(0, agora() - cronometro.startedAt));
+      }
+      return cronometro.elapsedMs + Math.max(0, agora() - baseDoCronometro.em) * velocidade;
+    },
+    /** M34: `cb(retrato)` a cada retrato novo do cronômetro. */
+    assinarCronometro(cb) {
+      ouvintesDoCronometro.add(cb);
+      return () => ouvintesDoCronometro.delete(cb);
+    },
+    /**
+     * M34: um comando do cronômetro (`iniciar`, `pausar`, `volta`,
+     * `redefinir`, do `ipc.cronometro`): aplica o retrato da resposta.
+     * Recusado, pede um get_state e rejeita com o erro.
+     */
+    async comandoDoCronometro(nome) {
+      try {
+        aplicarCronometro(await ipc.cronometro[nome]());
+      } catch (erro) {
+        void sincronizar();
+        throw erro;
+      }
+    },
+    aplicarCronometro,
     aplicarTemporizadores,
     aplicarFoco,
     aplicarTick,
@@ -188,6 +245,7 @@ export function criarStore({ ipc, eventos, agora = () => Date.now() }) {
         ipc.ouvir(eventos.estado, aplicarFoco),
         ipc.ouvir(eventos.tick, aplicarTick),
         eventos.temporizadores && ipc.ouvir(eventos.temporizadores, aplicarTemporizadores),
+        eventos.cronometro && ipc.ouvir(eventos.cronometro, aplicarCronometro),
       ]);
       doc?.addEventListener('visibilitychange', () => {
         if (doc.visibilityState === 'visible') void sincronizar();

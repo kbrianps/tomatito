@@ -13,7 +13,7 @@ use tomatito_core::{Sound, TimeZone};
 
 use crate::audio::Som;
 use crate::engine::{CommandError, Engine, TauriSink};
-use crate::events::{self, FocusDto, StateDto, TimersDto};
+use crate::events::{self, FocusDto, StateDto, StopwatchDto, TimersDto};
 use crate::settings::{Settings, SettingsError, SettingsStore};
 use crate::stats::{Stats, StatsDto};
 use crate::tasks::{TaskDto, TaskError};
@@ -235,4 +235,27 @@ pub fn timer_pause(engine: State<'_, AppEngine>, id: u64) -> Result<TimersDto, C
 #[tauri::command]
 pub fn timer_reset(engine: State<'_, AppEngine>, id: u64) -> Result<TimersDto, CommandError> {
     engine.timer_reset(id)
+}
+
+// M34: o cronômetro (3.5, `stopwatch_start/pause/lap/reset`). Cada um devolve
+// o retrato novo, e o motor também o emite em `tt://stopwatch`.
+
+#[tauri::command]
+pub fn stopwatch_start(engine: State<'_, AppEngine>) -> Result<StopwatchDto, CommandError> {
+    engine.stopwatch_start()
+}
+
+#[tauri::command]
+pub fn stopwatch_pause(engine: State<'_, AppEngine>) -> Result<StopwatchDto, CommandError> {
+    engine.stopwatch_pause()
+}
+
+#[tauri::command]
+pub fn stopwatch_lap(engine: State<'_, AppEngine>) -> Result<StopwatchDto, CommandError> {
+    engine.stopwatch_lap()
+}
+
+#[tauri::command]
+pub fn stopwatch_reset(engine: State<'_, AppEngine>) -> Result<StopwatchDto, CommandError> {
+    engine.stopwatch_reset()
 }

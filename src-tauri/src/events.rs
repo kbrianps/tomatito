@@ -12,7 +12,7 @@
 use serde::Serialize;
 use tomatito_core::{
     ChangeCause, EpochMs, FocusSnapshot, Phase, PhaseChange, PhaseKind, SessionSnapshot, Status,
-    TimerSnapshot, TimerStatus, TimersSnapshot,
+    StopwatchSnapshot, StopwatchStatus, TimerSnapshot, TimerStatus, TimersSnapshot,
 };
 
 /// Retrato completo, a cada transição (iniciar, pausar, retomar, pular,
@@ -29,6 +29,10 @@ pub const SETTINGS: &str = "tt://settings";
 /// excluir, iniciar, pausar, redefinir e cada fim). Fora da tabela da 3.5,
 /// que só tem o retrato do foco (docs/decisoes.md, M32).
 pub const TIMERS: &str = "tt://timers";
+/// M34: o retrato do cronômetro, a cada transição (iniciar, pausar, volta e
+/// redefinir). Sem tick: o JS conta os centésimos sozinho a partir do
+/// `startedAt` (docs/decisoes.md, M34).
+pub const STOPWATCH: &str = "tt://stopwatch";
 
 fn ms(t: EpochMs) -> i64 {
     t.0
@@ -326,6 +330,58 @@ impl From<&TimersSnapshot> for TimersDto {
     }
 }
 
+/// Estado do cronômetro no fio (M34).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum StopwatchStatusDto {
+    /// Zerado: "Voltas" e "Redefinir" desabilitados.
+    Idle,
+    Running,
+    Paused,
+}
+
+impl From<StopwatchStatus> for StopwatchStatusDto {
+    fn from(s: StopwatchStatus) -> Self {
+        match s {
+            StopwatchStatus::Idle => Self::Idle,
+            StopwatchStatus::Running => Self::Running,
+            StopwatchStatus::Paused => Self::Paused,
+        }
+    }
+}
+
+/// O cronômetro (M34; `tt://stopwatch` e o `stopwatch` do `get_state`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StopwatchDto {
+    /// Cresce a cada `tt://stopwatch` do processo (separado dos outros).
+    pub seq: u64,
+    pub at: i64,
+    pub status: StopwatchStatusDto,
+    /// O começo do trecho atual (ms UTC), só correndo.
+    pub started_at: Option<i64>,
+    /// Os trechos já fechados.
+    pub accumulated_ms: u64,
+    /// O decorrido em `at`.
+    pub elapsed_ms: u64,
+    /// O decorrido total em cada volta, em ordem (a lista é do M35).
+    pub laps: Vec<u64>,
+}
+
+impl From<&StopwatchSnapshot> for StopwatchDto {
+    fn from(s: &StopwatchSnapshot) -> Self {
+        Self {
+            seq: 0,
+            at: ms(s.at),
+            status: s.status.into(),
+            started_at: s.started_at.map(ms),
+            accumulated_ms: s.accumulated_ms,
+            elapsed_ms: s.elapsed_ms,
+            laps: s.laps.clone(),
+        }
+    }
+}
+
 /// O retrato do motor. O `get_state` o manda junto com as configurações
 /// (`commands.rs`); os `recursos` (M39) entram quando existirem.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -339,6 +395,8 @@ pub struct StateDto {
     pub setup: SetupDto,
     /// M32: os temporizadores.
     pub timers: TimersDto,
+    /// M34: o cronômetro.
+    pub stopwatch: StopwatchDto,
 }
 
 /// M17: a faixa e o passo do seletor de minutos (5 a 240, de 5 em 5; no
@@ -455,6 +513,26 @@ mod tests {
         assert_eq!(v["timers"][1]["endsAt"], json!(null));
         assert_eq!(v["timers"][1]["overdue"], false);
         assert_eq!(v["timers"].as_array().unwrap().len(), 4);
+    }
+
+    #[test]
+    fn cronometro_em_camel_case() {
+        use tomatito_core::Stopwatch;
+        let mut c = Stopwatch::new();
+        let t0 = EpochMs(1_000_000);
+        c.start(t0).unwrap();
+        c.lap(t0.plus_ms(1_870)).unwrap();
+        let v = serde_json::to_value(StopwatchDto::from(&c.snapshot(t0.plus_ms(2_000)))).unwrap();
+        assert_eq!(
+            v,
+            json!({"seq": 0, "at": 1_002_000, "status": "running", "startedAt": 1_000_000,
+                   "accumulatedMs": 0, "elapsedMs": 2_000, "laps": [1_870]})
+        );
+        c.pause(t0.plus_ms(2_000)).unwrap();
+        let v = serde_json::to_value(StopwatchDto::from(&c.snapshot(t0.plus_ms(9_000)))).unwrap();
+        assert_eq!(v["status"], "paused");
+        assert_eq!(v["startedAt"], json!(null));
+        assert_eq!(v["elapsedMs"], 2_000);
     }
 
     #[test]

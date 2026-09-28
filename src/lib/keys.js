@@ -96,7 +96,27 @@ const DONOS_DO_ESPACO = [
  */
 export function espacoLivre(e) {
   if (e.key !== ' ' && e.code !== 'Space') return false;
+  return livre(e);
+}
+
+/** A tecla sozinha, sem repetição nem modificadores, fora de botões e campos. */
+function livre(e) {
   if (e.repeat || e.defaultPrevented || e.isComposing) return false;
   if (e.ctrlKey || e.altKey || e.shiftKey || e.metaKey) return false;
   return !e.target?.closest?.(DONOS_DO_ESPACO);
+}
+
+/**
+ * M34: uma letra da tela Cronômetro (o L de "marcar volta", 3.8), com as
+ * mesmas regras do Espaço: sozinha, sem repetição nem modificadores, com o
+ * foco fora de botões e campos. A letra é lida pelo caractere (`key`), sem
+ * diferença de maiúscula (o Caps Lock ligado dá "L"): o L fica em lugares
+ * diferentes nos layouts.
+ * @param {{ key: string, repeat?: boolean, ctrlKey?: boolean, altKey?: boolean, shiftKey?: boolean, metaKey?: boolean, defaultPrevented?: boolean, isComposing?: boolean, target?: { closest?: (s: string) => unknown } }} e
+ * @param {string} letra
+ * @returns {boolean}
+ */
+export function teclaLivre(e, letra) {
+  if (typeof e.key !== 'string' || e.key.toLowerCase() !== letra.toLowerCase()) return false;
+  return livre(e);
 }

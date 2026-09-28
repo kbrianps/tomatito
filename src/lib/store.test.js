@@ -224,3 +224,79 @@ test('temporizadores: comando aplica a resposta; recusado, ressincroniza e rejei
   await new Promise((r) => setTimeout(r));
   assert.equal(s.temporizadores.seq, 7);
 });
+
+// M34: o cronômetro.
+const cronometro = (seq, { status = 'idle', inicio = null, acumulado = 0, decorrido = acumulado, at = T0, voltas = [] } = {}) => ({
+  seq, at, status, startedAt: inicio, accumulatedMs: acumulado, elapsedMs: decorrido, laps: voltas,
+});
+
+test('cronômetro: o get_state traz o retrato, e o evento é ouvido quando existe', async () => {
+  const ouvidos = {};
+  const relogio = { agora: T0 };
+  const ipc = {
+    obterEstado: async () => ({ focus: retrato(0, 'idle'), speed: 1, stopwatch: cronometro(2, { status: 'paused', acumulado: 1_870 }) }),
+    ouvir: async (ev, cb) => ((ouvidos[ev] = cb), () => {}),
+  };
+  const s = criarStore({ ipc, eventos: { ...EVENTOS, cronometro: 'tt://stopwatch' }, agora: () => relogio.agora });
+  assert.equal(s.decorridoDoCronometro(), null);
+  await s.ligar({ doc: alvo(), janela: alvo() });
+  assert.ok('tt://stopwatch' in ouvidos);
+  assert.equal(s.cronometro.seq, 2);
+  relogio.agora += 60_000;
+  assert.equal(s.decorridoDoCronometro(), 1_870, 'pausado não anda');
+});
+
+test('cronômetro: correndo, o decorrido sai do startedAt pelo relógio de parede, sem desviar', () => {
+  const m = montar();
+  // O retrato chega 40 ms depois do instante dele (a viagem do IPC).
+  m.relogio.agora = T0 + 5_040;
+  m.store.aplicarCronometro(cronometro(1, { status: 'running', inicio: T0, acumulado: 2_000, decorrido: 7_000, at: T0 + 5_000 }));
+  assert.equal(m.store.decorridoDoCronometro(), 7_040, 'a viagem do IPC não atrasa o número');
+  // Dez minutos depois, com a janela escondida no meio: nada se perde.
+  m.relogio.agora = T0 + 5_000 + 600_000;
+  assert.equal(m.store.decorridoDoCronometro(), 607_000);
+});
+
+test('cronômetro: nunca menos que o retrato, mesmo com o relógio do JS atrás', () => {
+  const m = montar();
+  m.relogio.agora = T0 - 1_000;
+  m.store.aplicarCronometro(cronometro(1, { status: 'running', inicio: T0, decorrido: 500, at: T0 + 500 }));
+  assert.equal(m.store.decorridoDoCronometro(), 500);
+});
+
+test('cronômetro: no relógio acelerado, estima pela velocidade a partir do retrato', async () => {
+  const m = montar({ estado: { focus: retrato(0, 'idle'), speed: 10, stopwatch: cronometro(1, { status: 'running', inicio: T0, decorrido: 3_000 }) } });
+  await m.store.sincronizar();
+  m.relogio.agora += 1_000;
+  assert.equal(m.store.decorridoDoCronometro(), 13_000);
+});
+
+test('cronômetro: retrato velho é descartado, e o comando recusado ressincroniza', async () => {
+  const m = montar();
+  const vistos = [];
+  m.store.assinarCronometro((c) => vistos.push(c.seq));
+  assert.equal(m.store.aplicarCronometro(cronometro(3)), true);
+  assert.equal(m.store.aplicarCronometro(cronometro(2)), false);
+  assert.equal(m.store.aplicarCronometro({ seq: 9 }), false, 'sem status, ignora');
+  assert.deepEqual(vistos, [3]);
+
+  const chamadas = [];
+  const ipc = {
+    obterEstado: async () => (chamadas.push('get_state'), { focus: retrato(0, 'idle'), speed: 1, stopwatch: cronometro(8) }),
+    ouvir: async () => () => {},
+    cronometro: {
+      iniciar: async () => (chamadas.push('iniciar'), cronometro(5, { status: 'running', inicio: T0 })),
+      volta: async () => {
+        chamadas.push('volta');
+        throw { code: 'notRunning', message: 'x' };
+      },
+    },
+  };
+  const s = criarStore({ ipc, eventos: EVENTOS, agora: () => T0 });
+  await s.comandoDoCronometro('iniciar');
+  assert.equal(s.cronometro.status, 'running');
+  await assert.rejects(s.comandoDoCronometro('volta'), { code: 'notRunning' });
+  await new Promise((r) => setTimeout(r));
+  assert.deepEqual(chamadas, ['iniciar', 'volta', 'get_state']);
+  assert.equal(s.cronometro.seq, 8);
+});

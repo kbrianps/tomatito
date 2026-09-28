@@ -4,7 +4,8 @@
 // intervalos da frase do cartão "Pronto para focar". M27: as durações do
 // cartão "Progresso diário" ("45 minutos", "2,5 horas"). hh:mm:ss, -hh:mm:ss
 // e hh:mm:ss,cc chegam com as telas que os usam. M32: hh:mm:ss e -hh:mm:ss
-// do temporizador e a duração curta do título do card ("1 min").
+// do temporizador e a duração curta do título do card ("1 min"). M34:
+// hh:mm:ss,cc do cronômetro.
 import t from './i18n/pt-BR.js';
 
 const dois = (n) => String(n).padStart(2, '0');
@@ -133,4 +134,23 @@ export function duracaoCurta(ms) {
   if (m) partes.push(`${m} ${u.min}`);
   if (s || !partes.length) partes.push(`${s} ${u.s}`);
   return partes.join(' ');
+}
+
+/**
+ * M34: o tempo do cronômetro, `hh:mm:ss,cc`, com os centésimos depois da
+ * vírgula (3.8). Tudo é cortado para baixo, como num cronômetro: 1,879 s é
+ * "00:00:01,87", e o segundo só vira quando se completa. As horas passam de
+ * 99 sem parar. Negativo ou inválido vira zero. Devolve as partes (a tela põe
+ * os centésimos menores e as unidades embaixo de cada par) e o texto inteiro.
+ */
+export function tempoDoCronometro(ms) {
+  const total = Number.isFinite(ms) && ms > 0 ? Math.floor(ms / 10) : 0;
+  const s = Math.floor(total / 100);
+  const partes = {
+    horas: dois(Math.floor(s / 3600)),
+    minutos: dois(Math.floor(s / 60) % 60),
+    segundos: dois(s % 60),
+    centesimos: dois(total % 100),
+  };
+  return { ...partes, texto: `${partes.horas}:${partes.minutos}:${partes.segundos},${partes.centesimos}` };
 }

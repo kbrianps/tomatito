@@ -1,10 +1,11 @@
 //! O `state.json` (PLANO.md, 3.3): o que está em andamento, para sobreviver a
 //! fechar e reabrir o app.
 //!
-//! - guarda os temporizadores (desde o M33); o cronômetro entra no M34 e o
-//!   foco, quando o M40 passar a carregar o arquivo ao abrir;
+//! - guarda os temporizadores (desde o M33) e o cronômetro (M34); o foco
+//!   entra quando o M40 passar a carregar o arquivo ao abrir;
 //! - é gravado a cada transição (criar, editar, excluir, iniciar, pausar,
-//!   redefinir e o fim de um temporizador), nunca a cada tick;
+//!   redefinir e o fim de um temporizador; iniciar, pausar, volta e redefinir
+//!   do cronômetro), nunca a cada tick;
 //! - a gravação é atômica, pelo `persist.rs`;
 //! - leva `schemaVersion`.
 //!
@@ -16,13 +17,18 @@
 //! depois de fechado: correndo, o prazo (`endsAt`, em ms UTC), que continua
 //! valendo com o app fechado; pausado, o que faltava (`remainingMs`, negativo
 //! depois do zero); parado, só a duração.
+//!
+//! O cronômetro (M34) é gravado como `started_at` mais o acumulado: correndo,
+//! o `startedAt` (ms UTC) continua valendo com o app fechado, e o decorrido
+//! ao reabrir é `accumulatedMs + (agora − startedAt)`; pausado, só o
+//! acumulado. As voltas vão junto (o decorrido total em cada uma).
 
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, PoisonError};
 
 use serde::Serialize;
 
-use crate::events::{TimerStatusDto, TimersDto};
+use crate::events::{StopwatchDto, StopwatchStatusDto, TimerStatusDto, TimersDto};
 
 /// O nome do arquivo, na pasta de dados do app.
 pub const FILE: &str = "state.json";
@@ -69,6 +75,31 @@ impl SavedTimer {
     }
 }
 
+/// O cronômetro como fica no arquivo (M34).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SavedStopwatch {
+    pub status: StopwatchStatusDto,
+    /// O começo do trecho atual, só correndo.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub started_at: Option<i64>,
+    /// Os trechos já fechados.
+    pub accumulated_ms: u64,
+    /// O decorrido total em cada volta.
+    pub laps: Vec<u64>,
+}
+
+impl From<&StopwatchDto> for SavedStopwatch {
+    fn from(c: &StopwatchDto) -> Self {
+        Self {
+            status: c.status,
+            started_at: c.started_at,
+            accumulated_ms: c.accumulated_ms,
+            laps: c.laps.clone(),
+        }
+    }
+}
+
 /// O conteúdo do `state.json`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -80,6 +111,9 @@ pub struct StateFile {
     /// dos temporizadores neste processo.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timers: Option<Vec<SavedTimer>>,
+    /// M34: ausente até a primeira transição do cronômetro neste processo.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stopwatch: Option<SavedStopwatch>,
 }
 
 impl Default for StateFile {
@@ -88,6 +122,7 @@ impl Default for StateFile {
             schema_version: SCHEMA_VERSION,
             saved_at: 0,
             timers: None,
+            stopwatch: None,
         }
     }
 }
@@ -118,7 +153,20 @@ impl StateStore {
         let mut g = self.atual.lock().unwrap_or_else(PoisonError::into_inner);
         g.saved_at = dto.at;
         g.timers = Some(dto.timers.iter().map(SavedTimer::from_dto).collect());
-        if let Err(e) = crate::persist::write_json_atomic(&self.arquivo, &*g) {
+        self.gravar(&g);
+    }
+
+    /// M34: troca o cronômetro pelo retrato `dto` e grava o arquivo, sem
+    /// mexer nos temporizadores.
+    pub fn save_stopwatch(&self, dto: &StopwatchDto) {
+        let mut g = self.atual.lock().unwrap_or_else(PoisonError::into_inner);
+        g.saved_at = dto.at;
+        g.stopwatch = Some(dto.into());
+        self.gravar(&g);
+    }
+
+    fn gravar(&self, conteudo: &StateFile) {
+        if let Err(e) = crate::persist::write_json_atomic(&self.arquivo, conteudo) {
             eprintln!(
                 "[tomatito] state.json não gravado ({e}): {}",
                 self.arquivo.display()
@@ -194,6 +242,48 @@ mod tests {
         assert_eq!(
             ler(&store),
             serde_json::json!({ "schemaVersion": 1, "savedAt": 2, "timers": [] })
+        );
+    }
+
+    fn cronometro(status: StopwatchStatusDto, at: i64) -> StopwatchDto {
+        StopwatchDto {
+            seq: 1,
+            at,
+            status,
+            started_at: (status == StopwatchStatusDto::Running).then_some(500),
+            accumulated_ms: 1_250,
+            elapsed_ms: 1_750,
+            laps: vec![900],
+        }
+    }
+
+    #[test]
+    fn cronometro_ao_lado_dos_temporizadores_sem_apagar_um_ao_outro() {
+        let d = PastaDeTeste::nova("estado-cronometro");
+        let store = StateStore::new(&d.0);
+        store.save_stopwatch(&cronometro(StopwatchStatusDto::Running, 1_000));
+        assert_eq!(
+            ler(&store),
+            serde_json::json!({
+                "schemaVersion": 1,
+                "savedAt": 1_000,
+                "stopwatch": { "status": "running", "startedAt": 500, "accumulatedMs": 1_250, "laps": [900] },
+            })
+        );
+        store.save_timers(&TimersDto {
+            seq: 1,
+            at: 2_000,
+            timers: vec![],
+        });
+        store.save_stopwatch(&cronometro(StopwatchStatusDto::Paused, 3_000));
+        assert_eq!(
+            ler(&store),
+            serde_json::json!({
+                "schemaVersion": 1,
+                "savedAt": 3_000,
+                "timers": [],
+                "stopwatch": { "status": "paused", "accumulatedMs": 1_250, "laps": [900] },
+            })
         );
     }
 

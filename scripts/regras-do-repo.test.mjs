@@ -296,6 +296,32 @@ test('temporizadores: barra, diálogo e state.json gravado pelo persist.rs a cad
   assert.doesNotMatch(dialogo + tela, /Pomodoro/i);
 });
 
+// M34: o cronômetro do núcleo (started_at mais o acumulado) no motor do app,
+// os quatro comandos stopwatch_* da 3.5, o tt://stopwatch e a gravação no
+// state.json a cada transição; na tela, o número em clamp(68px, 8vw, 110px)
+// e os três botões circulares de 64 px.
+test('cronômetro: comandos stopwatch_*, tt://stopwatch, state.json e a tela', () => {
+  const lib = ler('src-tauri/src/lib.rs');
+  const comandos = ler('src-tauri/src/commands.rs');
+  const ipcJs = ler('src/lib/ipc.js');
+  for (const c of ['stopwatch_start', 'stopwatch_pause', 'stopwatch_lap', 'stopwatch_reset']) {
+    assert.match(lib, new RegExp(`commands::${c},`), `${c} registrado`);
+    assert.match(comandos, new RegExp(`pub fn ${c}\\(`));
+    assert.match(ipcJs, new RegExp(`invoke\\('${c}'\\)`), `${c} no ipc.js`);
+  }
+  assert.match(ler('src-tauri/tomatito-core/src/lib.rs'), /^pub mod stopwatch;$/m);
+  assert.match(ler('src-tauri/src/events.rs'), /pub const STOPWATCH: &str = "tt:\/\/stopwatch";/);
+  assert.match(ipcJs, /cronometro: 'tt:\/\/stopwatch'/);
+  assert.match(ler('src-tauri/src/engine.rs'), /self\.emit\(events::STOPWATCH, stopwatch\);\s*(\/\/[^\n]*\n\s*)*self\.estado\.save_stopwatch\(stopwatch\);/);
+  const shell = ler('src/styles/shell.css');
+  assert.match(shell, /font-size:clamp\(68px, 8vw, 110px\)/);
+  assert.match(shell, /\.tt-cronometro-centesimos\{ font-size:\.7em; \}/);
+  const tela = ler('src/views/stopwatch.js');
+  assert.equal((tela.match(/botao\(/g) ?? []).length, 3, 'os três botões');
+  assert.match(tela, /tt-circular tt-grande/);
+  assert.doesNotMatch(tela, /Pomodoro/i);
+});
+
 test('capabilities/main.json com as permissões da seção 3.8, só para a main', () => {
   const arquivos = readdirSync(new URL('../src-tauri/capabilities', import.meta.url)).sort();
   assert.ok(!arquivos.includes('default.json'), 'o default.json do template sai');

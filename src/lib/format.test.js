@@ -156,3 +156,17 @@ test('M32: duração curta (os exemplos do timer_duration do i18n.rs)', async ()
   assert.equal(f(359_999_000), '99 h 59 min 59 s');
   assert.equal(f(0), '0 s');
 });
+
+test('M34: tempoDoCronometro corta para baixo e separa os centésimos com vírgula', async () => {
+  const { tempoDoCronometro } = await import('./format.js');
+  assert.equal(tempoDoCronometro(0).texto, '00:00:00,00');
+  assert.equal(tempoDoCronometro(1_879).texto, '00:00:01,87');
+  assert.equal(tempoDoCronometro(9).texto, '00:00:00,00');
+  assert.equal(tempoDoCronometro(59_999).texto, '00:00:59,99');
+  assert.equal(tempoDoCronometro(60_000).texto, '00:01:00,00');
+  assert.equal(tempoDoCronometro(3_723_450).texto, '01:02:03,45');
+  assert.equal(tempoDoCronometro(100 * 3_600_000).texto, '100:00:00,00');
+  assert.equal(tempoDoCronometro(-5).texto, '00:00:00,00');
+  assert.equal(tempoDoCronometro(NaN).texto, '00:00:00,00');
+  assert.deepEqual(tempoDoCronometro(1_879), { horas: '00', minutos: '00', segundos: '01', centesimos: '87', texto: '00:00:01,87' });
+});

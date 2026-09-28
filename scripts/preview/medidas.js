@@ -1311,4 +1311,104 @@
     await doisQuadros();
     return window.__ttEdicao();
   };
+  // M34: a tela Cronômetro (src/views/stopwatch.js). __ttCronometro()
+  // devolve o número como se vê (texto, fonte, caixa e a posição de cada
+  // unidade sob o seu par), os botões e a posição do bloco na área de
+  // conteúdo; __ttAmostraDoCronometro(ms) conta, quadro a quadro, quantos
+  // textos diferentes o número mostrou; __ttTeclaNoCronometro(key) despacha
+  // a tecla no elemento com o foco (ou no <body>).
+  window.__ttCronometro = () => {
+    const q = (sel) => document.querySelector(sel);
+    const r1 = (v) => Math.round(v * 10) / 10;
+    const caixa = (el) => {
+      const r = el.getBoundingClientRect();
+      return [r.x, r.y, r.width, r.height].map(r1);
+    };
+    const tempo = q('[data-tempo]');
+    const conteudo = document.querySelector('.tt-rolagem').getBoundingClientRect();
+    const t = tempo.getBoundingClientRect();
+    const pares = [...tempo.querySelectorAll('.tt-cronometro-par')].map((p) => {
+      const d = p.querySelector('.tt-cronometro-digitos').getBoundingClientRect();
+      const u = p.querySelector('.tt-cronometro-unidade').getBoundingClientRect();
+      return { unidade: p.querySelector('.tt-cronometro-unidade').textContent, desvio: r1(u.x + u.width / 2 - (d.x + d.width / 2)), abaixo: r1(u.top - d.bottom) };
+    });
+    const cent = q('.tt-cronometro-centesimos');
+    const botoes = [...document.querySelectorAll('.tt-cronometro-botoes button')];
+    return {
+      texto: [q('[data-horas]'), q('[data-minutos]'), q('[data-segundos]')].map((x) => x.textContent).join(':') + ',' + q('[data-centesimos]').textContent,
+      estado: q('[data-cronometro]').dataset.estado,
+      rotulo: tempo.getAttribute('aria-label'),
+      papel: tempo.getAttribute('role'),
+      fonte: parseFloat(getComputedStyle(tempo).fontSize),
+      peso: getComputedStyle(tempo).fontWeight,
+      numerosTabulares: getComputedStyle(tempo).fontVariantNumeric,
+      centesimos: r1(parseFloat(getComputedStyle(cent).fontSize) / parseFloat(getComputedStyle(tempo).fontSize) * 100) / 100,
+      unidadeFonte: r1(parseFloat(getComputedStyle(tempo.querySelector('.tt-cronometro-unidade')).fontSize)),
+      cor: getComputedStyle(tempo).color,
+      pares,
+      caixa: caixa(tempo),
+      // As sobras à esquerda e à direita do número, dentro da área de conteúdo.
+      sobras: [r1(t.left - conteudo.left), r1(conteudo.right - t.right)],
+      // O que o texto passa da própria caixa (0 quando cabe).
+      transborda: tempo.scrollWidth - tempo.clientWidth,
+      botoes: botoes.map((b) => ({ acao: b.dataset.acao, rotulo: b.getAttribute('aria-label'), desabilitado: b.disabled, destaque: b.classList.contains('tt-accent'), caixa: caixa(b), raio: getComputedStyle(b).borderRadius, icone: b.querySelector('svg')?.getBoundingClientRect().width ?? 0, cor: getComputedStyle(b).color })),
+      espacos: botoes.slice(1).map((b, i) => r1(b.getBoundingClientRect().left - botoes[i].getBoundingClientRect().right)),
+      meioDosBotoes: botoes.length ? r1((botoes[0].getBoundingClientRect().left + botoes.at(-1).getBoundingClientRect().right) / 2 - (t.left + t.right) / 2) : null,
+      rolagem: [document.querySelector('.tt-rolagem').scrollWidth, document.querySelector('.tt-rolagem').clientWidth],
+      cores: { fg1: window.__ttCor('--tt-fg-1', 'color'), desabilitado: window.__ttCor('--tt-fg-disabled', 'color') },
+      comandos: window.__TOMATITO_PREVIEW_COMANDOS__.filter((c) => c.startsWith('stopwatch_')),
+      voltas: [...(window.__TOMATITO_PREVIEW_CRONOMETRO__?.voltas ?? [])],
+      foco: document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.tagName.toLowerCase(),
+    };
+  };
+  window.__ttAmostraDoCronometro = (ms = 1000) =>
+    new Promise((res) => {
+      const t0 = performance.now();
+      let quadros = 0;
+      const vistos = new Set();
+      const f = () => {
+        quadros++;
+        vistos.add(document.querySelector('[data-tempo]').textContent);
+        if (performance.now() - t0 < ms) requestAnimationFrame(f);
+        else res({ quadros, valores: vistos.size, ...window.__ttCronometro() });
+      };
+      requestAnimationFrame(f);
+    });
+  window.__ttClicarNoCronometro = async (acao) => {
+    document.querySelector(`.tt-cronometro-botoes button[data-acao="${acao}"]`).click();
+    await new Promise((r) => setTimeout(r, 80));
+    await doisQuadros();
+    return window.__ttCronometro();
+  };
+  // Troca para outra tela por `ms` e volta, como quem esconde a tela: o
+  // cronômetro some do DOM e é montado de novo. Devolve o número antes e
+  // depois e o tempo que passou no relógio monotônico da página.
+  window.__ttSairEVoltar = async (ms = 1500) => {
+    const ler = () => {
+      const q = (x) => Number(document.querySelector(x).textContent);
+      return ((q('[data-horas]') * 60 + q('[data-minutos]')) * 60 + q('[data-segundos]')) * 1000 + q('[data-centesimos]') * 10;
+    };
+    // Lido logo depois de um quadro, o número é o daquele instante.
+    await new Promise((r) => requestAnimationFrame(r));
+    const antes = ler();
+    const p0 = performance.now();
+    location.hash = '#/foco';
+    await new Promise((r) => setTimeout(r, ms));
+    location.hash = '#/cronometro';
+    await new Promise((r) => setTimeout(r, 30));
+    await doisQuadros();
+    const depois = ler();
+    const passou = performance.now() - p0;
+    return { antes, depois, passou: Math.round(passou), diferenca: Math.round(depois - antes - passou), ...window.__ttCronometro() };
+  };
+  window.__ttTeclaNoCronometro = async (key, foco = null) => {
+    // foco: 'nada' tira o foco de onde estiver; um seletor põe o foco nele.
+    if (foco === 'nada') document.activeElement?.blur?.();
+    else if (foco) document.querySelector(foco).focus();
+    const alvo = document.activeElement ?? document.body;
+    alvo.dispatchEvent(new KeyboardEvent('keydown', { key, code: key === ' ' ? 'Space' : `Key${key.toUpperCase()}`, bubbles: true, cancelable: true, composed: true }));
+    await new Promise((r) => setTimeout(r, 80));
+    await doisQuadros();
+    return window.__ttCronometro();
+  };
 })();

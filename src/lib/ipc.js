@@ -12,9 +12,11 @@ export const EVENTOS = Object.freeze({
   configuracoes: 'tt://settings',
   // M32: o retrato de todos os temporizadores, a cada mudança.
   temporizadores: 'tt://timers',
+  // M34: o retrato do cronômetro, a cada transição.
+  cronometro: 'tt://stopwatch',
 });
 
-/** `get_state`: `{ focus, speed, setup, timers, settings }`. */
+/** `get_state`: `{ focus, speed, setup, timers, stopwatch, settings }`. */
 export const obterEstado = () => invoke('get_state');
 
 /**
@@ -97,6 +99,21 @@ export const temporizadores = Object.freeze({
   iniciar: (id) => invoke('timer_start', { id }),
   pausar: (id) => invoke('timer_pause', { id }),
   redefinir: (id) => invoke('timer_reset', { id }),
+});
+
+/**
+ * Cronômetro (src-tauri/src/engine.rs, M34). Cada comando resolve com o
+ * retrato novo (`{ seq, at, status, startedAt, accumulatedMs, elapsedMs,
+ * laps }`, o mesmo do `tt://stopwatch`), com `status` em `idle`, `running` ou
+ * `paused`, `startedAt` (ms UTC) só correndo e `laps` com o decorrido total
+ * em cada volta. Os erros vêm como `{ code, message }`, com `code` em
+ * `alreadyRunning`, `notRunning` ou `tooManyLaps`.
+ */
+export const cronometro = Object.freeze({
+  iniciar: () => invoke('stopwatch_start'),
+  pausar: () => invoke('stopwatch_pause'),
+  volta: () => invoke('stopwatch_lap'),
+  redefinir: () => invoke('stopwatch_reset'),
 });
 
 /** Ouve um evento do Rust; `cb` recebe só o conteúdo. Devolve o `unlisten`. */

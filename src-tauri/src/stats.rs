@@ -501,6 +501,7 @@ mod tests {
         }
         fn timers(&self, _: &crate::events::TimersDto) {}
         fn timer_notice(&self, _: &tomatito_core::TimerEnded) {}
+        fn stopwatch(&self, _: &crate::events::StopwatchDto) {}
     }
 
     /// Do motor ao banco: o `Effects` grava os períodos, e a sessão que

@@ -195,6 +195,26 @@ export default Object.freeze({
       }),
     }),
   }),
+  // M34: a tela Cronômetro (views/stopwatch.js). As unidades embaixo dos
+  // números são as do Relógio ("hr", "min", "sec"), em pt-BR.
+  cronometro: Object.freeze({
+    iniciar: 'Iniciar',
+    pausar: 'Pausar',
+    retomar: 'Retomar',
+    volta: 'Marcar volta',
+    redefinir: 'Redefinir',
+    unidades: Object.freeze({ h: 'h', min: 'min', s: 's' }),
+    // O rótulo do número (role="img"): muda ao trocar de estado e, correndo,
+    // uma vez por minuto (PLANO.md, 3.8). Pausado, o tempo exato, que não muda.
+    rotulo: Object.freeze({
+      zerado: 'Cronômetro zerado',
+      correndo: Object.freeze({
+        one: (n) => `Cronômetro correndo, ${n} minuto`,
+        other: (n) => `Cronômetro correndo, ${n} minutos`,
+      }),
+      pausado: (tempo) => `Cronômetro pausado em ${tempo}`,
+    }),
+  }),
   // Tela Configurações. M24: a seção Aparência (views/settings.js), com o
   // cartão do tema, como o SettingsCard do Relógio (ícone, título e
   // descrição) e as opções da 4.1. "Tomatito Suave" é nome provisório (1.2).

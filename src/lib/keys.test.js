@@ -100,3 +100,18 @@ test('Espaço num controle, repetido, com modificador ou já tratado: não vale'
   assert.equal(espacoLivre(espaco(alvo(), { isComposing: true })), false);
   assert.equal(espacoLivre(espaco(alvo(), { key: 'Enter', code: 'Enter' })), false);
 });
+
+test('M34: teclaLivre, o L do cronômetro, com as regras do Espaço', async () => {
+  const { teclaLivre } = await import('./keys.js');
+  const fora = { closest: () => null };
+  const botao = { closest: () => ({}) };
+  const ev = (extra = {}) => ({ key: 'l', code: 'KeyL', target: fora, ...extra });
+  assert.equal(teclaLivre(ev(), 'l'), true);
+  assert.equal(teclaLivre(ev({ key: 'L' }), 'l'), true, 'Caps Lock');
+  assert.equal(teclaLivre(ev({ key: 'k' }), 'l'), false);
+  assert.equal(teclaLivre(ev({ target: botao }), 'l'), false, 'foco num botão ou campo');
+  for (const m of ['ctrlKey', 'altKey', 'shiftKey', 'metaKey', 'repeat', 'defaultPrevented', 'isComposing']) {
+    assert.equal(teclaLivre(ev({ [m]: true }), 'l'), false, m);
+  }
+  assert.equal(teclaLivre({ code: 'KeyL', target: fora }, 'l'), false, 'sem key');
+});

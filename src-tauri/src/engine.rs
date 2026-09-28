@@ -30,6 +30,14 @@
 //! zero, a contagem negativa é só do JS, e o laço pode dormir. Cada mudança
 //! sai em `tt://timers`, e cada fim toca o som de fim de foco (menos o
 //! atrasado) e mostra uma notificação.
+//!
+//! **Cronômetro (M34).** Também sob a mesma trava e com o mesmo relógio. Ele
+//! não tem prazo nem nada a disparar: o decorrido é `acumulado + (agora −
+//! started_at)`, calculado na hora de cada leitura. Por isso o laço não roda
+//! por causa dele (seria só gasto de CPU; docs/decisoes.md, M34), e os
+//! centésimos da tela são contados pelo JS a partir do retrato. Cada
+//! transição (iniciar, pausar, volta, redefinir) sai em `tt://stopwatch` e vai
+//! para o `state.json`.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -40,12 +48,14 @@ use tokio::sync::Notify;
 use tokio::time::{MissedTickBehavior, interval};
 use tomatito_core::{
     Clock, CountdownEffects, CountdownError, Effects, EpochMs, Focus, FocusError, FocusSnapshot,
-    LATE_AFTER_MS, Notice, Period, PhaseChange, PlanSettings, SessionConfig, Sound, SystemClock,
-    TimerEnded, TimerId, Timers, TimersSnapshot,
+    LATE_AFTER_MS, Notice, Period, PhaseChange, PlanSettings, SessionConfig, Sound, Stopwatch,
+    StopwatchError, SystemClock, TimerEnded, TimerId, Timers, TimersSnapshot,
 };
 
 use crate::audio::Som;
-use crate::events::{self, FocusDto, PhaseEventDto, SetupDto, StateDto, TickDto, TimersDto};
+use crate::events::{
+    self, FocusDto, PhaseEventDto, SetupDto, StateDto, StopwatchDto, TickDto, TimersDto,
+};
 use crate::notify::Notificador;
 use crate::state_file::StateStore;
 use crate::stats::Stats;
@@ -93,6 +103,8 @@ pub trait Sink: Send + Sync + 'static {
     fn timers(&self, timers: &TimersDto);
     /// A notificação do fim de um temporizador (M32).
     fn timer_notice(&self, ended: &TimerEnded);
+    /// `tt://stopwatch` e o `state.json` (M34).
+    fn stopwatch(&self, stopwatch: &StopwatchDto);
 }
 
 /// Adapta um [`Sink`] ao trait `Effects` do núcleo e numera os retratos.
@@ -193,8 +205,10 @@ pub enum ErrorCode {
     InvalidDuration,
     /// M32: nome com mais de 255 caracteres.
     NameTooLong,
-    /// M32: iniciar um temporizador que já corre.
+    /// M32: iniciar um temporizador que já corre (M34: ou o cronômetro).
     AlreadyRunning,
+    /// M34: mais de 999 voltas.
+    TooManyLaps,
 }
 
 impl From<FocusError> for CommandError {
@@ -229,8 +243,25 @@ impl From<CountdownError> for CommandError {
     }
 }
 
+impl From<StopwatchError> for CommandError {
+    fn from(e: StopwatchError) -> Self {
+        let code = match e {
+            StopwatchError::AlreadyRunning => ErrorCode::AlreadyRunning,
+            StopwatchError::NotRunning => ErrorCode::NotRunning,
+            StopwatchError::TooManyLaps => ErrorCode::TooManyLaps,
+        };
+        Self {
+            code,
+            message: e.to_string(),
+        }
+    }
+}
+
 struct Inner {
     focus: Focus,
+    /// M34: o cronômetro, com o `seq` do último `tt://stopwatch`.
+    stopwatch: Stopwatch,
+    stopwatch_seq: u64,
     /// M32: os temporizadores, com o `seq` do último `tt://timers`.
     timers: Timers,
     timers_seq: u64,
@@ -256,8 +287,17 @@ impl Inner {
         dto
     }
 
+    /// M34: o retrato do cronômetro em `now`, com o `seq` do último
+    /// `tt://stopwatch`.
+    fn stopwatch_dto(&self, now: EpochMs) -> StopwatchDto {
+        let mut dto = StopwatchDto::from(&self.stopwatch.snapshot(now));
+        dto.seq = self.stopwatch_seq;
+        dto
+    }
+
     /// Se o laço precisa rodar: uma fase corre, ou um temporizador corre
-    /// rumo ao zero (um fim ainda por disparar).
+    /// rumo ao zero (um fim ainda por disparar). O cronômetro não conta
+    /// (M34): não há nada nele que vença.
     fn active(&self) -> bool {
         self.focus.is_running() || self.timers.next_deadline().is_some()
     }
@@ -297,6 +337,8 @@ impl<S: Sink> Engine<S> {
             sink,
             inner: Mutex::new(Inner {
                 focus,
+                stopwatch: Stopwatch::new(),
+                stopwatch_seq: 0,
                 timers,
                 timers_seq: 0,
                 seq: 0,
@@ -360,6 +402,7 @@ impl<S: Sink> Engine<S> {
             speed: self.speed,
             setup: setup(),
             timers: g.timers_dto(now),
+            stopwatch: g.stopwatch_dto(now),
         }
     }
 
@@ -491,6 +534,45 @@ impl<S: Sink> Engine<S> {
     pub fn timer_reset(&self, id: TimerId) -> Result<TimersDto, CommandError> {
         self.timer_command(|t, now, fx| t.reset(now, id, fx))
             .map(|(_, dto)| dto)
+    }
+
+    /// M34: roda um comando do cronômetro com um único "agora"; aceito, emite
+    /// o retrato novo (`tt://stopwatch` e `state.json`) e o devolve. Recusado,
+    /// não emite nada.
+    fn stopwatch_command(
+        &self,
+        f: impl FnOnce(&mut Stopwatch, EpochMs) -> Result<(), StopwatchError>,
+    ) -> Result<StopwatchDto, CommandError> {
+        let mut g = self.lock();
+        let now = self.clock.now();
+        f(&mut g.stopwatch, now)?;
+        g.stopwatch_seq += 1;
+        let dto = g.stopwatch_dto(now);
+        self.sink.stopwatch(&dto);
+        Ok(dto)
+    }
+
+    /// `stopwatch_start`: inicia (zerado) ou retoma (pausado).
+    pub fn stopwatch_start(&self) -> Result<StopwatchDto, CommandError> {
+        self.stopwatch_command(|c, now| c.start(now))
+    }
+
+    /// `stopwatch_pause`.
+    pub fn stopwatch_pause(&self) -> Result<StopwatchDto, CommandError> {
+        self.stopwatch_command(|c, now| c.pause(now))
+    }
+
+    /// `stopwatch_lap`: anota o total agora (a lista na tela é do M35).
+    pub fn stopwatch_lap(&self) -> Result<StopwatchDto, CommandError> {
+        self.stopwatch_command(|c, now| c.lap(now).map(|_| ()))
+    }
+
+    /// `stopwatch_reset`: zera e para, em qualquer estado.
+    pub fn stopwatch_reset(&self) -> Result<StopwatchDto, CommandError> {
+        self.stopwatch_command(|c, _| {
+            c.reset();
+            Ok(())
+        })
     }
 
     /// Um passo do laço: fecha o que venceu e, com uma fase correndo, emite o
@@ -647,6 +729,12 @@ impl Sink for TauriSink {
     fn timer_notice(&self, ended: &TimerEnded) {
         self.notificador.mostrar_temporizador(ended);
     }
+    fn stopwatch(&self, stopwatch: &StopwatchDto) {
+        self.emit(events::STOPWATCH, stopwatch);
+        // M34: cada transição vai para o `state.json`, como os temporizadores
+        // no M33 (3.3); nunca num tick, que o cronômetro não tem.
+        self.estado.save_stopwatch(stopwatch);
+    }
     fn period(&self, period: &Period) {
         // Síncrono, com o motor travado: um INSERT leva menos de 1 ms, e
         // assim o `stats_get` que vier depois do `tt://state` já vê a linha.
@@ -674,6 +762,7 @@ mod tests {
         Period(Period),
         Timers(TimersDto),
         TimerNotice(TimerEnded),
+        Stopwatch(StopwatchDto),
     }
 
     #[derive(Default)]
@@ -712,6 +801,9 @@ mod tests {
         }
         fn timer_notice(&self, e: &TimerEnded) {
             self.put(Out::TimerNotice(e.clone()));
+        }
+        fn stopwatch(&self, c: &StopwatchDto) {
+            self.put(Out::Stopwatch(c.clone()));
         }
     }
 
@@ -1221,5 +1313,100 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3600)).await;
         assert_eq!(e.ticks(), fim, "passado o zero, o laço dorme");
         laco.abort();
+    }
+
+    // M34: o cronômetro.
+
+    fn cronometros(out: &[Out]) -> Vec<&StopwatchDto> {
+        out.iter()
+            .filter_map(|o| match o {
+                Out::Stopwatch(c) => Some(c),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn get_state_traz_o_cronometro_zerado() {
+        let (e, _) = motor();
+        let c = e.state().stopwatch;
+        assert_eq!(c.status, crate::events::StopwatchStatusDto::Idle);
+        assert_eq!((c.seq, c.elapsed_ms, c.started_at), (0, 0, None));
+        assert!(e.sink().tirar().is_empty());
+    }
+
+    #[test]
+    fn cada_transicao_do_cronometro_emite_e_o_get_state_ve_o_decorrido() {
+        use crate::events::StopwatchStatusDto as St;
+        let (e, clock) = motor();
+        let r = e.stopwatch_start().unwrap();
+        assert_eq!(
+            (r.status, r.started_at, r.seq),
+            (St::Running, Some(T0.0), 1)
+        );
+        clock.advance_ms(12_340);
+        let r = e.stopwatch_lap().unwrap();
+        assert_eq!((r.laps.clone(), r.seq), (vec![12_340], 2));
+        clock.advance_ms(660);
+        assert_eq!(e.state().stopwatch.elapsed_ms, 13_000);
+        let r = e.stopwatch_pause().unwrap();
+        assert_eq!(
+            (r.status, r.accumulated_ms, r.started_at),
+            (St::Paused, 13_000, None)
+        );
+        clock.advance_ms(60_000);
+        assert_eq!(e.state().stopwatch.elapsed_ms, 13_000);
+        let r = e.stopwatch_reset().unwrap();
+        assert_eq!(
+            (r.status, r.elapsed_ms, r.laps.len(), r.seq),
+            (St::Idle, 0, 0, 4)
+        );
+        let out = e.sink().tirar();
+        let emitidos: Vec<u64> = cronometros(&out).iter().map(|c| c.seq).collect();
+        assert_eq!(
+            emitidos,
+            vec![1, 2, 3, 4],
+            "um tt://stopwatch por transição"
+        );
+        assert_eq!(out.len(), 4, "nada além do cronômetro");
+    }
+
+    #[test]
+    fn erros_do_cronometro_nao_emitem() {
+        let (e, _) = motor();
+        assert_eq!(e.stopwatch_pause().unwrap_err().code, ErrorCode::NotRunning);
+        assert_eq!(e.stopwatch_lap().unwrap_err().code, ErrorCode::NotRunning);
+        e.stopwatch_start().unwrap();
+        assert_eq!(
+            e.stopwatch_start().unwrap_err().code,
+            ErrorCode::AlreadyRunning
+        );
+        assert_eq!(cronometros(&e.sink().tirar()).len(), 1);
+        assert_eq!(e.state().stopwatch.seq, 1);
+    }
+
+    #[test]
+    fn cronometro_nao_acorda_o_laco() {
+        let (e, clock) = motor();
+        e.stopwatch_start().unwrap();
+        assert!(!e.is_running(), "sem prazo, o laço dorme");
+        clock.advance_ms(600_000);
+        assert!(!e.tick());
+        assert_eq!(e.state().stopwatch.elapsed_ms, 600_000);
+    }
+
+    #[test]
+    fn cronometro_foco_e_temporizador_nao_se_misturam() {
+        let (e, clock) = motor();
+        e.start(5, false, None).unwrap();
+        e.timer_start(1).unwrap();
+        e.stopwatch_start().unwrap();
+        e.sink().tirar();
+        andar(&e, &clock, 60_000);
+        e.stopwatch_pause().unwrap();
+        let s = e.state();
+        assert_eq!(s.stopwatch.elapsed_ms, 60_000);
+        assert_eq!(s.focus.session.as_ref().unwrap().remaining_ms, 240_000);
+        assert_eq!(s.timers.timers[0].remaining_ms, 0);
     }
 }

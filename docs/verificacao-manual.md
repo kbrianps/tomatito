@@ -845,3 +845,24 @@ O que só você consegue: julgar o desenho do diálogo e da barra ao lado do Rel
 8. [ ] Clique no check: os botões de cima somem. Inicie o "1 min" e dê `cat`: ele aparece com `"status": "running"` e `"endsAt"`. Pause e dê `cat`: `"paused"` com `"remainingMs"`.
 9. [ ] Teclado: Tab chega à barra (lápis e "+"); com o diálogo aberto, Esc fecha sem salvar e o foco volta ao "+". Nos campos de tempo, ↑/↓ dão a volta (59 → 00), e digitar `75` nos minutos vira 59 ao sair do campo.
 10. [ ] Feche o app (Ctrl+C). O `state.json` continua lá com a última lista. Ao reabrir, os temporizadores voltam aos padrões: carregar a lista gravada é do M40.
+
+
+## M34. Cronômetro
+
+O que já foi conferido sem você:
+- `cargo test`: o núcleo (`tomatito-core/tests/cronometro.rs`: 10 min de relógio são 10 min de cronômetro, 36 mil leituras em passos de um quadro sem nenhum desvio, uma lacuna de janela escondida contada na primeira leitura, pausar e retomar, voltas, redefinir, relógio para trás), o motor (um `tt://stopwatch` por transição, erros sem emitir, o laço dormindo com o cronômetro correndo) e o `state.json` (o cronômetro ao lado dos temporizadores, sem um apagar o outro).
+- Prévia (`node scripts/preview/cronometro.mjs`), no Chrome headless e no WebKitGTK: medidas do número (clamp, 70% dos centésimos, unidades embaixo de cada par), os três botões de 64 px, os centésimos mudando a cada quadro (61 textos em 61 quadros), Espaço e L com e sem o foco num botão, trocar de tela e voltar sem perder tempo, e os tamanhos de janela.
+- Roteiro aninhado `cronometro` (app de verdade, 13 conferências): clique em Iniciar, L e Espaço pelo teclado virtual, a janela minimizada por 20 s e escondida (hide) por 20 s; ao voltar, o tempo na tela bateu com o relógio monotônico com 8 ms e 5 ms de diferença; o `state.json` lido do disco a cada transição.
+
+O que só você consegue: comparar com um relógio de fora (o celular) por 10 minutos, e esconder a janela do jeito que você usa.
+
+### Para conferir (uns 12 minutos, quase todos de espera)
+
+1. [ ] `cd ~/dev/tomatito && npm run dev:app`. No painel, "Cronômetro": 00:00:00,00, com h, min e s embaixo; o botão de bandeira e o de redefinir apagados.
+2. [ ] Abra o cronômetro do celular. Aperte "Iniciar" no Tomatito e o do celular ao mesmo tempo (o melhor que der). Os centésimos do Tomatito correm liso, sem saltos.
+3. [ ] Minimize o Tomatito (ou troque de área de trabalho) e deixe os dois correndo.
+4. [ ] Uns 10 minutos depois, volte ao Tomatito e pare os dois juntos (Espaço no Tomatito, com o foco fora dos botões: clique antes no título "Cronômetro"). A diferença deve ser só a do seu reflexo (algumas dezenas de centésimos), e não crescer com o tempo. Confira também que, ao voltar para a janela, o número já apareceu certo no primeiro instante, sem "correr para alcançar".
+5. [ ] `cat ~/.local/share/io.github.kbrianps.tomatito.dev/state.json`: tem `"stopwatch"` com `"status": "paused"` e o `"accumulatedMs"` do tempo parado.
+6. [ ] Espaço de novo retoma. Aperte L: nada visível muda ainda (a lista de voltas é do M35), mas o `cat` mostra a volta em `"laps"`. Com o foco num botão (Tab até ele), L não marca volta.
+7. [ ] "Redefinir": volta a 00:00:00,00, e o `cat` mostra `"status": "idle"` sem voltas.
+8. [ ] Encolha a janela até o mínimo (480 px): o número diminui e continua inteiro, sem cortar nem rolar para o lado.

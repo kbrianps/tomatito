@@ -539,6 +539,35 @@ fluent-radio-group.tt-temas{
 .tt-temporizador-edicao{ position:absolute; top:4px; right:4px; display:none; gap:4px; }
 .tt-temporizadores[data-editando] .tt-temporizador-edicao{ display:flex; }
 .tt-temporizadores[data-editando] .tt-temporizador-titulo{ padding-right:68px; }
+/* M34: tela Cronômetro, como a do Relógio (stopwatch-in-clock-app.png): o
+   número centrado em clamp(68px, 8vw, 110px), com os pares de dígitos e as
+   unidades (h, min, s) embaixo de cada um, a um quarto do tamanho do número;
+   os centésimos a 70%, depois da vírgula, na mesma linha de base; os três
+   botões circulares de 64 px a 24 px um do outro. Números tabulares (.tt-num),
+   para os dígitos não dançarem a cada quadro. O bloco fica no terço de cima
+   da área, como lá. */
+.tt-pagina-cronometro{ box-sizing:border-box; min-height:100%; display:flex; flex-direction:column; }
+.tt-cronometro{
+  display:flex; flex-direction:column; align-items:center;
+  margin:clamp(24px, 14vh, 150px) 0 0; min-width:0;
+}
+.tt-cronometro-tempo{
+  display:flex; align-items:baseline; justify-content:center; max-width:100%;
+  font-family:var(--tt-font-display); font-weight:400; line-height:1;
+  font-size:clamp(68px, 8vw, 110px); color:var(--tt-fg-1); white-space:nowrap;
+}
+/* Na janela mínima (480 px), 68 px não cabem: "00:00:00,00" tem cerca de
+   5,5 em na Inter. Abaixo disso, o número encolhe com a área de conteúdo
+   (100cqi menos o recuo de 32 px de cada lado), para não passar da borda
+   (docs/decisoes.md, M34). Acima de ~560 px de janela, vale o clamp do plano. */
+.tt-cronometro-tempo{ font-size:min(clamp(68px, 8vw, 110px), calc((100cqi - 64px) / 5.7)); }
+.tt-cronometro-par{ display:inline-flex; flex-direction:column; align-items:center; }
+.tt-cronometro-unidade{
+  font-family:var(--tt-font-text); font-size:.25em; line-height:1.4; margin-top:.1em;
+}
+.tt-cronometro-sep{ padding:0 .02em; }
+.tt-cronometro-centesimos{ font-size:.7em; }
+.tt-cronometro-botoes{ display:flex; gap:24px; margin-top:40px; }
 @media (forced-colors:active){
   .tt-temporizador[data-vencido] .tt-temporizador-tempo{ color:CanvasText; }
 }
