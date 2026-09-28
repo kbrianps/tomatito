@@ -939,6 +939,7 @@ O que já foi conferido sem você:
 - `npm test` e `cargo test`: a escolha do Full e a saída pelas Configurações (esperando o `tt://settings` da saída), a ordem do "Entrar" e do "Sair" da 5.7, o limite de 2 s do `tt://tomato-ready`, o início só com a `tomato` e a chave de validação.
 - Prévia no Chrome (`node scripts/preview/aparencia.mjs`, 42 conferências): a opção "Tomatito Full" com o tomate em miniatura, e a ida e a volta pela Aparência em cada tema de partida.
 - Roteiro aninhado `full` (o app de verdade no GNOME Shell 50.1 aninhado, 20 conferências): 20 idas e voltas com uma sessão correndo, sem clarão quadro a quadro (949 quadros do tomate, 820 da janela principal), sem zerar o timer e sem crash; a memória do app e do WebKit +0,7%; o Claro escolhido com o Full ativo; o início direto no Full.
+- Correções da verificação (`docs/decisoes.md`, M51, item 13; 21 conferências): a janela principal só some quando o tomate já está desenhado, também quando a página do tomate passa do limite de 2 s (com a página atrasada de propósito), e o registro do app é lido em UTF-8, de modo que o limite atingido aparece na conferência.
 
 O que só você consegue: ver a troca na sua tela e com o seu teclado.
 
@@ -947,7 +948,7 @@ Desde o M51, o botão "Abrir o tomate" do `#/dev` (passo 1 da seção M50) escon
 ### Para conferir (uns 5 minutos)
 
 1. [ ] `cd ~/dev/tomatito-full && npm run dev:app` (ou, depois da junção, em `~/dev/tomatito`). Vá em Configurações: em "Tema do aplicativo" há seis opções, e "Tomatito Full" mostra um tomate sobre um fundo cinza.
-2. [ ] Na tela Foco, inicie uma sessão. Volte a Configurações e clique em "Tomatito Full": o tomate aparece e a janela principal some, **sem nenhum quadro branco, preto ou cinza** no lugar do tomate e sem piscar. O tomate mostra o mesmo tempo que a tela Foco mostrava.
+2. [ ] Na tela Foco, inicie uma sessão. Volte a Configurações e clique em "Tomatito Full": o tomate aparece e a janela principal some, **sem nenhum quadro branco, preto ou cinza** no lugar do tomate, sem piscar e sem um instante em que nenhuma das duas está na tela. O tomate mostra o mesmo tempo que a tela Foco mostrava.
 3. [ ] Com o tomate ativo (clique nele, fora dos botões, se precisar), aperte Esc: a janela principal volta, em Configurações, no tema de antes, e o tomate fecha. O tempo continua de onde estava.
 4. [ ] Entre no Full de novo e clique no ícone de janela (em cima, à esquerda do tomate, "Voltar ao modo normal"): o mesmo do passo 3.
 5. [ ] Faça umas 5 idas e voltas seguidas, alternando o Esc e o botão: nenhum clarão, o tempo nunca volta ao começo.

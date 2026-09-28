@@ -4,16 +4,22 @@
 //
 //   TT_PORT=5174 bash scripts/gnome-aninhado/rodar.sh full   # binário compilado para a 5174
 //   TT_CICLOS=5 ...                                          # menos idas e voltas (padrão 20)
+//   TT_CONTROLE=tomate-lento TT_CICLOS=3 ...                 # a página do tomate atrasada 2,5 s: o limite de 2 s em toda ida, e tudo ok
+//   TT_CONTROLE=aviso-cedo TT_CICLOS=3 ...                   # controle negativo: "sem vazio" e "o tomate pintado" falham
 //
 // O "Pronto quando" do M51, no que dá para medir sem um humano:
 //   1. 20 idas e voltas, com uma sessão de foco correndo: a ida pelo clique
 //      em "Tomatito Full" (Configurações > Aparência), a volta alternando o
 //      Esc e o botão "Voltar ao modo normal" do tomate. Em cada uma:
 //      - sem clarão: cada quadro que o compositor pintou do tomate (do
-//        primeiro até 1,5 s depois) tem os quatro cantos transparentes, e
-//        cada quadro da main que volta não tem um branco ou um preto que não
-//        é do tema (a janela é capturada pelo ator, com o canal alfa, como
-//        no roteiro partida-a-frio);
+//        primeiro até 1,5 s depois dele e da main sumir) tem os quatro cantos
+//        transparentes, e cada quadro da main que volta não tem um branco ou
+//        um preto que não é do tema (a janela é capturada pelo ator, com o
+//        canal alfa, como no roteiro partida-a-frio);
+//      - sem vazio: a main só some com o tomate já pintado, mesmo quando a
+//        página passa do limite de 2 s (docs/decisoes.md, M51, item 13);
+//      - o aviso tt://tomato-ready de cada ida, lido no app.log (build de
+//        debug): a tempo, depois do limite ou ausente;
 //      - só uma janela no fim de cada troca (a outra escondida ou fechada);
 //      - sem zerar o timer: a mesma sessão, o mesmo endsAt, e o tempo do
 //        tomate igual ao do motor;
@@ -43,6 +49,11 @@ const CICLOS = Number(GLib.getenv('TT_CICLOS') || 20);
 const LADO = 280;
 const K = LADO / 320;
 const QUADROS_MS = 1500;
+// O vazio: quanto tempo o compositor mostrou a tela sem nenhuma das duas
+// janelas (a main já fora e o tomate ainda sem pintar). Zero quando o tomate
+// pintado entra na primeira pintura do palco sem a main; senão, o tempo entre
+// o sumiço da main e o primeiro quadro pintado. Folga de dois quadros a 60 Hz.
+const FOLGA_DO_VAZIO_MS = 34;
 const R = { passos: [], checagens: {}, medidas: { ciclos: [] } };
 
 const salvar = () => GLib.file_set_contents(`${OUT}/resultado.json`, JSON.stringify(R, null, 2));
@@ -119,6 +130,7 @@ const LER_TOMATE = `JSON.stringify({ agora: Date.now(), estado: document.querySe
   pref: document.documentElement.dataset.themePref, tamanho: [innerWidth, innerHeight] })`;
 const LER_MAIN = `JSON.stringify({ hash: location.hash, pref: document.documentElement.dataset.themePref,
   tema: document.documentElement.dataset.theme, visivel: document.visibilityState })`;
+const faixaDe = (xs) => (xs.every(Number.isFinite) && xs.length ? [Math.min(...xs), Math.max(...xs)] : null);
 const segundos = (mmss) => {
   const [m, s] = mmss.split(':').map(Number);
   return m * 60 + s;
@@ -168,7 +180,8 @@ async function semVisaoGeral() {
 // Quadros das janelas que nascem depois de `ligar()`: cada after-paint do
 // palco, o conteúdo do ator (com o alfa) vai para um PNG, sem repetidos.
 function gravarQuadros(rotulo) {
-  const G = { janelas: [], ativo: true };
+  // `ate`: quem grava pode estender a captura até um instante (agoraMs).
+  const G = { janelas: [], ativo: true, ate: 0, pinturas: 0 };
   const seguir = (w) => {
     const J = { w, quadros: [], temQuadro: false, ator: null, soma: null, t0: agoraMs() };
     G.janelas.push(J);
@@ -178,6 +191,14 @@ function gravarQuadros(rotulo) {
       J.ator.connect('first-frame', () => {
         J.temQuadro = true;
         J.primeiro = Math.round(agoraMs() - G.t0);
+        try {
+          const ws = global.display.sort_windows_by_stacking(doApp());
+          J.pilha = ws.map((x) => `${eTomate(x) ? 'tomate' : 'main'}@${JSON.stringify(rect(x))}`);
+          const f = global.display.focus_window;
+          J.foco = f ? (eTomate(f) ? 'tomate' : f.get_title()) : null;
+        } catch (e) {
+          J.pilha = String(e);
+        }
       });
       return GLib.SOURCE_REMOVE;
     };
@@ -189,7 +210,7 @@ function gravarQuadros(rotulo) {
     if (!G.ativo) return;
     for (const J of G.janelas) {
       if (!J.temQuadro || !J.ator || J.fim) continue;
-      if (agoraMs() - G.t0 - (J.primeiro ?? 0) > QUADROS_MS) continue;
+      if (agoraMs() - G.t0 - (J.primeiro ?? 0) > QUADROS_MS && !(agoraMs() <= G.ate)) continue;
       let img = null;
       try {
         img = J.ator.get_image(null);
@@ -206,12 +227,13 @@ function gravarQuadros(rotulo) {
         continue;
       }
       J.soma = soma;
-      J.quadros.push({ t: Math.round(agoraMs() - G.t0), arq });
+      J.quadros.push({ t: Math.round(agoraMs() - G.t0), pintura: G.pinturas, arq });
     }
   };
   G.t0 = agoraMs();
   G.idCriada = global.display.connect('window-created', (_d, w) => seguir(w));
   G.idPintura = global.stage.connect('after-paint', () => {
+    G.pinturas++;
     if (pendente || !G.ativo) return;
     pendente = true;
     GLib.idle_add(GLib.PRIORITY_HIGH, () => (capturar(), GLib.SOURCE_REMOVE));
@@ -320,13 +342,30 @@ async function abrir() {
   passo(`partida ${partida}: pid ${pid}`);
 }
 const vivo = () => proc && !proc.get_if_exited() && !proc.get_if_signaled();
-function logDoApp(i = partida) {
+// O app.log em bytes; o texto é UTF-8 ("não avisou").
+function bytesDoLog(i = partida) {
   try {
-    const [, b] = GLib.file_get_contents(`${OUT}/app-${i}.log`);
-    return new TextDecoder('latin1').decode(b);
+    return GLib.file_get_contents(`${OUT}/app-${i}.log`)[1];
   } catch {
-    return '';
+    return new Uint8Array();
   }
+}
+const logDoApp = (i = partida) => new TextDecoder().decode(bytesDoLog(i));
+// O que o build de debug registra de uma entrada no Full (window/tomato.rs,
+// criar_e_mostrar), no trecho do log escrito durante a ida.
+function avisoDaIda(trecho) {
+  const m = /entrada no Full: janela criada em (\d+) ms, mostrada (a tempo|pelo limite) em (\d+) ms, (pintada|sem aviso de pintura) em (\d+) ms/.exec(trecho);
+  if (!m) return null;
+  return {
+    janela: Number(m[1]),
+    mostrada: m[2],
+    mostradaMs: Number(m[3]),
+    pintada: m[4] === 'pintada',
+    ms: Number(m[5]),
+    // As linhas do limite, em UTF-8, para conferir o registro.
+    limite: /não avisou tt:\/\/tomato-ready/.test(trecho),
+    semPintura: /não avisou que pintou/.test(trecho),
+  };
 }
 
 // Clica na moldura da prévia `tema` da main (em #/configuracoes).
@@ -358,7 +397,17 @@ const motor = async (janela) => (await ipc(janela, 'get_state')).focus;
 // Uma ida (`entrar`) ou volta, com os quadros e as conferências de cada uma.
 async function troca(i, sentido, como) {
   const infosAntes = infos(sentido === 'ida' ? 'tomato' : 'main');
+  const logAntes = bytesDoLog().length;
   const G = gravarQuadros(`${i}-${sentido}`);
+  // Na ida, o instante em que a main some (o hide no Wayland desfaz a
+  // MetaWindow), para comparar com o primeiro quadro pintado do tomate.
+  let sumiu = null;
+  let sumiuNaPintura = null;
+  const mAntes = sentido === 'ida' ? main() : null;
+  const idSumiu = mAntes?.connect('unmanaging', () => {
+    sumiu ??= Math.round(agoraMs() - G.t0);
+    sumiuNaPintura ??= G.pinturas;
+  });
   if (como === 'aparencia') await clicarNaPrevia('full');
   else if (como === 'esc') {
     Main.activateWindow(tomate());
@@ -372,22 +421,38 @@ async function troca(i, sentido, como) {
       if (sentido === 'ida') return ws.length === 1 && eTomate(ws[0]) ? ws[0] : null;
       return ws.length === 1 && !eTomate(ws[0]) ? ws[0] : null;
     },
-    6000,
+    // Pelo limite, a main espera o tomate até 2 s + 8 s (ESPERA_DA_PINTURA).
+    sentido === 'ida' ? 12000 : 6000,
     `o fim da ${sentido} ${i}`,
   ).catch(() => null);
   const dur = Math.round(agoraMs() - acao);
+  G.ate = agoraMs() + QUADROS_MS;
   await sleep(QUADROS_MS + 200);
   G.parar();
+  try {
+    if (idSumiu) mAntes.disconnect(idSumiu);
+  } catch {
+    // a MetaWindow já se foi
+  }
   const C = { i, sentido, como, ms: dur, janelas: doApp().map((w) => rect(w)) };
   // Os quadros de cada janela nova.
   const todos = [];
   for (const J of G.janelas) {
     const tom = J.quadros.length && pixels(J.quadros[0].arq).w === LADO;
-    const an = J.quadros.map((q) => ({ t: q.t, ...(tom ? analisarTomate(q.arq) : analisarMain(q.arq)) }));
+    const an = J.quadros.map((q) => ({ t: q.t, pintura: q.pintura, ...(tom ? analisarTomate(q.arq) : analisarMain(q.arq)) }));
     todos.push(...J.quadros.map((q) => q.arq));
     if (tom) {
       const ruins = an.filter((a) => a.cantos.some((c) => c > 8));
-      C.tomate = { quadros: an.length, primeiro: J.primeiro, cantosMax: Math.max(0, ...an.flatMap((a) => a.cantos)), ruins: ruins.length, pintado: an.some((a) => a.corpo === 255) };
+      const pintado = an.find((a) => a.corpo === 255);
+      C.tomate = { pilha: J.pilha, foco: J.foco, quadros: an.length, primeiro: J.primeiro, cantosMax: Math.max(0, ...an.flatMap((a) => a.cantos)), ruins: ruins.length, pintado: Boolean(pintado) };
+      // O vazio (FOLGA_DO_VAZIO_MS): sem o tomate pintado ou sem o sinal da
+      // main, fica null e a conferência falha.
+      if (sentido === 'ida') {
+        C.tomate.pintouEm = pintado?.t ?? null;
+        C.tomate.mainSumiuEm = sumiu;
+        C.tomate.pinturas = pintado && sumiuNaPintura !== null ? pintado.pintura - sumiuNaPintura : null;
+        C.tomate.vazioMs = pintado && sumiu !== null ? (pintado.pintura <= sumiuNaPintura + 1 ? 0 : pintado.t - sumiu) : null;
+      }
       if (ruins.length) C.tomate.exemplo = J.quadros[an.indexOf(ruins[0])].arq;
     } else if (J.quadros.length) {
       const ruins = an.filter((a) => a.branco > 0.25 || a.preto > 0.25 || a.transparente > 0.2);
@@ -398,6 +463,7 @@ async function troca(i, sentido, como) {
   // Guarda só os quadros ruins e os da primeira ida e volta.
   apagar(todos.filter((a) => a !== C.tomate?.exemplo && a !== C.main?.exemplo && !(i === 1)));
   C.fim = Boolean(fim);
+  if (sentido === 'ida') C.pronto = avisoDaIda(new TextDecoder().decode(bytesDoLog().slice(logAntes)));
   // A página nova avisou pela sonda (a tomato nasce a cada ida; a main só é
   // mostrada de novo, então a volta confere pela visibilidade).
   if (sentido === 'ida') await esperar(() => infos('tomato') > infosAntes, 10000, 'a página do tomate').catch(() => null);
@@ -466,6 +532,11 @@ async function principal() {
     idas.map((c) => c.tomate),
   );
   checar(
+    `sem vazio na ida: a main só some com o tomate já pintado (no máximo ${FOLGA_DO_VAZIO_MS} ms sem nenhuma das duas), também pelo limite de 2 s`,
+    idas.every((c) => c.tomate?.vazioMs !== null && c.tomate?.vazioMs !== undefined && c.tomate.vazioMs <= FOLGA_DO_VAZIO_MS),
+    idas.map((c) => [c.i, c.tomate?.vazioMs, c.tomate?.pinturas, c.tomate?.pintouEm, c.tomate?.mainSumiuEm, c.pronto?.mostrada]),
+  );
+  checar(
     'sem clarão na volta: nenhum quadro da main com branco, preto ou transparência que não são do tema',
     voltas.every((c) => c.main && c.main.ruins === 0),
     voltas.map((c) => c.main),
@@ -485,10 +556,24 @@ async function principal() {
   checar('sem zerar o timer: a mesma sessão e o mesmo endsAt em todas as trocas', ids.size === 1 && ends.size === 1 && C.every((c) => c.motor.status === 'focus'), { ids: [...ids], endsAt: [...ends] });
   checar('o tomate mostra o tempo do motor em cada ida', idas.every((c) => Math.abs(segundos(c.pagina.tempo) - c.esperado) <= 1), idas.map((c) => [c.pagina.tempo, c.esperado]));
   const log1 = logDoApp(1);
-  const prontos = (log1.match(/tomate pronto:/g) ?? []).length;
-  const semAviso = (log1.match(/não avisou tt:\/\/tomato-ready/g) ?? []).length;
-  R.medidas.pronto = { avisos: prontos, semAviso, exemplo: /tomate pronto: ([^\n]*)/.exec(log1)?.[1] };
-  checar(`o tomate avisa tt://tomato-ready a cada ida (sem o limite de 2 s)`, prontos >= CICLOS && semAviso === 0, R.medidas.pronto);
+  const pr = idas.map((c) => c.pronto);
+  R.medidas.pronto = {
+    aTempo: pr.filter((p) => p?.mostrada === 'a tempo').length,
+    peloLimite: pr.filter((p) => p?.mostrada === 'pelo limite').length,
+    pintadas: pr.filter((p) => p?.pintada).length,
+    semRegistro: pr.filter((p) => !p).length,
+    // No log inteiro da partida 1, com as idas "claro" e "fim".
+    linhasDoLimite: (log1.match(/não avisou tt:\/\/tomato-ready/g) ?? []).length,
+    janelaMs: faixaDe(pr.map((p) => p?.janela)),
+    mostradaMs: faixaDe(pr.map((p) => p?.mostradaMs)),
+    pintadaMs: faixaDe(pr.map((p) => p?.ms)),
+    exemplo: /tomate pronto(?: e pintado)?: ([^\n]*)/.exec(log1)?.[1],
+  };
+  checar(
+    `o tomate avisa tt://tomato-ready em cada uma das ${CICLOS} idas, o de pintado inclusive (a tempo ou pelo limite de 2 s), e o registro bate com as linhas do limite`,
+    pr.every((p) => p && p.pintada && !p.semPintura && p.limite === (p.mostrada === 'pelo limite')),
+    R.medidas.pronto,
+  );
   R.medidas.tempos = { ida: idas.map((c) => c.ms), volta: voltas.map((c) => c.ms) };
   checar('sem crash: o app vivo e sem pânico no registro', vivo() && !/panicked at/.test(log1), { vivo: vivo() });
 
@@ -535,16 +620,25 @@ async function principal() {
   await abrir();
   const t2 = await esperar(() => tomate(), 60000, 'o tomate na partida 2');
   await esperar(() => infos('tomato') > infosT, 20000, 'a página do tomate na partida 2');
+  G2.ate = agoraMs() + QUADROS_MS;
   await sleep(QUADROS_MS + 1500);
   G2.parar();
   const quadrosInicio = G2.janelas.flatMap((J) => J.quadros.map((q) => q.arq)).filter((a) => pixels(a).w === LADO).map(analisarTomate);
+  // Sem a main na partida, o limite de 2 s só mostra antes a janela, ainda
+  // vazia e transparente (docs/decisoes.md, M51, item 13): conta, mas não falha.
+  const log2 = logDoApp(2);
+  R.medidas.partida2 = { limite: /não avisou tt:\/\/tomato-ready/.test(log2), quadros: quadrosInicio.length, pintado: quadrosInicio.some((a) => a.corpo === 255) };
   checar(
     'iniciar direto no Full: só a tomato (nenhuma main), com os cantos transparentes desde o primeiro quadro',
     doApp().length === 1 && eTomate(doApp()[0]) && infos('main') === infosM && quadrosInicio.length > 0 && quadrosInicio.every((a) => a.cantos.every((c) => c <= 8)),
     { janelas: doApp().map(rect), mains: infos('main') - infosM, quadros: quadrosInicio.length, cantosMax: Math.max(0, ...quadrosInicio.flatMap((a) => a.cantos)) },
   );
   const tt2 = JSON.parse(await comando('tomato', LER_TOMATE));
-  checar('o tomate da partida 2 no tema full, e o log com o tt://tomato-ready', tt2.tema === 'full' && /tomate pronto:/.test(logDoApp(2)) && !/não avisou/.test(logDoApp(2)), { tema: tt2.tema, estado: tt2.estado });
+  checar(
+    'o tomate da partida 2 no tema full, pintado, e o log com o tt://tomato-ready',
+    tt2.tema === 'full' && /tomate pronto(?: e pintado)?:/.test(log2) && R.medidas.partida2.pintado,
+    { tema: tt2.tema, estado: tt2.estado, ...R.medidas.partida2 },
+  );
   await clicarNoTomate('configuracoes');
   await esperar(() => main(), 8000, 'a main criada pelas Configurações do tomate');
   await esperar(() => infos('main') > infosM, 20000, 'a página da main nova');

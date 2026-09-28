@@ -11,7 +11,9 @@
 //
 // M51: a janela nasce escondida pelo `switch_window_mode` (5.7) e só aparece
 // quando esta página avisa `tt://tomato-ready`, com o retrato escrito e as
-// fontes carregadas (o Rust mostra assim mesmo depois de 2 s). "Voltar ao modo
+// fontes carregadas (o Rust mostra assim mesmo depois de 2 s). Já na tela, a
+// página avisa de novo, `pintado`, depois de dois quadros, e só então o Rust
+// esconde a main (docs/decisoes.md, M51, item 13). "Voltar ao modo
 // normal" e o Esc saem do Full pelo mesmo comando. Ainda sem região de
 // entrada (M53 e M54). O menu nativo do botão direito e os outros atalhos
 // (Espaço e Ctrl+,) são do M56; até lá, o menu de contexto do WebView fica
@@ -167,6 +169,20 @@ function renderizador() {
   }
 }
 
+// Dois quadros na tela: o segundo rAF roda depois de o primeiro quadro ter
+// sido pintado. Sem limite aqui: quem espera é o Rust (ESPERA_DA_PINTURA).
+const quadroPintado = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+const naTela = () =>
+  new Promise((r) => {
+    const ver = () => {
+      if (document.visibilityState !== 'visible') return;
+      document.removeEventListener('visibilitychange', ver);
+      r();
+    };
+    document.addEventListener('visibilitychange', ver);
+    ver();
+  });
+
 // Anúncio das fases na região aria-live (a11y.js, a mesma regra da main).
 ligarAnuncioDeFases({ ipc }).catch((erro) => console.error('[anúncio]', erro));
 
@@ -181,7 +197,13 @@ try {
   // a classe só sai dois quadros depois de a janela aparecer.
   requestAnimationFrame(() => requestAnimationFrame(() => h.classList.remove('tt-no-transition')));
   await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]);
-  ipc.full
-    .avisarPronto({ userAgent: navigator.userAgent, renderer: renderizador() })
-    .catch((erro) => console.error('[tomate] tt://tomato-ready', erro));
+  const dados = { userAgent: navigator.userAgent, renderer: renderizador() };
+  const avisar = (pintado) =>
+    ipc.full.avisarPronto({ ...dados, pintado }).catch((erro) => console.error('[tomate] tt://tomato-ready', erro));
+  // Escondida: o primeiro aviso libera o show(). Já na tela (o Rust a mostrou
+  // pelo limite de 2 s), só o segundo.
+  if (document.visibilityState !== 'visible') avisar(false);
+  await naTela();
+  await quadroPintado();
+  avisar(true);
 }

@@ -7,7 +7,8 @@
 //!
 //! M51: a troca normal ↔ Full (5.7). [`entrar`] grava `theme = full`, cria a
 //! `tomato` escondida e só a mostra quando a página avisa `tt://tomato-ready`
-//! (ou depois de 2 s), e então esconde a `main`. [`sair`] grava o
+//! (ou depois de 2 s), e só esconde a `main` quando a página, já na tela,
+//! avisa de novo que pintou (docs/decisoes.md, M51, item 13). [`sair`] grava o
 //! `lastNormalTheme`, mostra a `main` (recriada se não existir) e fecha a
 //! `tomato`. As duas passam pela mesma trava, então duas trocas nunca se
 //! cruzam. Com `theme = full`, o `setup` cria só a `tomato` ([`abrir_no_inicio`]).
@@ -17,13 +18,13 @@
 //! (M56).
 
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::Deserialize;
 use serde_json::json;
 use tauri::window::Color;
 use tauri::{AppHandle, Listener, Manager, Theme, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
-use tokio::sync::oneshot;
+use tokio::sync::mpsc;
 
 use super::main_window;
 use crate::settings::{Settings, SettingsStore, ThemePref};
@@ -82,40 +83,50 @@ pub const EVENTO_PRONTO: &str = "tt://tomato-ready";
 /// Quanto o `show()` espera pelo `tt://tomato-ready` (5.7, passo 4).
 pub const ESPERA_DO_PRONTO: Duration = Duration::from_secs(2);
 
+/// Quanto a `main` espera, depois do `show()` do tomate, o aviso de que ele
+/// pintou (docs/decisoes.md, M51, item 13). A página, já na tela, avisa de
+/// novo (`pintado: true`) depois de dois quadros; só então a `main` se
+/// esconde, e assim nunca fica um instante sem nenhuma das duas, nem quando o
+/// tomate aparece pelo limite de 2 s, ainda vazio. Passado este prazo, a
+/// `main` se esconde assim mesmo.
+pub const ESPERA_DA_PINTURA: Duration = Duration::from_secs(8);
+
 /// Quanto a saída espera a `main` recriada aparecer antes de fechar o tomate.
 /// A `main` se mostra sozinha (main.js), com o próprio limite de 2 s.
 const ESPERA_DA_MAIN: Duration = Duration::from_secs(3);
 
-/// O conteúdo do `tt://tomato-ready`.
+/// O conteúdo do `tt://tomato-ready`. A página avisa uma vez escondida
+/// (`pintado: false`, libera o `show()`) e outra já na tela, depois de dois
+/// quadros (`pintado: true`, libera o `hide()` da `main`); se já nasce na
+/// tela (o `show()` pelo limite), só a segunda.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Pronto {
     pub user_agent: String,
     pub renderer: String,
+    pub pintado: bool,
 }
 
 /// Estado da troca (no `app.manage`): a trava que põe as trocas em fila e
-/// quem espera o próximo `tt://tomato-ready`.
+/// quem espera os próximos `tt://tomato-ready` (os dois avisos de uma página).
 #[derive(Default)]
 pub struct Troca {
     trava: Arc<tokio::sync::Mutex<()>>,
-    esperando: Mutex<Option<oneshot::Sender<Pronto>>>,
+    esperando: Mutex<Option<mpsc::UnboundedSender<Pronto>>>,
 }
 
 impl Troca {
-    fn esperar_pronto(&self) -> oneshot::Receiver<Pronto> {
-        let (tx, rx) = oneshot::channel();
+    /// Os avisos daqui em diante vão para o receptor devolvido; o anterior
+    /// fica sem nenhum.
+    fn esperar_pronto(&self) -> mpsc::UnboundedReceiver<Pronto> {
+        let (tx, rx) = mpsc::unbounded_channel();
         *self.esperando.lock().unwrap_or_else(|e| e.into_inner()) = Some(tx);
         rx
     }
 
     fn pronto(&self, p: Pronto) {
-        let tx = self
-            .esperando
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .take();
-        if let Some(tx) = tx {
+        let esperando = self.esperando.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(tx) = esperando.as_ref() {
             let _ = tx.send(p);
         }
     }
@@ -130,7 +141,8 @@ pub fn ligar(app: &AppHandle) {
         let p: Pronto = serde_json::from_str(ev.payload()).unwrap_or_default();
         if cfg!(debug_assertions) {
             eprintln!(
-                "[tomatito] tomate pronto: {}",
+                "[tomatito] tomate pronto{}: {}",
+                if p.pintado { " e pintado" } else { "" },
                 chave_de_validacao(&p, &Ambiente::atual())
             );
         }
@@ -229,28 +241,68 @@ fn gravar_tema(app: &AppHandle, tema: &str) -> Result<Settings, String> {
 }
 
 /// Cria a `tomato` escondida e a mostra quando a página avisar que está pronta
-/// (ou depois de [`ESPERA_DO_PRONTO`]). Devolve o que a página informou.
+/// (ou depois de [`ESPERA_DO_PRONTO`]), e então espera o aviso de que ela
+/// pintou, já na tela (até [`ESPERA_DA_PINTURA`]): quem chama esconde a
+/// `main` em seguida. Devolve o primeiro aviso da página.
 async fn criar_e_mostrar(
     app: &AppHandle,
     s: &Settings,
 ) -> tauri::Result<(WebviewWindow, Option<Pronto>)> {
+    let t0 = Instant::now();
     // O ouvinte antes da janela: a página pode ficar pronta antes do `await`.
-    let rx = app.state::<Troca>().esperar_pronto();
+    let mut rx = app.state::<Troca>().esperar_pronto();
     let w = build_tomato(app, s)?;
-    let pronto = tokio::time::timeout(ESPERA_DO_PRONTO, rx)
+    let criada = t0.elapsed();
+    let pronto = tokio::time::timeout(ESPERA_DO_PRONTO, rx.recv())
         .await
         .ok()
-        .and_then(Result::ok);
+        .flatten();
     if pronto.is_none() {
         eprintln!(
-            "[tomatito] o tomate não avisou {EVENTO_PRONTO} em {} s; mostrando assim mesmo",
+            "[tomatito] o tomate não avisou {EVENTO_PRONTO} em {} s; mostrando assim mesmo, com a main na tela até ele pintar",
             ESPERA_DO_PRONTO.as_secs()
         );
     }
+    let mostrada = t0.elapsed();
     w.show()?;
     // O foco do teclado vai para o tomate (Esc sai do Full). O GNOME pode só
     // avisar "Tomatito está pronto" (prevenção de roubo de foco; 3.4).
     let _ = w.set_focus();
+    // A main só some com o tomate pintado: a página, já na tela, avisa de novo
+    // depois de dois quadros. Pelo limite, a página ainda carrega, e o
+    // primeiro aviso dela pode ser o de pintado.
+    let mut pintado = pronto.as_ref().is_some_and(|p| p.pintado);
+    let fim = tokio::time::Instant::now() + ESPERA_DA_PINTURA;
+    while !pintado {
+        match tokio::time::timeout_at(fim, rx.recv()).await {
+            Ok(Some(p)) => pintado = p.pintado,
+            _ => break,
+        }
+    }
+    if !pintado {
+        eprintln!(
+            "[tomatito] o tomate não avisou que pintou em {} s; escondendo a main assim mesmo",
+            ESPERA_DA_PINTURA.as_secs()
+        );
+    }
+    if cfg!(debug_assertions) {
+        eprintln!(
+            "[tomatito] entrada no Full: janela criada em {} ms, mostrada {} em {} ms, {} em {} ms",
+            criada.as_millis(),
+            if pronto.is_some() {
+                "a tempo"
+            } else {
+                "pelo limite"
+            },
+            mostrada.as_millis(),
+            if pintado {
+                "pintada"
+            } else {
+                "sem aviso de pintura"
+            },
+            t0.elapsed().as_millis()
+        );
+    }
     Ok((w, pronto))
 }
 
@@ -324,11 +376,14 @@ pub fn abrir_no_inicio(app: &AppHandle, s: &Settings) -> tauri::Result<()> {
     // meio-tempo (que passa pelo `entrar`) espera, e não mostra a janela antes
     // da página. No `setup` ninguém mais tem a trava.
     let vez = troca.trava.clone().try_lock_owned().ok();
-    let rx = troca.esperar_pronto();
+    let mut rx = troca.esperar_pronto();
     let w = build_tomato(app, s)?;
     tauri::async_runtime::spawn(async move {
         let _vez = vez;
-        if tokio::time::timeout(ESPERA_DO_PRONTO, rx).await.is_err() {
+        if tokio::time::timeout(ESPERA_DO_PRONTO, rx.recv())
+            .await
+            .is_err()
+        {
             eprintln!(
                 "[tomatito] o tomate não avisou {EVENTO_PRONTO} em 2 s; mostrando assim mesmo"
             );
@@ -368,6 +423,9 @@ mod tests {
                 .unwrap();
         assert_eq!(p.user_agent, "Mozilla/5.0 X");
         assert_eq!(p.renderer, "Apple GPU");
+        assert!(!p.pintado);
+        let pintado: Pronto = serde_json::from_str(r#"{"pintado":true}"#).unwrap();
+        assert!(pintado.pintado);
         let vazio: Pronto = serde_json::from_str("{}").unwrap();
         assert_eq!(vazio, Pronto::default());
         assert!(serde_json::from_str::<Pronto>("null").is_err());
@@ -378,6 +436,7 @@ mod tests {
         let p = Pronto {
             user_agent: " Mozilla/5.0 X ".into(),
             renderer: "Apple GPU".into(),
+            ..Pronto::default()
         };
         let intel = Ambiente {
             webview: "2.52.6".into(),
@@ -410,6 +469,8 @@ mod tests {
     #[test]
     fn so_um_espera_o_pronto_e_o_ultimo_pedido_vale() {
         let t = Troca::default();
+        // Um aviso sem ninguém esperando (um F5 na página) não quebra nada.
+        t.pronto(Pronto::default());
         let mut velho = t.esperar_pronto();
         let mut novo = t.esperar_pronto();
         t.pronto(Pronto {
@@ -418,8 +479,13 @@ mod tests {
         });
         assert!(velho.try_recv().is_err());
         assert_eq!(novo.try_recv().unwrap().renderer, "r");
-        // Um aviso sem ninguém esperando (um F5 na página) não quebra nada.
-        t.pronto(Pronto::default());
+        // Os dois avisos da mesma página chegam ao mesmo receptor, em ordem.
+        t.pronto(Pronto {
+            pintado: true,
+            ..Pronto::default()
+        });
+        assert!(novo.try_recv().unwrap().pintado);
+        assert!(novo.try_recv().is_err());
     }
 
     #[cfg(target_os = "linux")]

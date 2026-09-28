@@ -693,7 +693,10 @@ test('Full: switch_window_mode pelo caminho do settings_set, tt://tomato-ready c
   const ordem = (texto, partes) => partes.map((p) => texto.indexOf(p)).every((i, k, a) => i >= 0 && (k === 0 || i > a[k - 1]));
   assert.ok(ordem(entrar, ['trava.lock().await', 'gravar_tema(app, ThemePref::Full.as_str())', 'criar_e_mostrar(app, &s)', 'm.hide()']), 'a ordem do "Entrar" (5.7)');
   const criar = tomato.slice(tomato.indexOf('async fn criar_e_mostrar('), tomato.indexOf('pub async fn entrar('));
-  assert.ok(ordem(criar, ['esperar_pronto()', 'build_tomato(app, s)', 'tokio::time::timeout(ESPERA_DO_PRONTO, rx)', 'w.show()']), 'o ouvinte antes da janela, e o show depois do pronto ou do limite');
+  assert.ok(ordem(criar, ['esperar_pronto()', 'build_tomato(app, s)', 'tokio::time::timeout(ESPERA_DO_PRONTO, rx.recv())', 'w.show()']), 'o ouvinte antes da janela, e o show depois do pronto ou do limite');
+  // A main só some quando o tomate avisa, já na tela, que pintou (docs/decisoes.md, M51, item 13).
+  assert.match(tomato, /pub const ESPERA_DA_PINTURA: Duration = Duration::from_secs\(8\);/);
+  assert.ok(ordem(criar, ['w.show()', 'Instant::now() + ESPERA_DA_PINTURA', 'while !pintado', 'timeout_at(fim, rx.recv())', 'Ok((w, pronto))']), 'depois do show, a espera do aviso de pintado');
   // Sair: grava o lastNormalTheme, mostra a main (recriada se preciso) e fecha a tomato.
   const sair = tomato.slice(tomato.indexOf('pub async fn sair('), tomato.indexOf('async fn esperar_visivel('));
   assert.ok(ordem(sair, ['trava.lock().await', 'gravar_tema(app, atual.last_normal_theme.as_str())', 'm.show()', 'build_main(app, &s)', 't.destroy()']), 'a ordem do "Sair" (5.7)');
@@ -706,7 +709,9 @@ test('Full: switch_window_mode pelo caminho do settings_set, tt://tomato-ready c
   assert.match(lib, /window::tomato::ligar\(app\.handle\(\)\);\s*if s\.theme == settings::ThemePref::Full \{\s*window::tomato::abrir_no_inicio\(app\.handle\(\), &s\)\?;\s*\} else \{\s*window::main_window::build_main\(app\.handle\(\), &s\)\?;/);
   // A página avisa o pronto, e o Esc e o "Voltar ao modo normal" saem pelo mesmo comando.
   const js = ler('src/tomato.js');
-  assert.match(js, /ipc\.full\s*\.avisarPronto\(\{ userAgent: navigator\.userAgent, renderer: renderizador\(\) \}\)/);
+  assert.match(js, /const dados = \{ userAgent: navigator\.userAgent, renderer: renderizador\(\) \};/);
+  assert.match(js, /ipc\.full\.avisarPronto\(\{ \.\.\.dados, pintado \}\)/);
+  assert.match(js, /if \(document\.visibilityState !== 'visible'\) avisar\(false\);\s*await naTela\(\);\s*await quadroPintado\(\);\s*avisar\(true\);/, 'escondida, o primeiro aviso; na tela, o de pintado depois de dois quadros');
   assert.match(js, /e\.key !== 'Escape'/);
   assert.match(js, /voltar: \(\) => sair\(\)/);
   assert.match(js, /ipc\.full\.trocarModo\(false\)/);

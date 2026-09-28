@@ -23,7 +23,18 @@ if (idas.length) {
 }
 if (m.memoria) console.log(`  memória: ${m.memoria.antes} KB antes, ${m.memoria.depois} KB depois (${m.memoria.crescimento}%)`);
 if (m.memoriaAntes) console.log(`    antes: ${m.memoriaAntes.processos.join(', ')}\n    depois: ${m.memoriaDepois?.processos.join(', ')}`);
-if (m.pronto) console.log(`  tt://tomato-ready: ${m.pronto.avisos} avisos, ${m.pronto.semAviso} sem aviso; chave: ${m.pronto.exemplo}`);
+if (idas.length) {
+  const vazios = idas.map((c) => c.tomate?.vazioMs).filter(Number.isFinite);
+  const diferencas = idas.filter((c) => Number.isFinite(c.tomate?.pintouEm) && Number.isFinite(c.tomate?.mainSumiuEm)).map((c) => c.tomate.pintouEm - c.tomate.mainSumiuEm);
+  const pinturas = idas.map((c) => c.tomate?.pinturas).filter(Number.isFinite);
+  console.log(`  vazio (tela sem nenhuma das duas): ${faixa(vazios)} ms em ${vazios.length} de ${idas.length} idas; o tomate pintado menos a main sumida: ${faixa(diferencas)} ms, ${faixa(pinturas)} pinturas do palco`);
+}
+if (m.pronto) {
+  const p = m.pronto;
+  console.log(`  tt://tomato-ready nas idas: ${p.aTempo} mostradas a tempo, ${p.peloLimite} pelo limite de 2 s, ${p.pintadas} com o aviso de pintado, ${p.semRegistro} sem registro (linhas do limite no log da partida 1: ${p.linhasDoLimite}); janela criada em ${p.janelaMs?.join('–')} ms, mostrada em ${p.mostradaMs?.join('–')} ms, pintada em ${p.pintadaMs?.join('–')} ms`);
+  console.log(`  chave: ${p.exemplo}`);
+}
+if (m.partida2) console.log(`  partida 2: ${m.partida2.quadros} quadros do tomate, pintado ${m.partida2.pintado}, limite de 2 s ${m.partida2.limite ? 'atingido' : 'não atingido'}`);
 
 let falhou = Boolean(r.erro) || !Object.keys(r.checagens ?? {}).length;
 for (const [nome, { ok, detalhe }] of Object.entries(r.checagens ?? {})) {
