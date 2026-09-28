@@ -190,7 +190,7 @@ test('nenhuma janela no tauri.conf.json: a main nasce no setup, com o builder da
 test('configurações no Rust: settings_get, settings_set e tt://settings, sem o plugin do store', () => {
   const lib = ler('src-tauri/src/lib.rs');
   // M26: a pasta de dados é lida uma vez (`dados`) e serve ao stats.sqlite também.
-  assert.match(lib, /let dados = app\.path\(\)\.app_data_dir\(\)\?;[\s\S]*SettingsStore::load\(dados\)[\s\S]*build_main\(app\.handle\(\), &s\)/,
+  assert.match(lib, /let dados = app\.path\(\)\.app_data_dir\(\)\?;[\s\S]*SettingsStore::load\(dados(?:\.clone\(\))?\)[\s\S]*build_main\(app\.handle\(\), &s\)/,
     'o settings.json é lido antes de a main nascer, e ela recebe as configurações');
   assert.match(lib, /commands::settings_get,\s*commands::settings_set,/);
   // Um generate_context! só (ele embute a página), e o linuxX11 lido antes do Builder.
@@ -202,6 +202,24 @@ test('configurações no Rust: settings_get, settings_set e tt://settings, sem o
   assert.match(ipcJs, /invoke\('settings_set', \{ patch \}\)/);
   assert.doesNotMatch(ler('src-tauri/Cargo.toml'), /tauri-plugin-store/);
   assert.ok(!pkg.dependencies['@tauri-apps/plugin-store'] && !pkg.devDependencies['@tauri-apps/plugin-store']);
+});
+
+// M36: bandeja pela feature do Tauri (3.6), fechar para a bandeja (3.4).
+test('bandeja: tray-icon e image-png, ícone depois do motor e CloseRequested só esconde', () => {
+  assert.match(ler('src-tauri/Cargo.toml'), /^tauri = \{ version = "=2\.12\.0", features = \["tray-icon", "image-png"\] \}$/m);
+  const lib = ler('src-tauri/src/lib.rs');
+  assert.match(lib, /tray::Bandeja::new\([\s\S]*engine::Engine::new\([\s\S]*bandeja\.criar_icone\(/,
+    'a bandeja nasce antes do motor, e o ícone depois dele');
+  assert.match(lib, /WindowEvent::CloseRequested \{ api, \.\. \}[\s\S]*fechar_para_bandeja\(window\)[\s\S]*api\.prevent_close\(\);/);
+  const tray = ler('src-tauri/src/tray.rs');
+  // Nada de texto solto: os itens vêm do i18n.rs (3.8).
+  const codigo = tray.split('#[cfg(test)]')[0].split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
+  assert.doesNotMatch(codigo, /"(Iniciar|Pausar|Retomar) foco"|"Mostrar Tomatito"/);
+  assert.match(tray, /run_on_main_thread\(move \|\|/, 'a bandeja posta na thread principal, sem esperar');
+  const i18n = ler('src-tauri/src/i18n.rs');
+  for (const txt of ['Iniciar foco', 'Pausar foco', 'Mostrar Tomatito', 'Sair']) assert.ok(i18n.includes(`"${txt}"`), txt);
+  // "Mostrar Tomatito" segue a 3.4: show, unminimize e set_focus na main.
+  assert.match(ler('src-tauri/src/window/mod.rs'), /w\.show\(\);\s*let _ = w\.unminimize\(\);\s*let _ = w\.set_focus\(\);/);
 });
 
 // M26: estatísticas no SQLite do Rust (3.3), sem o tauri-plugin-sql.

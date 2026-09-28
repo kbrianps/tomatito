@@ -135,6 +135,45 @@ pub fn timer_ended(ended: &TimerEnded, tz: &TimeZone) -> NoticeText {
     }
 }
 
+/// Os itens do menu da bandeja (M36).
+pub mod bandeja {
+    pub const INICIAR: &str = "Iniciar foco";
+    pub const PAUSAR: &str = "Pausar foco";
+    pub const RETOMAR: &str = "Retomar foco";
+    pub const MOSTRAR: &str = "Mostrar Tomatito";
+    pub const SAIR: &str = "Sair";
+    /// A dica do ícone no Windows, sem sessão (no Linux, `set_tooltip` não
+    /// tem efeito; 3.8).
+    pub const DICA: &str = "Tomatito";
+}
+
+/// O que a sessão está fazendo, para o tempo na bandeja (M36).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TrayPhase {
+    Focus,
+    Break,
+    Paused,
+}
+
+/// O tempo na bandeja (M36): os minutos que faltam, arredondados para cima
+/// como no mostrador (`src/lib/format.js`): "24 min", "Intervalo · 4 min",
+/// "Pausado · 24 min". Muda uma vez por minuto.
+pub fn tray_time(phase: TrayPhase, minutes: u64) -> String {
+    match phase {
+        TrayPhase::Focus => format!("{minutes} min"),
+        TrayPhase::Break => format!("Intervalo · {minutes} min"),
+        TrayPhase::Paused => format!("Pausado · {minutes} min"),
+    }
+}
+
+/// A dica do ícone no Windows com o tempo ligado: "Tomatito · 24 min".
+pub fn tray_tooltip(time: Option<&str>) -> String {
+    match time {
+        Some(t) => format!("{} · {t}", bandeja::DICA),
+        None => bandeja::DICA.to_owned(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

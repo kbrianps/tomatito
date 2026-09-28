@@ -59,6 +59,7 @@ use crate::events::{
 use crate::notify::Notificador;
 use crate::state_file::StateStore;
 use crate::stats::Stats;
+use crate::tray::Bandeja;
 
 /// O ritmo do laço (3.2).
 pub const TICK_EVERY: Duration = Duration::from_millis(250);
@@ -672,6 +673,8 @@ pub struct TauriSink {
     stats: Arc<Stats>,
     /// M33: o `state.json`.
     estado: Arc<StateStore>,
+    /// M36: o item do menu e o tempo na bandeja.
+    bandeja: Arc<Bandeja>,
 }
 
 impl TauriSink {
@@ -680,6 +683,7 @@ impl TauriSink {
         som: Arc<Som>,
         stats: Arc<Stats>,
         estado: Arc<StateStore>,
+        bandeja: Arc<Bandeja>,
     ) -> Self {
         let notificador = Notificador::new(app.clone());
         Self {
@@ -688,6 +692,7 @@ impl TauriSink {
             notificador,
             stats,
             estado,
+            bandeja,
         }
     }
 
@@ -702,9 +707,14 @@ impl TauriSink {
 impl Sink for TauriSink {
     fn state(&self, focus: &FocusDto) {
         self.emit(events::STATE, focus);
+        // M36: "Iniciar foco" vira "Pausar foco" (só posta; não espera a
+        // thread principal com o motor travado, tray.rs).
+        self.bandeja.foco(focus);
     }
     fn tick(&self, tick: &TickDto) {
         self.emit(events::TICK, tick);
+        // M36: o tempo na bandeja, que só muda uma vez por minuto.
+        self.bandeja.tick(tick);
     }
     fn phase(&self, change: &PhaseEventDto) {
         self.emit(events::PHASE, change);

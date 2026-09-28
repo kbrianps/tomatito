@@ -888,3 +888,24 @@ O que só você consegue: colar de verdade numa planilha e julgar a lista ao lad
 7. [ ] Volte ao Tomatito, "Pausar" e "Redefinir": a lista some.
 8. [ ] Teclado: Tab chega ao "Copiar" depois dos três botões redondos, e Enter nele copia (o aviso aparece).
 9. [ ] Feche o app (Ctrl+C no terminal).
+
+## M36. Bandeja e fechar para a bandeja
+
+O que já foi conferido sem você:
+- `cargo test` e `npm test`: o item de cada estado, o tempo na bandeja em minutos (para cima, mudando uma vez por minuto), a dica do Windows, a ordem no `setup` e o `CloseRequested`.
+- Roteiro aninhado `bandeja` (app de verdade, extensão AppIndicator ligada no GNOME Shell aninhado, relógio a 60×, 24 conferências): o menu usado pelo D-Bus, como o painel faz; iniciar, pausar e retomar pela bandeja; o rótulo de tempo ligado e andando; fechar esconde e a sessão continua; o fim com a janela escondida (notificação no shell e som no PipeWire); "Mostrar Tomatito"; "Sair"; `closeToTray` desligado.
+- Abertura curta na sua sessão: o ícone registrado no seu painel, com os três itens.
+
+O que só você consegue: clicar de verdade no ícone do painel, ouvir o som com a janela escondida e ver a janela voltar.
+
+### Para conferir (uns 5 minutos)
+
+1. [ ] `cd ~/dev/tomatito && TOMATITO_SPEED=60 npm run dev:app`. No canto de cima, à direita do painel do GNOME, aparece o ícone do app (ainda o do Tauri; o do Tomatito é do M44), sem texto ao lado.
+2. [ ] Clique no ícone: o menu tem "Iniciar foco", "Mostrar Tomatito", um separador e "Sair".
+3. [ ] "Iniciar foco": a tela Foco mostra a sessão de 30 min correndo (a 60×, 30 s). Abra o menu de novo: o primeiro item agora é "Pausar foco". Clique nele: a tela mostra "Pausado", e o item vira "Retomar foco". Clique para retomar.
+4. [ ] Feche a janela pelo X da barra de título. A janela some, o ícone continua no painel e o terminal não mostra o app saindo.
+5. [ ] Espere o fim da sessão (uns 30 s a 60×) com a janela escondida: **o som toca** e aparece a notificação "Sessão de foco concluída".
+6. [ ] No menu do ícone, "Mostrar Tomatito": a janela volta (o GNOME pode só avisar "Tomatito está pronto"; clique no aviso), com a sessão concluída na tela. O item voltou a "Iniciar foco".
+7. [ ] Repita o passo 4 com Alt+F4 e depois com Ctrl+W, e traga a janela de volta por "Mostrar Tomatito" a cada vez.
+8. [ ] Tempo na bandeja (opcional; a opção na tela é do M39): no DevTools (botão direito → Inspecionar → Console), `await window.__TAURI_INTERNALS__.invoke('settings_set', { patch: { trayTime: true } })`. Inicie pela bandeja: ao lado do ícone aparece "30 min", que desce um por segundo a 60× ("Intervalo · N min" num intervalo, "Pausado · N min" no pausado). Volte com `{ trayTime: false }`: o texto some.
+9. [ ] "Sair" no menu: o app fecha e o terminal mostra o `tauri dev` terminando (ou Ctrl+C no terminal, se o Vite continuar).

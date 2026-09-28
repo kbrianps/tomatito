@@ -42,3 +42,4 @@ Formato: data, marco em que surgiu e uma linha sobre a ideia.
 - 27/09/2026, M18: o botão de janela compacta que o Relógio mostra no canto do cartão em sessão. No Tomatito, o papel é do Full (M50 a M57); decidir lá se o cartão ganha um atalho para ele.
 - 28/09/2026, M30: trocar a tarefa no meio da sessão (exigiria um comando `focus_set_task` no núcleo e um período novo a partir da troca).
 - 28/09/2026, M30: renomear uma tarefa (duplo clique no título) e arrastar para reordenar. Hoje só adicionar, concluir, escolher e apagar.
+- 28/09/2026, M36: "Iniciar foco" da bandeja com a última duração usada na tela Foco (hoje, sempre 30 min, a duração com que o seletor abre). Exigiria guardar a última duração no `settings.json`.

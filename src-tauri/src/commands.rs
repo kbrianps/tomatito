@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tomatito_core::{Sound, TimeZone};
 
 use crate::audio::Som;
@@ -17,6 +17,7 @@ use crate::events::{self, FocusDto, StateDto, StopwatchDto, TimersDto};
 use crate::settings::{Settings, SettingsError, SettingsStore};
 use crate::stats::{Stats, StatsDto};
 use crate::tasks::{TaskDto, TaskError};
+use crate::tray::Bandeja;
 
 pub type AppEngine = Arc<Engine<TauriSink>>;
 
@@ -58,6 +59,10 @@ pub fn settings_set(
     settings.set(&patch, |s| {
         if let Err(e) = app.emit(events::SETTINGS, s) {
             eprintln!("[tomatito] {} não saiu: {e}", events::SETTINGS);
+        }
+        // M36: ligar ou desligar o tempo na bandeja vale na hora.
+        if let Some(b) = app.try_state::<Arc<Bandeja>>() {
+            b.tray_time(s.tray_time);
         }
     })
 }

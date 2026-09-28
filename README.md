@@ -11,6 +11,12 @@ Você escolhe a duração da sessão de foco, e o Tomatito intercala intervalos 
 - Linux: Ubuntu 26.04 com GNOME 50 (Wayland).
 - Windows 11. O Windows 10 é suportado em melhor esforço.
 
+## Bandeja
+
+O Tomatito fica na bandeja do sistema, com "Iniciar foco" (ou "Pausar foco" durante a sessão), "Mostrar Tomatito" e "Sair". Fechar a janela só a esconde: a sessão, os temporizadores, o som e as notificações continuam. Para encerrar de verdade, use "Sair". Com "fechar para a bandeja" desligado (`closeToTray` no `settings.json`; a opção na tela de Configurações ainda vai entrar), fechar a janela encerra o app.
+
+No GNOME, a bandeja depende da extensão AppIndicator (vem ativa no Ubuntu). Sem ela, o ícone não aparece, e fechar continua escondendo a janela. Abrir o Tomatito de novo pelo menu de apps vai trazê-la de volta quando a instância única entrar; até lá, sem a extensão, é melhor desligar "fechar para a bandeja".
+
 ## Privacidade
 
 Nenhum dado sai do computador: sem rede e sem contas. Configurações e histórico ficam na pasta de dados do app.
@@ -46,6 +52,7 @@ bash scripts/gnome-aninhado/rodar.sh temas-fluent                    # os tokens
 bash scripts/gnome-aninhado/rodar.sh controles                       # menus, listas, dicas e diálogo com o ponteiro e o teclado
 bash scripts/gnome-aninhado/rodar.sh botoes                          # botões, anel de foco pelo Tab e a dica dos botões de ícone
 bash scripts/gnome-aninhado/rodar.sh sistema                         # seguir o estilo do GNOME (portal falso), sem laço
+TT_PIPEWIRE=/run/user/$UID bash scripts/gnome-aninhado/rodar.sh bandeja   # o menu da bandeja, fechar escondendo e Sair
 bash scripts/gnome-aninhado/instalado.sh                             # o Tomatito instalado: janela, .desktop no dock e saída
 node scripts/preview/responsivo.mjs                                  # o layout em 15 larguras, no Chrome e no WebKitGTK
 node scripts/preview/temas-fluent.mjs                                # os tokens do Fluent nos cinco temas, no Chrome e no WebKitGTK
