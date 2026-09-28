@@ -64,6 +64,8 @@ export const ICONES = Object.freeze([
   // check do "Concluído", que troca o lápis da barra enquanto se edita
   { nome: 'delete', estilo: 'regular', tamanhos: [16] },
   { nome: 'checkmark', estilo: 'regular', tamanhos: [16] },
+  // M35: o "Copiar" das voltas do cronômetro
+  { nome: 'copy', estilo: 'regular', tamanhos: [16] },
 ]);
 
 /** Os arquivos da lista, no formato do pacote: `play_16_filled.svg`. */

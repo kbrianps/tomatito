@@ -1411,4 +1411,72 @@
     await doisQuadros();
     return window.__ttCronometro();
   };
+  // M35: as voltas do cronômetro. __ttVoltas() devolve a lista como se vê
+  // (cabeçalho, linhas, se as colunas alinham à direita, números tabulares,
+  // texto selecionável, caixa do "Copiar" e transbordo); __ttCopiarVoltas(via)
+  // clica no "Copiar" com a área de transferência trocada por uma de mentira
+  // ('api': o navigator.clipboard; 'antiga': sem ele, o execCommand) e
+  // devolve o texto que chegou lá e o aviso; __ttSelecionarVoltas() seleciona
+  // a tabela inteira e devolve o texto da seleção.
+  window.__ttVoltas = () => {
+    const secao = document.querySelector('[data-voltas]');
+    const tabela = secao?.querySelector('table');
+    if (!secao || secao.hidden || !tabela) return { visivel: false };
+    const r1 = (v) => Math.round(v * 10) / 10;
+    const celulas = (tr) => [...tr.children].map((c) => c.textContent);
+    const linhas = [...tabela.tBodies[0].rows];
+    const direitas = [...tabela.rows].map((tr) => [...tr.children].map((c) => {
+      const r = document.createRange();
+      r.selectNodeContents(c);
+      return r1(r.getBoundingClientRect().right);
+    }));
+    const alinhadas = [1, 2].every((col) => direitas.every((d) => Math.abs(d[col] - direitas[0][col]) <= 0.5));
+    const td = linhas[0]?.cells[1];
+    const copiar = secao.querySelector('[data-copiar]').getBoundingClientRect();
+    const conteudo = document.querySelector('.tt-rolagem');
+    return {
+      visivel: true,
+      cabecalho: celulas(tabela.tHead.rows[0]),
+      linhas: linhas.map(celulas),
+      alinhadas,
+      tabular: td ? getComputedStyle(td).fontVariantNumeric : null,
+      selecionavel: td ? getComputedStyle(td).userSelect || getComputedStyle(td).webkitUserSelect : null,
+      altura: td ? r1(td.getBoundingClientRect().height) : null,
+      largura: r1(tabela.getBoundingClientRect().width),
+      copiar: [copiar.width, copiar.height].map(r1),
+      copiarTexto: secao.querySelector('[data-copiar]').textContent,
+      transbordaLado: conteudo.scrollWidth > conteudo.clientWidth,
+    };
+  };
+  window.__ttCopiarVoltas = async (via = 'api') => {
+    let recebido = null;
+    const exec = document.execCommand;
+    if (via === 'api') {
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (t) => void (recebido = t) } });
+    } else {
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
+      document.execCommand = (cmd) => {
+        if (cmd === 'copy') recebido = document.activeElement?.value ?? null;
+        return cmd === 'copy';
+      };
+    }
+    try {
+      document.querySelector('[data-copiar]').click();
+      await new Promise((r) => setTimeout(r, 100));
+      return { via, recebido, aviso: document.querySelector('[data-aviso]').textContent, foco: document.activeElement?.tagName };
+    } finally {
+      delete navigator.clipboard;
+      document.execCommand = exec;
+    }
+  };
+  window.__ttSelecionarVoltas = () => {
+    const sel = getSelection();
+    sel.removeAllRanges();
+    const r = document.createRange();
+    r.selectNodeContents(document.querySelector('.tt-voltas-tabela'));
+    sel.addRange(r);
+    const texto = sel.toString();
+    sel.removeAllRanges();
+    return texto;
+  };
 })();

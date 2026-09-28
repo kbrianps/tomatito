@@ -11,9 +11,10 @@
 //! Nenhum método lê o relógio: todos recebem o `now` de quem chama, e os
 //! testes passam o `now` de um `FakeClock`.
 //!
-//! **Voltas.** O plano guarda as voltas no Rust (M35). Desde o M34 o botão e
-//! a tecla L existem, então o núcleo já anota, a cada volta, o decorrido
-//! total naquele instante; a lista na tela e o "Copiar" são do M35. Só se marca
+//! **Voltas.** O plano guarda as voltas no Rust (M35). A cada volta, o núcleo
+//! anota o decorrido total naquele instante (o botão e a tecla L existem desde
+//! o M34); a tela deriva o tempo de cada volta da diferença entre os totais e
+//! monta a lista e o texto do "Copiar" (src/views/stopwatch.js). Só se marca
 //! volta correndo (o botão fica desabilitado parado e pausado).
 //!
 //! **Relógio para trás** (aceito na v1): o trecho atual nunca fica negativo,

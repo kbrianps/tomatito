@@ -58,3 +58,50 @@ test('HTML: número com unidades, centésimos depois da vírgula e três botões
   assert.match(zerado, /data-acao="volta"[^>]* disabled/);
   assert.match(zerado, /data-acao="redefinir"[^>]* disabled/);
 });
+
+// M35: as voltas.
+import { linhasDasVoltas, marcacaoDasVoltas, textoDasVoltas } from './stopwatch.js';
+
+const LAPS = [2_345, 7_000, 3_725_999];
+
+test('linhas das voltas: a mais nova em cima, com o tempo da volta e o total', () => {
+  assert.deepEqual(linhasDasVoltas(LAPS), [
+    { numero: '3', tempo: '01:01:58,99', total: '01:02:05,99' },
+    { numero: '2', tempo: '00:00:04,65', total: '00:00:07,00' },
+    { numero: '1', tempo: '00:00:02,34', total: '00:00:02,34' },
+  ]);
+  assert.deepEqual(linhasDasVoltas([]), []);
+  assert.deepEqual(linhasDasVoltas(), []);
+});
+
+test('Copiar: cabeçalho e linhas da tela, separados por tabulação', () => {
+  const texto = textoDasVoltas(LAPS);
+  assert.equal(texto, [
+    'Volta\tTempo\tTotal',
+    '3\t01:01:58,99\t01:02:05,99',
+    '2\t00:00:04,65\t00:00:07,00',
+    '1\t00:00:02,34\t00:00:02,34',
+  ].join('\n'));
+  // Toda linha tem três colunas, sem tabulação nem quebra sobrando.
+  for (const linha of texto.split('\n')) assert.equal(linha.split('\t').length, 3);
+  assert.ok(!texto.endsWith('\n'));
+  assert.equal(textoDasVoltas([]), '');
+});
+
+test('Copiar: cada linha da tela aparece igual no texto', () => {
+  const html = marcacaoDasVoltas(LAPS);
+  const daTela = [...html.matchAll(/<tr><td>(\d+)<\/td><td>([^<]+)<\/td><td>([^<]+)<\/td><\/tr>/g)].map((m) => m.slice(1).join('\t'));
+  assert.deepEqual(daTela, textoDasVoltas(LAPS).split('\n').slice(1));
+});
+
+test('HTML das voltas: escondido sem voltas, tabela tabular e selecionável, botão Copiar', () => {
+  assert.match(marcacaoDasVoltas([]), /<section class="tt-voltas" data-voltas[^>]* hidden>/);
+  const html = marcacaoDasVoltas(LAPS, (n) => `[${n}]`);
+  assert.doesNotMatch(html, /data-voltas[^>]* hidden/);
+  assert.match(html, /<table class="tt-voltas-tabela tt-num tt-selectable">/);
+  assert.match(html, /<th scope="col">Volta<\/th><th scope="col">Tempo<\/th><th scope="col">Total<\/th>/);
+  assert.match(html, /<button type="button" data-copiar>\[copy\]<span>Copiar<\/span><\/button>/);
+  assert.match(html, /role="status" data-aviso/);
+  // Na tela inteira, as voltas vêm do retrato.
+  assert.match(marcacao({ ...c('running', 8_000), laps: LAPS }), /<td>3<\/td><td>01:01:58,99<\/td>/);
+});

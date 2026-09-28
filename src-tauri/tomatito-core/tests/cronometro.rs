@@ -94,6 +94,27 @@ fn voltas_guardam_o_total_e_so_correndo() {
     assert_eq!(c.snapshot(relogio.now()).laps, vec![12_340, 22_340]);
 }
 
+// M35: a tela deriva o tempo de cada volta da diferença entre os totais;
+// pausar no meio não apaga as voltas nem entra no total da seguinte.
+#[test]
+fn voltas_atravessam_a_pausa_sem_contar_o_tempo_parado() {
+    let relogio = FakeClock::new(INICIO);
+    let mut c = Stopwatch::new();
+    c.start(relogio.now()).unwrap();
+    relogio.advance_ms(2_345);
+    c.lap(relogio.now()).unwrap();
+    relogio.advance_ms(1_000);
+    c.pause(relogio.now()).unwrap();
+    relogio.advance_ms(60 * S);
+    assert_eq!(c.snapshot(relogio.now()).laps, vec![2_345]);
+    c.start(relogio.now()).unwrap();
+    relogio.advance_ms(3_655);
+    assert_eq!(c.lap(relogio.now()), Ok(2));
+    let laps = c.snapshot(relogio.now()).laps;
+    assert_eq!(laps, vec![2_345, 7_000]);
+    assert_eq!(laps[1] - laps[0], 4_655);
+}
+
 #[test]
 fn limite_de_voltas() {
     let relogio = FakeClock::new(INICIO);

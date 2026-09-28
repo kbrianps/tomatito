@@ -214,6 +214,17 @@ export default Object.freeze({
       }),
       pausado: (tempo) => `Cronômetro pausado em ${tempo}`,
     }),
+    // M35: a lista de voltas, com as colunas do Relógio ("Laps", "Time",
+    // "Total"). O cabeçalho também vai na primeira linha do "Copiar".
+    voltas: Object.freeze({
+      titulo: 'Voltas',
+      volta: 'Volta',
+      tempo: 'Tempo',
+      total: 'Total',
+      copiar: 'Copiar',
+      copiado: 'Voltas copiadas',
+      falhou: 'Não foi possível copiar as voltas',
+    }),
   }),
   // Tela Configurações. M24: a seção Aparência (views/settings.js), com o
   // cartão do tema, como o SettingsCard do Relógio (ícone, título e

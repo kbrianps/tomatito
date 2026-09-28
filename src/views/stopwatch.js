@@ -17,9 +17,18 @@
 //
 // O número muda a cada quadro e fica fora da árvore de acessibilidade; quem
 // fala é o rótulo do role="img", que muda ao trocar de estado e, correndo,
-// uma vez por minuto (3.8). As voltas (lista e "Copiar") são do M35: aqui o
-// botão e a tecla L já mandam o `stopwatch_lap`, e o Rust guarda a volta.
+// uma vez por minuto (3.8).
+//
+// M35: as voltas. Quem guarda é o Rust (o decorrido total em cada volta, no
+// retrato `laps`); a tela deriva o tempo de cada volta (total menos o total
+// da anterior) e mostra a lista embaixo dos botões, como o Relógio: a mais
+// nova em cima, com as colunas Volta, Tempo e Total, em números tabulares e
+// selecionáveis (.tt-selectable). "Copiar" põe na área de transferência o
+// mesmo que a tela mostra, na mesma ordem, com o cabeçalho, uma linha por
+// volta e as colunas separadas por tabulação: colado numa planilha, cada
+// valor cai na sua célula.
 import t from '../lib/i18n/pt-BR.js';
+import { copiarTexto } from '../lib/copiar.js';
 import { categoria, tempoDoCronometro } from '../lib/format.js';
 import { espacoLivre, teclaLivre } from '../lib/keys.js';
 import { store as storeDoApp } from '../lib/store.js';
@@ -61,6 +70,53 @@ export function aparencia(c, decorrido = c?.elapsedMs ?? 0) {
   };
 }
 
+/**
+ * As linhas da lista de voltas, na ordem da tela (a mais nova primeiro):
+ * `{ numero, tempo, total }`, com os tempos em `hh:mm:ss,cc`. `laps` é o do
+ * retrato: o decorrido total em cada volta, em ordem.
+ */
+export function linhasDasVoltas(laps = []) {
+  const linhas = [];
+  let anterior = 0;
+  laps.forEach((total, i) => {
+    linhas.push({ numero: String(i + 1), tempo: tempoDoCronometro(total - anterior).texto, total: tempoDoCronometro(total).texto });
+    anterior = total;
+  });
+  return linhas.reverse();
+}
+
+/**
+ * O texto do "Copiar": o cabeçalho e as linhas da tela, colunas separadas por
+ * tabulação e linhas por quebra de linha (sem quebra depois da última). Sem
+ * voltas, vazio.
+ */
+export function textoDasVoltas(laps = []) {
+  const linhas = linhasDasVoltas(laps);
+  if (!linhas.length) return '';
+  const V = C.voltas;
+  return [[V.volta, V.tempo, V.total], ...linhas.map((l) => [l.numero, l.tempo, l.total])].map((c) => c.join('\t')).join('\n');
+}
+
+const linhaDaVolta = (l) =>
+  `<tr><td>${l.numero}</td><td>${l.tempo}</td><td>${l.total}</td></tr>`;
+
+/** O corpo da tabela de voltas. */
+export const corpoDasVoltas = (laps) => linhasDasVoltas(laps).map(linhaDaVolta).join('');
+
+/** A seção das voltas: escondida sem voltas. */
+export function marcacaoDasVoltas(laps = [], icone = semIcone) {
+  const V = C.voltas;
+  return (
+    `<section class="tt-voltas" data-voltas aria-labelledby="tt-voltas-titulo"${laps.length ? '' : ' hidden'}>` +
+    `<div class="tt-voltas-topo"><h2 class="tt-t-body-strong" id="tt-voltas-titulo">${V.titulo}</h2>` +
+    `<span class="tt-voltas-aviso tt-t-caption" role="status" data-aviso></span>` +
+    `<button type="button" data-copiar>${icone('copy')}<span>${V.copiar}</span></button></div>` +
+    `<table class="tt-voltas-tabela tt-num tt-selectable">` +
+    `<thead><tr><th scope="col">${V.volta}</th><th scope="col">${V.tempo}</th><th scope="col">${V.total}</th></tr></thead>` +
+    `<tbody data-linhas>${corpoDasVoltas(laps)}</tbody></table></section>`
+  );
+}
+
 const par = (campo, valor, unidade) =>
   `<span class="tt-cronometro-par"><span class="tt-cronometro-digitos" data-${campo}>${valor}</span>` +
   `<span class="tt-cronometro-unidade">${unidade}</span></span>`;
@@ -88,7 +144,9 @@ export function marcacao(c = null, { icone = semIcone, decorrido } = {}) {
     botao(' tt-accent', ap.acao, C[ap.acao], icone(ap.acao === 'pausar' ? 'pause' : 'play', 24)) +
     botao('', 'volta', C.volta, icone('flag', 24), !ap.podeVolta) +
     botao('', 'redefinir', C.redefinir, icone('arrow_reset', 24), !ap.podeRedefinir) +
-    `</div></div></div>`
+    `</div>` +
+    marcacaoDasVoltas(c?.laps ?? [], icone) +
+    `</div></div>`
   );
 }
 
@@ -100,7 +158,9 @@ const escrever = (el, texto) => {
  * `store` é o de lib/store.js (`cronometro`, `decorridoDoCronometro`,
  * `assinarCronometro` e `comandoDoCronometro`); os testes passam outro, ou
  * null para só desenhar. `quadro` e `cancelar` são o requestAnimationFrame e
- * o cancelAnimationFrame. Devolve a limpeza.
+ * o cancelAnimationFrame. `copiar(texto)` é o da lib/copiar.js, e
+ * `esperar(f, ms)`/`desesperar(id)`, o setTimeout e o clearTimeout do aviso
+ * do "Copiar". Devolve a limpeza.
  */
 export function montar(raiz, {
   store = storeDoApp,
@@ -108,6 +168,9 @@ export function montar(raiz, {
   quadro = (f) => requestAnimationFrame(f),
   cancelar = (id) => cancelAnimationFrame(id),
   doc = raiz.ownerDocument,
+  copiar = copiarTexto,
+  esperar = (f, ms) => setTimeout(f, ms),
+  desesperar = (id) => clearTimeout(id),
 } = {}) {
   const decorridoAgora = () => store?.decorridoDoCronometro?.() ?? store?.cronometro?.elapsedMs ?? 0;
   raiz.innerHTML = marcacao(store?.cronometro ?? null, { icone, decorrido: store ? decorridoAgora() : 0 });
@@ -123,8 +186,34 @@ export function montar(raiz, {
   const principal = raiz.querySelector('.tt-cronometro-botoes button:first-child');
   const volta = raiz.querySelector('button[data-acao="volta"]');
   const redefinir = raiz.querySelector('button[data-acao="redefinir"]');
+  const voltas = raiz.querySelector('[data-voltas]');
+  const linhas = raiz.querySelector('[data-linhas]');
+  const aviso = raiz.querySelector('[data-aviso]');
+  const copiarBotao = raiz.querySelector('[data-copiar]');
   let c = store.cronometro;
   let pedido = null;
+  let voltasDesenhadas = JSON.stringify(c?.laps ?? []);
+  let prazoDoAviso = null;
+
+  const avisar = (texto) => {
+    aviso.textContent = texto;
+    if (prazoDoAviso !== null) desesperar(prazoDoAviso);
+    prazoDoAviso = esperar(() => {
+      prazoDoAviso = null;
+      aviso.textContent = '';
+    }, 3000);
+  };
+
+  const desenharVoltas = () => {
+    const laps = c?.laps ?? [];
+    const chave = JSON.stringify(laps);
+    if (chave === voltasDesenhadas) return;
+    voltasDesenhadas = chave;
+    linhas.innerHTML = corpoDasVoltas(laps);
+    if (!laps.length && voltas.contains(doc?.activeElement)) principal.focus();
+    voltas.hidden = !laps.length;
+    if (!laps.length) aviso.textContent = '';
+  };
 
   const pintar = () => {
     const ap = aparencia(c, decorridoAgora());
@@ -159,6 +248,7 @@ export function montar(raiz, {
     }
     habilitar(volta, ap.podeVolta);
     habilitar(redefinir, ap.podeRedefinir);
+    desenharVoltas();
     pintar();
     if (c.status === 'running' && pedido === null) pedido = quadro(passo);
   };
@@ -174,6 +264,15 @@ export function montar(raiz, {
     executar(b.dataset.acao);
   };
   raiz.querySelector('.tt-cronometro-botoes').addEventListener('click', aoClicar);
+
+  // "Copiar": dentro do próprio clique (a área de transferência pede o gesto
+  // do usuário), com as voltas do último retrato.
+  const aoCopiar = () => {
+    const texto = textoDasVoltas(c?.laps ?? []);
+    if (!texto) return;
+    copiar(texto).then((ok) => avisar(ok ? C.voltas.copiado : C.voltas.falhou));
+  };
+  copiarBotao.addEventListener('click', aoCopiar);
 
   // Espaço inicia ou pausa, e L marca volta (só contando), com o foco fora
   // de botões e campos. Só enquanto a tela está montada.
@@ -196,6 +295,9 @@ export function montar(raiz, {
     desassinar();
     doc?.removeEventListener('keydown', aoTeclar);
     raiz.querySelector('.tt-cronometro-botoes')?.removeEventListener('click', aoClicar);
+    copiarBotao.removeEventListener('click', aoCopiar);
+    if (prazoDoAviso !== null) desesperar(prazoDoAviso);
+    prazoDoAviso = null;
     if (pedido !== null) cancelar(pedido);
     pedido = null;
   };

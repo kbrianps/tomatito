@@ -866,3 +866,25 @@ O que só você consegue: comparar com um relógio de fora (o celular) por 10 mi
 6. [ ] Espaço de novo retoma. Aperte L: nada visível muda ainda (a lista de voltas é do M35), mas o `cat` mostra a volta em `"laps"`. Com o foco num botão (Tab até ele), L não marca volta.
 7. [ ] "Redefinir": volta a 00:00:00,00, e o `cat` mostra `"status": "idle"` sem voltas.
 8. [ ] Encolha a janela até o mínimo (480 px): o número diminui e continua inteiro, sem cortar nem rolar para o lado.
+
+
+## M35. Voltas
+
+O que já foi conferido sem você:
+- `cargo test` e `node --test`: as voltas atravessando uma pausa, as linhas (tempo da volta e total), o texto do "Copiar" igual à tela e as duas vias da área de transferência.
+- Prévia (`node scripts/preview/voltas.mjs`), no Chrome headless e no WebKitGTK: a lista aparecendo com a primeira volta, a mais nova em cima, colunas alinhadas, números tabulares e selecionáveis, "Copiar" pela API e pela via antiga, redefinir, Claro, Lite e a janela mínima.
+- Roteiro aninhado `voltas` (app de verdade, 12 conferências): L três vezes, a lista contra o `state.json`, um clique de verdade no "Copiar", o texto lido da área de transferência do GNOME Shell e aberto no LibreOffice Calc sem tela: cada valor na sua célula, tempos reconhecidos como tempo.
+
+O que só você consegue: colar de verdade numa planilha e julgar a lista ao lado do Relógio.
+
+### Para conferir (uns 3 minutos)
+
+1. [ ] `cd ~/dev/tomatito && npm run dev:app`. No painel, "Cronômetro". Não há lista embaixo dos botões.
+2. [ ] "Iniciar". Clique no título "Cronômetro" (para tirar o foco dos botões) e aperte L três ou quatro vezes, com intervalos diferentes. Aparece "Voltas" com a tabela Volta, Tempo e Total, a mais nova em cima. Em cada linha, o Total é o Total da linha de baixo mais o Tempo (a menos de um centésimo). Os dígitos das colunas ficam alinhados, sem dançar.
+3. [ ] Arraste o mouse sobre alguns tempos da tabela: o texto fica selecionado (o resto da interface não se seleciona).
+4. [ ] Clique em "Copiar". Ao lado do botão aparece "Voltas copiadas", que some em uns 3 s.
+5. [ ] Abra o LibreOffice Calc (planilha nova) e aperte Ctrl+V na célula A1. Se o Calc abrir "Importar texto", confira que "Tabulação" está marcada e o idioma é "Português (Brasil)" (ou "Padrão", com o sistema em pt-BR), e dê OK.
+6. [ ] A planilha tem o cabeçalho Volta, Tempo e Total em A1:C1 e uma linha por volta embaixo, cada valor na sua célula, sem nada juntado numa célula só e sem colunas vazias no meio. Os tempos aparecem como na tela (`00:00:02,34`); clicando num deles, a barra de fórmulas mostra um tempo, e não um texto com apóstrofo.
+7. [ ] Volte ao Tomatito, "Pausar" e "Redefinir": a lista some.
+8. [ ] Teclado: Tab chega ao "Copiar" depois dos três botões redondos, e Enter nele copia (o aviso aparece).
+9. [ ] Feche o app (Ctrl+C no terminal).

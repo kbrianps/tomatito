@@ -21,6 +21,7 @@
 #   TOMATITO_SPEED=10 bash scripts/gnome-aninhado/rodar.sh temporizador   # M32: a tela Temporizador, do clique à notificação
 #   bash scripts/gnome-aninhado/rodar.sh temporizador-edicao   # M33: criar, editar e excluir, com o state.json
 #   bash scripts/gnome-aninhado/rodar.sh cronometro        # M34: o cronômetro, minimizado e escondido, com o state.json
+#   bash scripts/gnome-aninhado/rodar.sh voltas            # M35: as voltas, o Copiar na área de transferência e o LibreOffice
 #   bash scripts/gnome-aninhado/instalado.sh               # o Tomatito instalado (M21b)
 #
 # Pré-requisito: o binário de debug atualizado (`cd src-tauri && cargo build`).
