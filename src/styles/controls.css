@@ -131,6 +131,27 @@ fluent-listbox,fluent-menu-list,fluent-tooltip{ border-color:var(--tt-border); }
    escuro). */
 fluent-dialog{ --dialog-backdrop:var(--tt-smoke); }
 
+/* M28: diálogo "Editar meta diária" (src/views/focus/goal-dialog.js), como o
+   do Relógio (windows-11-focus-sessions-targets.png, a 175%): 320 px de
+   largura (o mínimo do ContentDialog), a sombra de 64 e o raio de 8 do
+   próprio fluent-dialog, 24 px por dentro e o título em 20/28 semibold (os
+   do fluent-dialog-body). As listas ocupam a largura toda, com o rótulo
+   8 px acima e 24 px entre os dois campos; os botões ficam lado a lado, com a
+   mesma largura e 8 px entre eles, 24 px abaixo do último campo (o
+   fluent-dialog-body os empilharia abaixo de 480 px de largura). */
+fluent-dialog.tt-dialogo-meta::part(dialog){ width:320px; max-width:calc(100vw - 32px); box-shadow:var(--shadow64); }
+.tt-dialogo-meta fluent-dialog-body::part(actions){
+  flex-direction:row; align-items:stretch; justify-content:stretch;
+  margin-block-start:0; padding-block-start:24px;
+}
+.tt-dialogo-meta [slot="action"]{ flex:1 1 0; min-width:0; }
+.tt-dialogo-meta-campos{ display:flex; flex-direction:column; gap:24px; padding-top:12px; }
+.tt-dialogo-meta .tt-campo{ align-items:stretch; }
+.tt-dialogo-meta fluent-dropdown{ width:100%; }
+.tt-dialogo-meta-erro{ display:flex; align-items:flex-start; gap:8px; margin:-12px 0 0; color:var(--tt-fg-1); }
+.tt-dialogo-meta-erro[hidden]{ display:none; }
+.tt-dialogo-meta-erro .tt-icone{ flex:none; width:16px; height:16px; margin-top:2px; fill:var(--tt-critical); }
+
 /* M13: desabilitados dos componentes Fluent. As cores vêm da ponte
    (--colorNeutral*Disabled); aqui, o rótulo ao lado do controle desabilitado
    (TextFillColorDisabled, como o texto de um CheckBox desabilitado do WinUI)

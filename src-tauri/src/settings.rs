@@ -795,6 +795,37 @@ mod tests {
         assert!(texto.contains("\"theme\": \"suave\""), "{texto}");
     }
 
+    /// M28: o patch do diálogo "Editar meta diária" leva as duas chaves de
+    /// uma vez; um valor fora da lista recusa as duas.
+    #[test]
+    fn set_meta_e_hora_de_zerar_juntas() {
+        let d = PastaDeTeste::nova("meta");
+        let store = SettingsStore::load(d.0.clone());
+        let mut emitidos = 0;
+        for (goal, hour) in [(60, 5), (0, 23), (480, 0)] {
+            let s = store
+                .set(
+                    &json!({ "dailyGoalMinutes": goal, "resetHour": hour }),
+                    |_| emitidos += 1,
+                )
+                .unwrap();
+            assert_eq!((s.daily_goal_minutes, s.reset_hour), (goal, hour));
+            let lido = load_from(&d.0);
+            assert_eq!((lido.daily_goal_minutes, lido.reset_hour), (goal, hour));
+        }
+        assert_eq!(emitidos, 3, "uma emissão de tt://settings por gravação");
+        let e = store
+            .set(&json!({ "dailyGoalMinutes": 60, "resetHour": 24 }), |_| {
+                panic!("não devia emitir")
+            })
+            .unwrap_err();
+        assert_eq!(e.code, SettingsErrorCode::InvalidValue);
+        assert_eq!(
+            (store.get().daily_goal_minutes, store.get().reset_hour),
+            (480, 0)
+        );
+    }
+
     #[test]
     fn set_como_o_apply_theme_da_4_6() {
         let d = PastaDeTeste::nova("apply-theme");

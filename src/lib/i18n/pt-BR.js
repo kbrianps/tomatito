@@ -97,6 +97,30 @@ export default Object.freeze({
       // O rótulo do anel (role="img"): a meta, o que foi feito hoje e a
       // fração da meta, que pode passar de 100% (o anel para no círculo cheio).
       anel: (meta, hoje, pct) => `Meta diária de ${meta}. Concluído hoje: ${hoje}, ${pct}% da meta.`,
+      // M28: o lápis do cartão (nome e dica).
+      editar: 'Editar meta diária',
+    }),
+    // M28: o diálogo "Editar meta diária" (views/focus/goal-dialog.js). As
+    // metas por extenso, como no cartão ("1 hora e 30 minutos", e não "1 h
+    // 30"; docs/decisoes.md, M28).
+    metaDiaria: Object.freeze({
+      titulo: 'Editar meta diária',
+      meta: 'Meta diária',
+      zerar: 'Zerar progresso às',
+      opcoes: Object.freeze({
+        0: 'Desativada',
+        30: '30 minutos',
+        60: '1 hora',
+        90: '1 hora e 30 minutos',
+        120: '2 horas',
+        180: '3 horas',
+        240: '4 horas',
+        360: '6 horas',
+        480: '8 horas',
+      }),
+      salvar: 'Salvar',
+      cancelar: 'Cancelar',
+      erro: 'Não foi possível salvar. Tente de novo.',
     }),
   }),
   // Tela Configurações. M24: a seção Aparência (views/settings.js), com o

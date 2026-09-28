@@ -866,4 +866,108 @@
     await doisQuadros();
     return document.adoptedStyleSheets.length;
   };
+
+  // M28: o diálogo "Editar meta diária" (src/views/focus/goal-dialog.js).
+  // __ttMeta() devolve o lápis (nome, dica, centro a partir do canto de cima,
+  // à direita, do cartão, e se tem o foco), o diálogo (aberto, nome, papel,
+  // largura, sombra, fundo de trás, título, rótulos, opções, valores
+  // escolhidos, nomes das listas, botões, foco e aviso), o cartão
+  // (__ttProgresso) e os settings_set pedidos. __ttMetaAbrir() clica no lápis
+  // pelo click(); __ttMetaEscolher(meta, hora) escolhe nas listas;
+  // __ttMetaBotao('salvar'|'cancelar') clica no botão; __ttMetaEsc() manda o
+  // cancel do <dialog> (o Esc no WebKitGTK fora da tela, que não tem teclado;
+  // no Chrome, o meta.mjs usa a tecla de verdade). __ttSabotarMeta() empilha
+  // os botões (o controle negativo).
+  window.__ttMeta = () => {
+    const cartao = document.querySelector('[data-cartao="progresso"]');
+    const lapis = cartao.querySelector('[data-editar-meta]');
+    const c = cartao.getBoundingClientRect();
+    const l = lapis.getBoundingClientRect();
+    const host = document.querySelector('fluent-dialog[data-dialogo="meta"]');
+    const dlg = host?.dialog ?? null;
+    const aberto = Boolean(dlg?.open);
+    const r1 = (v) => Math.round(v * 10) / 10;
+    const ativo = document.activeElement;
+    const nomeDe = (el) => {
+      if (!el) return null;
+      const ids = el.getAttribute('aria-labelledby');
+      if (ids) return ids.split(/\s+/).map((id) => document.getElementById(id)?.textContent ?? '').join(' ');
+      return el.getAttribute('aria-label') ?? el.textContent.trim();
+    };
+    const listas = host ? [...host.querySelectorAll('fluent-dropdown[data-campo]')] : [];
+    const d = dlg?.getBoundingClientRect();
+    const botoes = host ? [...host.querySelectorAll('[slot="action"]')] : [];
+    const erro = host?.querySelector('[data-erro]');
+    return {
+      lapis: {
+        rotulo: lapis.getAttribute('aria-label'),
+        dica: lapis.hasAttribute('data-dica'),
+        classe: lapis.className,
+        icone: lapis.querySelector('svg')?.dataset?.icone ?? null,
+        centro: [r1(c.right - (l.x + l.width / 2)), r1(l.y + l.height / 2 - c.y)],
+        tamanho: [r1(l.width), r1(l.height)],
+        focado: ativo === lapis,
+      },
+      aberto,
+      dialogo: host && aberto ? {
+        nome: dlg.getAttribute('aria-label'),
+        papel: dlg.getAttribute('role'),
+        modal: dlg.getAttribute('aria-modal'),
+        caixa: [d.x, d.y, d.width, d.height].map(r1),
+        janela: [innerWidth, innerHeight],
+        sombra: getComputedStyle(dlg).boxShadow,
+        raio: getComputedStyle(dlg).borderTopLeftRadius,
+        fundo: getComputedStyle(host.querySelector('fluent-dialog-body')).backgroundColor,
+        fundoDeTras: getComputedStyle(dlg, '::backdrop').backgroundColor,
+        titulo: host.querySelector('[slot="title"]').textContent,
+        tamanhoDoTitulo: getComputedStyle(host.querySelector('[slot="title"]')).fontSize,
+        rotulos: [...host.querySelectorAll('.tt-campo-rotulo')].map((e) => e.textContent),
+        opcoes: listas.map((dd) => [...dd.querySelectorAll('fluent-option')].map((o) => o.textContent)),
+        valores: listas.map((dd) => dd.value),
+        mostrados: listas.map((dd) => dd.control?.textContent?.trim() ?? null),
+        listasAbertas: listas.map((dd) => Boolean(dd.open)),
+        nomes: listas.map((dd) => nomeDe(dd.control)),
+        listas: listas.map((dd) => r1(dd.getBoundingClientRect().width)),
+        botoes: botoes.map((b) => {
+          const r = b.getBoundingClientRect();
+          return { texto: b.textContent.trim(), destaque: b.classList.contains('tt-accent'), icone: b.querySelector('svg')?.dataset?.icone ?? null, caixa: [r.x - d.x, r.y - d.y, r.width, r.height].map(r1) };
+        }),
+        foco: ativo?.getAttribute('role') === 'combobox' ? `lista ${nomeDe(ativo)}` : (ativo?.getAttribute('aria-label') ?? ativo?.localName ?? null),
+        erro: erro && !erro.hidden ? { texto: erro.textContent, papel: erro.getAttribute('role'), icone: erro.querySelector('svg')?.dataset?.icone ?? null } : null,
+      } : null,
+      progresso: window.__ttProgresso(),
+      gravacoes: (window.__TOMATITO_PREVIEW_COMANDOS__ ?? []).filter((x) => x.startsWith('settings_set')),
+    };
+  };
+  window.__ttMetaAbrir = async () => {
+    document.querySelector('[data-editar-meta]').click();
+    await new Promise((r) => setTimeout(r, 400));
+    await doisQuadros();
+    return window.__ttMeta();
+  };
+  window.__ttMetaEscolher = async (meta, hora) => {
+    document.querySelector('fluent-dropdown[data-campo="meta"]').value = String(meta);
+    document.querySelector('fluent-dropdown[data-campo="hora"]').value = String(hora);
+    await doisQuadros();
+    return window.__ttMeta();
+  };
+  window.__ttMetaBotao = async (qual, espera = 500) => {
+    document.querySelector(`fluent-dialog[data-dialogo="meta"] [data-${qual}]`).click();
+    await new Promise((r) => setTimeout(r, espera));
+    await doisQuadros();
+    return window.__ttMeta();
+  };
+  window.__ttMetaEsc = async () => {
+    document.querySelector('fluent-dialog[data-dialogo="meta"]').dialog.dispatchEvent(new Event('cancel', { cancelable: true }));
+    await new Promise((r) => setTimeout(r, 400));
+    await doisQuadros();
+    return window.__ttMeta();
+  };
+  window.__ttSabotarMeta = async () => {
+    const folha = new CSSStyleSheet();
+    folha.replaceSync('.tt-dialogo-meta [slot="action"] { flex: none !important; }');
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, folha];
+    await doisQuadros();
+    return document.adoptedStyleSheets.length;
+  };
 })();

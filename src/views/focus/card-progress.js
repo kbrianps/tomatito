@@ -18,10 +18,15 @@
 // semana e o rodapé. Até a primeira resposta (a tela aberta pela primeira vez),
 // o cartão já tem o tamanho final, com os números escondidos
 // (`data-carregando`), para nada pular quando eles chegam.
+//
+// M28: o lápis no canto de cima, à direita, como no Relógio, abre o diálogo
+// "Editar meta diária" (goal-dialog.js), criado no primeiro clique. Salvar
+// relê os números na hora (o `tt://settings` também relê).
 import t from '../../lib/i18n/pt-BR.js';
 import { duracao, minutosInteiros } from '../../lib/format.js';
 import * as anel from '../../components/ring.js';
 import * as ipcDoApp from '../../lib/ipc.js';
+import * as dialogoDaMeta from './goal-dialog.js';
 
 const d = t.foco.diario;
 /** Intervalo da releitura periódica, em ms (a virada do dia). */
@@ -55,14 +60,20 @@ const coluna = (id, titulo, v) =>
   `<dd><span class="tt-progresso-numero tt-num" data-numero>${v?.numero ?? '0'}</span>` +
   `<span class="tt-progresso-unidade" data-unidade>${v?.unidade ?? ''}</span></dd></div>`;
 
-/** HTML do conteúdo do cartão (depois do título). */
-export function marcacao(s = ultimo) {
+const semIcone = () => '';
+
+/**
+ * HTML do conteúdo do cartão (depois do título): o lápis e os números.
+ * `icone(nome)` é o do components/icon.js.
+ */
+export function marcacao(s = ultimo, { icone = semIcone } = {}) {
   const n = numeros(s);
   const centro =
     `<span class="tt-progresso-rotulo">${d.meta}</span>` +
     `<span class="tt-progresso-numero tt-num" data-numero>${n.meta?.numero ?? ''}</span>` +
     `<span class="tt-progresso-unidade" data-unidade>${n.meta?.unidade ?? ''}</span>`;
   return (
+    `<button type="button" class="tt-sutil tt-progresso-editar" aria-label="${d.editar}" data-dica data-editar-meta>${icone('edit')}</button>` +
     `<div class="tt-progresso-corpo"${s && !n.meta ? ' data-sem-meta' : ''}${s ? '' : ' data-carregando'} data-progresso>` +
     `<dl class="tt-progresso-lado">${coluna('ontem', d.ontem, n.ontem)}</dl>` +
     anel.marcacao({ fracao: n.fracao, rotulo: n.rotulo, centro, classe: 'tt-progresso-anel' }) +
@@ -81,7 +92,7 @@ const escrever = (el, texto) => {
  * `ipc`, o lib/ipc.js (`estatisticas.obter`, `ouvir` e `EVENTOS`). Devolve a
  * função de limpeza.
  */
-export function ligar(cartao, store, { ipc = ipcDoApp, doc = cartao.ownerDocument, relogio = globalThis } = {}) {
+export function ligar(cartao, store, { ipc = ipcDoApp, doc = cartao.ownerDocument, relogio = globalThis, icone = semIcone, dialogo = dialogoDaMeta } = {}) {
   const corpo = cartao.querySelector('[data-progresso]');
   const rodape = cartao.querySelector('[data-concluido]');
   const a = anel.ligarAnel(corpo);
@@ -123,6 +134,23 @@ export function ligar(cartao, store, { ipc = ipcDoApp, doc = cartao.ownerDocumen
     }
   };
 
+  // O lápis: abre o diálogo com a meta e a hora de zerar da última leitura
+  // (ou das configurações, se o cartão ainda não leu nada).
+  const lapis = cartao.querySelector('[data-editar-meta]');
+  let janela = null;
+  const editar = async () => {
+    try {
+      const valores = ultimo ?? (await ipc.configuracoes.obter());
+      if (desligado) return;
+      janela ??= dialogo.criar({ doc, gatilho: lapis, icone, ipc, aoSalvar: () => void atualizar() });
+      janela.abrir(valores);
+    } catch (erro) {
+      console.warn('[progresso]', erro);
+    }
+  };
+  const aoClicarNoLapis = () => void editar();
+  lapis?.addEventListener('click', aoClicarNoLapis);
+
   const desassinar = store?.assinar(() => void atualizar()) ?? (() => {});
   let pararDeOuvir = null;
   Promise.resolve(ipc.ouvir(ipc.EVENTOS.configuracoes, () => void atualizar()))
@@ -135,6 +163,8 @@ export function ligar(cartao, store, { ipc = ipcDoApp, doc = cartao.ownerDocumen
 
   return () => {
     desligado = true;
+    lapis?.removeEventListener('click', aoClicarNoLapis);
+    janela?.desligar();
     desassinar();
     pararDeOuvir?.();
     relogio.clearInterval(periodico);

@@ -727,3 +727,27 @@ O que só você consegue ver: a animação suave do arco na sua tela e a leitura
 6. [ ] (Opcional, Orca ligado: Super+Alt+S) Com o Tab ou as setas do Orca, chegue ao anel: ele é lido como imagem, com "Meta diária de 2 horas. Concluído hoje: N minutos, P% da meta."
 7. [ ] Para zerar: feche o app e `rm ~/.local/share/io.github.kbrianps.tomatito.dev/stats.sqlite`.
 
+
+## M28. Diálogo "Editar meta diária"
+
+O que foi conferido de forma automática (28/09/2026):
+
+- Prévia no Chrome headless e no WebKitGTK fora da tela (`node scripts/preview/meta.mjs`): o lápis na posição do Relógio, o diálogo (320 px, sombra de 64, fundo de trás a 30%, título, as 9 metas e as 24 horas, os valores atuais, os nomes das listas, os botões lado a lado e com a mesma largura, o foco na primeira lista), Esc, Esc com a lista aberta (só no Chrome, com tecla de verdade), Cancelar, Salvar, "Desativada", gravação recusada, os quatro temas e a janela estreita. 14 conferências no Chrome e 13 no WebKitGTK, todas ok.
+- Roteiro aninhado `meta` (app de verdade, ponteiro e teclado virtuais): abrir pelo lápis, Esc, escolher com o ponteiro, Salvar (o anel muda na hora e o `settings.json` no disco tem as duas chaves), "Desativada", e depois de reabrir, os valores guardados e Cancelar sem gravar. 17 conferências ok.
+
+O que só você consegue ver: o diálogo na sua tela, o Tab e o anel de foco, e a leitura pelo Orca.
+
+### Para conferir (uns 3 minutos)
+
+1. [ ] `cd ~/dev/tomatito && npm run dev:app`. Na tela Foco, o cartão "Progresso diário" tem um lápis no canto de cima, à direita. Pare o mouse nele: aparece a dica "Editar meta diária".
+2. [ ] Clique no lápis. O fundo escurece e abre o diálogo "Editar meta diária", com "Meta diária" e "Zerar progresso às" preenchidos com o que está valendo, e os botões Salvar (destaque) e Cancelar do mesmo tamanho.
+3. [ ] Aperte Esc: o diálogo fecha e nada muda no cartão. Aperte Espaço ou Enter: o diálogo abre de novo (o foco ficou no lápis).
+4. [ ] Abra a lista "Meta diária" e aperte Esc: fecha só a lista. Aperte Esc de novo: fecha o diálogo.
+5. [ ] Abra, escolha "1 hora" e clique em Salvar: o diálogo fecha e o anel mostra "1 hora" no centro na mesma hora, com o arco na fração nova.
+6. [ ] Abra, escolha "Desativada" e salve: o anel e a meta somem; ficam Ontem, Esta semana e o rodapé.
+7. [ ] Abra, mude qualquer coisa e clique em Cancelar: nada muda. Clique fora do diálogo, no fundo escurecido: ele continua aberto (como no Relógio).
+8. [ ] Feche e abra o app: a meta e a hora de zerar continuam as que você salvou.
+9. [ ] Só com o teclado: Tab até o lápis, Enter abre, Tab passa pelas duas listas, Salvar e Cancelar, e volta à primeira lista (o foco não sai do diálogo).
+10. [ ] (Opcional, Orca ligado: Super+Alt+S) Ao abrir, o Orca lê "Editar meta diária, diálogo" e a lista "Meta diária" com o valor.
+11. [ ] Para voltar ao padrão: salve "2 horas" e "00:00".
+

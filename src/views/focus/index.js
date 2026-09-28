@@ -2,7 +2,8 @@
 // área de conteúdo (shell.css): duas colunas independentes, como no Relógio,
 // com a sessão e as tarefas na primeira e o progresso na segunda; numa coluna
 // só, a mesma ordem do HTML. M17: o cartão de sessão ("Pronto para focar",
-// card-session.js). M27: o de progresso (card-progress.js). O de tarefas
+// card-session.js). M27: o de progresso (card-progress.js), que no M28 ganha
+// o lápis e o diálogo da meta (goal-dialog.js). O de tarefas
 // ganha o conteúdo no M30.
 import t from '../../lib/i18n/pt-BR.js';
 import { PREPARO_PADRAO, store as storeDoApp } from '../../lib/store.js';
@@ -26,7 +27,7 @@ const cartao = (id, conteudo = '') =>
  * do components/icon.js (o main.js o passa pelo roteador; os testes, um falso).
  */
 export function marcacao({ preparo = PREPARO_PADRAO, icone = semIcone } = {}) {
-  const conteudo = { sessao: () => sessao.marcacao(preparo, icone), progresso: () => progresso.marcacao() };
+  const conteudo = { sessao: () => sessao.marcacao(preparo, icone), progresso: () => progresso.marcacao(undefined, { icone }) };
   const colunas = COLUNAS.map(
     (ids) => `<div class="tt-foco-coluna">${ids.map((id) => cartao(id, conteudo[id]?.())).join('')}</div>`,
   ).join('');
@@ -45,7 +46,7 @@ export function montar(raiz, { store = storeDoApp, icone = semIcone, ipc } = {})
   if (!store) return null;
   const limpar = [
     sessao.ligar(raiz.querySelector('[data-cartao="sessao"]'), store, { icone }),
-    progresso.ligar(raiz.querySelector('[data-cartao="progresso"]'), store, ipc ? { ipc } : {}),
+    progresso.ligar(raiz.querySelector('[data-cartao="progresso"]'), store, ipc ? { ipc, icone } : { icone }),
   ];
   return () => limpar.forEach((f) => f());
 }

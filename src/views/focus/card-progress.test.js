@@ -208,3 +208,77 @@ test('ligar: ao voltar à tela, a marcação já vem com os últimos números', 
   assert.match(marcacao(), /Concluído: 45 minutos/);
   assert.doesNotMatch(marcacao(), /data-carregando/);
 });
+
+// M28: o lápis e o diálogo "Editar meta diária".
+test('marcação: o lápis (botão sutil só de ícone, com nome e dica) vem antes dos números', () => {
+  esquecer();
+  const icone = (nome) => `<svg data-icone="${nome}"></svg>`;
+  const html = marcacao(stats(2700), { icone });
+  assert.match(html, /^<button type="button" class="tt-sutil tt-progresso-editar" aria-label="Editar meta diária" data-dica data-editar-meta><svg data-icone="edit"><\/svg><\/button><div class="tt-progresso-corpo"/);
+  assert.match(marcacao(), /^<button [^>]*data-editar-meta><\/button>/, 'sem contexto, sem ícone');
+});
+
+function comLapis() {
+  const f = cartaoFalso();
+  const ouvintes = new Map();
+  const lapis = {
+    addEventListener: (tipo, cb) => ouvintes.set(tipo, cb),
+    removeEventListener: (tipo, cb) => ouvintes.get(tipo) === cb && ouvintes.delete(tipo),
+  };
+  f.cartao.filhos['[data-editar-meta]'] = lapis;
+  const chamadas = [];
+  const dialogo = {
+    criar: (opcoes) => {
+      chamadas.push(['criar', opcoes]);
+      return { abrir: (v) => chamadas.push(['abrir', v]), desligar: () => chamadas.push(['desligar']) };
+    },
+  };
+  return { ...f, lapis, ouvintes, chamadas, dialogo };
+}
+
+test('ligar: o lápis cria o diálogo uma vez, abre com a meta e a hora da última leitura, e salvar relê na hora', async () => {
+  esquecer();
+  const f = comLapis();
+  const amb = ambiente([stats(2700), stats(2700, { goal: 60 })]);
+  const icone = () => '';
+  const limpar = ligar(f.cartao, amb.store, { ...amb, icone, dialogo: f.dialogo });
+  await esperar();
+  f.ouvintes.get('click')();
+  await esperar();
+  const [criado, aberto] = f.chamadas;
+  assert.equal(criado[0], 'criar');
+  assert.equal(criado[1].gatilho, f.lapis, 'o foco volta ao lápis');
+  assert.equal(criado[1].icone, icone);
+  assert.equal(criado[1].ipc, amb.ipc);
+  assert.deepEqual(aberto, ['abrir', stats(2700)]);
+  // Salvar: o cartão relê sem esperar o tt://settings.
+  criado[1].aoSalvar({ dailyGoalMinutes: 60 });
+  await esperar();
+  assert.equal(amb.pedidos.length, 2);
+  assert.equal(f.campos['.tt-anel-centro [data-numero]'].textContent, '1');
+  assert.equal(f.campos['.tt-anel-centro [data-unidade]'].textContent, 'hora');
+  // Abrir de novo usa o mesmo diálogo, com os números novos.
+  f.ouvintes.get('click')();
+  await esperar();
+  assert.deepEqual(f.chamadas.map((c) => c[0]), ['criar', 'abrir', 'abrir']);
+  assert.equal(f.chamadas[2][1].dailyGoalMinutes, 60);
+  limpar();
+  assert.deepEqual(f.chamadas.at(-1), ['desligar']);
+  assert.equal(f.ouvintes.size, 0);
+});
+
+test('ligar: antes da primeira leitura, o lápis abre com as configurações; sem clique, nenhum diálogo', async () => {
+  esquecer();
+  const f = comLapis();
+  const amb = ambiente([new Promise(() => {})]);
+  amb.ipc.configuracoes = { obter: async () => ({ dailyGoalMinutes: 30, resetHour: 3, theme: 'lite' }) };
+  const limpar = ligar(f.cartao, amb.store, { ...amb, dialogo: f.dialogo });
+  f.ouvintes.get('click')();
+  await esperar();
+  assert.deepEqual(f.chamadas[1], ['abrir', { dailyGoalMinutes: 30, resetHour: 3, theme: 'lite' }]);
+  limpar();
+  const g = comLapis();
+  const limpar2 = ligar(g.cartao, amb.store, { ...ambiente([stats(0)]), dialogo: g.dialogo });
+  limpar2();
+  assert.deepEqual(g.chamadas, [], 'o diálogo só nasce no primeiro clique');
+});

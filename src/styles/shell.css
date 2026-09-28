@@ -293,8 +293,13 @@
    centradas a 55 px das bordas, com o número (34 px) no meio do anel; o
    rodapé com a linha de base a 278 px. O título, o rótulo, o número e a
    unidade do centro do anel ficam nas mesmas linhas das colunas. */
-.tt-card.tt-progresso{ gap:0; padding:9px 16px 26px; container-type:inline-size; }
-.tt-progresso > h2{ font:var(--tt-type-body-strong); }
+.tt-card.tt-progresso{ position:relative; gap:0; padding:9px 16px 26px; container-type:inline-size; }
+/* M28: o lápis ("Editar meta diária"), botão sutil de 32 px no canto de cima,
+   à direita, com o centro a 19 px da borda direita e do topo, contando a
+   borda de 1 px (medidos na captura do Relógio), na linha do meio do
+   título. */
+.tt-progresso-editar{ position:absolute; top:2px; right:2px; }
+.tt-progresso > h2{ font:var(--tt-type-body-strong); padding-right:28px; }   /* M28: o título não passa por baixo do lápis */
 .tt-progresso-corpo{
   display:grid; grid-template-columns:minmax(0,110px) auto minmax(0,110px); justify-content:space-between;
   align-items:center; margin:18px -15px 0; text-align:center;

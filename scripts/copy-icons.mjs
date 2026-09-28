@@ -53,6 +53,9 @@ export const ICONES = Object.freeze([
   // Configurações: o ícone do cartão "Tema do aplicativo" (M24), na grade de
   // 20 do HeaderIcon do SettingsCard do WinUI
   { nome: 'paint_brush', estilo: 'regular', tamanhos: [20] },
+  // aviso de erro (M28: o diálogo da meta quando o Rust recusa a gravação),
+  // preenchido, como o InfoBar de erro do WinUI
+  { nome: 'error_circle', estilo: 'filled', tamanhos: [16] },
 ]);
 
 /** Os arquivos da lista, no formato do pacote: `play_16_filled.svg`. */

@@ -75,6 +75,10 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 46. **"1,5 hora" ou "1,5 horas"?** (desde o M27). As durações a partir de 1 h usam o plural do `Intl.PluralRules('pt-BR')`, que deixa 1,5 no singular ("1,5 hora", a regra da norma); o zero ficou no plural ("0 minutos"). Se preferir "1,5 horas" (mais comum no dia a dia), é uma linha na função `categoria` do `src/lib/format.js` (`docs/decisoes.md`, M27, item 5).
 47. **Anel no Windows** (desde o M27). No WebView2: repetir os passos 1 a 5 da seção M27 de `docs/verificacao-manual.md` e conferir, com escala de 125% e 150%, que o arco e o trilho ficam nítidos e que as pontas redondas não passam das 12 h de forma estranha. O Chrome headless (o mesmo Chromium) já passou nas mesmas conferências. Entra na ida ao Windows do M48.
 
+48. **Conferir o M28 no seu GNOME** (desde o M28). Uns 3 minutos, com os passos em `docs/verificacao-manual.md`, seção M28: o lápis abre o diálogo, Salvar muda o anel na hora, "Desativada" esconde o anel, Esc e Cancelar não gravam e o foco volta ao lápis. O teste aninhado já fez isso com ponteiro e teclado virtuais no app de verdade (17 conferências ok); falta o seu olho e, se quiser, o Orca lendo o diálogo. Não bloqueia o M29.
+49. **Metas por extenso** (desde o M28). O plano lista as opções como "30 min, 1 h, 1 h 30, 2 h…"; o diálogo usa "30 minutos", "1 hora", "1 hora e 30 minutos", "2 horas"…, como o próprio cartão e o catálogo do M12 (`docs/decisoes.md`, M28, item 2). Se preferir a forma curta, é trocar os textos em `t.foco.metaDiaria.opcoes` (`src/lib/i18n/pt-BR.js`).
+50. **Diálogo da meta no Windows** (desde o M28). No WebView2: repetir a seção M28 de `docs/verificacao-manual.md`, com atenção ao Esc (a lista aberta fecha só a lista; o segundo Esc fecha o diálogo) e ao Narrador lendo "Editar meta diária, diálogo" e as duas listas pelo nome. O Chrome headless (o mesmo Chromium) já passou nas mesmas conferências, com teclas de verdade. Entra na ida ao Windows do M48.
+
 ## Resolvidas
 
 - **Nome** (1.2, item 1): continua "Tomatito".

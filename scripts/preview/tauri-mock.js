@@ -18,6 +18,9 @@
 //   ?hoje=&ontem=&semana=       M26: os segundos de foco do stats_get
 //   ?meta=N                     M27: a meta diária (dailyGoalMinutes; 0 =
 //                               desativada)
+//   ?zerar=H                    M28: a hora de zerar (resetHour)
+// M28: com window.__TOMATITO_PREVIEW_RECUSAR_CONFIGURACOES__ = true (pelo
+// --eval), o settings_set rejeita como o Rust quando não consegue gravar.
 // As globais do initialization_script (?pref, ?ultimo e ?plataforma) não são
 // daqui: precisam existir antes do script de boot do <head>, e vêm do script
 // clássico que o vite.config.js desta pasta põe antes dele.
@@ -192,6 +195,7 @@ function normalizarConfiguracoes(c) {
   c.resolvedTheme = fixo ?? (c.resolvedTheme === 'dark' ? 'dark' : 'light');
 }
 if (params.has('meta')) configuracoes.dailyGoalMinutes = Number(params.get('meta'));
+if (params.has('zerar')) configuracoes.resetHour = Number(params.get('zerar'));
 normalizarConfiguracoes(configuracoes);
 window.__TOMATITO_PREVIEW_CONFIGURACOES__ = configuracoes;
 
@@ -199,6 +203,10 @@ const handlers = {
   get_state: () => ({ focus: retratoFoco(), speed: velocidade, setup: preparo, settings: structuredClone(configuracoes) }),
   settings_get: () => structuredClone(configuracoes),
   settings_set: ({ patch }) => {
+    if (window.__TOMATITO_PREVIEW_RECUSAR_CONFIGURACOES__) {
+      window.__TOMATITO_PREVIEW_COMANDOS__.push(`settings_set:recusado`);
+      throw { code: 'writeFailed', message: 'prévia: gravação recusada' };
+    }
     const { sounds, ...resto } = patch ?? {};
     Object.assign(configuracoes, resto);
     if (sounds) Object.assign(configuracoes.sounds, sounds);
