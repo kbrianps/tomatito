@@ -10,7 +10,7 @@ import { arquivos, comparar, copiar, ICONES } from './copy-icons.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./copy-icons.mjs', import.meta.url));
 
-test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenchidos) mais o pincel do M24, o aviso de erro do M28 e o check preenchido do M30', () => {
+test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenchidos) mais o pincel do M24, o aviso de erro do M28, o check preenchido do M30 e a lixeira e o check do M33', () => {
   assert.deepEqual(
     ICONES.map((i) => i.nome),
     [
@@ -20,6 +20,7 @@ test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenc
       'circle', 'checkmark_circle', 'checkmark_circle', 'dismiss', 'save',
       'paint_brush',
       'error_circle',
+      'delete', 'checkmark',
     ],
   );
   for (const [i, { nome, estilo }] of ICONES.entries()) {
@@ -38,7 +39,7 @@ test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenc
 test('src/assets/icons/ está em dia com a lista e com o pacote (node scripts/copy-icons.mjs --conferir)', () => {
   const r = spawnSync(process.execPath, [SCRIPT, '--conferir'], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /em dia \(28 ícones\)/);
+  assert.match(r.stdout, /em dia \(30 ícones\)/);
 });
 
 test('copiar() numa pasta vazia, de novo sem mudar nada, e a conferência acusando cada diferença', () => {

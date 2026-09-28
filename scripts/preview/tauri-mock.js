@@ -285,6 +285,12 @@ for (const item of (params.get('tempos') ?? '').split(',').filter(Boolean)) {
 }
 if (params.has('tempos')) mudouTempos();
 window.__TOMATITO_PREVIEW_TEMPOS__ = tempos;
+function nomeDoTempo(name, durationMs) {
+  if (!(durationMs >= 1000 && durationMs <= 359_999_000)) throw { code: 'invalidDuration', message: 'duração fora da faixa' };
+  const limpo = String(name ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim();
+  if ([...limpo].length > 255) throw { code: 'nameTooLong', message: 'o nome passa de 255 caracteres' };
+  return limpo;
+}
 const comandoDoTempo = (nome, f) => (args) => {
   window.__TOMATITO_PREVIEW_COMANDOS__.push(`${nome}:${args?.id ?? ''}`);
   f(args);
@@ -304,6 +310,26 @@ const handlers = {
     Object.assign(tm, { restante: restanteDo(tm), run: 'paused' });
   }),
   timer_reset: comandoDoTempo('timer_reset', ({ id }) => Object.assign(acharTempo(id), { run: 'idle', ended: false })),
+  // M33: criar, editar e excluir, com as regras do countdown.rs: duração de
+  // 1 s a 99:59:59, nome limpo de até 255 caracteres, e trocar a duração
+  // volta o temporizador a parado. O nome gravado vai para o registro de
+  // comandos, para a conferência ver o que chegou ao "Rust".
+  timer_create: comandoDoTempo('timer_create', ({ name, durationMs }) => {
+    const nome = nomeDoTempo(name, durationMs);
+    tempos.lista.push({ id: tempos.proximo++, name: nome, durationMs, run: 'idle', endsAt: null, restante: null, ended: false, prazo: null });
+    window.__TOMATITO_PREVIEW_COMANDOS__.push(`timer_create:${JSON.stringify({ name: nome, durationMs })}`);
+  }),
+  timer_update: comandoDoTempo('timer_update', ({ id, name, durationMs }) => {
+    const tm = acharTempo(id);
+    tm.name = nomeDoTempo(name, durationMs);
+    if (tm.durationMs !== durationMs) Object.assign(tm, { durationMs, run: 'idle', ended: false });
+    window.__TOMATITO_PREVIEW_COMANDOS__.push(`timer_update:${JSON.stringify({ id, name: tm.name, durationMs })}`);
+  }),
+  timer_delete: comandoDoTempo('timer_delete', ({ id }) => {
+    const tm = acharTempo(id);
+    clearTimeout(tm.prazo);
+    tempos.lista.splice(tempos.lista.indexOf(tm), 1);
+  }),
   settings_get: () => structuredClone(configuracoes),
   settings_set: ({ patch }) => {
     if (window.__TOMATITO_PREVIEW_RECUSAR_CONFIGURACOES__) {

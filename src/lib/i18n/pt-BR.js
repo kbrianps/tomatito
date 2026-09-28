@@ -153,6 +153,32 @@ export default Object.freeze({
     pausar: 'Pausar',
     retomar: 'Retomar',
     redefinir: 'Redefinir',
+    // M33: a barra do canto inferior direito (lápis e "+"), os botões de
+    // cada card no modo de edição e a lista vazia.
+    barra: 'Ações dos temporizadores',
+    editarLista: 'Editar temporizadores',
+    concluido: 'Concluído',
+    adicionar: 'Adicionar temporizador',
+    editar: 'Editar',
+    excluir: 'Excluir',
+    vazio: 'Nenhum temporizador. Use o botão Adicionar temporizador, no canto inferior direito.',
+    // M33: o diálogo de adicionar e editar (views/timer-dialog.js).
+    dialogo: Object.freeze({
+      novo: 'Adicionar temporizador',
+      editar: 'Editar temporizador',
+      duracao: 'Duração',
+      horas: 'Horas',
+      minutos: 'Minutos',
+      segundos: 'Segundos',
+      mais: (campo) => `Aumentar ${campo.toLowerCase()}`,
+      menos: (campo) => `Diminuir ${campo.toLowerCase()}`,
+      nome: 'Nome do temporizador',
+      salvar: 'Salvar',
+      cancelar: 'Cancelar',
+      zero: 'Escolha uma duração de pelo menos 1 segundo.',
+      longo: 'O nome pode ter até 255 caracteres.',
+      erro: 'Não foi possível salvar o temporizador. Tente de novo.',
+    }),
     // A duração curta do título sem nome (format.js, duracaoCurta).
     unidades: Object.freeze({ h: 'h', min: 'min', s: 's' }),
     // O rótulo do anel (role="img"), uma vez por minuto (PLANO.md, 3.8).

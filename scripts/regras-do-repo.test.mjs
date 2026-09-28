@@ -212,7 +212,7 @@ test('estatísticas: rusqlite com bundled, banco aberto antes do motor e stats_g
   assert.ok(!pkg.dependencies['@tauri-apps/plugin-sql'] && !pkg.devDependencies['@tauri-apps/plugin-sql']);
   const lib = ler('src-tauri/src/lib.rs');
   assert.match(lib, /stats::Stats::open\(&dados\)[\s\S]*engine::Engine::new\(/, 'o banco abre antes do motor');
-  assert.match(lib, /TauriSink::new\(app\.handle\(\)\.clone\(\), som, stats\)/);
+  assert.match(lib, /TauriSink::new\(\s*app\.handle\(\)\.clone\(\),\s*som,\s*stats,/);
   assert.match(lib, /commands::stats_get,/);
   // Os dias ficam no núcleo, com o jiff; o app não calcula datas por conta própria.
   assert.match(ler('src-tauri/tomatito-core/src/days.rs'), /use jiff::/);
@@ -274,6 +274,26 @@ test('temporizadores: comandos timer_*, tt://timers e o fim com som e notificaç
   assert.doesNotMatch(tela, /Pomodoro/i);
   // O nome vem do usuário: só entra no HTML escapado.
   assert.match(tela, /\$\{esc\(titulo\(tm\)\)\}/);
+});
+
+// M33: criar, editar e excluir pela barra e pelo diálogo, e a lista gravada
+// no state.json pelo persist.rs a cada transição (3.3).
+test('temporizadores: barra, diálogo e state.json gravado pelo persist.rs a cada transição', () => {
+  const estado = ler('src-tauri/src/state_file.rs');
+  assert.match(estado, /pub const FILE: &str = "state\.json";/);
+  assert.match(estado, /pub const SCHEMA_VERSION: u32 = 1;/);
+  assert.match(estado, /crate::persist::write_json_atomic\(/, 'gravação atômica');
+  assert.match(ler('src-tauri/src/lib.rs'), /^mod state_file;$/m);
+  assert.match(ler('src-tauri/src/lib.rs'), /state_file::StateStore::new\(&dados\)/);
+  // O tt://timers sai a cada transição, nunca a cada tick; a gravação vai junto.
+  assert.match(ler('src-tauri/src/engine.rs'), /self\.emit\(events::TIMERS, timers\);\s*(\/\/[^\n]*\n\s*)*self\.estado\.save_timers\(timers\);/);
+  const tela = ler('src/views/timers.js');
+  assert.match(tela, /comandoDoTemporizador\('criar', nome, duracaoMs\)/);
+  assert.match(tela, /comandoDoTemporizador\('editar', id, nome, duracaoMs\)/);
+  assert.match(tela, /comandoDoTemporizador\('excluir', id\)/);
+  const dialogo = ler('src/views/timer-dialog.js');
+  assert.match(dialogo, /value="\$\{esc\(tm\?\.name \?\? ''\)\}"/, 'o nome só entra escapado');
+  assert.doesNotMatch(dialogo + tela, /Pomodoro/i);
 });
 
 test('capabilities/main.json com as permissões da seção 3.8, só para a main', () => {

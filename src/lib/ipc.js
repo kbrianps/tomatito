@@ -88,7 +88,7 @@ export const tarefas = Object.freeze({
  * `status` em `idle`, `running` ou `paused` e `remainingMs` negativo depois do
  * zero. Os erros vêm como `{ code, message }`, com `code` em `notFound`,
  * `invalidDuration`, `nameTooLong`, `alreadyRunning` ou `notRunning`.
- * `criar`, `editar` e `excluir` ganham tela no M33.
+ * `criar`, `editar` e `excluir` são da barra e do diálogo do M33.
  */
 export const temporizadores = Object.freeze({
   criar: (nome, duracaoMs) => invoke('timer_create', { name: nome, durationMs: duracaoMs }),

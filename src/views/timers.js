@@ -17,10 +17,17 @@
 // tempo, que marca o estado sem depender da cor (no Lite, a cor é a mesma do
 // correndo; 4.2). O fim (som e notificação) sai do Rust, mesmo com a tela
 // fechada ou a janela escondida.
+//
+// M33: a barra do canto inferior direito, com o lápis (modo de edição) e o
+// "+" (diálogo de adicionar, views/timer-dialog.js). No modo de edição, o
+// lápis vira "Concluído", e cada card ganha "Editar" e "Excluir" no canto de
+// cima, onde o Relógio põe "Expandir" e "Manter no topo". Criar, editar e
+// excluir vão para o Rust, que regrava o state.json (state_file.rs).
 import t from '../lib/i18n/pt-BR.js';
 import { categoria, duracaoCurta, plurais, tempoDoTemporizador } from '../lib/format.js';
 import { store as storeDoApp } from '../lib/store.js';
 import * as anel from '../components/ring.js';
+import * as dialogoDoTemporizador from './timer-dialog.js';
 
 const T = t.temporizador;
 /** O anel do card: 210 px CSS, com traço de 12 (o viewBox tem o mesmo lado). */
@@ -91,6 +98,12 @@ export function cartao(tm, { icone = semIcone, restante = tm.remainingMs } = {})
   return (
     `<section class="tt-card tt-temporizador" data-temporizador="${tm.id}" data-estado="${ap.estado}"${ap.vencido ? ' data-vencido' : ''} aria-labelledby="${id}">` +
     `<h2 id="${id}" class="tt-temporizador-titulo" data-titulo>${esc(titulo(tm))}</h2>` +
+    // M33: só aparecem no modo de edição (o CSS esconde fora dele, e fora
+    // do Tab). O aria-describedby diz de qual card é o botão.
+    `<div class="tt-temporizador-edicao">` +
+    `<button type="button" class="tt-sutil" data-acao="editar" aria-label="${T.editar}" aria-describedby="${id}" data-dica>${icone('edit')}</button>` +
+    `<button type="button" class="tt-sutil" data-acao="excluir" aria-label="${T.excluir}" aria-describedby="${id}" data-dica>${icone('delete')}</button>` +
+    `</div>` +
     anel.marcacao({
       fracao: ap.fracao,
       rotulo: rotuloDoAnel(tm, restante),
@@ -106,12 +119,28 @@ export function cartao(tm, { icone = semIcone, restante = tm.remainingMs } = {})
   );
 }
 
-/** HTML da tela: o título e a grade (vazia até o primeiro retrato). */
-export function marcacao(retrato = null, { icone = semIcone } = {}) {
-  const cards = (retrato?.timers ?? []).map((tm) => cartao(tm, { icone })).join('');
+/** HTML da barra do canto inferior direito (M33): o lápis (ou "Concluído") e o "+". */
+export function barra({ editando = false, vazia = false, icone = semIcone } = {}) {
   return (
-    `<div class="tt-pagina"><h1 class="tt-t-title" tabindex="-1">${t.navegacao.temporizador}</h1>` +
-    `<div class="tt-temporizadores" data-temporizadores>${cards}</div></div>`
+    `<div class="tt-temporizadores-barra" role="toolbar" aria-label="${T.barra}" data-barra>` +
+    `<button type="button" class="tt-sutil" data-editar-lista aria-label="${editando ? T.concluido : T.editarLista}" data-dica${vazia && !editando ? ' disabled' : ''}>` +
+    `${icone(editando ? 'checkmark' : 'edit')}</button>` +
+    `<button type="button" class="tt-sutil" data-adicionar aria-label="${T.adicionar}" data-dica>${icone('add')}</button>` +
+    `</div>`
+  );
+}
+
+/** HTML da tela: o título, a grade (vazia até o primeiro retrato) e a barra. */
+export function marcacao(retrato = null, { icone = semIcone } = {}) {
+  const timers = retrato?.timers ?? [];
+  const cards = timers.map((tm) => cartao(tm, { icone })).join('');
+  const vazia = Boolean(retrato) && timers.length === 0;
+  return (
+    `<div class="tt-pagina tt-pagina-temporizador"><h1 class="tt-t-title" tabindex="-1">${t.navegacao.temporizador}</h1>` +
+    `<div class="tt-temporizadores" data-temporizadores>${cards}</div>` +
+    `<p class="tt-temporizadores-vazio" data-vazio${vazia ? '' : ' hidden'}>${T.vazio}</p>` +
+    barra({ vazia, icone }) +
+    `</div>`
   );
 }
 
@@ -124,7 +153,8 @@ function ligarCartao(el, icone) {
   const tempo = el.querySelector('[data-tempo]');
   const encerrado = el.querySelector('[data-encerrado]');
   const tituloEl = el.querySelector('[data-titulo]');
-  const principal = el.querySelector('button[data-acao]:not([data-acao="redefinir"])');
+  // M33: o principal é o primeiro dos botões de baixo (os de edição, em cima, também têm data-acao).
+  const principal = el.querySelector('.tt-temporizador-botoes button[data-acao]:not([data-acao="redefinir"])');
   const redefinir = el.querySelector('button[data-acao="redefinir"]');
   const a = anel.ligarAnel(el);
   let tm = null;
@@ -185,10 +215,19 @@ export function montar(raiz, {
   icone = semIcone,
   quadro = (f) => requestAnimationFrame(f),
   cancelar = (id) => cancelAnimationFrame(id),
+  dialogo = dialogoDoTemporizador,
+  doc = raiz.ownerDocument,
 } = {}) {
   raiz.innerHTML = marcacao(store?.temporizadores, { icone });
   if (!store) return null;
   const grade = raiz.querySelector('[data-temporizadores]');
+  const vazio = raiz.querySelector('[data-vazio]');
+  const lapis = raiz.querySelector('[data-editar-lista]');
+  const mais = raiz.querySelector('[data-adicionar]');
+  let editando = false;
+  let janela = null;
+  // Depois de excluir: a posição do card, para o foco ir ao vizinho.
+  let focarApos = null;
   let cards = new Map();
   let ids = '';
   let pedido = null;
@@ -214,22 +253,75 @@ export function montar(raiz, {
     if (algum) pedido = quadro(passo);
   };
 
+  // M33: o modo de edição. O lápis vira "Concluído" (e volta), e a grade
+  // ganha o atributo que mostra "Editar" e "Excluir" em cada card.
+  const editar = (sim) => {
+    const vazia = cards.size === 0;
+    editando = sim && !vazia;
+    grade.toggleAttribute('data-editando', editando);
+    lapis.setAttribute('aria-label', editando ? T.concluido : T.editarLista);
+    lapis.innerHTML = icone(editando ? 'checkmark' : 'edit');
+    const tinhaFoco = doc?.activeElement === lapis;
+    lapis.disabled = vazia;
+    if (tinhaFoco && lapis.disabled) mais.focus();
+  };
+
+  const focarDepoisDeExcluir = () => {
+    if (focarApos === null) return;
+    const lista = [...grade.querySelectorAll('[data-temporizador]')];
+    const alvo = lista[Math.min(focarApos, lista.length - 1)];
+    focarApos = null;
+    (alvo?.querySelector('button[data-acao="excluir"]') ?? mais).focus();
+  };
+
   const aplicar = (retrato) => {
     if (!retrato) return;
     const novos = retrato.timers.map((tm) => tm.id).join(',');
     if (novos !== ids) {
       ids = novos;
       redesenhar(retrato);
+      vazio.hidden = retrato.timers.length > 0;
+      editar(editando);
+      focarDepoisDeExcluir();
     }
     for (const tm of retrato.timers) cards.get(tm.id)?.atualizar(tm, restante(tm));
     if (pedido === null && retrato.timers.some((tm) => tm.status === 'running')) pedido = quadro(passo);
   };
+
+  const abrirDialogo = (tm, quem) => {
+    janela ??= dialogo.criar({
+      doc,
+      icone,
+      aoSalvar: ({ id, nome, duracaoMs }) =>
+        id === null
+          ? store.comandoDoTemporizador('criar', nome, duracaoMs)
+          : store.comandoDoTemporizador('editar', id, nome, duracaoMs),
+    });
+    janela.abrir(tm, quem);
+  };
+
+  const aoClicarNaBarra = (ev) => {
+    const b = ev.target.closest?.('button');
+    if (!b || b.disabled) return;
+    if (b.hasAttribute('data-editar-lista')) editar(!editando);
+    else if (b.hasAttribute('data-adicionar')) abrirDialogo(null, mais);
+  };
+  raiz.querySelector('[data-barra]').addEventListener('click', aoClicarNaBarra);
 
   const aoClicar = (ev) => {
     const b = ev.target.closest?.('button[data-acao]');
     const el = b?.closest('[data-temporizador]');
     if (!b || !el || b.disabled) return;
     const id = Number(el.dataset.temporizador);
+    if (b.dataset.acao === 'editar') return abrirDialogo(cards.get(id)?.tm ?? null, b);
+    if (b.dataset.acao === 'excluir') {
+      focarApos = [...grade.querySelectorAll('[data-temporizador]')].indexOf(el);
+      store.comandoDoTemporizador('excluir', id).catch((erro) => {
+        focarApos = null;
+        console.warn('[temporizador]', erro);
+      });
+      return;
+    }
     const comando = { iniciar: 'iniciar', retomar: 'iniciar', pausar: 'pausar', redefinir: 'redefinir' }[b.dataset.acao];
     if (!comando) return;
     store.comandoDoTemporizador(comando, id).catch((erro) => console.warn('[temporizador]', erro));
@@ -243,6 +335,9 @@ export function montar(raiz, {
   return () => {
     desassinar();
     grade.removeEventListener('click', aoClicar);
+    raiz.querySelector('[data-barra]')?.removeEventListener('click', aoClicarNaBarra);
+    janela?.desligar();
+    janela = null;
     if (pedido !== null) cancelar(pedido);
     pedido = null;
   };

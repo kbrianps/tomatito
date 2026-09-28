@@ -152,6 +152,26 @@ fluent-dialog.tt-dialogo-meta::part(dialog){ width:320px; max-width:calc(100vw -
 .tt-dialogo-meta-erro[hidden]{ display:none; }
 .tt-dialogo-meta-erro .tt-icone{ flex:none; width:16px; height:16px; margin-top:2px; fill:var(--tt-critical); }
 
+/* M33: diálogo "Adicionar/Editar temporizador" (views/timer-dialog.js), com
+   o mesmo corpo e os mesmos botões do da meta. As horas, os minutos e os
+   segundos são caixas de texto de 72 × 56 em Title, com os chevrons (sutis,
+   72 × 24) em cima e embaixo e o nome do campo em Caption; os ":" ficam na
+   altura dos números. O aviso de erro é o da meta. */
+fluent-dialog.tt-dialogo-temporizador::part(dialog){ width:360px; max-width:calc(100vw - 32px); box-shadow:var(--shadow64); }
+.tt-dialogo-temporizador fluent-dialog-body::part(actions){
+  flex-direction:row; align-items:stretch; justify-content:stretch;
+  margin-block-start:0; padding-block-start:24px;
+}
+.tt-dialogo-temporizador [slot="action"]{ flex:1 1 0; min-width:0; }
+.tt-dialogo-temporizador-campos{ display:flex; flex-direction:column; gap:24px; padding-top:12px; }
+.tt-duracao{ display:flex; justify-content:center; align-items:flex-start; gap:4px; }
+.tt-duracao-campo{ display:flex; flex-direction:column; align-items:center; gap:4px; }
+.tt-duracao-campo button.tt-sutil{ width:72px; height:24px; }
+.tt-texto.tt-duracao-numero{ width:72px; height:56px; padding:0; text-align:center; font:var(--tt-type-title); }
+.tt-duracao-sep{ font:var(--tt-type-title); color:var(--tt-fg-2); line-height:56px; margin-top:28px; }
+.tt-duracao-rotulo{ font:var(--tt-type-caption); color:var(--tt-fg-2); }
+.tt-dialogo-temporizador-nome{ width:100%; }
+
 /* M30: caixa de texto (o TextBox do WinUI): 32 px de altura, raio 4, fundo
    --tt-input-bg, borda --tt-border com o sublinhado --tt-stroke-control; com
    o foco, o sublinhado vira 2 px do accent e o fundo fica o do cartão (o

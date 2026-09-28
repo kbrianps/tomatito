@@ -1230,4 +1230,85 @@
       };
       olhar();
     });
+  // M33: adicionar, editar e excluir. __ttEdicao() devolve a barra (caixa,
+  // distância ao canto do conteúdo e botões), o modo de edição, cada card
+  // (título, tempo e os botões de edição visíveis), o diálogo (aberto, título,
+  // campos, nome, aviso e caixa), quem tem o foco e os comandos timer_*.
+  // __ttPreencher({ h, m, s, nome }) escreve nos campos do diálogo, como quem
+  // digita (com o evento input).
+  window.__ttEdicao = () => {
+    const caixa = (el) => {
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return [r.x, r.y, r.width, r.height].map((v) => Math.round(v * 10) / 10);
+    };
+    const visivel = (el) => Boolean(el) && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0;
+    const barra = document.querySelector('[data-barra]');
+    const conteudo = document.querySelector('.tt-rolagem').getBoundingClientRect();
+    const b = barra?.getBoundingClientRect();
+    const d = document.querySelector('[data-dialogo="temporizador"]');
+    const ativo = document.activeElement;
+    return {
+      barra: barra && {
+        caixa: caixa(barra),
+        direita: Math.round(conteudo.right - b.right),
+        fundo: Math.round(conteudo.bottom - b.bottom),
+        botoes: [...barra.querySelectorAll('button')].map((x) => ({ rotulo: x.getAttribute('aria-label'), desabilitado: x.disabled, icone: x.querySelector('svg') ? 1 : 0 })),
+      },
+      editando: document.querySelector('[data-temporizadores]')?.hasAttribute('data-editando') ?? false,
+      vazio: !(document.querySelector('[data-vazio]')?.hidden ?? true),
+      cards: [...document.querySelectorAll('[data-temporizador]')].map((c) => ({
+        id: Number(c.dataset.temporizador),
+        titulo: c.querySelector('[data-titulo]').textContent,
+        tempo: c.querySelector('[data-tempo]').textContent,
+        edicao: [...c.querySelectorAll('.tt-temporizador-edicao button')].filter(visivel).map((x) => x.getAttribute('aria-label')),
+        caixaEdicao: caixa(c.querySelector('.tt-temporizador-edicao')),
+        caixa: caixa(c),
+      })),
+      dialogo: d && {
+        aberto: Boolean(d.dialog?.open),
+        rotulo: d.getAttribute('aria-label'),
+        titulo: d.querySelector('[slot="title"]')?.textContent ?? null,
+        campos: [...d.querySelectorAll('[data-campo]')].map((x) => x.value),
+        nome: d.querySelector('[data-nome]')?.value ?? null,
+        aviso: d.querySelector('[data-erro]')?.hidden === false ? d.querySelector('[data-erro-texto]').textContent : null,
+        caixa: caixa(d.dialog),
+      },
+      foco: ativo ? (ativo.getAttribute('aria-label') ?? ativo.getAttribute('data-campo') ?? ativo.tagName.toLowerCase()) : null,
+      comandos: window.__TOMATITO_PREVIEW_COMANDOS__.filter((c) => /^timer_(create|update):\{|^timer_delete:\d/.test(c)),
+    };
+  };
+  // O click() de um elemento (a prévia do WebKitGTK não tem clique de mouse)
+  // e uma tecla despachada no elemento com o foco (ou no seletor).
+  window.__ttClicar = async (seletor, espera = 50) => {
+    document.querySelector(seletor).click();
+    await new Promise((r) => setTimeout(r, espera));
+    await doisQuadros();
+    return window.__ttEdicao();
+  };
+  window.__ttTecla = async (key, seletor = null) => {
+    const alvo = seletor ? document.querySelector(seletor) : document.activeElement;
+    alvo.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, composed: true }));
+    await new Promise((r) => setTimeout(r, 50));
+    await doisQuadros();
+    return window.__ttEdicao();
+  };
+  window.__ttPreencher = async ({ h, m, s, nome } = {}) => {
+    const d = document.querySelector('[data-dialogo="temporizador"]');
+    const escrever = (el, v) => {
+      if (v === undefined || !el) return;
+      el.focus();
+      el.value = String(v);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      // Sair do campo: sem janela com foco (headless), o focus() seguinte
+      // não dispara o focusout sozinho.
+      el.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    };
+    escrever(d.querySelector('[data-campo="h"]'), h);
+    escrever(d.querySelector('[data-campo="m"]'), m);
+    escrever(d.querySelector('[data-campo="s"]'), s);
+    escrever(d.querySelector('[data-nome]'), nome);
+    await doisQuadros();
+    return window.__ttEdicao();
+  };
 })();

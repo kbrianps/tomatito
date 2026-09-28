@@ -60,6 +60,10 @@ export const ICONES = Object.freeze([
   // aviso de erro (M28: o diálogo da meta quando o Rust recusa a gravação),
   // preenchido, como o InfoBar de erro do WinUI
   { nome: 'error_circle', estilo: 'filled', tamanhos: [16] },
+  // M33: a lixeira do "Excluir" de cada temporizador no modo de edição e o
+  // check do "Concluído", que troca o lápis da barra enquanto se edita
+  { nome: 'delete', estilo: 'regular', tamanhos: [16] },
+  { nome: 'checkmark', estilo: 'regular', tamanhos: [16] },
 ]);
 
 /** Os arquivos da lista, no formato do pacote: `play_16_filled.svg`. */

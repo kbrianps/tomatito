@@ -514,6 +514,31 @@ fluent-radio-group.tt-temas{
 }
 .tt-temporizador-encerrado[hidden]{ display:none; }
 .tt-temporizador-botoes{ display:flex; gap:10px; margin-top:13px; }
+
+/* M33: a tela ocupa a altura toda, para a barra do lápis e do "+" ficar no
+   canto inferior direito mesmo com poucos cards; com a grade mais alta que a
+   janela, ela gruda no fundo enquanto a página rola (sticky). A barra é como
+   a do Relógio: um cartão pequeno com os dois botões sutis de 32 px. */
+.tt-pagina-temporizador{
+  box-sizing:border-box; min-height:100%; display:flex; flex-direction:column;
+  padding-bottom:16px;
+}
+.tt-pagina-temporizador .tt-temporizadores{ margin-bottom:16px; }
+.tt-temporizadores-vazio{ margin:24px 0 0; text-align:center; color:var(--tt-fg-2); }
+.tt-temporizadores-vazio[hidden]{ display:none; }
+.tt-temporizadores-barra{
+  position:sticky; bottom:16px; z-index:1; align-self:flex-end; margin-top:auto;
+  display:flex; gap:4px; padding:4px;
+  background:var(--tt-bg-card); border:1px solid var(--tt-border); border-radius:var(--tt-r-card);
+  box-shadow:var(--shadow8);
+}
+/* No modo de edição, "Editar" e "Excluir" no canto de cima do card, onde o
+   Relógio põe "Expandir" e "Manter no topo"; o título abre espaço para eles.
+   Fora do modo, somem (e saem do Tab). */
+.tt-card.tt-temporizador{ position:relative; }
+.tt-temporizador-edicao{ position:absolute; top:4px; right:4px; display:none; gap:4px; }
+.tt-temporizadores[data-editando] .tt-temporizador-edicao{ display:flex; }
+.tt-temporizadores[data-editando] .tt-temporizador-titulo{ padding-right:68px; }
 @media (forced-colors:active){
   .tt-temporizador[data-vencido] .tt-temporizador-tempo{ color:CanvasText; }
 }

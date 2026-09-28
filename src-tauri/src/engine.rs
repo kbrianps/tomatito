@@ -47,6 +47,7 @@ use tomatito_core::{
 use crate::audio::Som;
 use crate::events::{self, FocusDto, PhaseEventDto, SetupDto, StateDto, TickDto, TimersDto};
 use crate::notify::Notificador;
+use crate::state_file::StateStore;
 use crate::stats::Stats;
 
 /// O ritmo do laço (3.2).
@@ -587,16 +588,24 @@ pub struct TauriSink {
     som: Arc<Som>,
     notificador: Notificador,
     stats: Arc<Stats>,
+    /// M33: o `state.json`.
+    estado: Arc<StateStore>,
 }
 
 impl TauriSink {
-    pub fn new(app: tauri::AppHandle, som: Arc<Som>, stats: Arc<Stats>) -> Self {
+    pub fn new(
+        app: tauri::AppHandle,
+        som: Arc<Som>,
+        stats: Arc<Stats>,
+        estado: Arc<StateStore>,
+    ) -> Self {
         let notificador = Notificador::new(app.clone());
         Self {
             app,
             som,
             notificador,
             stats,
+            estado,
         }
     }
 
@@ -629,6 +638,11 @@ impl Sink for TauriSink {
     }
     fn timers(&self, timers: &TimersDto) {
         self.emit(events::TIMERS, timers);
+        // M33: cada mudança da lista (criar, editar, excluir, iniciar, pausar,
+        // redefinir, fim) é uma transição e vai para o `state.json`. Síncrono,
+        // como o período: a gravação atômica leva poucos ms, e quem faz um
+        // `cat` logo depois do clique já vê a lista nova.
+        self.estado.save_timers(timers);
     }
     fn timer_notice(&self, ended: &TimerEnded) {
         self.notificador.mostrar_temporizador(ended);

@@ -6,6 +6,7 @@ mod i18n;
 mod notify;
 mod persist;
 mod settings;
+mod state_file;
 mod stats;
 mod tasks;
 mod window;
@@ -44,7 +45,14 @@ pub fn run() {
             let motor = Arc::new(engine::Engine::new(
                 clock,
                 speed,
-                engine::TauriSink::new(app.handle().clone(), som, stats),
+                engine::TauriSink::new(
+                    app.handle().clone(),
+                    som,
+                    stats,
+                    // M33: o `state.json`, gravado a cada transição dos
+                    // temporizadores; carregar ao abrir é do M40.
+                    Arc::new(state_file::StateStore::new(&dados)),
+                ),
             ));
             app.manage(motor.clone());
             tauri::async_runtime::spawn(motor.run());

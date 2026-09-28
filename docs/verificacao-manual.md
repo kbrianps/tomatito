@@ -823,3 +823,25 @@ O que só você consegue: ouvir o som, ver o balão no seu GNOME e julgar a leit
 7. [ ] Teclado: Tab passa pelo play e pelo "Redefinir" de cada card (o "Redefinir" apagado fica fora), com o anel de foco; Espaço ou Enter aciona.
 8. [ ] Feche o app (Ctrl+C no terminal). Os temporizadores voltam aos padrões ao reabrir: gravar a lista é do M33, e carregá-la ao abrir, do M40.
 
+
+## M33. Adicionar, editar e excluir temporizadores
+
+O que já foi conferido sem você:
+- `cargo test` (`state_file.rs`): o formato do `state.json` para parado, correndo e pausado, a lista inteira regravada a cada vez e a falha de disco sem pânico.
+- Prévia (`node scripts/preview/temporizador-edicao.mjs`), no Chrome headless e no WebKitGTK: a barra no canto inferior direito, o diálogo com 00:05:00, criar "Chá · 4 min", o modo de edição com "Editar" e "Excluir" em cada card, editar para "Chá verde · 5 min", excluir, o Lite, o Claro e a lista vazia.
+- Roteiro aninhado `temporizador-edicao` (app de verdade, 18 conferências): cliques de verdade no "+", no chevron, no Salvar, no lápis, no "Editar" e no "Excluir", com o `state.json` lido do disco depois de cada operação.
+
+O que só você consegue: julgar o desenho do diálogo e da barra ao lado do Relógio, e digitar de verdade.
+
+### Para conferir (uns 4 minutos)
+
+1. [ ] `cd ~/dev/tomatito && npm run dev:app`. Em outro terminal, deixe pronto: `cat ~/.local/share/io.github.kbrianps.tomatito.dev/state.json` (antes da primeira operação, o arquivo pode não existir ou ter a lista de uma rodada anterior: o app ainda não o lê ao abrir, isso é do M40).
+2. [ ] No painel, "Temporizador". No canto inferior direito há uma barra com um lápis e um "+".
+3. [ ] Clique no "+". Abre "Adicionar temporizador" com 00 : 05 : 00. Clique no chevron de baixo dos minutos (vira 04), clique em "Nome do temporizador" e digite `Chá`. Salvar. Aparece o card "Chá" com 00:04:00 no fim da grade.
+4. [ ] `cat` do arquivo: tem `"schemaVersion": 1` e os cinco temporizadores, o último com `"name": "Chá"` e `"durationMs": 240000`.
+5. [ ] Clique no lápis: ele vira um check ("Concluído"), e cada card ganha um lápis e uma lixeira no canto de cima. Clique no lápis do "Chá": abre "Editar temporizador" com 00:04:00 e "Chá". No campo dos minutos, aperte ↑ (vira 05) e troque o nome para `Chá verde`. Enter (ou Salvar). O card vira "Chá verde", 00:05:00.
+6. [ ] `cat`: o último agora tem `"name": "Chá verde"` e `"durationMs": 300000`.
+7. [ ] Clique na lixeira do "Chá verde". O card some sem pedir confirmação (como no Relógio), e o foco fica na lixeira do card vizinho. `cat`: só os quatro padrões.
+8. [ ] Clique no check: os botões de cima somem. Inicie o "1 min" e dê `cat`: ele aparece com `"status": "running"` e `"endsAt"`. Pause e dê `cat`: `"paused"` com `"remainingMs"`.
+9. [ ] Teclado: Tab chega à barra (lápis e "+"); com o diálogo aberto, Esc fecha sem salvar e o foco volta ao "+". Nos campos de tempo, ↑/↓ dão a volta (59 → 00), e digitar `75` nos minutos vira 59 ao sair do campo.
+10. [ ] Feche o app (Ctrl+C). O `state.json` continua lá com a última lista. Ao reabrir, os temporizadores voltam aos padrões: carregar a lista gravada é do M40.
