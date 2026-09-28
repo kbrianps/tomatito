@@ -798,3 +798,7 @@ O que só você consegue ver: o hover revelando o "Escolher" e o "x" sem a lista
 9. [ ] Teclado: Tab a partir do "+" passa pelo "…", pelo círculo, "Escolher para a sessão" e o "x" de cada linha, com o anel de foco. Espaço no círculo marca e desmarca.
 10. [ ] (Opcional, Orca ligado: Super+Alt+S) O círculo é lido como caixa de seleção com o título da tarefa ("Ler o capítulo 3, caixa de seleção, não marcada").
 11. [ ] No "…", "Apagar concluídas" apaga "Lista 2". Para zerar: feche o app e apague o `stats.sqlite` do passo 1.
+
+## M31. Motor de temporizadores
+
+Sem conferência manual: o marco é só o motor no `tomatito-core`, sem tela nem comando, e o "Pronto quando" é coberto pelo `cargo test -p tomatito-core --test temporizadores`. A conferência com os olhos e os ouvidos vem no M32.
