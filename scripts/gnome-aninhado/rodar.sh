@@ -18,6 +18,7 @@
 #   bash scripts/gnome-aninhado/rodar.sh meta              # M28: o diálogo "Editar meta diária"
 #   bash scripts/gnome-aninhado/rodar.sh tarefas           # M29: os comandos task_* e a virada do dia
 #   bash scripts/gnome-aninhado/rodar.sh cartao-tarefas    # M30: o cartão "Tarefas", da tela ao banco
+#   TOMATITO_SPEED=10 bash scripts/gnome-aninhado/rodar.sh temporizador   # M32: a tela Temporizador, do clique à notificação
 #   bash scripts/gnome-aninhado/instalado.sh               # o Tomatito instalado (M21b)
 #
 # Pré-requisito: o binário de debug atualizado (`cd src-tauri && cargo build`).

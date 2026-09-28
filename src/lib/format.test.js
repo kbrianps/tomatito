@@ -127,3 +127,32 @@ test('minutos inteiros e a categoria com o zero no plural', () => {
   assert.equal(categoria(1), 'one');
   assert.equal(categoria(2), 'other');
 });
+
+test('M32: tempo do temporizador, positivo e negativo', async () => {
+  const { tempoDoTemporizador: f } = await import('./format.js');
+  assert.equal(f(60_000), '00:01:00');
+  assert.equal(f(59_001), '00:01:00');
+  assert.equal(f(1), '00:00:01');
+  assert.equal(f(0), '00:00:00');
+  assert.equal(f(0, true), '-00:00:00');
+  assert.equal(f(-400), '-00:00:00');
+  assert.equal(f(-12_000), '-00:00:12');
+  assert.equal(f(-12_999), '-00:00:12');
+  assert.equal(f(-3_723_000), '-01:02:03');
+  assert.equal(f(359_999_000), '99:59:59');
+  assert.equal(f(-360_000_000 - 1000), '-100:00:01');
+  assert.equal(f(NaN), '00:00:00');
+});
+
+test('M32: duração curta (os exemplos do timer_duration do i18n.rs)', async () => {
+  const { duracaoCurta: f } = await import('./format.js');
+  assert.equal(f(60_000), '1 min');
+  assert.equal(f(600_000), '10 min');
+  assert.equal(f(45_000), '45 s');
+  assert.equal(f(90_000), '1 min 30 s');
+  assert.equal(f(5_400_000), '1 h 30 min');
+  assert.equal(f(3_600_000), '1 h');
+  assert.equal(f(3_601_000), '1 h 1 s');
+  assert.equal(f(359_999_000), '99 h 59 min 59 s');
+  assert.equal(f(0), '0 s');
+});

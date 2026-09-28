@@ -8,7 +8,7 @@
 //! os segundos e nunca abaixo de 1, como o rodapé "A seguir" do mostrador
 //! (`src/views/focus/andamento.js`): um bloco de 1650 s é "27 min".
 
-use tomatito_core::{EpochMs, Notice, PhaseKind, TimeZone};
+use tomatito_core::{EpochMs, Notice, PhaseKind, TimeZone, TimerEnded};
 
 /// Uma notificação pronta para mostrar.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,6 +88,50 @@ pub fn notice(notice: &Notice, tz: &TimeZone) -> NoticeText {
             };
             NoticeText { title, body: None }
         }
+    }
+}
+
+/// A duração de um temporizador, curta, como o título do card sem nome
+/// (M32; `duracaoCurta` do `src/lib/format.js`): "1 min", "1 h 30 min",
+/// "45 s", "1 min 30 s". Os segundos quebrados são cortados.
+pub fn timer_duration(duration_ms: u64) -> String {
+    let s = duration_ms / 1000;
+    let (h, m, s) = (s / 3600, s / 60 % 60, s % 60);
+    let mut partes = Vec::new();
+    if h > 0 {
+        partes.push(format!("{h} h"));
+    }
+    if m > 0 {
+        partes.push(format!("{m} min"));
+    }
+    if s > 0 || partes.is_empty() {
+        partes.push(format!("{s} s"));
+    }
+    partes.join(" ")
+}
+
+/// O aviso do fim de um temporizador (M32):
+///
+/// | Aviso | Título | Corpo |
+/// |---|---|---|
+/// | sem nome | Temporizador encerrado | 1 min |
+/// | com nome | Temporizador encerrado | Chá · 4 min |
+/// | atrasado | Temporizador encerrado às 14:32 | (o mesmo corpo) |
+pub fn timer_ended(ended: &TimerEnded, tz: &TimeZone) -> NoticeText {
+    let base = "Temporizador encerrado";
+    let title = match ended.late.then(|| hh_mm(ended.ended_at, tz)).flatten() {
+        Some(h) => format!("{base} às {h}"),
+        None => base.to_owned(),
+    };
+    let duracao = timer_duration(ended.duration_ms);
+    let body = if ended.name.is_empty() {
+        duracao
+    } else {
+        format!("{} · {duracao}", ended.name)
+    };
+    NoticeText {
+        title,
+        body: Some(body),
     }
 }
 
@@ -278,5 +322,49 @@ mod tests {
                 ),
             ]
         );
+    }
+
+    #[test]
+    fn duracao_curta_do_temporizador() {
+        assert_eq!(timer_duration(60_000), "1 min");
+        assert_eq!(timer_duration(600_000), "10 min");
+        assert_eq!(timer_duration(45_000), "45 s");
+        assert_eq!(timer_duration(90_000), "1 min 30 s");
+        assert_eq!(timer_duration(5_400_000), "1 h 30 min");
+        assert_eq!(timer_duration(3_600_000), "1 h");
+        assert_eq!(timer_duration(3_601_000), "1 h 1 s");
+        assert_eq!(timer_duration(359_999_000), "99 h 59 min 59 s");
+        assert_eq!(timer_duration(0), "0 s");
+    }
+
+    #[test]
+    fn fim_de_temporizador() {
+        let fim = |name: &str, late| TimerEnded {
+            id: 1,
+            name: name.into(),
+            duration_ms: 240_000,
+            ended_at: T0.plus_ms(2 * 60_000),
+            late,
+        };
+        assert_eq!(
+            texto_do_temporizador(&fim("", false)),
+            ("Temporizador encerrado".into(), Some("4 min".into()))
+        );
+        assert_eq!(
+            texto_do_temporizador(&fim("Chá", false)),
+            ("Temporizador encerrado".into(), Some("Chá · 4 min".into()))
+        );
+        assert_eq!(
+            texto_do_temporizador(&fim("Chá", true)),
+            (
+                "Temporizador encerrado às 14:32".into(),
+                Some("Chá · 4 min".into())
+            )
+        );
+    }
+
+    fn texto_do_temporizador(e: &TimerEnded) -> (String, Option<String>) {
+        let t = timer_ended(e, &sp());
+        (t.title, t.body)
     }
 }

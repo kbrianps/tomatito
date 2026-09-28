@@ -156,3 +156,71 @@ test('M17: o preparo vem do get_state, com o padrão antes e diante de um setup 
     assert.deepEqual(m.store.preparo, debug, `ignora ${JSON.stringify(ruim)}`);
   }
 });
+
+// M32: os temporizadores.
+const temporizador = (id, { status = 'idle', restante = 60_000, duracao = 60_000, ended = false } = {}) => ({
+  id, name: '', durationMs: duracao, status,
+  endsAt: status === 'running' ? T0 + restante : null,
+  remainingMs: restante, ended, overdue: restante < 0 || (ended && restante === 0),
+});
+const temporizadores = (seq, ...timers) => ({ seq, at: T0, timers });
+
+test('temporizadores: o get_state traz o retrato, e o evento é ouvido quando existe', async () => {
+  const m = montar({ estado: { focus: retrato(0, 'idle'), speed: 1, timers: temporizadores(0, temporizador(1)) } });
+  m.store.ligar({ doc: alvo(), janela: alvo() });
+  await new Promise((r) => setTimeout(r));
+  assert.equal(m.store.temporizadores.timers.length, 1);
+  assert.equal(m.store.restanteDoTemporizador(1), 60_000);
+  assert.equal(m.store.restanteDoTemporizador(9), null);
+
+  const m2 = montar();
+  const ouvidos = {};
+  const ipc = { obterEstado: async () => ({ focus: retrato(0, 'idle'), speed: 1 }), ouvir: async (ev, cb) => ((ouvidos[ev] = cb), () => {}) };
+  const s2 = criarStore({ ipc, eventos: { ...EVENTOS, temporizadores: 'tt://timers' }, agora: () => m2.relogio.agora });
+  await s2.ligar({ doc: alvo(), janela: alvo() });
+  assert.deepEqual(Object.keys(ouvidos).sort(), ['tt://state', 'tt://tick', 'tt://timers']);
+});
+
+test('temporizadores: dois correndo descontam o relógio, passam do zero e o pausado fica parado', () => {
+  const m = montar();
+  m.store.aplicarTemporizadores(
+    temporizadores(2, temporizador(1, { status: 'running', restante: 10_000 }), temporizador(2, { status: 'running', restante: 180_000, duracao: 180_000 }), temporizador(3, { status: 'paused', restante: 5_000 })),
+  );
+  m.relogio.agora += 22_000;
+  assert.equal(m.store.restanteDoTemporizador(1), -12_000);
+  assert.equal(m.store.restanteDoTemporizador(2), 158_000);
+  assert.equal(m.store.restanteDoTemporizador(3), 5_000);
+});
+
+test('temporizadores: retrato velho é descartado e os ouvintes recebem o novo', () => {
+  const m = montar();
+  const vistos = [];
+  const parar = m.store.assinarTemporizadores((t) => vistos.push(t.seq));
+  assert.equal(m.store.aplicarTemporizadores(temporizadores(3, temporizador(1))), true);
+  assert.equal(m.store.aplicarTemporizadores(temporizadores(2, temporizador(1))), false);
+  assert.equal(m.store.aplicarTemporizadores(temporizadores(3, temporizador(1))), true);
+  parar();
+  m.store.aplicarTemporizadores(temporizadores(4, temporizador(1)));
+  assert.deepEqual(vistos, [3, 3]);
+  assert.equal(m.store.aplicarTemporizadores({ seq: 9 }), false, 'sem a lista, ignora');
+});
+
+test('temporizadores: comando aplica a resposta; recusado, ressincroniza e rejeita', async () => {
+  const m = montar();
+  const ipc = {
+    obterEstado: async () => (m.chamadas.push('get_state'), { focus: retrato(0, 'idle'), speed: 1, timers: temporizadores(7, temporizador(1)) }),
+    ouvir: async () => () => {},
+    temporizadores: {
+      iniciar: async (id) => temporizadores(5, temporizador(id, { status: 'running' })),
+      pausar: async () => {
+        throw { code: 'notRunning', message: 'x' };
+      },
+    },
+  };
+  const s = criarStore({ ipc, eventos: EVENTOS, agora: () => m.relogio.agora });
+  await s.comandoDoTemporizador('iniciar', 1);
+  assert.equal(s.temporizadores.timers[0].status, 'running');
+  await assert.rejects(s.comandoDoTemporizador('pausar', 1), { code: 'notRunning' });
+  await new Promise((r) => setTimeout(r));
+  assert.equal(s.temporizadores.seq, 7);
+});

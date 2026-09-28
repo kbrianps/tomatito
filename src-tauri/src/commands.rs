@@ -13,7 +13,7 @@ use tomatito_core::{Sound, TimeZone};
 
 use crate::audio::Som;
 use crate::engine::{CommandError, Engine, TauriSink};
-use crate::events::{self, FocusDto, StateDto};
+use crate::events::{self, FocusDto, StateDto, TimersDto};
 use crate::settings::{Settings, SettingsError, SettingsStore};
 use crate::stats::{Stats, StatsDto};
 use crate::tasks::{TaskDto, TaskError};
@@ -190,4 +190,49 @@ pub fn task_complete(
 #[tauri::command]
 pub fn task_delete(stats: State<'_, Arc<Stats>>, id: i64) -> Result<(), TaskError> {
     stats.task_delete(id)
+}
+
+// M32: os temporizadores (3.5, `timer_create/update/delete/start/pause/reset`).
+// Cada um devolve o retrato de todos, e o motor também o emite em
+// `tt://timers`. No JS, `durationMs` em ms.
+
+/// `timer_create{name, duration_ms}`.
+#[tauri::command]
+pub fn timer_create(
+    engine: State<'_, AppEngine>,
+    name: Option<String>,
+    duration_ms: u64,
+) -> Result<TimersDto, CommandError> {
+    engine.timer_create(name.as_deref().unwrap_or(""), duration_ms)
+}
+
+/// `timer_update{id, name, duration_ms}`.
+#[tauri::command]
+pub fn timer_update(
+    engine: State<'_, AppEngine>,
+    id: u64,
+    name: Option<String>,
+    duration_ms: u64,
+) -> Result<TimersDto, CommandError> {
+    engine.timer_update(id, name.as_deref().unwrap_or(""), duration_ms)
+}
+
+#[tauri::command]
+pub fn timer_delete(engine: State<'_, AppEngine>, id: u64) -> Result<TimersDto, CommandError> {
+    engine.timer_delete(id)
+}
+
+#[tauri::command]
+pub fn timer_start(engine: State<'_, AppEngine>, id: u64) -> Result<TimersDto, CommandError> {
+    engine.timer_start(id)
+}
+
+#[tauri::command]
+pub fn timer_pause(engine: State<'_, AppEngine>, id: u64) -> Result<TimersDto, CommandError> {
+    engine.timer_pause(id)
+}
+
+#[tauri::command]
+pub fn timer_reset(engine: State<'_, AppEngine>, id: u64) -> Result<TimersDto, CommandError> {
+    engine.timer_reset(id)
 }

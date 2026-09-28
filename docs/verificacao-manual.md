@@ -802,3 +802,24 @@ O que só você consegue ver: o hover revelando o "Escolher" e o "x" sem a lista
 ## M31. Motor de temporizadores
 
 Sem conferência manual: o marco é só o motor no `tomatito-core`, sem tela nem comando, e o "Pronto quando" é coberto pelo `cargo test -p tomatito-core --test temporizadores`. A conferência com os olhos e os ouvidos vem no M32.
+
+## M32. Tela Temporizador
+
+O que já foi conferido sem você:
+- `cargo test` (motor): dois temporizadores juntos, o fim com o som de fim de foco e a notificação uma vez só, o `-12 s` ainda correndo, a pausa de um sem mexer no outro, o redefinir rearmando o fim, o laço dormindo depois do zero, o fim atrasado sem som, os erros e o foco junto com um temporizador.
+- Prévia (`node scripts/preview/temporizador.mjs`), no Chrome headless e no WebKitGTK: cards de 313 × 321 centrados, anel de 210 com traço de 12, cores de parado, correndo e vencido, "Encerrado há" com `-00:00:12`, o Lite distinguível só pelo rótulo e pelo sinal, pausar no negativo e redefinir, e a tela estreita.
+- Roteiro aninhado `temporizador` (app de verdade, `TOMATITO_SPEED=10`, 18 conferências): cliques de verdade no painel e nos dois "Iniciar", a notificação "Temporizador encerrado | 1 min" com o balão no shell aninhado, um fluxo de som no PipeWire, o `-00:00:12` com "Encerrado há" (captura `docs/capturas/m32-app-vencido.png`) e o fim uma vez só.
+
+O que só você consegue: ouvir o som, ver o balão no seu GNOME e julgar a leitura no Lite.
+
+### Para conferir (uns 4 minutos)
+
+1. [ ] `cd ~/dev/tomatito && TOMATITO_SPEED=10 npm run dev:app` (o relógio 10 vezes mais rápido; 1 min passa em 6 s). No painel, clique em "Temporizador" (ou Ctrl+2). Aparecem quatro cards, "1 min", "3 min", "5 min" e "10 min", com o tempo cinza e o "Redefinir" apagado.
+2. [ ] Clique no play do "1 min" e logo depois no do "3 min". Os dois contam juntos, com o tempo mais forte e o anel diminuindo.
+3. [ ] Uns 6 s depois, o "1 min" chega a zero: toca o som de fim de foco (o mesmo do fim de um período de foco) e aparece a notificação "Temporizador encerrado", corpo "1 min". O card passa a contar em negativo, com "Encerrado há" acima do tempo. O "3 min" segue contando normalmente.
+4. [ ] Com o tema Lite (o padrão), o negativo e o que corre têm a mesma cor: confira que dá para distinguir pelo "Encerrado há" e pelo sinal de menos (algo como `-00:00:12`).
+5. [ ] Espere mais alguns segundos: nenhuma notificação nem som a mais do "1 min". Pause o "1 min" (o tempo negativo para) e clique em "Redefinir": volta a 00:01:00, cinza, com o "Redefinir" apagado de novo.
+6. [ ] Esconda a janela (feche com "fechar para a bandeja" ou minimize) com o "3 min" correndo: a notificação e o som chegam mesmo assim, uns 18 s depois de ele começar.
+7. [ ] Teclado: Tab passa pelo play e pelo "Redefinir" de cada card (o "Redefinir" apagado fica fora), com o anel de foco; Espaço ou Enter aciona.
+8. [ ] Feche o app (Ctrl+C no terminal). Os temporizadores voltam aos padrões ao reabrir: gravar a lista é do M33, e carregá-la ao abrir, do M40.
+

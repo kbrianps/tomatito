@@ -252,6 +252,30 @@ test('cartão Tarefas: card-tasks.js ligado na tela Foco e a escolhida no focus_
   assert.doesNotMatch(cartao, /Pomodoro/i);
 });
 
+// M32: os temporizadores do núcleo no motor do app, os seis comandos timer_*
+// da 3.5 registrados, o tt://timers e o fim com o som de fim de foco.
+test('temporizadores: comandos timer_*, tt://timers e o fim com som e notificação', () => {
+  const lib = ler('src-tauri/src/lib.rs');
+  const comandos = ler('src-tauri/src/commands.rs');
+  const ipcJs = ler('src/lib/ipc.js');
+  for (const c of ['timer_create', 'timer_update', 'timer_delete', 'timer_start', 'timer_pause', 'timer_reset']) {
+    assert.match(lib, new RegExp(`commands::${c},`), `${c} registrado`);
+    assert.match(comandos, new RegExp(`pub fn ${c}\\(`));
+    assert.match(ipcJs, new RegExp(`invoke\\('${c}'`), `${c} no ipc.js`);
+  }
+  assert.match(ler('src-tauri/src/events.rs'), /pub const TIMERS: &str = "tt:\/\/timers";/);
+  assert.match(ipcJs, /temporizadores: 'tt:\/\/timers'/);
+  const motor = ler('src-tauri/src/engine.rs');
+  assert.match(motor, /impl<S: Sink> CountdownEffects for TimersOutbox/);
+  assert.match(motor, /if !ended\.late \{\s*self\.sink\.sound\(Sound::FocusEnd\);/);
+  assert.match(motor, /Timers::with_defaults\(\)/);
+  const tela = ler('src/views/timers.js');
+  assert.match(tela, /store\.comandoDoTemporizador\(comando, id\)/);
+  assert.doesNotMatch(tela, /Pomodoro/i);
+  // O nome vem do usuário: só entra no HTML escapado.
+  assert.match(tela, /\$\{esc\(titulo\(tm\)\)\}/);
+});
+
 test('capabilities/main.json com as permissões da seção 3.8, só para a main', () => {
   const arquivos = readdirSync(new URL('../src-tauri/capabilities', import.meta.url)).sort();
   assert.ok(!arquivos.includes('default.json'), 'o default.json do template sai');

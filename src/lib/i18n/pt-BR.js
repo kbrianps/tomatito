@@ -144,6 +144,31 @@ export default Object.freeze({
       longa: 'O título pode ter até 255 caracteres.',
     }),
   }),
+  // M32: a tela Temporizador (views/timers.js). "Encerrado há" fica acima
+  // do tempo negativo em todos os temas (PLANO.md, 4.2): no Lite, é ele que
+  // distingue o estado, e não a cor.
+  temporizador: Object.freeze({
+    encerradoHa: 'Encerrado há',
+    iniciar: 'Iniciar',
+    pausar: 'Pausar',
+    retomar: 'Retomar',
+    redefinir: 'Redefinir',
+    // A duração curta do título sem nome (format.js, duracaoCurta).
+    unidades: Object.freeze({ h: 'h', min: 'min', s: 's' }),
+    // O rótulo do anel (role="img"), uma vez por minuto (PLANO.md, 3.8).
+    anel: Object.freeze({
+      parado: 'Parado',
+      restantes: Object.freeze({
+        one: (n) => `${n} minuto restante`,
+        other: (n) => `${n} minutos restantes`,
+      }),
+      pausado: (resto) => `Pausado, ${resto}`,
+      encerrado: Object.freeze({
+        one: (n) => `Encerrado há ${n} minuto`,
+        other: (n) => `Encerrado há ${n} minutos`,
+      }),
+    }),
+  }),
   // Tela Configurações. M24: a seção Aparência (views/settings.js), com o
   // cartão do tema, como o SettingsCard do Relógio (ícone, título e
   // descrição) e as opções da 4.1. "Tomatito Suave" é nome provisório (1.2).

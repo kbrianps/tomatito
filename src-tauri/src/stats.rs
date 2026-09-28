@@ -499,6 +499,8 @@ mod tests {
         fn period(&self, p: &Period) {
             self.0.record(p).unwrap();
         }
+        fn timers(&self, _: &crate::events::TimersDto) {}
+        fn timer_notice(&self, _: &tomatito_core::TimerEnded) {}
     }
 
     /// Do motor ao banco: o `Effects` grava os períodos, e a sessão que

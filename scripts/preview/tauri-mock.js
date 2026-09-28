@@ -23,6 +23,11 @@
 //                               um "*" no fim marca a concluída
 //   ?tarefa=N                   M30: com ?foco=, a sessão já aberta tem a
 //                               tarefa N (taskId)
+//   ?tempos=1@-12000,2@150000,3~40000
+//                               M32: os temporizadores padrão (1, 3, 5 e 10
+//                               min) com o estado dado: id@restante correndo,
+//                               id~restante pausado (ms; negativo depois do
+//                               zero, já com o fim disparado)
 // M28: com window.__TOMATITO_PREVIEW_RECUSAR_CONFIGURACOES__ = true (pelo
 // --eval), o settings_set rejeita como o Rust quando não consegue gravar.
 // As globais do initialization_script (?pref, ?ultimo e ?plataforma) não são
@@ -228,8 +233,77 @@ for (const item of (params.get('tarefas') ?? '').split('|').filter(Boolean)) {
 }
 window.__TOMATITO_PREVIEW_TAREFAS__ = tarefas;
 
+// M32: os temporizadores, como o countdown.rs e o engine.rs: prazo no relógio
+// do motor, fim disparado uma vez (um setTimeout no prazo), contagem negativa
+// e o tt://timers a cada mudança. O som e a notificação do fim ficam
+// anotados em __TOMATITO_PREVIEW_FINS__ (a prévia não toca nem notifica).
+const tempos = { seq: 0, proximo: 1, lista: [] };
+window.__TOMATITO_PREVIEW_FINS__ = [];
+for (const min of [1, 3, 5, 10]) tempos.lista.push({ id: tempos.proximo++, name: '', durationMs: min * 60_000, run: 'idle', endsAt: null, restante: null, ended: false, prazo: null });
+const restanteDo = (tm, agora = agoraMotor()) =>
+  Math.min(tm.durationMs, tm.run === 'running' ? tm.endsAt - agora : tm.run === 'paused' ? tm.restante : tm.durationMs);
+function retratoDosTempos() {
+  const at = agoraMotor();
+  return {
+    seq: tempos.seq, at,
+    timers: tempos.lista.map((tm) => {
+      const r = restanteDo(tm, at);
+      return { id: tm.id, name: tm.name, durationMs: tm.durationMs, status: tm.run, endsAt: tm.run === 'running' ? tm.endsAt : null,
+        remainingMs: r, ended: tm.ended, overdue: r < 0 || (tm.ended && r === 0) };
+    }),
+  };
+}
+function mudouTempos() {
+  tempos.seq++;
+  for (const tm of tempos.lista) {
+    clearTimeout(tm.prazo);
+    if (tm.run === 'running' && !tm.ended) {
+      tm.prazo = setTimeout(() => {
+        tm.ended = true;
+        window.__TOMATITO_PREVIEW_FINS__.push({ id: tm.id, som: 'focusEnd', notificacao: true });
+        mudouTempos();
+      }, Math.max(0, (tm.endsAt - agoraMotor()) / velocidade));
+    }
+  }
+  const r = retratoDosTempos();
+  setTimeout(() => emit('tt://timers', r));
+  return r;
+}
+const acharTempo = (id) => {
+  const tm = tempos.lista.find((x) => x.id === id);
+  if (!tm) throw { code: 'notFound', message: `não existe temporizador com o id ${id}` };
+  return tm;
+};
+for (const item of (params.get('tempos') ?? '').split(',').filter(Boolean)) {
+  const m = /^(\d+)([@~])(-?\d+)$/.exec(item);
+  if (!m) continue;
+  const tm = acharTempo(Number(m[1]));
+  const r = Number(m[3]);
+  if (m[2] === '@') Object.assign(tm, { run: 'running', endsAt: agoraMotor() + r });
+  else Object.assign(tm, { run: 'paused', restante: r });
+  tm.ended = r <= 0;
+}
+if (params.has('tempos')) mudouTempos();
+window.__TOMATITO_PREVIEW_TEMPOS__ = tempos;
+const comandoDoTempo = (nome, f) => (args) => {
+  window.__TOMATITO_PREVIEW_COMANDOS__.push(`${nome}:${args?.id ?? ''}`);
+  f(args);
+  return mudouTempos();
+};
+
 const handlers = {
-  get_state: () => ({ focus: retratoFoco(), speed: velocidade, setup: preparo, settings: structuredClone(configuracoes) }),
+  get_state: () => ({ focus: retratoFoco(), speed: velocidade, setup: preparo, timers: retratoDosTempos(), settings: structuredClone(configuracoes) }),
+  timer_start: comandoDoTempo('timer_start', ({ id }) => {
+    const tm = acharTempo(id);
+    if (tm.run === 'running') throw { code: 'alreadyRunning', message: 'o temporizador já está correndo' };
+    Object.assign(tm, { endsAt: agoraMotor() + restanteDo(tm), run: 'running' });
+  }),
+  timer_pause: comandoDoTempo('timer_pause', ({ id }) => {
+    const tm = acharTempo(id);
+    if (tm.run !== 'running') throw { code: 'notRunning', message: 'o temporizador não está correndo' };
+    Object.assign(tm, { restante: restanteDo(tm), run: 'paused' });
+  }),
+  timer_reset: comandoDoTempo('timer_reset', ({ id }) => Object.assign(acharTempo(id), { run: 'idle', ended: false })),
   settings_get: () => structuredClone(configuracoes),
   settings_set: ({ patch }) => {
     if (window.__TOMATITO_PREVIEW_RECUSAR_CONFIGURACOES__) {

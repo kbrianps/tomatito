@@ -14,6 +14,11 @@
 //
 // Os retratos levam `seq` (events.rs): um retrato mais velho que o atual é
 // descartado, e um tick de uma transição que o JS não viu pede um get_state.
+//
+// M32: o store guarda também o retrato dos temporizadores (`tt://timers`, o
+// `timers` do get_state e a resposta dos comandos `timer_*`), com o `seq`
+// próprio. O restante de cada um que corre é estimado do mesmo jeito, e segue
+// negativo depois do zero (o Rust não manda tick de temporizador).
 
 import * as ipc from './ipc.js';
 
@@ -46,6 +51,22 @@ export function criarStore({ ipc, eventos, agora = () => Date.now() }) {
   let base = null;
   let pedido = null;
   const ouvintes = new Set();
+  // M32: os temporizadores e a base da estimativa de cada um que corre.
+  let temporizadores = null;
+  const basesDosTemporizadores = new Map();
+  const ouvintesDosTemporizadores = new Set();
+
+  function aplicarTemporizadores(dto) {
+    if (!dto || !Array.isArray(dto.timers) || (temporizadores && dto.seq < temporizadores.seq)) return false;
+    temporizadores = dto;
+    const em = agora();
+    basesDosTemporizadores.clear();
+    for (const t of dto.timers) {
+      if (t.status === 'running') basesDosTemporizadores.set(t.id, { restanteMs: t.remainingMs, em });
+    }
+    for (const f of ouvintesDosTemporizadores) f(temporizadores);
+    return true;
+  }
 
   function aplicarFoco(dto) {
     if (!dto || (foco && dto.seq < foco.seq)) return false;
@@ -74,6 +95,7 @@ export function criarStore({ ipc, eventos, agora = () => Date.now() }) {
         if (Number.isFinite(estado?.speed) && estado.speed > 0) velocidade = estado.speed;
         if (preparoValido(estado?.setup)) preparo = Object.freeze({ ...estado.setup });
         aplicarFoco(estado?.focus);
+        aplicarTemporizadores(estado?.timers);
       })
       .finally(() => {
         pedido = null;
@@ -107,6 +129,40 @@ export function criarStore({ ipc, eventos, agora = () => Date.now() }) {
       ouvintes.add(cb);
       return () => ouvintes.delete(cb);
     },
+    /** M32: o último retrato dos temporizadores (null até o get_state). */
+    get temporizadores() {
+      return temporizadores;
+    },
+    /**
+     * M32: o restante do temporizador `id` em ms, agora; negativo depois do
+     * zero. Null se não existe.
+     */
+    restanteDoTemporizador(id) {
+      const t = temporizadores?.timers.find((x) => x.id === id);
+      if (!t) return null;
+      const b = basesDosTemporizadores.get(id);
+      if (!b) return t.remainingMs;
+      return Math.min(t.durationMs, b.restanteMs - Math.max(0, agora() - b.em) * velocidade);
+    },
+    /** M32: `cb(retrato)` a cada retrato novo dos temporizadores. */
+    assinarTemporizadores(cb) {
+      ouvintesDosTemporizadores.add(cb);
+      return () => ouvintesDosTemporizadores.delete(cb);
+    },
+    /**
+     * M32: um comando dos temporizadores (`iniciar`, `pausar`, `redefinir`,
+     * `criar`, `editar`, `excluir`, do `ipc.temporizadores`): aplica o
+     * retrato da resposta. Recusado, pede um get_state e rejeita com o erro.
+     */
+    async comandoDoTemporizador(nome, ...args) {
+      try {
+        aplicarTemporizadores(await ipc.temporizadores[nome](...args));
+      } catch (erro) {
+        void sincronizar();
+        throw erro;
+      }
+    },
+    aplicarTemporizadores,
     aplicarFoco,
     aplicarTick,
     sincronizar,
@@ -128,7 +184,11 @@ export function criarStore({ ipc, eventos, agora = () => Date.now() }) {
      * o primeiro get_state.
      */
     async ligar({ doc = globalThis.document, janela = globalThis.window } = {}) {
-      await Promise.all([ipc.ouvir(eventos.estado, aplicarFoco), ipc.ouvir(eventos.tick, aplicarTick)]);
+      await Promise.all([
+        ipc.ouvir(eventos.estado, aplicarFoco),
+        ipc.ouvir(eventos.tick, aplicarTick),
+        eventos.temporizadores && ipc.ouvir(eventos.temporizadores, aplicarTemporizadores),
+      ]);
       doc?.addEventListener('visibilitychange', () => {
         if (doc.visibilityState === 'visible') void sincronizar();
       });

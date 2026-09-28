@@ -27,7 +27,7 @@
 //!   certo mesmo depois de uma troca de fuso com o app aberto.
 
 use tauri::AppHandle;
-use tomatito_core::{Notice, TimeZone};
+use tomatito_core::{Notice, TimeZone, TimerEnded};
 
 use crate::i18n;
 
@@ -45,6 +45,17 @@ impl Notificador {
 
     pub fn mostrar(&self, notice: Notice) {
         let texto = i18n::notice(&notice, &TimeZone::system());
+        eprintln!(
+            "[tomatito] notificação: {} | {}",
+            texto.title,
+            texto.body.as_deref().unwrap_or("")
+        );
+        self.entrega.enviar(texto);
+    }
+
+    /// M32: o fim de um temporizador, pela mesma entrega.
+    pub fn mostrar_temporizador(&self, ended: &TimerEnded) {
+        let texto = i18n::timer_ended(ended, &TimeZone::system());
         eprintln!(
             "[tomatito] notificação: {} | {}",
             texto.title,

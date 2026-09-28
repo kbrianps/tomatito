@@ -228,7 +228,7 @@ async function conferir(motor, capturas, linha) {
 
     const ini = porRotulo('iniciar');
     const fi = [];
-    if (JSON.stringify(ini.inicios) !== JSON.stringify([{ minutes: 65, skipBreaks: true }])) fi.push(`focus_start ${JSON.stringify(ini.inicios)}`);
+    if (JSON.stringify(ini.inicios) !== JSON.stringify([{ minutes: 65, skipBreaks: true, taskId: null }])) fi.push(`focus_start ${JSON.stringify(ini.inicios)}`);
     if (ini.preparo || !ini.andamento) fi.push(`preparo ${ini.preparo}, andamento ${ini.andamento}`);
     linha(!fi.length, `iniciar: focus_start ${JSON.stringify(ini.inicios)}, o cartão passa para a contagem`, fi);
 

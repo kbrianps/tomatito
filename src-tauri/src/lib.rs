@@ -76,6 +76,12 @@ pub fn run() {
             commands::task_add,
             commands::task_complete,
             commands::task_delete,
+            commands::timer_create,
+            commands::timer_update,
+            commands::timer_delete,
+            commands::timer_start,
+            commands::timer_pause,
+            commands::timer_reset,
         ])
         .run(context)
         .expect("error while building tauri application");

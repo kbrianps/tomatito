@@ -10,9 +10,11 @@ export const EVENTOS = Object.freeze({
   fase: 'tt://phase',
   // M23: as configurações inteiras, depois de cada `settings_set`.
   configuracoes: 'tt://settings',
+  // M32: o retrato de todos os temporizadores, a cada mudança.
+  temporizadores: 'tt://timers',
 });
 
-/** `get_state`: `{ focus, speed, setup, settings }`. */
+/** `get_state`: `{ focus, speed, setup, timers, settings }`. */
 export const obterEstado = () => invoke('get_state');
 
 /**
@@ -77,6 +79,24 @@ export const tarefas = Object.freeze({
   adicionar: (titulo) => invoke('task_add', { title: titulo }),
   concluir: (id, feita = true) => invoke('task_complete', { id, done: feita }),
   apagar: (id) => invoke('task_delete', { id }),
+});
+
+/**
+ * Temporizadores (src-tauri/src/engine.rs, M32). Cada comando resolve com o
+ * retrato de todos (`{ seq, at, timers: [{ id, name, durationMs, status,
+ * endsAt, remainingMs, ended, overdue }] }`, o mesmo do `tt://timers`), com
+ * `status` em `idle`, `running` ou `paused` e `remainingMs` negativo depois do
+ * zero. Os erros vêm como `{ code, message }`, com `code` em `notFound`,
+ * `invalidDuration`, `nameTooLong`, `alreadyRunning` ou `notRunning`.
+ * `criar`, `editar` e `excluir` ganham tela no M33.
+ */
+export const temporizadores = Object.freeze({
+  criar: (nome, duracaoMs) => invoke('timer_create', { name: nome, durationMs: duracaoMs }),
+  editar: (id, nome, duracaoMs) => invoke('timer_update', { id, name: nome, durationMs: duracaoMs }),
+  excluir: (id) => invoke('timer_delete', { id }),
+  iniciar: (id) => invoke('timer_start', { id }),
+  pausar: (id) => invoke('timer_pause', { id }),
+  redefinir: (id) => invoke('timer_reset', { id }),
 });
 
 /** Ouve um evento do Rust; `cb` recebe só o conteúdo. Devolve o `unlisten`. */

@@ -476,6 +476,48 @@ fluent-radio-group.tt-temas{
 .tt-previa-metade > .tt-previa{ flex:none; width:200%; }
 .tt-previa-metade + .tt-previa-metade > .tt-previa{ margin-left:-100%; }
 
+/* M32: tela Temporizador (src/views/timers.js), com as medidas da captura do
+   Relógio (timers-in-clock-app.png, a 175%; docs/decisoes.md, M32): cards de
+   313 × 321 numa grade centrada que quebra de linha, a 16 px um do outro, com
+   a última linha começando à esquerda, como lá. No card: o título em Body
+   Strong com o meio a 19 px do topo; o anel de 210 px (traço de 12) a 46 px
+   do topo, centrado; os botões redondos de 32 px com o meio a 285 px do topo,
+   a 10 px um do outro. */
+.tt-temporizadores{
+  display:grid; grid-template-columns:repeat(auto-fill, min(313px, 100%)); justify-content:center;
+  gap:var(--tt-gap); margin-top:var(--tt-gap);
+}
+.tt-card.tt-temporizador{ align-items:center; gap:0; height:321px; padding:9px 16px 0; }
+.tt-temporizador-titulo{
+  align-self:stretch; margin:0; font:var(--tt-type-body-strong);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.tt-temporizador-anel{ flex:none; width:210px; margin-top:17px; }
+/* O tempo em Title Large, no meio do anel; "Encerrado há" fica logo acima,
+   fora do fluxo, para o tempo não pular quando o rótulo aparece. */
+.tt-temporizador-tempo{ font:var(--tt-type-title-large); color:var(--tt-fg-2); white-space:nowrap; }
+.tt-temporizador[data-estado="running"] .tt-temporizador-tempo{ color:var(--tt-fg-1); }
+.tt-temporizador[data-vencido] .tt-temporizador-tempo{ color:var(--tt-timer-overdue); }
+/* O negativo tem um caractere a mais: um pouco menor, para caber no anel
+   (186 px por dentro do traço) com folga; continua Title Large no peso e na
+   família. */
+.tt-temporizador[data-vencido] .tt-temporizador-tempo{ font-size:36px; }
+/* Fora do Windows, a fonte é a Inter, com algarismos mais largos que os da
+   Segoe UI Variable (00:05:00 a 40 px passa de 180 px no WebKitGTK e
+   encosta no traço): 36 px, e 32 px no negativo, para sobrar ao menos 8 px de
+   cada lado dentro do anel (docs/decisoes.md, M32). */
+:root:not([data-platform="windows"]) .tt-temporizador-tempo{ font-size:36px; }
+:root:not([data-platform="windows"]) .tt-temporizador[data-vencido] .tt-temporizador-tempo{ font-size:32px; }
+.tt-temporizador-encerrado{
+  position:absolute; left:0; right:0; top:calc(50% - 26px - 20px);
+  font:var(--tt-type-body); color:var(--tt-fg-2); text-align:center;
+}
+.tt-temporizador-encerrado[hidden]{ display:none; }
+.tt-temporizador-botoes{ display:flex; gap:10px; margin-top:13px; }
+@media (forced-colors:active){
+  .tt-temporizador[data-vencido] .tt-temporizador-tempo{ color:CanvasText; }
+}
+
 /* Amostra do M06 (#/dev) */
 .tt-amostra{
   display:flex; flex-direction:column; gap:var(--tt-gap);

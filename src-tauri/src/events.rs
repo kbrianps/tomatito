@@ -12,6 +12,7 @@
 use serde::Serialize;
 use tomatito_core::{
     ChangeCause, EpochMs, FocusSnapshot, Phase, PhaseChange, PhaseKind, SessionSnapshot, Status,
+    TimerSnapshot, TimerStatus, TimersSnapshot,
 };
 
 /// Retrato completo, a cada transição (iniciar, pausar, retomar, pular,
@@ -24,6 +25,10 @@ pub const PHASE: &str = "tt://phase";
 /// Depois de cada gravação do `settings_set` (M23): as configurações
 /// inteiras, no formato do `settings.json` (`settings.rs`).
 pub const SETTINGS: &str = "tt://settings";
+/// M32: o retrato de todos os temporizadores, a cada mudança (criar, editar,
+/// excluir, iniciar, pausar, redefinir e cada fim). Fora da tabela da 3.5,
+/// que só tem o retrato do foco (docs/decisoes.md, M32).
+pub const TIMERS: &str = "tt://timers";
 
 fn ms(t: EpochMs) -> i64 {
     t.0
@@ -245,6 +250,82 @@ impl From<&PhaseChange> for PhaseEventDto {
     }
 }
 
+/// Estado de um temporizador no fio (M32).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TimerStatusDto {
+    /// Parado na duração cheia: o "Redefinir" fica desabilitado.
+    Idle,
+    Running,
+    Paused,
+}
+
+impl From<TimerStatus> for TimerStatusDto {
+    fn from(s: TimerStatus) -> Self {
+        match s {
+            TimerStatus::Idle => Self::Idle,
+            TimerStatus::Running => Self::Running,
+            TimerStatus::Paused => Self::Paused,
+        }
+    }
+}
+
+/// Um temporizador (M32), como o `countdown.rs` o descreve.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TimerDto {
+    pub id: u64,
+    /// Pode ser vazio: a tela mostra a duração no lugar.
+    pub name: String,
+    pub duration_ms: u64,
+    pub status: TimerStatusDto,
+    /// O prazo, só enquanto corre.
+    pub ends_at: Option<i64>,
+    /// Quanto falta em `at`; negativo depois do zero.
+    pub remaining_ms: i64,
+    /// O fim já disparou (até redefinir).
+    pub ended: bool,
+    /// Passou do zero: o tempo aparece negativo, com "Encerrado há".
+    pub overdue: bool,
+}
+
+impl From<&TimerSnapshot> for TimerDto {
+    fn from(t: &TimerSnapshot) -> Self {
+        Self {
+            id: t.id,
+            name: t.name.clone(),
+            duration_ms: t.duration_ms,
+            status: t.status.into(),
+            ends_at: t.ends_at.map(ms),
+            remaining_ms: t.remaining_ms,
+            ended: t.ended,
+            overdue: t.is_overdue(),
+        }
+    }
+}
+
+/// Todos os temporizadores (`tt://timers` e o `timers` do `get_state`), na
+/// ordem de criação, que é a ordem dos cards.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TimersDto {
+    /// Cresce a cada `tt://timers` do processo (separado do `seq` do foco):
+    /// o JS descarta um retrato mais velho que o que já tem.
+    pub seq: u64,
+    pub at: i64,
+    pub timers: Vec<TimerDto>,
+}
+
+impl From<&TimersSnapshot> for TimersDto {
+    fn from(s: &TimersSnapshot) -> Self {
+        Self {
+            seq: 0,
+            at: ms(s.at),
+            timers: s.timers.iter().map(Into::into).collect(),
+        }
+    }
+}
+
 /// O retrato do motor. O `get_state` o manda junto com as configurações
 /// (`commands.rs`); os `recursos` (M39) entram quando existirem.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -256,6 +337,8 @@ pub struct StateDto {
     pub speed: f64,
     /// M17: o que o cartão "Pronto para focar" precisa para montar uma sessão.
     pub setup: SetupDto,
+    /// M32: os temporizadores.
+    pub timers: TimersDto,
 }
 
 /// M17: a faixa e o passo do seletor de minutos (5 a 240, de 5 em 5; no
@@ -350,6 +433,28 @@ mod tests {
                    "ended": {"kind": "focus", "n": 1, "durationS": 300},
                    "phase": null, "of": null})
         );
+    }
+
+    #[test]
+    fn temporizadores_em_camel_case() {
+        use tomatito_core::{FakeCountdownEffects, Timers};
+        let mut fx = FakeCountdownEffects::new();
+        let mut timers = Timers::with_defaults();
+        let t0 = EpochMs(1_000_000);
+        timers.start(t0, 1, &mut fx).unwrap();
+        let v =
+            serde_json::to_value(TimersDto::from(&timers.snapshot(t0.plus_ms(72_000)))).unwrap();
+        assert_eq!(v["seq"], 0);
+        assert_eq!(v["at"], 1_072_000);
+        assert_eq!(
+            v["timers"][0],
+            json!({"id": 1, "name": "", "durationMs": 60_000, "status": "running",
+                   "endsAt": 1_060_000, "remainingMs": -12_000, "ended": false, "overdue": true})
+        );
+        assert_eq!(v["timers"][1]["status"], "idle");
+        assert_eq!(v["timers"][1]["endsAt"], json!(null));
+        assert_eq!(v["timers"][1]["overdue"], false);
+        assert_eq!(v["timers"].as_array().unwrap().len(), 4);
     }
 
     #[test]

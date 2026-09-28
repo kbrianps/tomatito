@@ -23,6 +23,13 @@
 //! O som (M20) vai para a thread do `audio.rs`, sem esperar, e a notificação
 //! (M21), para o `notify.rs`, que também não espera. Os períodos (M26) vão
 //! para o `stats.rs`, uma linha no SQLite por fase que termina.
+//!
+//! **Temporizadores (M32).** O mesmo motor guarda os [`Timers`] do núcleo,
+//! sob a mesma trava e com o mesmo relógio. O laço também roda enquanto algum
+//! temporizador corre rumo ao zero (um prazo ainda não disparado); passado o
+//! zero, a contagem negativa é só do JS, e o laço pode dormir. Cada mudança
+//! sai em `tt://timers`, e cada fim toca o som de fim de foco (menos o
+//! atrasado) e mostra uma notificação.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -32,12 +39,13 @@ use serde::Serialize;
 use tokio::sync::Notify;
 use tokio::time::{MissedTickBehavior, interval};
 use tomatito_core::{
-    Clock, Effects, EpochMs, Focus, FocusError, FocusSnapshot, LATE_AFTER_MS, Notice, Period,
-    PhaseChange, PlanSettings, SessionConfig, Sound, SystemClock,
+    Clock, CountdownEffects, CountdownError, Effects, EpochMs, Focus, FocusError, FocusSnapshot,
+    LATE_AFTER_MS, Notice, Period, PhaseChange, PlanSettings, SessionConfig, Sound, SystemClock,
+    TimerEnded, TimerId, Timers, TimersSnapshot,
 };
 
 use crate::audio::Som;
-use crate::events::{self, FocusDto, PhaseEventDto, SetupDto, StateDto, TickDto};
+use crate::events::{self, FocusDto, PhaseEventDto, SetupDto, StateDto, TickDto, TimersDto};
 use crate::notify::Notificador;
 use crate::stats::Stats;
 
@@ -80,6 +88,10 @@ pub trait Sink: Send + Sync + 'static {
     fn notice(&self, notice: Notice);
     /// Uma linha em `periods` (M26).
     fn period(&self, period: &Period);
+    /// `tt://timers` (M32).
+    fn timers(&self, timers: &TimersDto);
+    /// A notificação do fim de um temporizador (M32).
+    fn timer_notice(&self, ended: &TimerEnded);
 }
 
 /// Adapta um [`Sink`] ao trait `Effects` do núcleo e numera os retratos.
@@ -130,6 +142,30 @@ impl<S: Sink> Effects for Outbox<'_, S> {
     }
 }
 
+/// Adapta um [`Sink`] ao trait `CountdownEffects` do núcleo (M32) e numera
+/// os retratos dos temporizadores.
+struct TimersOutbox<'a, S: Sink> {
+    sink: &'a S,
+    seq: &'a mut u64,
+}
+
+impl<S: Sink> CountdownEffects for TimersOutbox<'_, S> {
+    fn timer_ended(&mut self, ended: &TimerEnded) {
+        // O som de fim de foco (o "Fazer" do M32); o atrasado só notifica,
+        // como o foco (3.2).
+        if !ended.late {
+            self.sink.sound(Sound::FocusEnd);
+        }
+        self.sink.timer_notice(ended);
+    }
+    fn timers_changed(&mut self, snapshot: &TimersSnapshot) {
+        *self.seq += 1;
+        let mut dto = TimersDto::from(snapshot);
+        dto.seq = *self.seq;
+        self.sink.timers(&dto);
+    }
+}
+
 /// Erro de um comando, como o JS o recebe: `{ code, message }`. O `message`
 /// é para o registro; a interface decide o texto pelo `code`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -150,6 +186,14 @@ pub enum ErrorCode {
     NoSession,
     /// T, F ou B iguais a zero (não acontece com T validado e F e B padrão).
     InvalidPlan,
+    /// M32: não existe temporizador com esse id.
+    NotFound,
+    /// M32: duração fora de 1 s a 99:59:59.
+    InvalidDuration,
+    /// M32: nome com mais de 255 caracteres.
+    NameTooLong,
+    /// M32: iniciar um temporizador que já corre.
+    AlreadyRunning,
 }
 
 impl From<FocusError> for CommandError {
@@ -168,8 +212,27 @@ impl From<FocusError> for CommandError {
     }
 }
 
+impl From<CountdownError> for CommandError {
+    fn from(e: CountdownError) -> Self {
+        let code = match e {
+            CountdownError::NotFound(_) => ErrorCode::NotFound,
+            CountdownError::InvalidDuration => ErrorCode::InvalidDuration,
+            CountdownError::NameTooLong => ErrorCode::NameTooLong,
+            CountdownError::AlreadyRunning => ErrorCode::AlreadyRunning,
+            CountdownError::NotRunning => ErrorCode::NotRunning,
+        };
+        Self {
+            code,
+            message: e.to_string(),
+        }
+    }
+}
+
 struct Inner {
     focus: Focus,
+    /// M32: os temporizadores, com o `seq` do último `tt://timers`.
+    timers: Timers,
+    timers_seq: u64,
     /// O `seq` do último `tt://state`.
     seq: u64,
     /// O último `tt://tick` emitido: sessão, fase e segundo mostrado.
@@ -182,6 +245,20 @@ impl Inner {
         let mut dto = FocusDto::from(&self.focus.snapshot(now));
         dto.seq = self.seq;
         dto
+    }
+
+    /// M32: o retrato dos temporizadores em `now`, com o `seq` do último
+    /// `tt://timers`.
+    fn timers_dto(&self, now: EpochMs) -> TimersDto {
+        let mut dto = TimersDto::from(&self.timers.snapshot(now));
+        dto.seq = self.timers_seq;
+        dto
+    }
+
+    /// Se o laço precisa rodar: uma fase corre, ou um temporizador corre
+    /// rumo ao zero (um fim ainda por disparar).
+    fn active(&self) -> bool {
+        self.focus.is_running() || self.timers.next_deadline().is_some()
     }
 }
 
@@ -205,8 +282,13 @@ impl<S: Sink> Engine<S> {
     /// fase sairia "atrasado" (docs/decisoes.md, M15, item 16).
     pub fn new(clock: Box<dyn Clock>, speed: f64, sink: S) -> Self {
         let mut focus = Focus::new();
+        // M32: os padrões de 1, 3, 5 e 10 min. Carregar a lista gravada
+        // (M33) ao abrir é do M40.
+        let mut timers = Timers::with_defaults();
         if speed > 1.0 {
-            focus = focus.with_late_after_ms((LATE_AFTER_MS as f64 * speed).round() as u64);
+            let late = (LATE_AFTER_MS as f64 * speed).round() as u64;
+            focus = focus.with_late_after_ms(late);
+            timers = timers.with_late_after_ms(late);
         }
         Self {
             clock,
@@ -214,6 +296,8 @@ impl<S: Sink> Engine<S> {
             sink,
             inner: Mutex::new(Inner {
                 focus,
+                timers,
+                timers_seq: 0,
                 seq: 0,
                 last_tick: None,
             }),
@@ -244,8 +328,9 @@ impl<S: Sink> Engine<S> {
         self.clock.now()
     }
 
+    /// Se o laço precisa rodar (uma fase ou um temporizador rumo ao zero).
     pub fn is_running(&self) -> bool {
-        self.lock().focus.is_running()
+        self.lock().active()
     }
 
     /// `get_state`: fecha o que venceu (o JS chama isto ao abrir e ao voltar
@@ -254,12 +339,26 @@ impl<S: Sink> Engine<S> {
     pub fn state(&self) -> StateDto {
         let mut g = self.lock();
         let now = self.clock.now();
-        let Inner { focus, seq, .. } = &mut *g;
+        let Inner {
+            focus,
+            seq,
+            timers,
+            timers_seq,
+            ..
+        } = &mut *g;
         focus.advance_to(now, &mut Outbox::new(&self.sink, seq));
+        timers.advance_to(
+            now,
+            &mut TimersOutbox {
+                sink: &self.sink,
+                seq: timers_seq,
+            },
+        );
         StateDto {
             focus: g.dto(now),
             speed: self.speed,
             setup: setup(),
+            timers: g.timers_dto(now),
         }
     }
 
@@ -273,7 +372,7 @@ impl<S: Sink> Engine<S> {
         let now = self.clock.now();
         let Inner { focus, seq, .. } = &mut *g;
         let r = f(focus, now, &mut Outbox::new(&self.sink, seq));
-        let running = g.focus.is_running();
+        let running = g.active();
         let dto = g.dto(now);
         drop(g);
         if running {
@@ -324,6 +423,75 @@ impl<S: Sink> Engine<S> {
         self.command(|f, now, fx| f.stop(now, fx))
     }
 
+    /// Roda um comando dos temporizadores (M32) com um único "agora", acorda
+    /// o laço se algum ficou correndo rumo ao zero e devolve o retrato novo.
+    fn timer_command<T>(
+        &self,
+        f: impl FnOnce(&mut Timers, EpochMs, &mut dyn CountdownEffects) -> Result<T, CountdownError>,
+    ) -> Result<(T, TimersDto), CommandError> {
+        let mut g = self.lock();
+        let now = self.clock.now();
+        let Inner {
+            timers, timers_seq, ..
+        } = &mut *g;
+        let r = f(
+            timers,
+            now,
+            &mut TimersOutbox {
+                sink: &self.sink,
+                seq: timers_seq,
+            },
+        );
+        let active = g.active();
+        let dto = g.timers_dto(now);
+        drop(g);
+        if active {
+            self.wake.notify_one();
+        }
+        Ok((r?, dto))
+    }
+
+    /// `timer_create{name, duration_ms}`: devolve o retrato com o novo no fim.
+    pub fn timer_create(&self, name: &str, duration_ms: u64) -> Result<TimersDto, CommandError> {
+        self.timer_command(|t, now, fx| t.create(now, name, duration_ms, fx))
+            .map(|(_, dto)| dto)
+    }
+
+    /// `timer_update{id, name, duration_ms}`.
+    pub fn timer_update(
+        &self,
+        id: TimerId,
+        name: &str,
+        duration_ms: u64,
+    ) -> Result<TimersDto, CommandError> {
+        self.timer_command(|t, now, fx| t.update(now, id, name, duration_ms, fx))
+            .map(|(_, dto)| dto)
+    }
+
+    /// `timer_delete{id}`.
+    pub fn timer_delete(&self, id: TimerId) -> Result<TimersDto, CommandError> {
+        self.timer_command(|t, now, fx| t.delete(now, id, fx))
+            .map(|(_, dto)| dto)
+    }
+
+    /// `timer_start{id}`: inicia ou retoma.
+    pub fn timer_start(&self, id: TimerId) -> Result<TimersDto, CommandError> {
+        self.timer_command(|t, now, fx| t.start(now, id, fx))
+            .map(|(_, dto)| dto)
+    }
+
+    /// `timer_pause{id}`.
+    pub fn timer_pause(&self, id: TimerId) -> Result<TimersDto, CommandError> {
+        self.timer_command(|t, now, fx| t.pause(now, id, fx))
+            .map(|(_, dto)| dto)
+    }
+
+    /// `timer_reset{id}`.
+    pub fn timer_reset(&self, id: TimerId) -> Result<TimersDto, CommandError> {
+        self.timer_command(|t, now, fx| t.reset(now, id, fx))
+            .map(|(_, dto)| dto)
+    }
+
     /// Um passo do laço: fecha o que venceu e, com uma fase correndo, emite o
     /// `tt://tick` se o segundo mostrado mudou. Devolve se ainda há algo
     /// correndo.
@@ -331,8 +499,21 @@ impl<S: Sink> Engine<S> {
         self.ticks.fetch_add(1, Ordering::SeqCst);
         let mut g = self.lock();
         let now = self.clock.now();
-        let Inner { focus, seq, .. } = &mut *g;
+        let Inner {
+            focus,
+            seq,
+            timers,
+            timers_seq,
+            ..
+        } = &mut *g;
         focus.advance_to(now, &mut Outbox::new(&self.sink, seq));
+        timers.advance_to(
+            now,
+            &mut TimersOutbox {
+                sink: &self.sink,
+                seq: timers_seq,
+            },
+        );
         let snapshot = g.focus.snapshot(now);
         let Some((s, ends_at)) = snapshot
             .session
@@ -340,7 +521,7 @@ impl<S: Sink> Engine<S> {
             .and_then(|s| s.ends_at.map(|e| (s, e)))
         else {
             g.last_tick = None;
-            return false;
+            return g.active();
         };
         let key = (s.id, s.phase_index, s.remaining_ms.div_ceil(1000));
         if g.last_tick != Some(key) {
@@ -446,6 +627,12 @@ impl Sink for TauriSink {
         // Também sem esperar: o plugin entrega numa tarefa à parte.
         self.notificador.mostrar(notice);
     }
+    fn timers(&self, timers: &TimersDto) {
+        self.emit(events::TIMERS, timers);
+    }
+    fn timer_notice(&self, ended: &TimerEnded) {
+        self.notificador.mostrar_temporizador(ended);
+    }
     fn period(&self, period: &Period) {
         // Síncrono, com o motor travado: um INSERT leva menos de 1 ms, e
         // assim o `stats_get` que vier depois do `tt://state` já vê a linha.
@@ -471,6 +658,8 @@ mod tests {
         Sound(Sound),
         Notice(Notice),
         Period(Period),
+        Timers(TimersDto),
+        TimerNotice(TimerEnded),
     }
 
     #[derive(Default)]
@@ -503,6 +692,12 @@ mod tests {
         }
         fn period(&self, p: &Period) {
             self.put(Out::Period(*p));
+        }
+        fn timers(&self, t: &TimersDto) {
+            self.put(Out::Timers(t.clone()));
+        }
+        fn timer_notice(&self, e: &TimerEnded) {
+            self.put(Out::TimerNotice(e.clone()));
         }
     }
 
@@ -827,6 +1022,190 @@ mod tests {
             out.iter()
                 .any(|o| matches!(o, Out::Notice(Notice::SessionCompleted { .. })))
         );
+        laco.abort();
+    }
+
+    // M32: os temporizadores no motor.
+
+    fn fins(out: &[Out]) -> Vec<&TimerEnded> {
+        out.iter()
+            .filter_map(|o| match o {
+                Out::TimerNotice(e) => Some(e),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn sons(out: &[Out]) -> Vec<Sound> {
+        out.iter()
+            .filter_map(|o| match o {
+                Out::Sound(s) => Some(*s),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn get_state_traz_os_quatro_padroes() {
+        let (e, _) = motor();
+        let t = e.state().timers;
+        let duracoes: Vec<u64> = t.timers.iter().map(|t| t.duration_ms).collect();
+        assert_eq!(duracoes, [60_000, 180_000, 300_000, 600_000]);
+        assert_eq!(t.seq, 0);
+        assert!(t.timers.iter().all(|t| t.name.is_empty() && !t.overdue));
+        assert!(!e.is_running(), "parados: o laço dorme");
+        assert!(e.sink().tirar().is_empty());
+    }
+
+    #[test]
+    fn dois_temporizadores_juntos_e_o_fim_com_som_e_notificacao() {
+        // O "Pronto quando" do M32, no motor: 1 min e 3 min correndo juntos;
+        // o de 1 min acaba, toca o som de fim de foco e notifica uma vez, e
+        // 12 s depois está em −12 s, ainda correndo, com o outro intacto.
+        let (e, clock) = motor();
+        let r = e.timer_start(1).unwrap();
+        assert_eq!(r.seq, 1);
+        assert_eq!(r.timers[0].ends_at, Some(T0.0 + 60_000));
+        clock.advance_ms(10_000);
+        e.timer_start(2).unwrap();
+        assert!(e.is_running());
+        e.sink().tirar();
+        andar(&e, &clock, 50_000);
+        let out = e.sink().tirar();
+        let f = fins(&out);
+        assert_eq!(f.len(), 1);
+        assert_eq!(
+            (f[0].id, f[0].ended_at, f[0].late),
+            (1, T0.plus_ms(60_000), false)
+        );
+        assert_eq!(sons(&out), [Sound::FocusEnd]);
+        let ultimo = out
+            .iter()
+            .rev()
+            .find_map(|o| match o {
+                Out::Timers(t) => Some(t),
+                _ => None,
+            })
+            .unwrap();
+        assert!(ultimo.timers[0].ended);
+        andar(&e, &clock, 12_000);
+        let out = e.sink().tirar();
+        assert!(fins(&out).is_empty(), "o fim dispara uma única vez");
+        assert!(sons(&out).is_empty());
+        let t = e.state().timers;
+        assert_eq!(t.timers[0].remaining_ms, -12_000);
+        assert!(t.timers[0].overdue);
+        assert_eq!(t.timers[1].remaining_ms, 180_000 - 62_000);
+        assert!(!t.timers[1].overdue);
+        assert!(e.is_running(), "o de 3 min ainda vai ao zero");
+    }
+
+    #[test]
+    fn pausar_um_nao_mexe_no_outro_e_redefinir_rearma() {
+        let (e, clock) = motor();
+        e.timer_start(1).unwrap();
+        e.timer_start(2).unwrap();
+        andar(&e, &clock, 20_000);
+        let p = e.timer_pause(2).unwrap();
+        assert_eq!(p.timers[1].status, crate::events::TimerStatusDto::Paused);
+        assert_eq!(p.timers[1].remaining_ms, 160_000);
+        assert_eq!(p.timers[0].remaining_ms, 40_000);
+        let r = e.timer_reset(2).unwrap();
+        assert_eq!(r.timers[1].status, crate::events::TimerStatusDto::Idle);
+        assert_eq!(r.timers[1].remaining_ms, 180_000);
+        e.sink().tirar();
+        andar(&e, &clock, 45_000);
+        assert_eq!(fins(&e.sink().tirar()).len(), 1);
+        // Redefinir o que acabou e correr de novo dispara outra vez.
+        e.timer_reset(1).unwrap();
+        e.timer_start(1).unwrap();
+        e.sink().tirar();
+        andar(&e, &clock, 60_000);
+        assert_eq!(fins(&e.sink().tirar()).len(), 1);
+    }
+
+    #[test]
+    fn passado_o_zero_o_laco_pode_dormir() {
+        let (e, clock) = motor();
+        e.timer_start(1).unwrap();
+        andar(&e, &clock, 60_000);
+        assert!(!e.tick(), "no negativo, nada a disparar: o laço dorme");
+        assert!(!e.is_running());
+        clock.advance_ms(30_000);
+        assert_eq!(e.state().timers.timers[0].remaining_ms, -30_000);
+    }
+
+    #[test]
+    fn fim_atrasado_notifica_sem_som() {
+        let (e, clock) = motor();
+        e.timer_start(1).unwrap();
+        e.sink().tirar();
+        clock.advance_ms(60_000 + LATE_AFTER_MS + 1_000);
+        e.tick();
+        let out = e.sink().tirar();
+        assert!(sons(&out).is_empty());
+        let f = fins(&out);
+        assert_eq!(f.len(), 1);
+        assert!(f[0].late);
+    }
+
+    #[test]
+    fn erros_dos_temporizadores() {
+        let (e, _) = motor();
+        assert_eq!(e.timer_start(99).unwrap_err().code, ErrorCode::NotFound);
+        assert_eq!(e.timer_pause(1).unwrap_err().code, ErrorCode::NotRunning);
+        e.timer_start(1).unwrap();
+        let erro = e.timer_start(1).unwrap_err();
+        assert_eq!(erro.code, ErrorCode::AlreadyRunning);
+        assert_eq!(
+            serde_json::to_value(&erro).unwrap()["code"],
+            "alreadyRunning"
+        );
+        assert_eq!(
+            e.timer_create("", 0).unwrap_err().code,
+            ErrorCode::InvalidDuration
+        );
+        assert_eq!(
+            e.timer_create(&"a".repeat(256), 1000).unwrap_err().code,
+            ErrorCode::NameTooLong
+        );
+        let c = e.timer_create("Chá", 240_000).unwrap();
+        assert_eq!(c.timers.last().unwrap().name, "Chá");
+        let u = e.timer_update(5, "Chá verde", 240_000).unwrap();
+        assert_eq!(u.timers.last().unwrap().name, "Chá verde");
+        let d = e.timer_delete(5).unwrap();
+        assert_eq!(d.timers.len(), 4);
+    }
+
+    #[test]
+    fn foco_e_temporizador_juntos() {
+        let (e, clock) = motor();
+        e.start(5, false, None).unwrap();
+        e.timer_start(1).unwrap();
+        e.sink().tirar();
+        andar(&e, &clock, 60_000);
+        let out = e.sink().tirar();
+        assert_eq!(fins(&out).len(), 1);
+        assert!(!ticks(&out).is_empty(), "o foco segue com os ticks");
+        assert!(e.tick(), "o foco ainda corre");
+    }
+
+    /// O laço de verdade acorda com um temporizador e dorme depois do zero.
+    #[tokio::test(start_paused = true)]
+    async fn laco_acorda_com_o_temporizador() {
+        let (e, clock) = motor();
+        let laco = tokio::spawn(e.clone().run());
+        tokio::time::sleep(Duration::from_secs(5)).await;
+        assert_eq!(e.ticks(), 0);
+        e.timer_start(1).unwrap();
+        for _ in 0..(4 * 61) {
+            tokio::time::sleep(TICK_EVERY).await;
+            clock.advance_ms(250);
+        }
+        assert_eq!(fins(&e.sink().tirar()).len(), 1);
+        let fim = e.ticks();
+        tokio::time::sleep(Duration::from_secs(3600)).await;
+        assert_eq!(e.ticks(), fim, "passado o zero, o laço dorme");
         laco.abort();
     }
 }

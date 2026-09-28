@@ -3,7 +3,8 @@
 // arredondados para cima do mostrador. M17: os plurais (Intl.PluralRules) e a regra dos
 // intervalos da frase do cartão "Pronto para focar". M27: as durações do
 // cartão "Progresso diário" ("45 minutos", "2,5 horas"). hh:mm:ss, -hh:mm:ss
-// e hh:mm:ss,cc chegam com as telas que os usam.
+// e hh:mm:ss,cc chegam com as telas que os usam. M32: hh:mm:ss e -hh:mm:ss
+// do temporizador e a duração curta do título do card ("1 min").
 import t from './i18n/pt-BR.js';
 
 const dois = (n) => String(n).padStart(2, '0');
@@ -98,4 +99,38 @@ export function minutosInteiros(segundos) {
   const min = Number.isFinite(segundos) && segundos > 0 ? Math.floor(segundos / 60) : 0;
   const u = t.unidades.palavras.minutos;
   return `${min} ${u[categoria(min)] ?? u.other}`;
+}
+
+const hms = (s) => `${dois(Math.floor(s / 3600))}:${dois(Math.floor(s / 60) % 60)}:${dois(s % 60)}`;
+
+/**
+ * M32: o tempo de um temporizador em `hh:mm:ss`. Antes do zero, o segundo é
+ * arredondado para cima, como o `mmss` (00:01:00 no início de 1 min, 00:00:01
+ * no último segundo). Depois do zero (`ms` negativo, ou `vencido` no zero
+ * exato), `-hh:mm:ss` com o tempo passado arredondado para baixo: −12,4 s é
+ * "-00:00:12". As horas passam de 99 no negativo. Inválido vira 00:00:00.
+ */
+export function tempoDoTemporizador(ms, vencido = false) {
+  if (!Number.isFinite(ms)) return hms(0);
+  if (ms > 0) return hms(Math.ceil(ms / 1000));
+  return ms < 0 || vencido ? `-${hms(Math.floor(-ms / 1000))}` : hms(0);
+}
+
+/**
+ * M32: a duração curta de um temporizador, o título do card sem nome (e o
+ * corpo da notificação, `timer_duration` do src-tauri/src/i18n.rs, com os
+ * mesmos exemplos nos testes): "1 min", "1 h 30 min", "45 s", "1 min 30 s".
+ * Os segundos quebrados são cortados.
+ */
+export function duracaoCurta(ms) {
+  const total = Number.isFinite(ms) && ms > 0 ? Math.floor(ms / 1000) : 0;
+  const u = t.temporizador.unidades;
+  const h = Math.floor(total / 3600);
+  const m = Math.floor(total / 60) % 60;
+  const s = total % 60;
+  const partes = [];
+  if (h) partes.push(`${h} ${u.h}`);
+  if (m) partes.push(`${m} ${u.min}`);
+  if (s || !partes.length) partes.push(`${s} ${u.s}`);
+  return partes.join(' ');
 }

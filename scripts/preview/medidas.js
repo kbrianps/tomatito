@@ -1153,4 +1153,81 @@
     await doisQuadros();
     return window.__ttTarefas();
   };
+
+  // M32: a tela Temporizador (src/views/timers.js). __ttTemporizadores()
+  // devolve cada card como se vê (título, tempo, "Encerrado há", cor do tempo,
+  // estado, botões, anel e caixa) e as cores dos tokens; __ttCliqueNoTemporizador
+  // (id, 'principal' | 'redefinir') chama o click() do botão;
+  // __ttEsperarTempo(id, texto, ms) espera o card mostrar o texto (a cada
+  // quadro) e devolve a leitura daquele quadro, ou null no prazo.
+  window.__ttTemporizadores = () => {
+    const grade = document.querySelector('[data-temporizadores]');
+    const g = grade.getBoundingClientRect();
+    const conteudo = document.querySelector('.tt-rolagem').getBoundingClientRect();
+    const cards = [...grade.querySelectorAll('[data-temporizador]')].map((el) => {
+      const b = el.getBoundingClientRect();
+      const tempo = el.querySelector('[data-tempo]');
+      const enc = el.querySelector('[data-encerrado]');
+      const anel = el.querySelector('[data-anel]');
+      const a = anel.getBoundingClientRect();
+      const [principal, redefinir] = el.querySelectorAll('.tt-temporizador-botoes button');
+      const arco = anel.querySelector('.tt-anel-arco');
+      const r1 = (v) => Math.round(v * 10) / 10;
+      return {
+        id: Number(el.dataset.temporizador),
+        titulo: el.querySelector('h2').textContent,
+        tempo: tempo.textContent,
+        encerrado: !enc.hidden && getComputedStyle(enc).display !== 'none' ? enc.textContent : null,
+        corDoTempo: getComputedStyle(tempo).color,
+        fonte: `${getComputedStyle(tempo).fontWeight} ${getComputedStyle(tempo).fontSize}`,
+        estado: el.dataset.estado,
+        vencido: el.hasAttribute('data-vencido'),
+        principal: { acao: principal.dataset.acao, rotulo: principal.getAttribute('aria-label'), largura: principal.offsetWidth },
+        redefinir: { desabilitado: redefinir.disabled, cor: getComputedStyle(redefinir).color },
+        anel: { rotulo: anel.getAttribute('aria-label'), papel: anel.getAttribute('role'), lado: r1(a.width), traco: arco.getAttribute('stroke-width'), vazio: arco.hasAttribute('data-vazio'), topo: r1(a.top - b.top) },
+        caixa: [b.x, b.y, b.width, b.height].map(r1),
+        // Dentro do anel (210 − 2 × 12), com 8 px de folga de cada lado.
+        tempoCabe: tempo.getBoundingClientRect().width <= a.width - 24 - 16,
+        larguraDoTempo: Math.round(tempo.getBoundingClientRect().width),
+      };
+    });
+    return {
+      cards,
+      grade: { esquerda: Math.round(g.left - conteudo.left), direita: Math.round(conteudo.right - g.right) },
+      // A faixa ocupada pelos cards dentro da área de conteúdo: centrada, as
+      // duas sobras são iguais.
+      faixa: cards.length
+        ? {
+            esquerda: Math.round(Math.min(...cards.map((c) => c.caixa[0])) - conteudo.left),
+            direita: Math.round(conteudo.right - Math.max(...cards.map((c) => c.caixa[0] + c.caixa[2]))),
+          }
+        : null,
+      cores: {
+        fg1: window.__ttCor('--tt-fg-1', 'color'),
+        fg2: window.__ttCor('--tt-fg-2', 'color'),
+        vencido: window.__ttCor('--tt-timer-overdue', 'color'),
+        desabilitado: window.__ttCor('--tt-fg-disabled', 'color'),
+      },
+      comandos: window.__TOMATITO_PREVIEW_COMANDOS__.filter((c) => c.startsWith('timer_')),
+      fins: window.__TOMATITO_PREVIEW_FINS__,
+    };
+  };
+  window.__ttCliqueNoTemporizador = async (id, qual = 'principal') => {
+    const [principal, redefinir] = document.querySelectorAll(`[data-temporizador="${id}"] .tt-temporizador-botoes button`);
+    (qual === 'principal' ? principal : redefinir).click();
+    await new Promise((r) => setTimeout(r, 50));
+    await doisQuadros();
+    return window.__ttTemporizadores();
+  };
+  window.__ttEsperarTempo = (id, texto, ms = 20000) =>
+    new Promise((resolve) => {
+      const t0 = performance.now();
+      const olhar = () => {
+        const el = document.querySelector(`[data-temporizador="${id}"] [data-tempo]`);
+        if (el?.textContent === texto) return resolve(window.__ttTemporizadores());
+        if (performance.now() - t0 > ms) return resolve(null);
+        requestAnimationFrame(olhar);
+      };
+      olhar();
+    });
 })();
