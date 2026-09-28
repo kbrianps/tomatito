@@ -24,6 +24,12 @@
 //! (M21), para o `notify.rs`, que também não espera. Os períodos (M26) vão
 //! para o `stats.rs`, uma linha no SQLite por fase que termina.
 //!
+//! **Configurações (M38).** O motor guarda as [`Preferencias`] que lê do
+//! `settings.json`: o F e o B das sessões novas (a sessão em andamento fica
+//! com o plano com que começou) e quais fins de fase tocam som. O `setup` e
+//! cada `settings_set` as regravam ([`Engine::configurar`]). Um som desligado
+//! não sai do motor; a notificação sai do mesmo jeito.
+//!
 //! **Temporizadores (M32).** O mesmo motor guarda os [`Timers`] do núcleo,
 //! sob a mesma trava e com o mesmo relógio. O laço também roda enquanto algum
 //! temporizador corre rumo ao zero (um prazo ainda não disparado); passado o
@@ -57,6 +63,7 @@ use crate::events::{
     self, FocusDto, PhaseEventDto, SetupDto, StateDto, StopwatchDto, TickDto, TimersDto,
 };
 use crate::notify::Notificador;
+use crate::settings::Settings;
 use crate::state_file::StateStore;
 use crate::stats::Stats;
 use crate::tray::Bandeja;
@@ -71,18 +78,61 @@ pub const MAX_MINUTES: u32 = 240;
 /// Passo do seletor de minutos (M17): de 5 em 5, e de 1 em 1 no debug.
 pub const STEP_MINUTES: u32 = if cfg!(debug_assertions) { 1 } else { 5 };
 
-/// F e B das sessões novas: os padrões, até o `settings.rs`. O `focus_start`
-/// e o `get_state` (a frase dos intervalos no cartão) leem daqui.
-const PLAN_SETTINGS: PlanSettings = PlanSettings::DEFAULT;
+/// M38: o que o motor lê das configurações (3.3): o F e o B das sessões
+/// novas (`focusMinutes` e `breakMinutes`) e os sons de fim de fase
+/// (`sounds.focusEnd` e `sounds.breakEnd`). O volume fica com o `Som`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Preferencias {
+    pub plano: PlanSettings,
+    /// Toca o som no fim de cada período de foco (e no fim da sessão, que é o
+    /// fim do último foco).
+    pub som_fim_de_foco: bool,
+    /// Toca o som no fim de cada intervalo.
+    pub som_fim_de_intervalo: bool,
+}
 
-/// O `setup` do `get_state` (M17).
-fn setup() -> SetupDto {
+impl Default for Preferencias {
+    /// Os padrões da 3.3: 25 e 5, com os dois sons ligados.
+    fn default() -> Self {
+        Self {
+            plano: PlanSettings::DEFAULT,
+            som_fim_de_foco: true,
+            som_fim_de_intervalo: true,
+        }
+    }
+}
+
+impl From<&Settings> for Preferencias {
+    fn from(s: &Settings) -> Self {
+        Self {
+            plano: PlanSettings {
+                focus_minutes: s.focus_minutes,
+                break_minutes: s.break_minutes,
+            },
+            som_fim_de_foco: s.sounds.focus_end,
+            som_fim_de_intervalo: s.sounds.break_end,
+        }
+    }
+}
+
+impl Preferencias {
+    /// Se o som `sound` do fim de uma fase do foco toca.
+    pub fn toca(&self, sound: Sound) -> bool {
+        match sound {
+            Sound::FocusEnd => self.som_fim_de_foco,
+            Sound::BreakEnd => self.som_fim_de_intervalo,
+        }
+    }
+}
+
+/// O `setup` do `get_state` (M17), com o F e o B das configurações (M38).
+fn setup(plano: PlanSettings) -> SetupDto {
     SetupDto {
         min_minutes: MIN_MINUTES,
         max_minutes: MAX_MINUTES,
         step_minutes: STEP_MINUTES,
-        focus_minutes: PLAN_SETTINGS.focus_minutes,
-        break_minutes: PLAN_SETTINGS.break_minutes,
+        focus_minutes: plano.focus_minutes,
+        break_minutes: plano.break_minutes,
     }
 }
 
@@ -114,25 +164,34 @@ pub trait Sink: Send + Sync + 'static {
 /// `state_changed` logo antes de `phase_changed`, e o `tt://phase` leva o
 /// `seq` e a fase desse retrato: o anúncio do `aria-live` sai do próprio
 /// evento, sem depender da ordem em que o JS recebe os dois.
+///
+/// M38: também filtra os sons pelas [`Preferencias`]: um som desligado não
+/// chega ao [`Sink`].
 struct Outbox<'a, S: Sink> {
     sink: &'a S,
     seq: &'a mut u64,
     last: Option<FocusDto>,
+    prefs: Preferencias,
 }
 
 impl<'a, S: Sink> Outbox<'a, S> {
-    fn new(sink: &'a S, seq: &'a mut u64) -> Self {
+    fn new(sink: &'a S, seq: &'a mut u64, prefs: Preferencias) -> Self {
         Self {
             sink,
             seq,
             last: None,
+            prefs,
         }
     }
 }
 
 impl<S: Sink> Effects for Outbox<'_, S> {
     fn play_sound(&mut self, sound: Sound) {
-        self.sink.sound(sound);
+        if self.prefs.toca(sound) {
+            self.sink.sound(sound);
+        } else if cfg!(debug_assertions) {
+            eprintln!("[tomatito] som {sound:?} desligado nas configurações; não tocou");
+        }
     }
     fn notify(&mut self, notice: Notice) {
         self.sink.notice(notice);
@@ -166,7 +225,8 @@ struct TimersOutbox<'a, S: Sink> {
 impl<S: Sink> CountdownEffects for TimersOutbox<'_, S> {
     fn timer_ended(&mut self, ended: &TimerEnded) {
         // O som de fim de foco (o "Fazer" do M32); o atrasado só notifica,
-        // como o foco (3.2).
+        // como o foco (3.2). As chaves `sounds.*` são dos fins de fase do foco
+        // (M38): o temporizador toca mesmo com elas desligadas.
         if !ended.late {
             self.sink.sound(Sound::FocusEnd);
         }
@@ -198,7 +258,8 @@ pub enum ErrorCode {
     NotRunning,
     NotPaused,
     NoSession,
-    /// T, F ou B iguais a zero (não acontece com T validado e F e B padrão).
+    /// T, F ou B iguais a zero (não acontece: T é validado aqui, e o
+    /// `settings.rs` só aceita F e B a partir de 1).
     InvalidPlan,
     /// M32: não existe temporizador com esse id.
     NotFound,
@@ -270,6 +331,8 @@ struct Inner {
     seq: u64,
     /// O último `tt://tick` emitido: sessão, fase e segundo mostrado.
     last_tick: Option<(i64, u32, u64)>,
+    /// M38: F, B e os sons, das configurações.
+    prefs: Preferencias,
 }
 
 impl Inner {
@@ -344,6 +407,7 @@ impl<S: Sink> Engine<S> {
                 timers_seq: 0,
                 seq: 0,
                 last_tick: None,
+                prefs: Preferencias::default(),
             }),
             wake: Notify::new(),
             ticks: AtomicU64::new(0),
@@ -364,6 +428,13 @@ impl<S: Sink> Engine<S> {
         // Um pânico com o motor travado não pode derrubar o app inteiro: o
         // estado do núcleo é trocado de uma vez, então segue válido.
         self.inner.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// M38: as preferências das configurações, no `setup` e a cada
+    /// `settings_set`. Valem para a próxima sessão e o próximo fim de fase; a
+    /// sessão em andamento continua com o F e o B com que começou.
+    pub fn configurar(&self, prefs: Preferencias) {
+        self.lock().prefs = prefs;
     }
 
     /// O "agora" do motor (acelerado no modo `TOMATITO_SPEED`): o
@@ -388,9 +459,10 @@ impl<S: Sink> Engine<S> {
             seq,
             timers,
             timers_seq,
+            prefs,
             ..
         } = &mut *g;
-        focus.advance_to(now, &mut Outbox::new(&self.sink, seq));
+        focus.advance_to(now, &mut Outbox::new(&self.sink, seq, *prefs));
         timers.advance_to(
             now,
             &mut TimersOutbox {
@@ -401,22 +473,31 @@ impl<S: Sink> Engine<S> {
         StateDto {
             focus: g.dto(now),
             speed: self.speed,
-            setup: setup(),
+            setup: setup(g.prefs.plano),
             timers: g.timers_dto(now),
             stopwatch: g.stopwatch_dto(now),
         }
     }
 
-    /// Roda um comando do núcleo com um único "agora", acorda o laço se uma
-    /// fase ficou correndo e devolve o retrato novo.
+    /// Roda um comando do núcleo com um único "agora" (e o F e o B em uso,
+    /// que só o `start` lê), acorda o laço se uma fase ficou correndo e
+    /// devolve o retrato novo.
     fn command(
         &self,
-        f: impl FnOnce(&mut Focus, EpochMs, &mut dyn Effects) -> Result<(), FocusError>,
+        f: impl FnOnce(&mut Focus, EpochMs, PlanSettings, &mut dyn Effects) -> Result<(), FocusError>,
     ) -> Result<FocusDto, CommandError> {
         let mut g = self.lock();
         let now = self.clock.now();
-        let Inner { focus, seq, .. } = &mut *g;
-        let r = f(focus, now, &mut Outbox::new(&self.sink, seq));
+        let Inner {
+            focus, seq, prefs, ..
+        } = &mut *g;
+        let prefs = *prefs;
+        let r = f(
+            focus,
+            now,
+            prefs.plano,
+            &mut Outbox::new(&self.sink, seq, prefs),
+        );
         let running = g.active();
         let dto = g.dto(now);
         drop(g);
@@ -427,8 +508,7 @@ impl<S: Sink> Engine<S> {
         Ok(dto)
     }
 
-    /// `focus_start`. F e B são os padrões até o `settings.rs` existir (M17
-    /// em diante).
+    /// `focus_start`. F e B vêm das configurações (M38).
     pub fn start(
         &self,
         minutes: u32,
@@ -443,29 +523,32 @@ impl<S: Sink> Engine<S> {
                 ),
             });
         }
-        let config = SessionConfig {
-            minutes,
-            settings: PLAN_SETTINGS,
-            skip_breaks,
-            task_id,
-        };
-        self.command(|f, now, fx| f.start(now, config, fx))
+        // O F e o B do momento do início: a sessão fica com eles até o fim.
+        self.command(|f, now, plano, fx| {
+            let config = SessionConfig {
+                minutes,
+                settings: plano,
+                skip_breaks,
+                task_id,
+            };
+            f.start(now, config, fx)
+        })
     }
 
     pub fn pause(&self) -> Result<FocusDto, CommandError> {
-        self.command(|f, now, fx| f.pause(now, fx))
+        self.command(|f, now, _, fx| f.pause(now, fx))
     }
 
     pub fn resume(&self) -> Result<FocusDto, CommandError> {
-        self.command(|f, now, fx| f.resume(now, fx))
+        self.command(|f, now, _, fx| f.resume(now, fx))
     }
 
     pub fn skip(&self) -> Result<FocusDto, CommandError> {
-        self.command(|f, now, fx| f.skip(now, fx))
+        self.command(|f, now, _, fx| f.skip(now, fx))
     }
 
     pub fn stop(&self) -> Result<FocusDto, CommandError> {
-        self.command(|f, now, fx| f.stop(now, fx))
+        self.command(|f, now, _, fx| f.stop(now, fx))
     }
 
     /// Roda um comando dos temporizadores (M32) com um único "agora", acorda
@@ -588,9 +671,10 @@ impl<S: Sink> Engine<S> {
             seq,
             timers,
             timers_seq,
+            prefs,
             ..
         } = &mut *g;
-        focus.advance_to(now, &mut Outbox::new(&self.sink, seq));
+        focus.advance_to(now, &mut Outbox::new(&self.sink, seq, *prefs));
         timers.advance_to(
             now,
             &mut TimersOutbox {
@@ -1049,6 +1133,146 @@ mod tests {
         assert_eq!((s.focus_minutes, s.break_minutes), (25, 5));
         // O passo cabe na faixa: do mínimo ao máximo, de passo em passo.
         assert_eq!((s.max_minutes - s.min_minutes) % s.step_minutes, 0);
+    }
+
+    /// Os sons de uma sessão de `minutos` inteira, pelo laço.
+    fn sons_da_sessao(e: &Engine<Anota>, clock: &FakeClock, minutos: u32) -> Vec<Sound> {
+        e.start(minutos, false, None).unwrap();
+        let mut n = 0;
+        while e.tick() {
+            clock.advance_ms(250);
+            n += 1;
+            assert!(n < 60 * 60 * 4 * 4, "o laço não para");
+        }
+        e.sink()
+            .tirar()
+            .iter()
+            .filter_map(|o| match o {
+                Out::Sound(s) => Some(*s),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn m38_preferencias_saem_das_configuracoes() {
+        let mut s = Settings::default();
+        assert_eq!(Preferencias::from(&s), Preferencias::default());
+        s.focus_minutes = 50;
+        s.break_minutes = 10;
+        s.sounds.break_end = false;
+        let p = Preferencias::from(&s);
+        assert_eq!((p.plano.focus_minutes, p.plano.break_minutes), (50, 10));
+        assert!(p.toca(Sound::FocusEnd) && !p.toca(Sound::BreakEnd));
+    }
+
+    #[test]
+    fn m38_f_e_b_das_configuracoes_valem_na_proxima_sessao_e_no_preparo() {
+        let (e, _) = motor();
+        e.configurar(Preferencias {
+            plano: PlanSettings {
+                focus_minutes: 15,
+                break_minutes: 10,
+            },
+            ..Preferencias::default()
+        });
+        let setup = e.state().setup;
+        assert_eq!((setup.focus_minutes, setup.break_minutes), (15, 10));
+        // T = 60 com F = 15 e B = 10: floor(59 / 25) = 2 intervalos.
+        let r = e.start(60, false, None).unwrap();
+        let s = r.session.unwrap();
+        assert_eq!((s.focus_minutes, s.break_minutes), (15, 10));
+        assert_eq!((s.blocks, s.intervals), (3, 2));
+        assert_eq!(s.next.unwrap().duration_s, 600, "intervalo de 10 min");
+    }
+
+    #[test]
+    fn m38_a_sessao_em_andamento_fica_com_o_plano_do_inicio() {
+        let (e, clock) = motor();
+        e.start(60, false, None).unwrap();
+        e.configurar(Preferencias {
+            plano: PlanSettings {
+                focus_minutes: 15,
+                break_minutes: 15,
+            },
+            ..Preferencias::default()
+        });
+        andar(&e, &clock, 1_000);
+        let s = e.state();
+        let sessao = s.focus.session.unwrap();
+        assert_eq!((sessao.focus_minutes, sessao.break_minutes), (25, 5));
+        assert_eq!((sessao.blocks, sessao.intervals), (2, 1));
+        // O preparo da próxima já mostra os novos.
+        assert_eq!((s.setup.focus_minutes, s.setup.break_minutes), (15, 15));
+    }
+
+    #[test]
+    fn m38_desligar_um_som_silencia_o_proximo_fim_de_fase() {
+        // O "Pronto quando" do M38, no motor: 60 min = foco, intervalo, foco.
+        let (e, clock) = motor();
+        assert_eq!(
+            sons_da_sessao(&e, &clock, 60),
+            [Sound::FocusEnd, Sound::BreakEnd, Sound::FocusEnd]
+        );
+        e.configurar(Preferencias {
+            som_fim_de_foco: false,
+            ..Preferencias::default()
+        });
+        assert_eq!(sons_da_sessao(&e, &clock, 60), [Sound::BreakEnd]);
+        e.configurar(Preferencias {
+            som_fim_de_intervalo: false,
+            ..Preferencias::default()
+        });
+        assert_eq!(
+            sons_da_sessao(&e, &clock, 60),
+            [Sound::FocusEnd, Sound::FocusEnd]
+        );
+    }
+
+    #[test]
+    fn m38_som_desligado_no_meio_da_sessao_vale_no_proximo_fim() {
+        let (e, clock) = motor();
+        e.start(60, false, None).unwrap();
+        e.sink().tirar();
+        // Desliga o do intervalo durante o primeiro foco.
+        e.configurar(Preferencias {
+            som_fim_de_intervalo: false,
+            ..Preferencias::default()
+        });
+        let mut n = 0;
+        while e.tick() {
+            clock.advance_ms(250);
+            n += 1;
+            assert!(n < 60 * 60 * 4 + 10, "o laço não para");
+        }
+        let out = e.sink().tirar();
+        let sons: Vec<_> = out
+            .iter()
+            .filter_map(|o| match o {
+                Out::Sound(s) => Some(*s),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(sons, [Sound::FocusEnd, Sound::FocusEnd]);
+        // A notificação do fim do intervalo sai do mesmo jeito.
+        let avisos = out.iter().filter(|o| matches!(o, Out::Notice(_))).count();
+        assert_eq!(avisos, 3, "fim do foco, fim do intervalo e fim da sessão");
+    }
+
+    #[test]
+    fn m38_o_temporizador_toca_mesmo_com_os_sons_do_foco_desligados() {
+        let (e, clock) = motor();
+        e.configurar(Preferencias {
+            som_fim_de_foco: false,
+            som_fim_de_intervalo: false,
+            ..Preferencias::default()
+        });
+        e.timer_start(1).unwrap();
+        e.sink().tirar();
+        andar(&e, &clock, 60_250);
+        let out = e.sink().tirar();
+        assert!(out.iter().any(|o| matches!(o, Out::Sound(Sound::FocusEnd))));
+        assert!(out.iter().any(|o| matches!(o, Out::TimerNotice(_))));
     }
 
     #[test]

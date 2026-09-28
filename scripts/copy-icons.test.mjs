@@ -10,7 +10,7 @@ import { arquivos, comparar, copiar, ICONES } from './copy-icons.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./copy-icons.mjs', import.meta.url));
 
-test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenchidos) mais o pincel do M24, o aviso de erro do M28, o check preenchido do M30 , a lixeira e o check do M33 e o copiar do M35', () => {
+test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenchidos) mais o pincel do M24, o aviso de erro do M28, o check preenchido do M30 , a lixeira e o check do M33, o copiar do M35 e os cartões do M38', () => {
   assert.deepEqual(
     ICONES.map((i) => i.nome),
     [
@@ -19,6 +19,7 @@ test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenc
       'flag', 'arrow_reset', 'more_horizontal', 'edit', 'add', 'chevron_up', 'chevron_down',
       'circle', 'checkmark_circle', 'checkmark_circle', 'dismiss', 'save',
       'paint_brush',
+      'clock_alarm', 'speaker_2',
       'error_circle',
       'delete', 'checkmark',
       'copy',
@@ -33,6 +34,9 @@ test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenc
   for (const a of ['circle_20_regular.svg', 'checkmark_circle_20_regular.svg', 'checkmark_circle_20_filled.svg']) assert.ok(arquivos().includes(a), a);
   // M24: o ícone do cartão do tema, na grade de 20 do SettingsCard.
   assert.ok(arquivos().includes('paint_brush_20_regular.svg'));
+  // M38: os dos cartões das Sessões de foco, também na grade de 20 (o alvo
+  // do painel ganha a de 20, e continua com a de 16).
+  for (const a of ['target_20_regular.svg', 'clock_alarm_20_regular.svg', 'speaker_2_20_regular.svg']) assert.ok(arquivos().includes(a), a);
   // Os do painel continuam os do M09 (a mesma grade de 16).
   for (const nome of ['target', 'hourglass_half', 'timer', 'settings']) assert.ok(arquivos().includes(`${nome}_16_regular.svg`));
 });
@@ -40,7 +44,7 @@ test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenc
 test('src/assets/icons/ está em dia com a lista e com o pacote (node scripts/copy-icons.mjs --conferir)', () => {
   const r = spawnSync(process.execPath, [SCRIPT, '--conferir'], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /em dia \(31 ícones\)/);
+  assert.match(r.stdout, /em dia \(34 ícones\)/);
 });
 
 test('copiar() numa pasta vazia, de novo sem mudar nada, e a conferência acusando cada diferença', () => {

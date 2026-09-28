@@ -403,7 +403,7 @@ pub struct StateDto {
 /// debug, de 1 em 1, a mesma faixa que o `focus_start` aceita) e o F e o B
 /// que o próximo `focus_start` vai usar, para a frase "Você terá N
 /// intervalos." seguir a regra do `plan.rs` sem uma segunda fonte para os
-/// números. F e B são os padrões até o `settings.rs`.
+/// números. F e B vêm das configurações (M38).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SetupDto {

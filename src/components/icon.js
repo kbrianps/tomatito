@@ -13,7 +13,8 @@ const ARQUIVOS = import.meta.glob('../assets/icons/*.svg', { query: '?raw', impo
 // tarefa concluída); sem estilo pedido, vale o regular, ou o único que houver.
 const SVG = new Map();
 for (const [caminho, svg] of Object.entries(ARQUIVOS)) {
-  const m = /\/([a-z_]+)_(\d+)_(regular|filled)\.svg$/.exec(caminho);
+  // M38: o nome pode ter dígitos (speaker_2); a grade é o último número.
+  const m = /\/([a-z0-9_]+)_(\d+)_(regular|filled)\.svg$/.exec(caminho);
   if (!m) continue;
   const [, nome, grade, estilo] = m;
   if (!SVG.has(nome)) SVG.set(nome, new Map());

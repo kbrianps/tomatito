@@ -15,9 +15,12 @@
 //! áudio nem mantém um fluxo mudo aberto o dia inteiro.
 //!
 //! **Volume.** O [`Som`] guarda o volume (0 a 100) e o aplica a cada pedido.
-//! Até as configurações existirem (M38), é o [`VOLUME_PADRAO`]; num build de
-//! debug, `TOMATITO_VOLUME` o troca (os testes automáticos tocam a 1%, para
-//! não soar alto na máquina de quem roda). No release, a variável não é lida.
+//! Desde o M38, é o `volume` das configurações: o `setup` o passa ao
+//! [`Som::iniciar`], e cada `settings_set` o regrava ([`Som::definir_volume`]).
+//! Num build de debug, `TOMATITO_VOLUME` fixa o volume por cima das
+//! configurações (os testes automáticos tocam a 1%, para não soar alto na
+//! máquina de quem roda, qualquer que seja o `settings.json`). No release, a
+//! variável não é lida.
 //!
 //! **Erro nunca derruba o app.** Sem dispositivo, com o WAV ruim ou com um
 //! pânico dentro do rodio, a thread registra no stderr e segue para o pedido
@@ -42,7 +45,7 @@ const BREAK_END: &[u8] = include_bytes!("../sounds/break-end.wav");
 /// a folga cobre o buffer do dispositivo (fechar antes corta o fim).
 pub const SEGURAR: Duration = Duration::from_millis(1500);
 
-/// O volume até existir a configuração (`volume` da 3.3, no M38), de 0 a 100.
+/// O padrão do `volume` das configurações (3.3: "a confirmar"), de 0 a 100.
 pub const VOLUME_PADRAO: u8 = 80;
 
 /// Os bytes do WAV de cada som.
@@ -73,14 +76,18 @@ pub struct Som {
     // versões com o `Sender` antigo e custa nada perto de tocar um som.
     tx: Mutex<Sender<Pedido>>,
     volume: AtomicU8,
+    /// Só no debug: o `TOMATITO_VOLUME`, que vence o das configurações.
+    forcado: Option<u8>,
 }
 
 impl Som {
     /// Sobe a thread `tomatito-som`, que toca na saída padrão do sistema, com
-    /// o volume de [`volume_do_ambiente`].
-    pub fn iniciar() -> Self {
-        let som = Self::com_saida(tocar_na_saida_padrao);
-        som.definir_volume(volume_do_ambiente());
+    /// o `volume` das configurações (M38). Num build de debug, o
+    /// [`volume_forcado`] vence.
+    pub fn iniciar(volume: u8) -> Self {
+        let mut som = Self::com_saida(tocar_na_saida_padrao);
+        som.forcado = volume_forcado();
+        som.definir_volume(volume);
         som
     }
 
@@ -100,16 +107,21 @@ impl Som {
         Self {
             tx: Mutex::new(tx),
             volume: AtomicU8::new(VOLUME_PADRAO),
+            forcado: None,
         }
     }
 
-    /// O volume dos próximos sons, de 0 a 100 (o M38 o liga às configurações).
+    /// O volume dos próximos sons, de 0 a 100: o `volume` das configurações,
+    /// no `setup` e a cada `settings_set` (M38). Vale no pedido seguinte.
     pub fn definir_volume(&self, volume: u8) {
         self.volume.store(volume.min(100), Ordering::Relaxed);
     }
 
+    /// O volume que o próximo som usa: o das configurações ou, no debug, o
+    /// `TOMATITO_VOLUME`.
     pub fn volume(&self) -> u8 {
-        self.volume.load(Ordering::Relaxed)
+        self.forcado
+            .unwrap_or_else(|| self.volume.load(Ordering::Relaxed))
     }
 
     /// Pede um som, com o volume atual, e volta na hora. Nunca falha: um erro
@@ -123,20 +135,25 @@ impl Som {
     }
 }
 
-/// O volume inicial: o [`VOLUME_PADRAO`] ou, num build de debug, o
-/// `TOMATITO_VOLUME` (0 a 100). Um valor inválido é registrado e ignorado.
-pub fn volume_do_ambiente() -> u8 {
+/// Num build de debug, o `TOMATITO_VOLUME` (0 a 100), que fixa o volume por
+/// cima das configurações; `None` sem a variável, com um valor inválido (que é
+/// registrado) e sempre no release.
+pub fn volume_forcado() -> Option<u8> {
     #[cfg(debug_assertions)]
     if let Ok(v) = std::env::var("TOMATITO_VOLUME") {
         match v.trim().parse::<u8>() {
             Ok(n) if n <= 100 => {
-                eprintln!("[tomatito] volume do som: {n}%");
-                return n;
+                eprintln!(
+                    "[tomatito] volume do som: {n}% (TOMATITO_VOLUME, acima das configurações)"
+                );
+                return Some(n);
             }
-            _ => eprintln!("[tomatito] TOMATITO_VOLUME inválido ({v:?}); usando {VOLUME_PADRAO}%"),
+            _ => {
+                eprintln!("[tomatito] TOMATITO_VOLUME inválido ({v:?}); usando o das configurações")
+            }
         }
     }
-    VOLUME_PADRAO
+    None
 }
 
 /// O laço da thread: um pedido por vez, na ordem, até o app fechar (o canal
@@ -254,6 +271,18 @@ mod tests {
         assert_eq!(som.volume(), VOLUME_PADRAO);
         som.definir_volume(250);
         assert_eq!(som.volume(), 100);
+    }
+
+    #[test]
+    fn o_volume_forcado_do_debug_vence_o_das_configuracoes() {
+        // M38: o `TOMATITO_VOLUME` dos testes automáticos (1%) vale mesmo com
+        // outro `volume` no settings.json e depois de um `settings_set`.
+        let mut som = Som::com_saida(|_| Ok(()));
+        som.forcado = Some(1);
+        som.definir_volume(80);
+        assert_eq!(som.volume(), 1);
+        som.forcado = None;
+        assert_eq!(som.volume(), 80);
     }
 
     #[test]

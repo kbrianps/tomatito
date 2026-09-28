@@ -230,7 +230,40 @@ export default Object.freeze({
   // cartão do tema, como o SettingsCard do Relógio (ícone, título e
   // descrição) e as opções da 4.1. "Tomatito Suave" é nome provisório (1.2).
   // O Full só entra na lista no M51.
+  // M38: a seção "Sessões de foco", com os cartões expansíveis do Relógio
+  // (clock-focus-sessions-settings.png): os períodos, os dois sons e o volume.
   configuracoes: Object.freeze({
+    sessoes: 'Sessões de foco',
+    periodos: Object.freeze({
+      titulo: 'Períodos de foco',
+      descricao: 'Ajuste a duração dos períodos de foco e dos intervalos. Vale a partir da próxima sessão.',
+      foco: 'Período de foco',
+      intervalo: 'Intervalo',
+    }),
+    somFoco: Object.freeze({
+      titulo: 'Som de fim de foco',
+      descricao: 'Tocar um aviso quando o período de foco termina.',
+      som: 'Duas notas',
+      testar: 'Testar o som de fim de foco',
+    }),
+    somIntervalo: Object.freeze({
+      titulo: 'Som de fim de intervalo',
+      descricao: 'Tocar um aviso quando o intervalo termina.',
+      som: 'Uma nota',
+      testar: 'Testar o som de fim de intervalo',
+    }),
+    // O texto ao lado do switch, como o OnContent e o OffContent do
+    // ToggleSwitch do WinUI.
+    ativado: 'Ativado',
+    desativado: 'Desativado',
+    somDoAviso: 'Som do aviso',
+    testar: 'Testar',
+    volume: Object.freeze({
+      titulo: 'Volume',
+      descricao: 'Volume dos avisos sonoros.',
+      valor: (n) => `${n}%`,
+    }),
+    erro: 'Não foi possível salvar a configuração. Tente de novo.',
     aparencia: 'Aparência',
     tema: 'Tema do aplicativo',
     temaDescricao: 'Escolha as cores do Tomatito.',

@@ -28,6 +28,12 @@
 // escondida. Com o relógio acelerado (`TOMATITO_SPEED`, só no debug), o
 // relógio do Rust não é o do JS, e o decorrido é estimado como o dos
 // temporizadores.
+//
+// M38: e a última cópia das configurações (o `settings` do get_state, o
+// `tt://settings` e a resposta do `settings_set`), sem `seq`: cada uma é o
+// arquivo inteiro, e o Rust as emite na ordem das gravações. O F e o B delas
+// entram no preparo, para a frase dos intervalos mudar assim que o período ou
+// o intervalo mudam nas Configurações.
 
 import * as ipc from './ipc.js';
 
@@ -68,6 +74,21 @@ export function criarStore({ ipc, eventos, agora = () => Date.now() }) {
   let cronometro = null;
   let baseDoCronometro = null;
   const ouvintesDoCronometro = new Set();
+  // M38: as configurações.
+  let configuracoes = null;
+  const ouvintesDasConfiguracoes = new Set();
+
+  function aplicarConfiguracoes(dto) {
+    if (!dto || typeof dto !== 'object' || Array.isArray(dto)) return false;
+    configuracoes = dto;
+    const f = dto.focusMinutes;
+    const b = dto.breakMinutes;
+    if (Number.isInteger(f) && f > 0 && Number.isInteger(b) && b > 0) {
+      preparo = Object.freeze({ ...preparo, focusMinutes: f, breakMinutes: b });
+    }
+    for (const cb of ouvintesDasConfiguracoes) cb(configuracoes);
+    return true;
+  }
 
   function aplicarCronometro(dto) {
     if (!dto || typeof dto.status !== 'string' || (cronometro && dto.seq < cronometro.seq)) return false;
@@ -115,6 +136,7 @@ export function criarStore({ ipc, eventos, agora = () => Date.now() }) {
       .then((estado) => {
         if (Number.isFinite(estado?.speed) && estado.speed > 0) velocidade = estado.speed;
         if (preparoValido(estado?.setup)) preparo = Object.freeze({ ...estado.setup });
+        aplicarConfiguracoes(estado?.settings);
         aplicarFoco(estado?.focus);
         aplicarTemporizadores(estado?.timers);
         aplicarCronometro(estado?.stopwatch);
@@ -218,6 +240,26 @@ export function criarStore({ ipc, eventos, agora = () => Date.now() }) {
         throw erro;
       }
     },
+    /** M38: a última cópia das configurações (null até o get_state). */
+    get configuracoes() {
+      return configuracoes;
+    },
+    /** M38: `cb(configuracoes)` a cada cópia nova. */
+    assinarConfiguracoes(cb) {
+      ouvintesDasConfiguracoes.add(cb);
+      return () => ouvintesDasConfiguracoes.delete(cb);
+    },
+    /**
+     * M38: grava um patch pelo `settings_set` e aplica a resposta (as
+     * configurações inteiras). Recusado, rejeita com o erro do Rust, e nada
+     * muda aqui.
+     */
+    async gravarConfiguracoes(patch) {
+      const novas = await ipc.configuracoes.gravar(patch);
+      aplicarConfiguracoes(novas);
+      return novas;
+    },
+    aplicarConfiguracoes,
     aplicarCronometro,
     aplicarTemporizadores,
     aplicarFoco,
@@ -246,6 +288,7 @@ export function criarStore({ ipc, eventos, agora = () => Date.now() }) {
         ipc.ouvir(eventos.tick, aplicarTick),
         eventos.temporizadores && ipc.ouvir(eventos.temporizadores, aplicarTemporizadores),
         eventos.cronometro && ipc.ouvir(eventos.cronometro, aplicarCronometro),
+        eventos.configuracoes && ipc.ouvir(eventos.configuracoes, aplicarConfiguracoes),
       ]);
       doc?.addEventListener('visibilitychange', () => {
         if (doc.visibilityState === 'visible') void sincronizar();

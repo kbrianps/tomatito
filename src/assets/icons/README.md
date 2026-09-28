@@ -2,7 +2,7 @@
 
 <!-- Gerado por scripts/copy-icons.mjs; não edite à mão. -->
 
-Cópia de 31 arquivos do pacote npm `@fluentui/svg-icons` 1.1.343
+Cópia de 34 arquivos do pacote npm `@fluentui/svg-icons` 1.1.343
 (Fluent System Icons, repositório `microsoft/fluentui-system-icons`), sem
 nenhuma alteração. Licença MIT, a mesma declarada no `package.json` do pacote;
 o texto completo vai para os avisos de terceiros do app (PLANO.md, 9).
@@ -21,6 +21,7 @@ lista `ICONES` de `scripts/copy-icons.mjs` e rode `node scripts/copy-icons.mjs`.
 - `chevron_up_16_regular.svg`
 - `circle_16_regular.svg`
 - `circle_20_regular.svg`
+- `clock_alarm_20_regular.svg`
 - `copy_16_regular.svg`
 - `delete_16_regular.svg`
 - `dismiss_16_regular.svg`
@@ -37,7 +38,9 @@ lista `ICONES` de `scripts/copy-icons.mjs` e rode `node scripts/copy-icons.mjs`.
 - `play_24_filled.svg`
 - `save_16_regular.svg`
 - `settings_16_regular.svg`
+- `speaker_2_20_regular.svg`
 - `stop_16_filled.svg`
 - `stop_24_filled.svg`
 - `target_16_regular.svg`
+- `target_20_regular.svg`
 - `timer_16_regular.svg`

@@ -476,6 +476,97 @@ fluent-radio-group.tt-temas{
 .tt-previa-metade > .tt-previa{ flex:none; width:200%; }
 .tt-previa-metade + .tt-previa-metade > .tt-previa{ margin-left:-100%; }
 
+/* M38: a seção "Sessões de foco" (src/views/settings.js), com as medidas da
+   captura de Configurações do Relógio (clock-focus-sessions-settings.png, a
+   175%): cabeçalho de 68 px, itens de 50 px com o rótulo na coluna do título
+   (58 px) e o controle a 44 px da borda direita (a coluna do chevron), 1 px
+   de divisor entre as linhas, raio 4 e 4 px entre os cartões.
+   O expansível (o SettingsExpander do WinUI) é uma grade de três colunas: o
+   botão do cabeçalho ocupa as três (subgrid: ícone e textos na primeira,
+   chevron na terceira) e o switch dos sons fica por cima da do meio, fora do
+   botão. O hover vale para a linha inteira, inclusive em cima do switch, e
+   leva a descrição para o --tt-fg-2-on-ctl (no Lite, o fg-2 sobre o hover
+   cai abaixo de 4,5:1, 4.4). */
+.tt-expansor-topo{ display:grid; grid-template-columns:minmax(0, 1fr) auto 44px; align-items:center; min-height:68px; }
+button.tt-expansor-botao{
+  grid-row:1; grid-column:1 / -1; display:grid; grid-template-columns:subgrid; align-items:center;
+  width:100%; height:auto; min-height:68px; padding:16px 0 16px 18px; gap:0;
+  border:0; border-radius:3px; background:transparent; color:var(--tt-fg-1);
+  text-align:start; white-space:normal;
+}
+.tt-expansor-topo:hover > button.tt-expansor-botao{ background:var(--tt-subtle-hover); }
+.tt-expansor-topo > button.tt-expansor-botao:active{ background:var(--tt-subtle-press); }
+.tt-expansor-topo:hover .tt-config-descricao{ color:var(--tt-fg-2-on-ctl); }
+.tt-expansor[data-aberto] button.tt-expansor-botao{ border-bottom-left-radius:0; border-bottom-right-radius:0; }
+.tt-config-cabeca{ grid-column:1; display:flex; align-items:center; gap:20px; min-width:0; }
+.tt-expansor-chevron{ grid-column:3; justify-self:end; display:flex; align-items:center; justify-content:center; width:32px; height:32px; margin-right:8px; }
+button.tt-expansor-botao .tt-expansor-chevron .tt-icone{ width:12px; height:12px; }
+.tt-expansor[data-aberto] .tt-expansor-chevron .tt-icone{ transform:rotate(180deg); }
+.tt-expansor-acao{ grid-row:1; grid-column:2; position:relative; display:flex; align-items:center; gap:12px; padding-left:16px; color:var(--tt-fg-1); }
+.tt-expansor-conteudo{ border-top:1px solid var(--tt-border); }
+.tt-expansor-conteudo[hidden]{ display:none; }
+.tt-config-item{ display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:50px; padding:8px 44px 8px 58px; }
+.tt-config-item + .tt-config-item{ border-top:1px solid var(--tt-border); }
+.tt-config-item fluent-dropdown{ min-width:140px; }
+.tt-config-item-acoes{ display:flex; align-items:center; gap:12px; }
+.tt-config-valor{ color:var(--tt-fg-2); }
+/* O cartão que não abre (Volume): o controle à direita, a 16 px da borda. */
+.tt-config-controle{ display:flex; align-items:center; gap:12px; margin-left:auto; }
+.tt-config-controle > .tt-config-valor{ min-width:3ch; text-align:end; }
+/* Estreito (menos de 560 px de conteúdo, o limite da grade da tela Foco),
+   como o SettingsCard do WinUI abaixo do limite dele: o controle desce para
+   uma linha própria, na coluna do título. No expansível com switch, o botão
+   ganha uma segunda linha de 32 px (8 px abaixo dos textos), e o switch fica
+   nela; nos itens e no volume, a linha quebra. */
+@container conteudo (width < 560px){
+  /* O título de uma palavra só não quebra: em Title Large, "Configurações"
+     passaria da largura com zoom; no estreito, fica em Title (o do M24). */
+  .tt-pagina > h1.tt-t-title-large{ font:var(--tt-type-title); }
+  .tt-expansor-topo:has(> .tt-expansor-acao){ grid-template-columns:minmax(0, 1fr) 44px; }
+  .tt-expansor-topo:has(> .tt-expansor-acao) > button.tt-expansor-botao{
+    grid-row:1 / span 2; grid-template-columns:minmax(0, 1fr) 44px; grid-template-rows:auto 32px; row-gap:8px;
+  }
+  .tt-expansor-topo:has(> .tt-expansor-acao) .tt-expansor-chevron{ grid-column:2; grid-row:1; }
+  .tt-expansor-topo > .tt-expansor-acao{ grid-row:2; grid-column:1; align-self:end; height:32px; margin:0 0 16px 58px; padding-left:0; }
+  .tt-config-item{ flex-wrap:wrap; row-gap:8px; padding-right:16px; padding-left:58px; }
+  .tt-config-cabecalho:has(> .tt-config-controle){ flex-wrap:wrap; row-gap:8px; }
+  .tt-config-cabecalho:has(> .tt-config-controle) > .tt-config-textos{ flex:1 1 0; }
+  .tt-config-cabecalho > .tt-config-controle{ flex:1 1 calc(100% - 40px); min-width:0; margin-left:40px; }
+  .tt-config-controle > input.tt-deslizante{ flex:1 1 0; width:0; min-width:0; }
+}
+
+/* M38: controle deslizante (o Slider do WinUI, Slider_themeresources.xaml):
+   trilho de 4 px com raio 2, preenchido no accent até o valor e no
+   --tt-stroke-control (ControlStrongFillColorDefault) depois; polegar de
+   20 px com o anel no fundo do cartão e a bolinha do accent, que cresce no
+   hover (14 px) e encolhe ao apertar (10 px). O ponto do valor fica sob o
+   centro do polegar: 10 px + (largura − 20 px) × fração, com a fração
+   (--tt-fracao, de 0 a 1) posta pelo JS. */
+input.tt-deslizante{
+  -webkit-appearance:none; appearance:none; flex:0 1 200px; width:200px; min-width:96px; height:32px; margin:0;
+  background:transparent; border-radius:var(--tt-r-ctl); cursor:default;
+  --tt-fracao:0; --tt-ponto:calc(10px + (100% - 20px) * var(--tt-fracao));
+}
+input.tt-deslizante::-webkit-slider-runnable-track{
+  height:4px; border-radius:2px;
+  background:linear-gradient(to right, var(--tt-accent) var(--tt-ponto), var(--tt-stroke-control) var(--tt-ponto));
+}
+input.tt-deslizante::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none; width:20px; height:20px; margin-top:-8px; border-radius:50%;
+  border:1px solid var(--tt-ctl-stroke-top);
+  background:radial-gradient(circle, var(--tt-accent) 0 6px, var(--tt-bg-card) 6.5px);
+}
+input.tt-deslizante:hover::-webkit-slider-thumb{ background:radial-gradient(circle, var(--tt-accent-hover) 0 7px, var(--tt-bg-card) 7.5px); }
+input.tt-deslizante:active::-webkit-slider-thumb{ background:radial-gradient(circle, var(--tt-accent-pressed) 0 5px, var(--tt-bg-card) 5.5px); }
+input.tt-deslizante:focus{ outline:none; }
+input.tt-deslizante:focus-visible{ outline:2px solid var(--tt-focus-outer); outline-offset:1px; box-shadow:0 0 0 1px var(--tt-focus-inner); }
+@media (forced-colors:active){
+  input.tt-deslizante{ forced-color-adjust:none; }
+  input.tt-deslizante::-webkit-slider-runnable-track{ background:linear-gradient(to right, Highlight var(--tt-ponto), GrayText var(--tt-ponto)); }
+  input.tt-deslizante::-webkit-slider-thumb{ border-color:ButtonText; background:radial-gradient(circle, Highlight 0 6px, Canvas 6.5px); }
+  input.tt-deslizante:focus-visible{ outline-color:Highlight; }
+}
+
 /* M32: tela Temporizador (src/views/timers.js), com as medidas da captura do
    Relógio (timers-in-clock-app.png, a 175%; docs/decisoes.md, M32): cards de
    313 × 321 numa grade centrada que quebra de linha, a 16 px um do outro, com

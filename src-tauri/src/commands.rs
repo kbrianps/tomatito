@@ -12,7 +12,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use tomatito_core::{Sound, TimeZone};
 
 use crate::audio::Som;
-use crate::engine::{CommandError, Engine, TauriSink};
+use crate::engine::{CommandError, Engine, Preferencias, TauriSink};
 use crate::events::{self, FocusDto, StateDto, StopwatchDto, TimersDto};
 use crate::settings::{Settings, SettingsError, SettingsStore};
 use crate::stats::{Stats, StatsDto};
@@ -73,6 +73,15 @@ pub fn settings_set(
         if let Some(b) = app.try_state::<Arc<Bandeja>>() {
             b.tray_time(s.tray_time);
         }
+        // M38: F e B (a próxima sessão), os sons de fim de fase (o próximo
+        // fim) e o volume (o próximo som) também. Sem trava invertida: o
+        // motor nunca lê as configurações com a própria trava.
+        if let Some(motor) = app.try_state::<AppEngine>() {
+            motor.configurar(Preferencias::from(s));
+        }
+        if let Some(som) = app.try_state::<Arc<Som>>() {
+            som.definir_volume(s.volume);
+        }
     })
 }
 
@@ -127,7 +136,8 @@ impl From<SoundDto> for Sound {
 
 /// `sound_test{sound?}`: toca um som agora, com o volume atual (o "Testar"
 /// das Configurações, M38). Sem `sound`, toca os dois, um depois do outro.
-/// Volta na hora; um erro de áudio só vai para o log (`audio.rs`).
+/// Toca mesmo com o som desligado nas configurações: o "Testar" é para ouvir
+/// o som. Volta na hora; um erro de áudio só vai para o log (`audio.rs`).
 #[tauri::command]
 pub fn sound_test(som: State<'_, Arc<Som>>, sound: Option<SoundDto>) {
     let sons = match sound {

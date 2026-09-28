@@ -69,8 +69,9 @@ pub fn run() {
             let bandeja = Arc::new(tray::Bandeja::new(app.handle().clone(), s.tray_time));
             app.manage(bandeja.clone());
             let (clock, speed) = engine::clock_from_env();
-            // A thread de som sobe junto: o motor e o `sound_test` usam a mesma.
-            let som = Arc::new(audio::Som::iniciar());
+            // A thread de som sobe junto: o motor e o `sound_test` usam a mesma,
+            // com o volume das configurações (M38).
+            let som = Arc::new(audio::Som::iniciar(s.volume));
             app.manage(som.clone());
             // M37: o "Sair" também grava o `state.json` (`window::sair`).
             let estado = Arc::new(state_file::StateStore::new(&dados));
@@ -89,6 +90,9 @@ pub fn run() {
                     bandeja.clone(),
                 ),
             ));
+            // M38: F, B e os sons de fim de fase das configurações; cada
+            // `settings_set` os regrava.
+            motor.configurar(engine::Preferencias::from(&s));
             app.manage(motor.clone());
             bandeja.criar_icone(&motor.state().focus);
             tauri::async_runtime::spawn(motor.run());

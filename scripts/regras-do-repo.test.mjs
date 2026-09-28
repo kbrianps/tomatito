@@ -590,7 +590,7 @@ test('ícones só da pasta copiada: nada do @fluentui/svg-icons no código do ap
   // Todo ícone pedido no código existe na pasta.
   const disponiveis = new Set(readdirSync(new URL('../src/assets/icons', import.meta.url)).map((a) => a.replace(/_\d+_(regular|filled)\.svg$/, '')));
   for (const { arquivo, texto } of jsDoApp) {
-    for (const m of texto.matchAll(/icone\('([a-z_]+)'/g)) assert.ok(disponiveis.has(m[1]), `${arquivo}: ícone ${m[1]} fora da pasta`);
+    for (const m of texto.matchAll(/icone\('([a-z0-9_]+)'/g)) assert.ok(disponiveis.has(m[1]), `${arquivo}: ícone ${m[1]} fora da pasta`);
   }
   for (const { rota, icone: nome } of [{ icone: 'target' }, { icone: 'hourglass_half' }, { icone: 'timer' }, { icone: 'settings' }]) {
     assert.ok(disponiveis.has(nome), rota);

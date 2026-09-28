@@ -933,3 +933,25 @@ O que só você consegue: abrir o app de novo pelo seu terminal ou dock, ver a j
 11. [ ] Copie um texto qualquer (em outro app). No cartão "Tarefas", clique no "+" e dê botão direito no campo vazio: abre o menu do campo (Recortar, Copiar, Colar...), e o campo continua aberto. "Colar": o texto entra no campo.
 12. [ ] Clique no título "Foco" e aperte F5 e depois Ctrl+R: nada acontece, e o texto colado continua no campo.
 13. [ ] Ctrl+Q fecha o app. (O próximo `npm run dev:app` recompila o binário de desenvolvimento.)
+
+## M38. Configurações: foco e sons
+
+O que já foi conferido sem você:
+- `cargo test` e `npm test`: o F e o B das configurações na próxima sessão (e a sessão em andamento com o plano do início), desligar cada som silencia o próximo fim de fase (a notificação sai do mesmo jeito; o temporizador continua tocando), o `TOMATITO_VOLUME` do debug acima do volume das configurações, a marcação da tela e os patches do `settings_set`.
+- `scripts/preview/configuracoes.mjs` (Chrome headless, nos quatro temas): as medidas da captura do Relógio (Title Large, cabeçalhos de 68 px, itens de 50 px, raio 4), o hover levando a descrição ao `--tt-fg-2-on-ctl`, abrir e fechar pelo clique e pelo Enter, as listas, o switch, o "Testar", o volume pelo teclado, a recusa do `settings_set` e a frase da tela Foco.
+- Roteiro aninhado `configuracoes` (app de verdade no GNOME Shell aninhado, sem saída de áudio): desligar o som de fim de foco pelo ponteiro, 15 e 10 min pelas listas, volume 97 pelo teclado, uma sessão acelerada em que os fins de foco não pedem som e o do intervalo pede, os valores voltando depois de reabrir, e o contrário com o de intervalo desligado.
+
+O que só você consegue: ouvir que o som desligado não toca (e que o ligado toca), sentir o volume mudar e olhar a tela.
+
+### Para conferir (uns 6 minutos)
+
+1. [ ] `cd ~/dev/tomatito && TOMATITO_SPEED=60 npm run dev:app` (o relógio 60 vezes mais rápido: 1 min de sessão dura 1 s). Abra Configurações (Ctrl+,).
+2. [ ] O título "Configurações" é grande (como "Settings" no Relógio). Em "Sessões de foco" há quatro cartões: "Períodos de foco", "Som de fim de foco", "Som de fim de intervalo" e "Volume". Passe o mouse sobre o cabeçalho de um cartão que abre: o fundo clareia e a descrição fica um pouco mais forte (no Lite, quase branca).
+3. [ ] Clique em "Períodos de foco": abre com "Período de foco" (25 minutos) e "Intervalo" (5 minutos). Escolha 15 minutos e 10 minutos.
+4. [ ] Volte à tela Foco (Ctrl+1) e ponha 30 minutos no seletor: a frase diz "Você terá 1 intervalo." (com 25 e 5, diria "Sem intervalos.").
+5. [ ] Em Configurações, abra "Som de fim de foco" e clique em "Testar": toca o som de duas notas. Abra "Som de fim de intervalo" e clique em "Testar": uma nota.
+6. [ ] Arraste o volume para perto de 20 e teste de novo: o som sai mais baixo. Volte para perto de 80.
+7. [ ] Desligue "Som de fim de foco" (o texto ao lado vira "Desativado"). Na tela Foco, inicie uma sessão de 26 minutos (com o relógio a 60×, uns 26 s): no fim do primeiro foco, **nenhum som**, só a notificação; no fim do intervalo, **o som de uma nota**; no fim da sessão, nenhum som.
+8. [ ] Ctrl+Q e `TOMATITO_SPEED=60 npm run dev:app` de novo: em Configurações, os cartões voltam fechados, com 15 e 10 minutos, "Som de fim de foco" desativado e o volume onde você deixou.
+9. [ ] Religue "Som de fim de foco", desligue "Som de fim de intervalo" e repita o passo 7: agora tocam os dois fins de foco, e o fim do intervalo fica mudo.
+10. [ ] Para voltar ao padrão: 25 e 5 minutos, os dois sons ligados e o volume em 80. Ctrl+Q (e Ctrl+C no terminal, se o Vite continuar).

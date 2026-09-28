@@ -30,7 +30,7 @@ export const DESTINO = new URL('src/assets/icons/', RAIZ);
 // grades copiadas.
 export const ICONES = Object.freeze([
   // painel de navegação (M09)
-  { nome: 'target', estilo: 'regular', tamanhos: [16] },
+  { nome: 'target', estilo: 'regular', tamanhos: [16, 20] },
   { nome: 'hourglass_half', estilo: 'regular', tamanhos: [16] },
   { nome: 'timer', estilo: 'regular', tamanhos: [16] },
   { nome: 'settings', estilo: 'regular', tamanhos: [16] },
@@ -57,6 +57,10 @@ export const ICONES = Object.freeze([
   // Configurações: o ícone do cartão "Tema do aplicativo" (M24), na grade de
   // 20 do HeaderIcon do SettingsCard do WinUI
   { nome: 'paint_brush', estilo: 'regular', tamanhos: [20] },
+  // M38: os cartões "Períodos de foco" (o alvo do painel, na grade de 20),
+  // os dos sons (o despertador, como no Relógio) e o do volume
+  { nome: 'clock_alarm', estilo: 'regular', tamanhos: [20] },
+  { nome: 'speaker_2', estilo: 'regular', tamanhos: [20] },
   // aviso de erro (M28: o diálogo da meta quando o Rust recusa a gravação),
   // preenchido, como o InfoBar de erro do WinUI
   { nome: 'error_circle', estilo: 'filled', tamanhos: [16] },

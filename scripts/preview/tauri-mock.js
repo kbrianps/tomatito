@@ -19,6 +19,10 @@
 //   ?meta=N                     M27: a meta diária (dailyGoalMinutes; 0 =
 //                               desativada)
 //   ?zerar=H                    M28: a hora de zerar (resetHour)
+//   ?periodo=F&intervalo=B      M38: o F e o B das configurações
+//   ?volume=N&sons=focusEnd,breakEnd
+//                               M38: o volume e os sons ligados ("sons="
+//                               desliga os dois)
 //   ?tarefas=A|B*|C             M29: as tarefas iniciais, separadas por "|";
 //                               um "*" no fim marca a concluída
 //   ?tarefa=N                   M30: com ?foco=, a sessão já aberta tem a
@@ -52,7 +56,8 @@ const redimensionou = () =>
 // M16: um motor de foco simulado, só para a prévia, que emite tt://state como
 // o Rust (src-tauri/src/events.rs). Não emite tt://tick: a contagem da prévia
 // vive da estimativa do store. M18: a sessão tem as fases da regra do plan.rs
-// (F = 25, B = 5; os blocos de foco repartem T·60 − intervalos·B·60 segundos,
+// (F e B das configurações, M38, 25 e 5 por padrão; os blocos de foco
+// repartem T·60 − intervalos·B·60 segundos,
 // com o resto no último), a fase vence sozinha (um setTimeout no prazo) e o relógio
 // pode andar mais rápido (?velocidade=60, como o TOMATITO_SPEED). O "Pular"
 // passa para a fase seguinte, como no núcleo.
@@ -63,8 +68,10 @@ const agoraMotor = (() => {
   return () => base + (Date.now() - base) * velocidade;
 })();
 function planejar(minutos, pular) {
-  const F = 25;
-  const B = 5;
+  // M38: o F e o B das configurações da prévia (que ainda não existem quando
+  // a URL já abre com uma sessão, ?foco=).
+  const F = window.__TOMATITO_PREVIEW_CONFIGURACOES__?.focusMinutes ?? 25;
+  const B = window.__TOMATITO_PREVIEW_CONFIGURACOES__?.breakMinutes ?? 5;
   const intervalos = pular ? 0 : Math.floor((minutos - 1) / (F + B));
   const blocos = intervalos + 1;
   // Em segundos, como o plan.rs: blocos iguais e o resto no último.
@@ -75,7 +82,7 @@ function planejar(minutos, pular) {
     fases.push({ kind: 'focus', n: i + 1, durationS: i === blocos - 1 ? focoS - blocoS * (blocos - 1) : blocoS });
     if (i < intervalos) fases.push({ kind: 'break', n: i + 1, durationS: B * 60 });
   }
-  return { blocos, intervalos, fases };
+  return { blocos, intervalos, fases, F, B };
 }
 function retratoFoco() {
   const agora = agoraMotor();
@@ -88,7 +95,7 @@ function retratoFoco() {
     status: motor.pausadoMs == null ? fase.kind : 'paused',
     at: agora,
     session: {
-      id: s.id, minutes: s.minutos, skipBreaks: s.pular, taskId: s.tarefa ?? null, focusMinutes: 25, breakMinutes: 5,
+      id: s.id, minutes: s.minutos, skipBreaks: s.pular, taskId: s.tarefa ?? null, focusMinutes: s.F, breakMinutes: s.B,
       startedAt: s.id, blocks: s.blocos, intervals: s.intervalos, phaseIndex: s.indice,
       phase: fase, phaseStartedAt: s.inicioDaFase,
       endsAt: motor.pausadoMs == null ? s.endsAt : null, remainingMs: restante,
@@ -170,7 +177,7 @@ function iniciarFoco(minutos, restante = null, pular = false, tarefa = null) {
   const plano = planejar(minutos, pular);
   const d = plano.fases[0].durationS * 1000;
   motor.sessao = {
-    id: Date.now(), minutos, pular, tarefa, blocos: plano.blocos, intervalos: plano.intervalos, fases: plano.fases,
+    id: Date.now(), minutos, pular, tarefa, blocos: plano.blocos, intervalos: plano.intervalos, fases: plano.fases, F: plano.F, B: plano.B,
     indice: 0, inicioDaFase: agora - (d - Math.min(restante ?? d, d)), endsAt: agora + Math.min(restante ?? d, d),
   };
   motor.pausadoMs = null;
@@ -212,6 +219,15 @@ function normalizarConfiguracoes(c) {
   c.resolvedTheme = fixo ?? (c.resolvedTheme === 'dark' ? 'dark' : 'light');
 }
 if (params.has('meta')) configuracoes.dailyGoalMinutes = Number(params.get('meta'));
+// M38: ?periodo=F&intervalo=B&volume=N&sons=focusEnd,breakEnd (os ligados;
+// "sons=" desliga os dois), para abrir as Configurações com outros valores.
+if (params.has('periodo')) configuracoes.focusMinutes = Number(params.get('periodo'));
+if (params.has('intervalo')) configuracoes.breakMinutes = Number(params.get('intervalo'));
+if (params.has('volume')) configuracoes.volume = Number(params.get('volume'));
+if (params.has('sons')) {
+  const ligados = params.get('sons').split(',');
+  configuracoes.sounds = { focusEnd: ligados.includes('focusEnd'), breakEnd: ligados.includes('breakEnd') };
+}
 if (params.has('zerar')) configuracoes.resetHour = Number(params.get('zerar'));
 normalizarConfiguracoes(configuracoes);
 window.__TOMATITO_PREVIEW_CONFIGURACOES__ = configuracoes;
@@ -328,7 +344,8 @@ const comandoDoCrono = (nome, f) => () => {
 };
 
 const handlers = {
-  get_state: () => ({ focus: retratoFoco(), speed: velocidade, setup: preparo, timers: retratoDosTempos(), stopwatch: retratoDoCrono(), settings: structuredClone(configuracoes) }),
+  get_state: () => ({ focus: retratoFoco(), speed: velocidade,
+    setup: { ...preparo, focusMinutes: configuracoes.focusMinutes, breakMinutes: configuracoes.breakMinutes }, timers: retratoDosTempos(), stopwatch: retratoDoCrono(), settings: structuredClone(configuracoes) }),
   stopwatch_start: comandoDoCrono('stopwatch_start', () => {
     if (crono.run === 'running') throw { code: 'alreadyRunning', message: 'o cronômetro já está correndo' };
     Object.assign(crono, { run: 'running', inicio: agoraMotor() });

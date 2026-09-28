@@ -192,18 +192,28 @@ async function abrir(i) {
   await sleep(500);
   return W;
 }
+// Desde o M36, fechar a janela só a esconde ("fechar para a bandeja", ligado
+// por padrão): a partida termina pelo "Sair" (o app_quit do Ctrl+Q, M37).
 async function fechar(i) {
-  W.delete(global.get_current_time());
+  GLib.file_set_contents(`${OUT}/comando.json`, JSON.stringify({ id: `c${++nComando}`, js: "window.__TAURI_INTERNALS__.invoke('app_quit')" }));
   const saiu = await esperarProcesso(proc, 10000);
   if (!saiu) proc.force_exit();
   const saida = saiu ? (proc.get_if_exited() ? `saiu ${proc.get_exit_status()}` : 'sinal') : 'forçado';
   R.partidas.push({ partida: i, saida });
-  checar(`partida ${i}: o app sai sozinho ao fechar a janela`, saida === 'saiu 0', saida);
+  checar(`partida ${i}: o app sai pelo "Sair" (app_quit) com código 0`, saida === 'saiu 0', saida);
+  // A sonda da próxima página rodaria o último comando de novo (o app_quit).
+  GLib.file_set_contents(`${OUT}/comando.json`, '{}');
   await sleep(800);
 }
+// M38: a seção "Sessões de foco" veio antes da Aparência (a ordem do Relógio),
+// e a grade das prévias ficou abaixo da dobra a 1000×700. A tela abre rolada
+// até o título da Aparência, e a conferência da dobra passa a ser a da seção
+// inteira na janela, a partir do título dela.
 async function irParaConfiguracoes() {
   await comando(`(location.hash = '#/configuracoes', 'ok')`);
   await sleep(600);
+  await comando(`(document.getElementById('config-aparencia').scrollIntoView({ block: 'start' }), 'ok')`);
+  await sleep(300);
   return ler();
 }
 // Rola a página até a opção `tema` caber inteira na janela e relê as caixas
@@ -264,7 +274,7 @@ async function principal() {
   let px = capturar(W, 'm24-configuracoes-lite.png');
   const amostras = {};
   R.p1_dobra = Object.keys(e.molduras).filter((t) => !cabe(e, t));
-  checar('a 1000×700, as cinco opções cabem na janela sem rolar', R.p1_dobra.length === 0, { fora: R.p1_dobra, inner: e.inner });
+  checar('a 1000×700, com a Aparência no topo, as cinco opções cabem na janela sem rolar', R.p1_dobra.length === 0, { fora: R.p1_dobra, inner: e.inner });
   for (const tema of Object.keys(e.molduras)) {
     // Uma prévia fora da janela é rolada para dentro e capturada de novo.
     if (!cabe(e, tema)) {

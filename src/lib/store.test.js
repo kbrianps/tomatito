@@ -300,3 +300,68 @@ test('cronômetro: retrato velho é descartado, e o comando recusado ressincroni
   assert.deepEqual(chamadas, ['iniciar', 'volta', 'get_state']);
   assert.equal(s.cronometro.seq, 8);
 });
+
+// M38: as configurações.
+const CONFIG = Object.freeze({ focusMinutes: 25, breakMinutes: 5, sounds: { focusEnd: true, breakEnd: true }, volume: 80 });
+
+test('M38: o get_state traz as configurações; o tt://settings as troca, e o F e o B entram no preparo', async () => {
+  const ouvidos = {};
+  const store = criarStore({
+    ipc: {
+      obterEstado: async () => ({ focus: retrato(0, 'idle'), speed: 1, settings: CONFIG }),
+      ouvir: async (ev, cb) => ((ouvidos[ev] = cb), () => {}),
+    },
+    eventos: { ...EVENTOS, configuracoes: 'tt://settings' },
+  });
+  const vistas = [];
+  store.assinarConfiguracoes((c) => vistas.push(c.focusMinutes));
+  assert.equal(store.configuracoes, null);
+  await store.ligar({ doc: alvo(), janela: alvo() });
+  assert.deepEqual(Object.keys(ouvidos).sort(), ['tt://settings', 'tt://state', 'tt://tick']);
+  assert.deepEqual(store.configuracoes, CONFIG);
+  assert.equal(store.preparo.focusMinutes, 25);
+  ouvidos['tt://settings']({ ...CONFIG, focusMinutes: 50, breakMinutes: 10 });
+  assert.deepEqual([store.preparo.focusMinutes, store.preparo.breakMinutes], [50, 10]);
+  assert.ok(Object.isFrozen(store.preparo));
+  assert.equal(store.preparo.stepMinutes, PREPARO_PADRAO.stepMinutes, 'a faixa do seletor não muda');
+  assert.deepEqual(vistas, [25, 50]);
+});
+
+test('M38: gravarConfiguracoes aplica a resposta; recusado, rejeita e nada muda', async () => {
+  const gravados = [];
+  let recusar = false;
+  const store = criarStore({
+    ipc: {
+      obterEstado: async () => ({ focus: retrato(0, 'idle'), speed: 1, settings: CONFIG }),
+      ouvir: async () => () => {},
+      configuracoes: {
+        gravar: async (patch) => {
+          gravados.push(patch);
+          if (recusar) throw { code: 'invalidValue', message: 'x' };
+          return { ...CONFIG, ...patch, sounds: { ...CONFIG.sounds, ...patch.sounds } };
+        },
+      },
+    },
+    eventos: EVENTOS,
+  });
+  await store.sincronizar();
+  const vistas = [];
+  store.assinarConfiguracoes((c) => vistas.push(c));
+  const novas = await store.gravarConfiguracoes({ sounds: { focusEnd: false } });
+  assert.equal(novas.sounds.focusEnd, false);
+  assert.equal(store.configuracoes.sounds.focusEnd, false);
+  assert.equal(vistas.length, 1);
+  recusar = true;
+  await assert.rejects(store.gravarConfiguracoes({ volume: 300 }), { code: 'invalidValue' });
+  assert.equal(store.configuracoes.volume, 80);
+  assert.equal(vistas.length, 1);
+  assert.deepEqual(gravados, [{ sounds: { focusEnd: false } }, { volume: 300 }]);
+});
+
+test('M38: configurações inválidas são ignoradas, e F ou B fora do lugar não mexem no preparo', () => {
+  const m = montar();
+  for (const ruim of [null, 3, [], 'x']) assert.equal(m.store.aplicarConfiguracoes(ruim), false);
+  assert.equal(m.store.configuracoes, null);
+  m.store.aplicarConfiguracoes({ ...CONFIG, focusMinutes: 0 });
+  assert.deepEqual(m.store.preparo, PREPARO_PADRAO);
+});
