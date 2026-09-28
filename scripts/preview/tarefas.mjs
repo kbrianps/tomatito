@@ -24,7 +24,13 @@
 //     app no meio da sessão);
 //   - os quatro temas, com a escolhida e na sessão (capturas);
 //   - controle negativo: com as linhas sem o esmaecimento, a conferência da
-//     cor acusa.
+//     cor acusa;
+//   - (correção da verificação) as linhas continuam com 41 px com o mouse em
+//     cima de cada uma (só no Chrome, que tem o mouse do DevTools; no
+//     WebKitGTK, o roteiro aninhado usa o ponteiro virtual) e com o foco do
+//     teclado em cada uma (no WebKitGTK fora da tela, sem janela com foco,
+//     o estado forçado de __ttTarefasForcar), a 1000 × 700, 1400 × 800 e
+//     480 × 700, com um título longo; controle negativo com o CSS de antes.
 // Sai com 1 se alguma conferência falhar.
 import { spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
@@ -95,6 +101,84 @@ export function conferirSessao(m, idDaSessao) {
     if ((l.id === idDaSessao) !== l.daSessao) f.push(`linha ${l.id}: da sessão ${l.daSessao}`);
   }
   return f;
+}
+
+const LONGO = 'Resumir os três primeiros capítulos do livro de álgebra linear e refazer os exercícios marcados';
+const LISTA_HOVER = ['Ler o capítulo 3', LONGO, 'Lista de exercícios 2', 'Revisar as notas*'];
+
+/**
+ * Confere uma medida de hover ou de foco: todas as linhas com 41 px e, na
+ * linha alvo (pendente), o "Escolher" e o "x" à vista; devolve as falhas.
+ */
+export function conferirAlturas(m, { alvo = null, modo = 'repouso' } = {}) {
+  const f = [];
+  for (const l of m?.linhas ?? []) {
+    if (Math.abs(l.altura - 41) > 0.5) f.push(`${modo}${alvo ? ` na ${alvo}` : ''}: linha ${l.id} com ${l.altura} px`);
+  }
+  if (alvo !== null) {
+    const l = m?.linhas?.find((x) => x.id === alvo);
+    const ativo = { hover: l?.hover, foco: l?.focoDentro, forçado: l?.forcado }[modo];
+    if (!ativo) f.push(`${modo} na ${alvo}: a linha não está em ${modo}`);
+    if (l && !l.marcada && (!l.escolherVisivel || !l.apagarVisivel)) f.push(`${modo} na ${alvo}: "Escolher" ${l.escolherVisivel}, "x" ${l.apagarVisivel}`);
+    if (l && !l.marcada && l.escolherCortado) f.push(`${modo} na ${alvo}: o "Escolher" saiu cortado ("${l.escolherVisto}")`);
+  }
+  if (!m?.linhas?.length) f.push(`${modo}: sem linhas`);
+  return f;
+}
+
+async function conferirHoverEFoco(motor, pasta, linha) {
+  const ids = LISTA_HOVER.map((_, i) => i + 1);
+  const rolar = "document.querySelector('[data-cartao=\"tarefas\"]').scrollIntoView({ block: 'center' })";
+  const neutro = '[data-cartao="tarefas"] h2';
+  const passosDe = (sabotar) => {
+    const p = ['--wait', '800', '--eval', `__ttTarefas(${rolar})`];
+    if (sabotar) p.push('--eval', '__ttTarefasSabotarAltura()');
+    if (motor === 'chrome') {
+      for (const id of ids) p.push('--hover', `[data-tarefa="${id}"]`, '--wait', '100', '--eval', '__ttTarefas()');
+      p.push('--hover', neutro, '--wait', '100');
+    }
+    // No WebKitGTK fora da tela, a janela não tem foco (o :focus-within não
+    // acontece): lá vai o estado forçado, a mesma cascata do hover e do foco.
+    const acao = motor === 'chrome' ? '__ttTarefasFocar' : '__ttTarefasForcar';
+    for (const id of ids) p.push('--eval', `${acao}(${id})`);
+    p.push('--eval', `${acao}(null)`);
+    return p;
+  };
+  const lista = encodeURIComponent(LISTA_HOVER.join('|'));
+  for (const tamanho of ['1000x700', '1400x800', '480x700']) {
+    const png = join(pasta, `${motor}-tarefas-hover-${tamanho}.png`);
+    const passos = passosDe(false);
+    if (motor === 'chrome') passos.splice(passos.indexOf('--hover') + 4, 0, '--shot', png);
+    const r = await rodar(motor, `${BASE}&pref=dark&tarefas=${lista}#/foco`, passos, { tamanho });
+    const esperadas = 1 + (motor === 'chrome' ? ids.length : 0) + ids.length + 1;
+    if (r.codigo !== 0 || r.valores.length !== esperadas) {
+      linha(false, `${motor} ${tamanho}: hover e foco, a prévia saiu com ${r.codigo} e ${r.valores.length}/${esperadas} medida(s)`, r.erros);
+      continue;
+    }
+    const v = [...r.valores];
+    const f = [...conferirAlturas(v.shift())];
+    const hovers = motor === 'chrome' ? ids.map((id) => [id, v.shift()]) : [];
+    const focos = ids.map((id) => [id, v.shift()]);
+    const depois = v.shift();
+    for (const [id, m] of hovers) f.push(...conferirAlturas(m, { alvo: id, modo: 'hover' }));
+    const modoFoco = motor === 'chrome' ? 'foco' : 'forçado';
+    for (const [id, m] of focos) f.push(...conferirAlturas(m, { alvo: id, modo: modoFoco }));
+    f.push(...conferirAlturas(depois));
+    const todas = [...hovers, ...focos].map(([, m]) => m.linhas.map((l) => l.altura).join('/'));
+    const visto = focos[0]?.[1]?.linhas?.[0]?.escolherVisto;
+    linha(!f.length, `${tamanho}: ${hovers.length ? `hover em cada linha e ` : ''}${motor === 'chrome' ? 'foco' : 'hover/foco forçados'} em cada linha, com título longo: alturas ${[...new Set(todas)].join(', ')} px; o botão mostra "${visto}"`, f);
+  }
+
+  // Controle negativo: com o CSS de antes da correção, a conferência acusa.
+  const r = await rodar(motor, `${BASE}&pref=dark&tarefas=${lista}#/foco`, passosDe(true), { tamanho: '1000x700' });
+  const v = r.valores.slice(2);
+  const f = [];
+  v.forEach((m, i) => {
+    const id = motor === 'chrome' ? (i < ids.length ? ids[i] : ids[i - ids.length]) : ids[i];
+    const modo = motor === 'chrome' ? (i < ids.length ? 'hover' : 'foco') : 'forçado';
+    f.push(...conferirAlturas(m, { alvo: i < v.length - 1 ? id : null, modo }));
+  });
+  linha(f.some((x) => /px$/.test(x)), `controle negativo (o "Escolher" quebrando, CSS de antes): ${f.length} falha(s) acusada(s)`, f.length ? [] : ['nada acusado']);
 }
 
 async function conferir(motor, capturas, linha) {
@@ -206,6 +290,9 @@ async function conferir(motor, capturas, linha) {
     ], { tamanho: '1000x700' });
     const f5 = conferirSessao(r5.valores.at(-1), 1);
     linha(f5.some((x) => /cor/.test(x)), `controle negativo (sem esmaecer): ${f5.length} falha(s) acusada(s)`, f5.length ? [] : ['nada acusado']);
+
+    // 6) Hover e foco: as linhas não mudam de altura.
+    await conferirHoverEFoco(motor, pasta, linha);
   } finally {
     if (!capturas) rmSync(pasta, { recursive: true, force: true });
   }

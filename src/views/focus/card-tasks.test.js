@@ -45,8 +45,9 @@ test('linha pendente: o círculo (checkbox desmarcado, com o título como nome),
     html,
     '<li class="tt-tarefa" data-tarefa="1">' +
       '<button type="button" role="checkbox" aria-checked="false" aria-labelledby="tarefa-1-titulo" class="tt-tarefa-check" data-acao="concluir"><svg data-icone="circle-20-regular"></svg></button>' +
-      '<span class="tt-tarefa-titulo" id="tarefa-1-titulo">Ler o capítulo 3</span>' +
-      '<button type="button" class="tt-tarefa-escolher" aria-pressed="false" aria-describedby="tarefa-1-titulo" data-acao="escolher">Escolher para a sessão</button>' +
+      '<span class="tt-tarefa-titulo" id="tarefa-1-titulo" title="Ler o capítulo 3">Ler o capítulo 3</span>' +
+      '<button type="button" class="tt-tarefa-escolher" aria-pressed="false" aria-label="Escolher para a sessão" aria-describedby="tarefa-1-titulo" data-acao="escolher">' +
+        '<span class="tt-escolher-longo" aria-hidden="true">Escolher para a sessão</span><span class="tt-escolher-curto" aria-hidden="true">Escolher</span></button>' +
       '<button type="button" class="tt-sutil tt-tarefa-apagar" aria-label="Apagar tarefa" aria-describedby="tarefa-1-titulo" data-dica data-acao="apagar"><svg data-icone="dismiss-16-regular"></svg></button>' +
       '</li>',
   );

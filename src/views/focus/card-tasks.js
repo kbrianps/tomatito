@@ -93,15 +93,19 @@ export function linha(tarefa, s, icone = () => '') {
   const escolher =
     s.sessao || feita
       ? ''
-      : `<button type="button" class="tt-tarefa-escolher" aria-pressed="${escolhidaAqui}" aria-describedby="${tituloId}" data-acao="escolher">` +
-        `${escolhidaAqui ? L.escolhida : L.escolher}</button>`;
+      : escolhidaAqui
+        ? `<button type="button" class="tt-tarefa-escolher" aria-pressed="true" aria-describedby="${tituloId}" data-acao="escolher">${L.escolhida}</button>`
+        : // Num cartão estreito, o texto visível encurta para "Escolher" (o
+          // CSS escolhe pela largura do cartão), e o nome continua inteiro.
+          `<button type="button" class="tt-tarefa-escolher" aria-pressed="false" aria-label="${L.escolher}" aria-describedby="${tituloId}" data-acao="escolher">` +
+          `<span class="tt-escolher-longo" aria-hidden="true">${L.escolher}</span><span class="tt-escolher-curto" aria-hidden="true">${L.escolherCurto}</span></button>`;
   const apagar = focadaAqui
     ? ''
     : `<button type="button" class="tt-sutil tt-tarefa-apagar" aria-label="${L.apagar}" aria-describedby="${tituloId}" data-dica data-acao="apagar">${icone('dismiss')}</button>`;
   return (
     `<li class="tt-tarefa" data-tarefa="${id}"${attrs}>` +
     `<button type="button" role="checkbox" aria-checked="${feita}" aria-labelledby="${tituloId}" class="tt-tarefa-check" data-acao="concluir">${check}</button>` +
-    `<span class="tt-tarefa-titulo" id="${tituloId}">${escapar(tarefa.title)}</span>` +
+    `<span class="tt-tarefa-titulo" id="${tituloId}" title="${escapar(tarefa.title)}">${escapar(tarefa.title)}</span>` +
     escolher +
     apagar +
     `</li>`

@@ -136,6 +136,7 @@ export default Object.freeze({
       campo: 'Nova tarefa',
       dicaDoCampo: 'Adicionar uma tarefa',
       escolher: 'Escolher para a sessão',
+      escolherCurto: 'Escolher',
       escolhida: 'Escolhida',
       apagar: 'Apagar tarefa',
       apagarConcluidas: 'Apagar concluídas',

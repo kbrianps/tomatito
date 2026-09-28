@@ -333,9 +333,12 @@
    o título em Body Strong com o ícone de 20 px antes, na mesma linha do
    título do progresso; o "+" e o "…" (sutis, 32 px) no canto de cima, à
    direita, com 4 px entre eles; o subtítulo em --tt-fg-2; as linhas de 41 px,
-   raio 4 e fundo --tt-bg-surface, 4 px uma da outra. A altura mínima segue a
+   raio 4 e fundo --tt-bg-surface, 4 px uma da outra, e sempre com 41 px:
+   o título fica numa linha só (com reticências), e o "Escolher" que aparece
+   no hover ou no foco não quebra, para a lista não pular (correção da
+   verificação do M30, decisões item 12). A altura mínima segue a
    do cartão da captura, para o cartão não pular ao receber a lista. */
-.tt-card.tt-tarefas{ position:relative; gap:0; min-height:240px; padding:9px 16px 16px; }
+.tt-card.tt-tarefas{ position:relative; gap:0; min-height:240px; padding:9px 16px 16px; container:tarefas / inline-size; }
 .tt-tarefas > h2{ display:flex; align-items:center; gap:10px; min-height:28px; padding-right:72px; font:var(--tt-type-body-strong); }
 .tt-tarefas > h2 > .tt-icone{ flex:none; width:20px; height:20px; fill:var(--tt-accent-fg); }
 .tt-tarefas-acoes{ position:absolute; top:2px; right:2px; display:flex; gap:4px; }
@@ -345,7 +348,7 @@
 .tt-tarefas-lista{ display:flex; flex-direction:column; gap:4px; margin:8px 0 0; padding:0; list-style:none; }
 .tt-tarefas-lista:empty{ display:none; }
 .tt-tarefa{
-  display:flex; align-items:center; gap:4px; min-height:41px; padding:0 4px;
+  display:flex; align-items:center; gap:4px; height:41px; padding:0 4px;
   background:var(--tt-bg-surface); border:1px solid var(--tt-border); border-radius:var(--tt-r-ctl);
   color:var(--tt-fg-1);
 }
@@ -356,7 +359,7 @@
 .tt-tarefa-check:active{ background:var(--tt-subtle-press); border-color:transparent; }
 .tt-tarefa-check .tt-icone{ width:20px; height:20px; }
 .tt-tarefa[data-feita] .tt-tarefa-check{ color:var(--tt-accent-fg); }
-.tt-tarefa-titulo{ flex:1 1 50%; min-width:0; padding:8px 4px; overflow-wrap:break-word; }
+.tt-tarefa-titulo{ flex:1 1 0; min-width:48px; padding:8px 4px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .tt-tarefa[data-feita] .tt-tarefa-titulo,
 .tt-tarefa[data-esmaecida]{ color:var(--tt-fg-2); }
 /* "Escolher para a sessão": um botão de texto no accent, sem fundo (o
@@ -365,12 +368,21 @@
    e o "x" saem do layout (e não só da vista): o título fica com a linha
    toda, como no Relógio. */
 .tt-tarefa-escolher{
-  flex:0 1 auto; max-width:50%; height:auto; min-height:32px; padding:4px 8px;
-  white-space:normal; text-align:right;
+  display:block; flex:0 1 auto; min-width:0; height:32px; padding:0 8px; line-height:30px;
+  overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
   background:transparent; border-color:transparent; color:var(--tt-accent-fg);
 }
 .tt-tarefa-escolher:hover{ background:var(--tt-subtle-hover); }
 .tt-tarefa-escolher:active{ background:var(--tt-subtle-press); border-color:transparent; }
+/* O texto inteiro só quando sobra lugar para o título (uns 160 px): com o
+   cartão na largura máxima (446 px, conteúdo de 412), ele cabe; num cartão
+   mais estreito (318 px na janela de 1000 × 700, com duas colunas), o
+   visível encurta para "Escolher", e o nome (aria-label) fica inteiro. */
+.tt-escolher-curto{ display:none; }
+@container tarefas (width < 380px){
+  .tt-escolher-longo{ display:none; }
+  .tt-escolher-curto{ display:inline; }
+}
 .tt-tarefa-apagar{ flex:none; }
 .tt-tarefa:not(:hover, :focus-within) :is(.tt-tarefa-escolher[aria-pressed="false"], .tt-tarefa-apagar){ display:none; }
 /* A escolhida e, na sessão, a da sessão: a borda no accent, como a da

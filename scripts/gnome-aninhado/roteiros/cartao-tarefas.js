@@ -10,6 +10,10 @@
 //     - a segunda escolhida ("Escolhida") e "Iniciar sessão de foco" com 5
 //       min (5 s a 60×): o retrato traz o taskId, o subtítulo vira "Você está
 //       focando em" e as outras linhas ficam em --tt-fg-2;
+//     - (correção da verificação) as linhas continuam com 41 px com o
+//       ponteiro virtual descendo pelas três, parando em cada uma, e com o
+//       foco do teclado em cada uma (e um Tab de verdade para o "Escolher"),
+//       com a altura amostrada pela página a cada quadro;
 //     - concluir a segunda pelo círculo: marcada, no lugar;
 //     - a sessão termina e o período de foco fica gravado com o task_id da
 //       segunda (lido do banco, fora do app);
@@ -18,6 +22,7 @@
 // Cada partida fecha a janela pelo compositor e espera o app sair. O
 // resumo-cartao-tarefas.mjs confere as checagens. As capturas da janela vão
 // para m30-app-*.png.
+import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -170,6 +175,115 @@ function capturar(nome) {
   }
 }
 const rolar = () => comando('__ttTarefasRolar()');
+
+let ptr;
+let kb;
+const agora = () => GLib.get_monotonic_time();
+const mover = (x, y) => ptr.notify_absolute_motion(agora(), x, y);
+async function deslizar([x0, y0], [x1, y1]) {
+  const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 8));
+  for (let i = 1; i <= n; i++) {
+    mover(x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * i) / n);
+    await sleep(16);
+  }
+}
+async function apertar(keyval) {
+  kb.notify_keyval(agora(), keyval, Clutter.KeyState.PRESSED);
+  await sleep(40);
+  kb.notify_keyval(agora(), keyval, Clutter.KeyState.RELEASED);
+  await sleep(300);
+}
+// A página guarda cada altura de linha que aparece, quadro a quadro.
+const AMOSTRAR =
+  "(() => { window.__ttAlturas = new Set(); if (!window.__ttAmostrando) { window.__ttAmostrando = true; const f = () => { document.querySelectorAll('[data-tarefa]').forEach((li) => window.__ttAlturas.add(Math.round(li.getBoundingClientRect().height * 10) / 10)); requestAnimationFrame(f); }; f(); } return true; })()";
+const ALTURAS = '[...window.__ttAlturas].sort((a, b) => a - b)';
+const RETANGULOS =
+  "[...document.querySelectorAll('[data-tarefa]')].map((li) => { const b = li.getBoundingClientRect(); return [Number(li.dataset.tarefa), b.x, b.y, b.width, b.height]; })";
+
+// Hover e foco nas três linhas: nenhuma muda de altura (41 px).
+async function hoverEFoco() {
+  // A visão geral da partida do shell pode ainda estar na tela (ela pega o
+  // ponteiro e o teclado): fecha e espera, várias vezes se preciso.
+  for (let i = 0; i < 20 && (Main.overview.visible || Main.overview.animationInProgress); i++) {
+    if (!Main.overview.animationInProgress) Main.overview.hide();
+    await sleep(500);
+  }
+  Main.activateWindow(W);
+  await sleep(500);
+  const fr = W.get_frame_rect();
+  const longe = [fr.x + fr.width + 150, fr.y + fr.height / 2];
+  mover(...longe);
+  await sleep(300);
+  await rolar();
+  await comando(AMOSTRAR);
+  await comando("(() => { window.__ttMouse = null; addEventListener('pointermove', (e) => (window.__ttMouse = [e.clientX, e.clientY]), { once: false }); return true; })()");
+  const rets = await comando(RETANGULOS);
+  R.diag = { fr: [fr.x, fr.y, fr.width, fr.height], buf: (() => { const b = W.get_buffer_rect(); return [b.x, b.y, b.width, b.height]; })(), rets, focada: global.display.focus_window === W, visaoGeral: Main.overview.visible, modal: Main.modalCount, temFoco: await comando('document.hasFocus()') };
+  const porLinha = [];
+  // Entra pela esquerda de cada linha, anda até o meio dela e para; depois
+  // desce até a próxima: o caminho de quem passa o mouse pela lista.
+  let pos = longe;
+  for (const [id, x, y, w, h] of rets ?? []) {
+    const alvo = [fr.x + Math.round(x + w * 0.35), fr.y + Math.round(y + h / 2)];
+    await deslizar(pos, alvo);
+    pos = alvo;
+    await sleep(250);
+    const m = await comando('__ttTarefas()');
+    const l = m?.linhas?.find((x) => x.id === id);
+    porLinha.push({ mouse: await comando('window.__ttMouse'), id, hover: l?.hover, escolher: l?.escolherVisivel, visto: l?.escolherVisto, alturas: m?.linhas?.map((x) => x.altura) });
+  }
+  await deslizar(pos, longe);
+  await sleep(300);
+  const alturasHover = await comando(ALTURAS);
+  R.hover = { porLinha, alturas: alturasHover };
+  checar(
+    'hover: o ponteiro passa pelas três linhas, cada uma mostra o "Escolher", e todas ficam com 41 px o tempo todo',
+    porLinha.length === 3 && porLinha.every((p) => p.hover && p.escolher) && alturasHover?.length === 1 && Math.abs(alturasHover[0] - 41) <= 0.5,
+    R.hover,
+  );
+
+  // Controle negativo: com o CSS de antes da correção, o mesmo caminho do
+  // ponteiro faz a linha crescer, e a amostragem acusa.
+  await comando('__ttTarefasSabotarAltura()');
+  await comando(AMOSTRAR);
+  pos = longe;
+  for (const [, x, y, w, h] of rets ?? []) {
+    const alvo = [fr.x + Math.round(x + w * 0.35), fr.y + Math.round(y + h / 2)];
+    await deslizar(pos, alvo);
+    pos = alvo;
+    await sleep(250);
+  }
+  await deslizar(pos, longe);
+  await sleep(300);
+  const alturasSabotadas = await comando(ALTURAS);
+  await comando('__ttTarefasRestaurarAltura()');
+  R.controleNegativo = alturasSabotadas;
+  checar(
+    'controle negativo: com o CSS de antes (o "Escolher" quebrando), a amostragem vê a linha crescer no hover',
+    alturasSabotadas?.some((a) => a > 41.5),
+    alturasSabotadas,
+  );
+
+  await comando(AMOSTRAR);
+  const focos = [];
+  for (const [id] of rets ?? []) {
+    const m = await comando(`__ttTarefasFocar(${id})`);
+    const l = m?.linhas?.find((x) => x.id === id);
+    focos.push({ id, foco: l?.focoDentro, escolher: l?.escolherVisivel });
+  }
+  // Um Tab de verdade: do círculo da última linha para o "Escolher" dela.
+  await apertar(Clutter.KEY_Tab);
+  const depoisDoTab = await comando('__ttTarefas()');
+  focos.push({ tab: depoisDoTab?.foco });
+  await comando('__ttTarefasFocar(null)');
+  const alturasFoco = await comando(ALTURAS);
+  R.foco = { focos, alturas: alturasFoco };
+  checar(
+    'foco do teclado em cada linha (e um Tab até o "Escolher"): todas ficam com 41 px',
+    focos.slice(0, 3).every((p) => p.foco && p.escolher) && /Escolher/.test(focos[3]?.tab ?? '') && alturasFoco?.length === 1 && Math.abs(alturasFoco[0] - 41) <= 0.5,
+    R.foco,
+  );
+}
 const cartao = () => comando('__ttTarefas()');
 const TRES = ['Ler o capítulo 3', 'Lista de exercícios 2', 'Revisar as notas'];
 const titulos = (m) => (m?.linhas ?? []).map((l) => `${l.titulo}${l.marcada ? '*' : ''}`).join('|');
@@ -179,6 +293,19 @@ async function principal() {
   Main.messageTray.bannerBlocked = true;
   if (Main.overview.visible) Main.overview.hide();
   limparDadosDoApp();
+  const seat = global.stage.context.get_backend().get_default_seat();
+  ptr = seat.create_virtual_device(Clutter.InputDeviceType.POINTER_DEVICE);
+  kb = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
+  // Como no roteiro controles: sem o canto ativo (no GSettings em memória do
+  // teste) e o ponteiro longe do canto, para a visão geral não voltar.
+  try {
+    new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' }).set_boolean('enable-hot-corners', false);
+  } catch {
+    // sem o esquema: segue
+  }
+  await sleep(200);
+  mover(960, 1070);
+  await sleep(300);
 
   // Partida 1.
   await abrir(1);
@@ -203,6 +330,7 @@ async function principal() {
     tres?.linhas?.map((l) => [l.altura, l.raio, l.fundo, tres.tokens.superficie]),
   );
   await comando('__ttTarefasEsc()');
+  await hoverEFoco();
 
   const idB = ids[1];
   const escolhida = await comando(`__ttTarefasAcao(${idB}, "escolher")`);

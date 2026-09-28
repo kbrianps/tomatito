@@ -1025,7 +1025,14 @@
           nomeDoCheck: document.getElementById(check.getAttribute('aria-labelledby'))?.textContent ?? null,
           escolhida: li.hasAttribute('data-escolhida'),
           daSessao: li.hasAttribute('data-focada'),
-          escolher: li.querySelector('[data-acao="escolher"]')?.textContent ?? null,
+          escolher: li.querySelector('[data-acao="escolher"]')?.getAttribute('aria-label') ?? li.querySelector('[data-acao="escolher"]')?.textContent ?? null,
+          escolherVisto: li.querySelector('[data-acao="escolher"]')?.innerText?.trim() ?? null,
+          escolherCortado: ((b) => Boolean(b) && b.scrollWidth > b.clientWidth + 0.5)(li.querySelector('[data-acao="escolher"]')),
+          escolherVisivel: visivel(li.querySelector('[data-acao="escolher"]')),
+          apagarVisivel: visivel(li.querySelector('[data-acao="apagar"]')),
+          hover: li.matches(':hover'),
+          focoDentro: li.matches(':focus-within'),
+          forcado: li.hasAttribute('data-tt-forcado'),
           altura: r1(li.getBoundingClientRect().height),
           raio: cs.borderTopLeftRadius,
           fundo: cs.backgroundColor,
@@ -1078,6 +1085,65 @@
   };
   window.__ttTarefasSabotar = async () => {
     document.querySelectorAll('[data-esmaecida]').forEach((e) => e.removeAttribute('data-esmaecida'));
+    await doisQuadros();
+    return window.__ttTarefas();
+  };
+  // Correção da verificação do M30: as linhas têm de ficar com 41 px também
+  // com o mouse em cima e com o foco do teclado. __ttTarefasFocar(id) põe o
+  // foco no círculo da linha (o :focus-within que revela o "Escolher" e o
+  // "x"), ou tira o foco com id = null; __ttTarefasSabotarAltura() repõe o CSS
+  // de antes da correção (o "Escolher" quebrando em duas linhas), para o
+  // controle negativo.
+  window.__ttTarefasFocar = async (id) => {
+    if (id === null) document.activeElement?.blur?.();
+    else document.querySelector(`[data-cartao="tarefas"] [data-tarefa="${id}"] [data-acao="concluir"]`).focus();
+    await doisQuadros();
+    return window.__ttTarefas();
+  };
+  // __ttTarefasForcar(id): o "estado forçado" do inspetor, para o WebKitGTK
+  // fora da tela (sem mouse e sem janela com foco, o :hover e o
+  // :focus-within não acontecem lá): em cada regra das folhas, troca o
+  // :hover e o :focus-within por :is(<o mesmo>, [data-tt-forcado]) (também
+  // dentro de :not) e marca a linha; com id = null, desmarca. O roteiro
+  // aninhado usa o ponteiro e o teclado de verdade.
+  let forcadoPronto = false;
+  const forcarRegras = (lista) => {
+    for (const regra of [...lista]) {
+      if (regra.selectorText && /:(hover|focus-within)\b/.test(regra.selectorText)) {
+        regra.selectorText = regra.selectorText.replace(/:(hover|focus-within)\b/g, ':is(:$1, [data-tt-forcado])');
+      }
+      if (regra.cssRules) forcarRegras(regra.cssRules);
+    }
+  };
+  window.__ttTarefasForcar = async (id) => {
+    if (!forcadoPronto) {
+      for (const folha of [...document.styleSheets]) {
+        try {
+          forcarRegras(folha.cssRules);
+        } catch {
+          // folha de outra origem
+        }
+      }
+      forcadoPronto = true;
+    }
+    document.querySelectorAll('[data-tt-forcado]').forEach((e) => e.removeAttribute('data-tt-forcado'));
+    if (id !== null) document.querySelector(`[data-cartao="tarefas"] [data-tarefa="${id}"]`).setAttribute('data-tt-forcado', '');
+    await doisQuadros();
+    return window.__ttTarefas();
+  };
+  window.__ttTarefasSabotarAltura = async () => {
+    const st = document.createElement('style');
+    st.id = 'tt-sabotagem-altura';
+    st.textContent =
+      '.tt-tarefa{ height:auto !important; min-height:41px; }' +
+      '.tt-tarefa-titulo{ flex:1 1 50% !important; white-space:normal !important; }' +
+      '.tt-tarefa-escolher{ display:inline-flex !important; max-width:50%; height:auto !important; min-height:32px; white-space:normal !important; line-height:normal !important; }';
+    document.head.append(st);
+    await doisQuadros();
+    return window.__ttTarefas();
+  };
+  window.__ttTarefasRestaurarAltura = async () => {
+    document.getElementById('tt-sabotagem-altura')?.remove();
     await doisQuadros();
     return window.__ttTarefas();
   };

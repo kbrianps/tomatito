@@ -779,15 +779,17 @@ Ainda não há tela (o cartão "Tarefas" é do M30); a conferência é pelo DevT
 O que foi conferido de forma automática (28/09/2026):
 
 - Prévia (`node scripts/preview/tarefas.mjs`), no Chrome headless e no WebKitGTK: vazio, o campo, três tarefas pelo Enter, Esc, escolher, iniciar com o `taskId`, as cores na sessão, concluir, o período com o `taskId`, os quatro temas.
-- Roteiro aninhado `cartao-tarefas` (app de verdade, `TOMATITO_SPEED=60`, 19 conferências): o "Pronto quando" inteiro, com o banco lido de fora mostrando o período com o `task_id`, e a lista igual depois de reabrir.
+- Roteiro aninhado `cartao-tarefas` (app de verdade, `TOMATITO_SPEED=60`, 22 conferências): o "Pronto quando" inteiro, com o banco lido de fora mostrando o período com o `task_id`, e a lista igual depois de reabrir.
+- Correção da verificação: a altura das linhas com o mouse em cima e com o foco do teclado. Na prévia, 41 px em todas as linhas com o mouse em cada uma (Chrome) e com o foco em cada uma (Chrome; no WebKitGTK fora da tela, o estado forçado), a 1000 × 700, 1400 × 800 e 480 × 700, com um título longo. No app de verdade, o ponteiro virtual desce pelas três linhas e a página amostra a altura a cada quadro: só 41 px; o mesmo com o foco em cada linha e um Tab de verdade até o "Escolher". Controle negativo nos dois: com o CSS de antes, a linha cresce (58 px no app, a 1000 × 700) e as conferências acusam.
 
-O que só você consegue ver: o hover revelando "Escolher para a sessão" e o "x" sem a linha pular demais, o Tab passando pelos botões da linha, e o leitor de tela.
+O que só você consegue ver: o hover revelando o "Escolher" e o "x" sem a lista se mexer (a altura já é medida; aqui é a impressão com o seu mouse), o Tab passando pelos botões da linha, a dica com o título inteiro de uma tarefa longa, e o leitor de tela.
 
 ### Para conferir (uns 5 minutos)
 
 1. [ ] `cd ~/dev/tomatito && rm -f ~/.local/share/io.github.kbrianps.tomatito.dev/stats.sqlite && npm run dev:app` (o banco do `.dev` começa limpo). Role até o cartão "Tarefas": aparece "Mantenha o rumo" e o botão "Adicionar tarefa".
 2. [ ] Clique em "Adicionar tarefa". A caixa abre com o cursor. Digite "Ler o capítulo 3" e Enter; "Lista 2" e Enter; "Revisar as notas" e Enter. As três aparecem, na ordem, e a caixa continua aberta e vazia. Esc fecha a caixa e o foco vai para o "+".
-3. [ ] Passe o mouse sobre "Lista 2": aparecem "Escolher para a sessão" e o "x". Clique em "Escolher para a sessão": vira "Escolhida" e a linha ganha a borda na cor de destaque.
+3. [ ] Passe o mouse devagar de cima para baixo pelas três linhas: em cada uma aparecem o "Escolher" (na janela de 1000 × 700; "Escolher para a sessão" com a janela maximizada) e o "x", e nenhuma linha muda de altura (a lista não se mexe). Clique no "Escolher" de "Lista 2": vira "Escolhida" e a linha ganha a borda na cor de destaque.
+   - [ ] Adicione uma tarefa com um título bem longo (mais que a largura do cartão): ela fica numa linha só, com reticências, e o mouse parado sobre o título mostra a dica com o texto inteiro.
 4. [ ] No seletor, deixe 1 min (Home) e clique em "Iniciar sessão de foco". O subtítulo vira "Você está focando em"; "Lista 2" fica com a borda e as outras duas, com o texto mais apagado. O "Escolher" some das linhas.
 5. [ ] Clique no círculo de "Lista 2": vira o check preenchido e o texto fica apagado, no mesmo lugar.
 6. [ ] Espere a sessão acabar (1 min). O subtítulo volta a "Escolha uma tarefa para a sessão".

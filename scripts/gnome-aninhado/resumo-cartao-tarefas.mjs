@@ -26,4 +26,4 @@ for (const [nome, ok] of Object.entries(checagens)) {
   console.log(`${ok ? 'ok   ' : 'FALHA'} ${nome}`);
   if (!ok) falhou = true;
 }
-process.exit(falhou || r.erro || Object.keys(r.checagens ?? {}).length < 12 ? 1 : 0);
+process.exit(falhou || r.erro || Object.keys(r.checagens ?? {}).length < 15 ? 1 : 0);
