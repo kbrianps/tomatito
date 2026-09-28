@@ -45,6 +45,7 @@ bash scripts/gnome-aninhado/rodar.sh responsivo                      # estreitar
 bash scripts/gnome-aninhado/rodar.sh temas-fluent                    # os tokens do Fluent em cada tema, na página e na tela
 bash scripts/gnome-aninhado/rodar.sh controles                       # menus, listas, dicas e diálogo com o ponteiro e o teclado
 bash scripts/gnome-aninhado/rodar.sh botoes                          # botões, anel de foco pelo Tab e a dica dos botões de ícone
+bash scripts/gnome-aninhado/rodar.sh sistema                         # seguir o estilo do GNOME (portal falso), sem laço
 bash scripts/gnome-aninhado/instalado.sh                             # o Tomatito instalado: janela, .desktop no dock e saída
 node scripts/preview/responsivo.mjs                                  # o layout em 15 larguras, no Chrome e no WebKitGTK
 node scripts/preview/temas-fluent.mjs                                # os tokens do Fluent nos cinco temas, no Chrome e no WebKitGTK

@@ -11,8 +11,8 @@
 // (docs/decisoes.md, M24).
 //
 // O modo Sistema segue a guarda (c) da 4.6: `setTheme(null)`, depois
-// `theme()`, depois, no Linux, `setTheme(t)`. As guardas (a) e (b) e o
-// `onThemeChanged` são do M25.
+// `theme()`, depois, no Linux, `setTheme(t)`. As guardas (a) e (b), com o
+// `onThemeChanged`, estão em `ligarSistema` (M25).
 
 /** O tema nativo (menus e diálogos do sistema) de cada tema resolvido, pelo color-scheme. */
 export const NATIVO = Object.freeze({ lite: 'dark', suave: 'light', light: 'light', dark: 'dark' });
@@ -92,4 +92,167 @@ export function refletirConfiguracoes(s, { h, quadro, global = globalThis } = {}
 /** Na main: ouve o `tt://settings` e regrava os atributos a cada gravação. Devolve o `unlisten`. */
 export function ligarTema({ ipc, h, quadro } = {}) {
   return ipc.ouvir(ipc.EVENTOS.configuracoes, (s) => refletirConfiguracoes(s, { h, quadro }));
+}
+
+/**
+ * O tema de base que a main mostra: a escolha salva ou, no Full, o
+ * `lastNormalTheme` (4.6). Pode ser `system`.
+ */
+export function temaDeBase(h, global = globalThis) {
+  return h.dataset.themePref === 'full' ? global.__TT_LAST__ || 'lite' : h.dataset.themePref;
+}
+
+/**
+ * Seguir o sistema (M25; guardas (a) e (b) da 4.6). Ouve dois sinais:
+ *   - o `onThemeChanged` da janela, que é o caminho no Windows;
+ *   - o `change` do `prefers-color-scheme` (`midia`), que é o caminho no Linux:
+ *     o tao 0.37 aplica a mudança do portal (`SettingChanged` de
+ *     `org.freedesktop.appearance color-scheme`) como `SetTheme(Some(x))` ao
+ *     app inteiro, com a janela "falsa" (`WindowId::dummy()`), e o Tauri não
+ *     entrega esse `ThemeChanged` a nenhuma janela. O que muda de fato é o
+ *     `gtk-application-prefer-dark-theme`, e o WebKitGTK repassa isso ao
+ *     `prefers-color-scheme` da página (docs/decisoes.md, M25).
+ * Os sinais esperam `atraso` ms sem sinal novo antes de a conferência rodar,
+ * porque a guarda (c) passa por um valor intermediário (o `setTheme(null)`
+ * grava `prefer-dark = false` antes do `setTheme(t)`), e a conferência lê o
+ * estado daquele momento, não o conteúdo do sinal:
+ *   - (a) só no modo Sistema o `data-theme` muda; o tema novo vai para o
+ *     `settings_set` (`resolvedTheme`), para a próxima partida nascer na cor
+ *     certa; no Linux, o `setTheme(t)` acompanha, porque o tao não atualiza o
+ *     tema fixado da janela quando o portal muda (o `theme()` ficaria velho);
+ *   - (b) fora do modo Sistema, o tema nativo só é reaplicado se for diferente
+ *     do esperado (`NATIVO`), e no máximo uma vez por valor dentro de
+ *     `janelaDoLaco` ms: sem essa guarda, a troca entra em laço.
+ * `deps`: `win`, `h`, `gravar` (o `settings_set`), `midia` (um
+ * MediaQueryList), `quadro`, `log` (o console), `relogio` ({ setTimeout,
+ * clearTimeout, agora }). Devolve `{ ouvindo, durante(promessa), conferir(), desligar() }`:
+ * `durante` segura as conferências enquanto uma troca pela interface
+ * (`aplicarTema`) está em curso, e até a mídia chegar ao tema pedido, e
+ * confere de novo quando ela termina.
+ */
+export function ligarSistema({
+  win,
+  h,
+  gravar,
+  midia,
+  quadro,
+  log = globalThis.console,
+  relogio = { setTimeout: (f, ms) => setTimeout(f, ms), clearTimeout: (id) => clearTimeout(id), agora: () => Date.now() },
+  atraso = 150,
+  janelaDoLaco = 2000,
+  esperaDaMidia = 1000,
+  global = globalThis,
+} = {}) {
+  let espera = null;
+  let ocupado = 0;
+  let rodando = null;
+  let reaplicado = { valor: null, em: -Infinity };
+  const linux = () => h.dataset.platform === 'linux';
+  const daMidia = () => (midia?.matches ? 'dark' : 'light');
+
+  // O tema nativo agora. No Linux, o do WebKit (que segue o prefer-dark do
+  // GTK); o `theme()` do tao só devolve o que foi fixado por último.
+  async function lerNativo() {
+    if (linux()) return daMidia();
+    return (await win.theme()) ?? daMidia();
+  }
+
+  async function conferirAgora() {
+    const base = temaDeBase(h, global);
+    const atual = await lerNativo();
+    if (base === 'system') {
+      if (linux() && (await win.theme()) !== atual) await win.setTheme(atual);
+      if (atual === h.dataset.theme) return 'igual';
+      const antes = h.dataset.theme;
+      trocarAtributos(h, h.dataset.themePref, atual, { quadro });
+      log.log?.(`[tema] sistema: ${antes} → ${atual}`);
+      try {
+        await gravar({ resolvedTheme: atual });
+      } catch (erro) {
+        log.error?.('[tema] resolvedTheme não gravado', erro);
+      }
+      return 'trocou';
+    }
+    const esperado = NATIVO[base] ?? NATIVO[h.dataset.theme];
+    if (!esperado || atual === esperado) return 'igual';
+    const t = relogio.agora();
+    if (reaplicado.valor === esperado && t - reaplicado.em < janelaDoLaco) {
+      log.error?.(`[tema] tema nativo ainda ${atual} depois de reaplicar ${esperado}; sem nova tentativa`);
+      return 'laço';
+    }
+    reaplicado = { valor: esperado, em: t };
+    log.log?.(`[tema] tema nativo ${atual} fora do Sistema; reaplicado ${esperado}`);
+    await win.setTheme(esperado);
+    return 'reaplicou';
+  }
+
+  function conferir() {
+    if (ocupado) return Promise.resolve('ocupado');
+    // Uma conferência de cada vez; a que chega no meio roda depois.
+    rodando = (rodando ?? Promise.resolve()).then(conferirAgora, conferirAgora).catch((erro) => {
+      log.error?.('[tema]', erro);
+      return 'erro';
+    });
+    return rodando;
+  }
+
+  function midiaChegar() {
+    const base = temaDeBase(h, global);
+    const alvo = base === 'system' ? h.dataset.theme : NATIVO[base];
+    if (!midia || !alvo || daMidia() === alvo) return Promise.resolve();
+    return new Promise((resolve) => {
+      const fim = () => {
+        relogio.clearTimeout(limite);
+        midia.removeEventListener?.('change', aoMudar);
+        resolve();
+      };
+      const aoMudar = () => daMidia() === alvo && fim();
+      const limite = relogio.setTimeout(fim, esperaDaMidia);
+      midia.addEventListener?.('change', aoMudar);
+    });
+  }
+
+  function agendar() {
+    if (espera !== null) relogio.clearTimeout(espera);
+    espera = relogio.setTimeout(() => {
+      espera = null;
+      conferir();
+    }, atraso);
+  }
+
+  function sinal(fonte, valor) {
+    log.log?.(`[tema] ThemeChanged ${valor} (${fonte})`);
+    agendar();
+  }
+
+  const aoMudarMidia = (e) => sinal('prefers-color-scheme', e.matches ? 'dark' : 'light');
+  midia?.addEventListener?.('change', aoMudarMidia);
+  let desligarJanela = null;
+  const ouvindo = Promise.resolve(win.onThemeChanged?.(({ payload }) => sinal('janela', payload)))
+    .then((u) => (desligarJanela = u ?? null))
+    .catch((erro) => log.error?.('[tema] onThemeChanged', erro));
+
+  return {
+    ouvindo,
+    conferir,
+    async durante(promessa) {
+      ocupado++;
+      try {
+        return await promessa;
+      } finally {
+        // O WebKit recebe o prefer-dark do GTK por IPC: o claro intermediário
+        // da guarda (c) pode chegar à página depois de a troca acabar. A
+        // conferência só volta quando a mídia chega ao tema pedido (ou depois
+        // de `esperaDaMidia` ms, se o sistema mudou no meio).
+        await midiaChegar();
+        ocupado--;
+        if (!ocupado) agendar();
+      }
+    },
+    desligar() {
+      if (espera !== null) relogio.clearTimeout(espera);
+      midia?.removeEventListener?.('change', aoMudarMidia);
+      desligarJanela?.();
+    },
+  };
 }

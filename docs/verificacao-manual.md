@@ -666,3 +666,24 @@ O que não dá para conferir daqui: o seu olho e o seu mouse, na sua sessão (GN
 6. [ ] Com o teclado: Tab até o grupo de temas e setas ← → trocam o tema a cada tecla.
 7. [ ] "Usar configuração do sistema" com o GNOME escuro deixa o app no **Escuro**. O acompanhamento ao vivo das Configurações do GNOME é do M25 (não precisa conferir agora).
 8. [ ] Para limpar: `rm ~/.local/share/io.github.kbrianps.tomatito.dev/settings*.json`.
+
+
+## M25. Seguir o sistema
+
+O que foi conferido de forma automática (28/09/2026):
+
+- `npm test`: as guardas (a) e (b) do `ligarSistema` no Linux e no Windows, sem laço mesmo contra uma janela que não obedece, e o claro intermediário da guarda (c) que não chega à página.
+- Roteiro aninhado `sistema` (`bash scripts/gnome-aninhado/rodar.sh sistema`, WebKitGTK e Rust de verdade, com um portal falso que emite o `SettingChanged` como o GNOME, 18 conferências): no Sistema, a página segue o estilo em ~215 ms; do Lite para o Sistema, Claro com o GNOME claro e Escuro com o escuro; tema explícito sem mudança e sem laço; reabertura depois de o GNOME mudar com o app fechado.
+
+O que não dá para conferir daqui: o painel de Configurações do GNOME de verdade (mexer nele mudaria o estilo da sua sessão).
+
+### Para conferir (uns 4 minutos)
+
+1. [ ] `cd ~/dev/tomatito && npm run dev:app`. Clique com o botão direito na página e escolha **Inspecionar elemento**; deixe a aba **Console** aberta.
+2. [ ] Com o GNOME no estilo **Claro** (Configurações > Aparência), vá a **Configurações** do Tomatito (Ctrl+,), escolha **Tomatito Lite** e depois **Usar configuração do sistema**: o app fica **Claro**.
+3. [ ] Em Configurações do GNOME > Aparência, troque para **Escuro**: o Tomatito fica escuro em até 1 s (sem precisar focar a janela). O console mostra uma linha `[tema] ThemeChanged dark (prefers-color-scheme)` e uma `[tema] sistema: light → dark`, uma vez cada.
+4. [ ] Volte o GNOME para **Claro**: o Tomatito volta ao Claro em até 1 s, com as mesmas duas linhas (agora `light`).
+5. [ ] No Tomatito, escolha **Escuro**. Troque o estilo do GNOME algumas vezes: o Tomatito **não** muda. A cada troca, o console mostra no máximo duas linhas `ThemeChanged` e uma `reaplicado`; nunca uma sequência que não para, e nunca `sem nova tentativa`. O menu do botão direito continua escuro.
+6. [ ] Escolha **Tomatito Suave** e troque o estilo do GNOME: o app continua rosado e o menu do botão direito continua claro.
+7. [ ] Volte a **Usar configuração do sistema**, feche o app (Ctrl+C no terminal), mude o estilo do GNOME e abra de novo: nasce no tema do GNOME. Feche e abra mais uma vez: nenhum quadro da cor antiga.
+8. [ ] Deixe o GNOME e o Tomatito como preferir; para limpar: `rm ~/.local/share/io.github.kbrianps.tomatito.dev/settings*.json`.

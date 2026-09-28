@@ -27,7 +27,7 @@ import { iniciarRoteador } from './router.js';
 import { store } from './lib/store.js';
 import * as ipc from './lib/ipc.js';
 import { ligarAnuncioDeFases } from './lib/a11y.js';
-import { aplicarTema, ligarTema } from './lib/theme.js';
+import { aplicarTema, ligarSistema, ligarTema, temaDeBase } from './lib/theme.js';
 import * as foco from './views/focus/index.js';
 import * as temporizador from './views/timers.js';
 import * as cronometro from './views/stopwatch.js';
@@ -56,6 +56,7 @@ const win = getCurrentWindow();
 // ainda no meio dela (docs/decisoes.md, M09). A classe é a da troca de tema
 // (4.6) e sai dois quadros depois do show().
 h.classList.add('tt-no-transition');
+let sistema = null;
 try {
   // Painel e primeira tela (M09): o roteador desenha a tela do hash (ou a
   // Foco) já na chamada. Vêm antes da espera pelas fontes: o index.html não
@@ -68,15 +69,21 @@ try {
   // M24: o Rust é o dono das configurações, e a main reflete cada gravação
   // (tt://settings) nos atributos de tema do <html> (4.6).
   ligarTema({ ipc, h }).catch((erro) => console.error('[tema]', erro));
+  // M25: seguir o sistema, com as guardas (a) e (b) da 4.6. A troca pela
+  // interface passa pelo `durante`, que segura as conferências até ela acabar.
+  const midia = matchMedia('(prefers-color-scheme: dark)');
+  sistema = ligarSistema({ win, h, gravar: ipc.configuracoes.gravar, midia, quadro: requestAnimationFrame });
   const tema = {
     aplicar: (pref) =>
-      aplicarTema(pref, {
-        win,
-        h,
-        gravar: ipc.configuracoes.gravar,
-        quadro: requestAnimationFrame,
-        escuroPelaMidia: () => matchMedia('(prefers-color-scheme: dark)').matches,
-      }),
+      sistema.durante(
+        aplicarTema(pref, {
+          win,
+          h,
+          gravar: ipc.configuracoes.gravar,
+          quadro: requestAnimationFrame,
+          escuroPelaMidia: () => midia.matches,
+        }),
+      ),
   };
   const nav = montarNavegacao(document.querySelector('.tt-nav'), {
     icone,
@@ -101,8 +108,7 @@ try {
   await Promise.race([pronto, new Promise((r) => setTimeout(r, 2000))]);   // nunca deixar a janela presa escondida
 
   await montarBarraDeTitulo(document.querySelector('.tt-titlebar'), win);
-  const base = h.dataset.themePref === 'full' ? (window.__TT_LAST__ || 'lite') : h.dataset.themePref;
-  if (base === 'system') {
+  if (temaDeBase(h) === 'system') {
     const t = await win.theme();
     if (t) h.dataset.theme = t;
   }
@@ -117,3 +123,11 @@ try {
   await win.show();
 }
 requestAnimationFrame(() => requestAnimationFrame(() => h.classList.remove('tt-no-transition')));
+// M25: uma conferência depois do primeiro quadro. No Sistema, grava o
+// resolvedTheme se o sistema mudou com o app fechado (a próxima partida nasce
+// na cor certa); fora dele, confere o tema nativo (guarda (b)).
+sistema?.conferir().then(async (r) => {
+  if (r !== 'igual' || temaDeBase(h) !== 'system') return;
+  const s = await ipc.configuracoes.obter();
+  if (s?.resolvedTheme !== h.dataset.theme) await ipc.configuracoes.gravar({ resolvedTheme: h.dataset.theme });
+}).catch((erro) => console.error('[tema]', erro));

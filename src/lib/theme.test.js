@@ -1,9 +1,19 @@
-// Testes do lib/theme.js (M24): o applyTheme da 4.6 com uma janela, um <html>
+// Testes do lib/theme.js (M24 e M25): o applyTheme da 4.6 com uma janela, um <html>
 // e um settings_set falsos. A troca de verdade (WebKitGTK, Rust e o
 // settings.json) é conferida pelo roteiro scripts/gnome-aninhado/roteiros/aparencia.js.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { aplicarTema, ESCOLHAS, EVENTO, ligarTema, NATIVO, refletirConfiguracoes, trocarAtributos } from './theme.js';
+import {
+  aplicarTema,
+  ESCOLHAS,
+  EVENTO,
+  ligarSistema,
+  ligarTema,
+  NATIVO,
+  refletirConfiguracoes,
+  temaDeBase,
+  trocarAtributos,
+} from './theme.js';
 
 function htmlFalso({ pref = 'lite', tema = 'lite', plataforma = 'linux' } = {}) {
   const h = new EventTarget();
@@ -155,4 +165,198 @@ test('trocarAtributos avisa as telas com o evento tt-tema', () => {
   const h = htmlFalso();
   trocarAtributos(h, 'system', 'dark', { quadro: quadros() });
   assert.deepEqual(h.eventos, [{ pref: 'system', tema: 'dark' }]);
+});
+
+// --- M25: seguir o sistema (ligarSistema) ---------------------------------
+
+// O prefers-color-scheme da página: `mudar(t)` dispara o `change`, como o
+// WebKitGTK quando o prefer-dark do GTK muda.
+function midiaFalsa(t = 'light') {
+  const m = new EventTarget();
+  m.matches = t === 'dark';
+  m.mudar = (novo) => {
+    if (m.matches === (novo === 'dark')) return;
+    m.matches = novo === 'dark';
+    const e = new Event('change');
+    e.matches = m.matches;
+    m.dispatchEvent(e);
+  };
+  return m;
+}
+
+// Janela com onThemeChanged. `linux`: como o tao 0.37 no Linux, o setTheme
+// muda o prefer-dark do GTK (a mídia) e o ThemeChanged não chega à janela.
+// Sem `linux`: como no Windows, o ThemeChanged chega com o tema novo.
+function janelaDoSistema({ midia, linux = true, fixado = null, sistema = 'light' } = {}) {
+  const w = { label: 'main', chamadas: [], fixado, sistema, ouvintes: [] };
+  w.onThemeChanged = async (cb) => {
+    w.ouvintes.push(cb);
+    return () => (w.ouvintes = w.ouvintes.filter((x) => x !== cb));
+  };
+  w.emitir = (t) => w.ouvintes.forEach((cb) => cb({ payload: t }));
+  w.setTheme = async (t) => {
+    w.chamadas.push(`setTheme:${t}`);
+    w.fixado = t;
+    const efetivo = t ?? (linux ? 'light' : w.sistema); // o set_theme(None) do tao grava prefer-dark = false
+    if (linux) midia?.mudar(efetivo);
+    else queueMicrotask(() => w.emitir(efetivo));
+  };
+  w.theme = async () => w.fixado ?? w.sistema;
+  return w;
+}
+
+const logFalso = () => {
+  const linhas = [];
+  return { linhas, log: (...a) => linhas.push(a.join(' ')), error: (...a) => linhas.push(`ERRO ${a.join(' ')}`) };
+};
+const pausa = (ms = 30) => new Promise((r) => setTimeout(r, ms));
+
+function montarSistema({ pref = 'system', tema = 'light', plataforma = 'linux', midiaInicial, janela = {} } = {}) {
+  const h = htmlFalso({ pref, tema, plataforma });
+  const midia = midiaFalsa(midiaInicial ?? (tema === 'dark' || NATIVO[tema] === 'dark' ? 'dark' : 'light'));
+  const win = janelaDoSistema({ midia, linux: plataforma === 'linux', ...janela });
+  const gravar = gravadorFalso();
+  const log = logFalso();
+  const s = ligarSistema({ win, h, gravar, midia, log, atraso: 5, quadro: () => {} });
+  return { h, midia, win, gravar, log, s };
+}
+
+test('temaDeBase: a escolha salva ou, no Full, o lastNormalTheme', () => {
+  const h = htmlFalso({ pref: 'suave' });
+  assert.equal(temaDeBase(h, {}), 'suave');
+  h.dataset.themePref = 'full';
+  assert.equal(temaDeBase(h, { __TT_LAST__: 'system' }), 'system');
+  assert.equal(temaDeBase(h, {}), 'lite');
+});
+
+test('Linux, Sistema: o GNOME escurece; guarda (a): data-theme, resolvedTheme gravado e o theme() do tao acompanha', async () => {
+  const { h, midia, win, gravar, log, s } = montarSistema({ janela: { fixado: 'light' } });
+  await s.ouvindo;
+  midia.mudar('dark'); // o tao aplicou o SetTheme(Some(Dark)) do portal
+  await pausa();
+  assert.equal(h.dataset.theme, 'dark');
+  assert.equal(h.dataset.themePref, 'system');
+  assert.deepEqual(gravar.patches, [{ resolvedTheme: 'dark' }]);
+  assert.deepEqual(win.chamadas, ['setTheme:dark'], 'sem isso, o theme() responderia o claro antigo');
+  assert.deepEqual(h.eventos, [{ pref: 'system', tema: 'dark' }]);
+  assert.equal(log.linhas.filter((l) => l.includes('ThemeChanged')).length, 1, 'um ThemeChanged por troca, sem repetição');
+  // De volta ao claro
+  midia.mudar('light');
+  await pausa();
+  assert.equal(h.dataset.theme, 'light');
+  assert.deepEqual(gravar.patches, [{ resolvedTheme: 'dark' }, { resolvedTheme: 'light' }]);
+  s.desligar();
+});
+
+test('Linux, tema explícito: guarda (b) reaplica o nativo uma vez, sem mexer no data-theme nem gravar', async () => {
+  for (const [tema, esperado, sistema] of [['lite', 'dark', 'light'], ['suave', 'light', 'dark'], ['dark', 'dark', 'light'], ['light', 'light', 'dark']]) {
+    const { h, midia, win, gravar, log, s } = montarSistema({ pref: tema, tema, janela: { fixado: esperado } });
+    await s.ouvindo;
+    midia.mudar(sistema); // o portal aplicou o tema do sistema ao app inteiro
+    await pausa();
+    assert.equal(h.dataset.theme, tema);
+    assert.equal(h.dataset.themePref, tema);
+    assert.deepEqual(gravar.patches, []);
+    assert.deepEqual(win.chamadas, [`setTheme:${esperado}`], tema);
+    assert.equal(midia.matches, esperado === 'dark', 'o prefer-dark voltou ao do tema');
+    await pausa();
+    assert.equal(win.chamadas.length, 1, 'a volta da mídia não reaplica de novo');
+    assert.equal(log.linhas.filter((l) => l.includes('ThemeChanged')).length, 2, 'a ida e a volta, uma vez cada');
+    // Mudança que não contraria o tema: nada a fazer
+    midia.mudar(esperado);
+    await pausa();
+    assert.equal(win.chamadas.length, 1);
+    s.desligar();
+  }
+});
+
+test('guarda (b) sem laço mesmo contra uma janela que nunca obedece', async () => {
+  // Windows-like: o ThemeChanged chega; esta janela responde sempre claro.
+  const { h, win, s, log } = montarSistema({ pref: 'lite', tema: 'lite', plataforma: 'windows', janela: { sistema: 'light' } });
+  win.theme = async () => 'light';
+  await s.ouvindo;
+  win.emitir('light');
+  await pausa(80);
+  assert.equal(win.chamadas.filter((c) => c === 'setTheme:dark').length, 1, 'uma reaplicação só');
+  assert.ok(log.linhas.some((l) => l.includes('sem nova tentativa')));
+  assert.equal(h.dataset.theme, 'lite');
+  s.desligar();
+});
+
+test('Windows, Sistema: o onThemeChanged da janela é o sinal, e o tema vem do theme()', async () => {
+  const { h, win, gravar, s } = montarSistema({ plataforma: 'windows', janela: { sistema: 'light' } });
+  await s.ouvindo;
+  win.sistema = 'dark';
+  win.emitir('dark');
+  await pausa();
+  assert.equal(h.dataset.theme, 'dark');
+  assert.deepEqual(gravar.patches, [{ resolvedTheme: 'dark' }]);
+  assert.deepEqual(win.chamadas, [], 'fora do Linux, o tema da janela já segue o sistema');
+  s.desligar();
+});
+
+test('Full com o lastNormalTheme = system: a main segue o sistema', async () => {
+  const { h, midia, gravar, s } = montarSistema({ pref: 'full', tema: 'light' });
+  globalThis.__TT_LAST__ = 'system';
+  try {
+    await s.ouvindo;
+    midia.mudar('dark');
+    await pausa();
+    assert.equal(h.dataset.theme, 'dark');
+    assert.equal(h.dataset.themePref, 'full');
+    assert.deepEqual(gravar.patches, [{ resolvedTheme: 'dark' }]);
+  } finally {
+    delete globalThis.__TT_LAST__;
+    s.desligar();
+  }
+});
+
+test('durante uma troca pela interface, os sinais esperam; o claro intermediário da guarda (c) não chega à página', async () => {
+  // Do Lite para o Sistema com o GNOME escuro: setTheme(null) → prefer-dark
+  // falso (a mídia vai a claro) → theme() = dark → setTheme(dark).
+  const h = htmlFalso({ pref: 'lite', tema: 'lite', plataforma: 'linux' });
+  const midia = midiaFalsa('dark');
+  const win = janelaDoSistema({ midia: null, fixado: 'dark', sistema: 'dark' });
+  // O prefer-dark chega à página com atraso (IPC do WebKit): o claro do
+  // setTheme(null) depois de 10 ms, o escuro do setTheme(dark) depois de 60,
+  // bem depois de a troca acabar.
+  let atrasoDaMidia = 10;
+  const fixarTema = win.setTheme;
+  win.setTheme = async (t) => {
+    await fixarTema(t);
+    const efetivo = t ?? 'light';
+    setTimeout(() => midia.mudar(efetivo), atrasoDaMidia);
+    atrasoDaMidia = 60;
+  };
+  win.theme = async () => win.fixado ?? 'dark'; // o portal diz escuro
+  const gravar = gravadorFalso();
+  const log = logFalso();
+  const s = ligarSistema({ win, h, gravar, midia, log, atraso: 5, quadro: () => {} });
+  await s.ouvindo;
+  const mudancas = [];
+  h.addEventListener(EVENTO, (e) => mudancas.push(e.detail.tema));
+  await s.durante(
+    (async () => {
+      const r = await aplicarTema('system', { win, h, gravar, quadro: () => {} });
+      await pausa(20); // o claro chega enquanto a troca não acabou
+      return r;
+    })(),
+  );
+  await pausa(80);
+  assert.deepEqual(mudancas, ['dark']);
+  assert.equal(h.dataset.theme, 'dark');
+  assert.deepEqual(gravar.patches, [{ theme: 'system', resolvedTheme: 'dark' }]);
+  assert.deepEqual(win.chamadas, ['setTheme:null', 'setTheme:dark']);
+  s.desligar();
+});
+
+test('desligar tira os dois ouvintes', async () => {
+  const { h, midia, win, gravar, s } = montarSistema();
+  await s.ouvindo;
+  s.desligar();
+  midia.mudar('dark');
+  win.emitir('dark');
+  await pausa();
+  assert.equal(h.dataset.theme, 'light');
+  assert.deepEqual(gravar.patches, []);
 });
