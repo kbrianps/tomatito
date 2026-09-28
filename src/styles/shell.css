@@ -268,6 +268,74 @@
   .tt-andamento[data-pausado] .tt-mostrador-numero{ color:GrayText; }
 }
 
+/* M24: Configurações (src/views/settings.js). A seção tem o cabeçalho e os
+   cartões do Relógio (clock-focus-sessions-settings.png): o título da seção em
+   Body Strong, 30 px abaixo do que vem antes e 6 px acima do cartão, e o
+   cartão no formato do SettingsCard do WinUI (fundo e borda do cartão, raio
+   4, 16 px por dentro, ícone de 20 px a 20 px do título, descrição em Caption
+   no texto 2). As escolhas ficam embaixo, como no conteúdo aberto de um
+   SettingsExpander: depois de um divisor, recuadas até a coluna do título
+   (16 + 20 + 20 + 2 px), numa grade que quebra conforme a largura. */
+.tt-config-secao{ display:flex; flex-direction:column; gap:4px; max-width:1000px; }
+.tt-config-secao > h2{ margin:30px 0 2px 1px; }
+.tt-config-cartao{ background:var(--tt-bg-card); border:1px solid var(--tt-border); border-radius:var(--tt-r-ctl); }
+.tt-config-cabecalho{ display:flex; align-items:center; gap:20px; min-height:36px; padding:16px 16px 16px 18px; }
+.tt-config-icone{ display:flex; flex:none; }
+.tt-config-icone .tt-icone{ display:block; width:20px; height:20px; fill:currentColor; }
+.tt-config-textos{ display:flex; flex-direction:column; min-width:0; }
+.tt-config-descricao{ color:var(--tt-fg-2); }
+fluent-radio-group.tt-temas{
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(156px, 220px)); gap:16px 12px;
+  padding:16px 16px 16px 58px; border-top:1px solid var(--tt-border);
+}
+@container conteudo (width < 560px){ fluent-radio-group.tt-temas{ padding-left:16px; } }
+
+/* Uma escolha: a prévia em cima e o rádio com o nome embaixo; o rótulo
+   inteiro é clicável. A moldura tem o traço da borda em repouso, o do
+   controle no hover e 2 px do accent quando marcada (como as miniaturas de
+   tema das Configurações do Windows). */
+.tt-tema{ display:flex; flex-direction:column; gap:8px; min-width:0; }
+.tt-tema > .tt-opcao{ align-items:flex-start; min-height:20px; line-height:20px; }
+.tt-tema > .tt-opcao > fluent-radio{ flex:none; }
+.tt-previa-moldura{
+  display:flex; aspect-ratio:16 / 10; overflow:hidden; border-radius:6px;
+  box-shadow:0 0 0 1px var(--tt-border);
+  transition:box-shadow var(--tt-dur-fast) linear;
+}
+.tt-tema:hover > .tt-previa-moldura{ box-shadow:0 0 0 1px var(--tt-stroke-control); }
+.tt-tema[data-marcado] > .tt-previa-moldura{ box-shadow:0 0 0 2px var(--tt-accent); }
+
+/* A janela em miniatura, pintada pelos tokens do tema do próprio
+   data-theme: o fundo do app, o painel com o item atual, a camada de
+   conteúdo (canto de cima arredondado, como a de verdade) e um cartão com
+   duas linhas de texto e a ação principal. Em alto contraste, as cores do
+   sistema apagariam a diferença entre os temas: a prévia fica fora do
+   ajuste (é uma imagem do tema, não texto). */
+.tt-previa{
+  flex:1 1 auto; display:flex; gap:4px; min-width:0; padding:6px 0 0 5px;
+  background:var(--tt-bg-app); forced-color-adjust:none;
+}
+.tt-previa i{ display:block; border-radius:2px; }
+.tt-previa-nav{ display:flex; flex-direction:column; gap:5px; flex:none; width:20%; padding-top:6px; }
+.tt-previa-nav > i{ height:4px; background:var(--tt-fg-2); opacity:.5; }
+.tt-previa-nav > i:first-child{ background:var(--tt-fg-1); opacity:1; }
+.tt-previa-camada{
+  flex:1 1 auto; display:flex; align-items:flex-start; min-width:0; padding:9px;
+  background:var(--tt-bg-surface); border:1px solid var(--tt-border); border-width:1px 0 0 1px;
+  border-top-left-radius:6px;
+}
+.tt-previa-cartao{
+  display:flex; flex-direction:column; gap:5px; width:78%; padding:7px;
+  background:var(--tt-bg-card); border:1px solid var(--tt-border); border-radius:3px;
+}
+.tt-previa-texto{ height:4px; width:80%; background:var(--tt-fg-1); }
+.tt-previa-curto{ width:55%; background:var(--tt-fg-2); }
+.tt-previa-acao{ height:9px; width:45%; margin-top:3px; background:var(--tt-accent); }
+/* Sistema: a metade esquerda do Claro e a direita do Escuro, como uma janela só. */
+.tt-previa-metade{ display:flex; flex:1 1 50%; min-width:0; overflow:hidden; }
+.tt-previa-metade > .tt-previa{ flex:none; width:200%; }
+.tt-previa-metade + .tt-previa-metade > .tt-previa{ margin-left:-100%; }
+
 /* Amostra do M06 (#/dev) */
 .tt-amostra{
   display:flex; flex-direction:column; gap:var(--tt-gap);

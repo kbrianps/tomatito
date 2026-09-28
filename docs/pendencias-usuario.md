@@ -62,6 +62,9 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 37. **Padrões "a confirmar" das configurações** (desde o M23; plano 1.2, item 7, e 3.3). Ficaram: tempo na bandeja (`trayTime`) **desligado**, meta diária de **2 horas** e volume de **80%**. Diga se quer outros; é trocar uma linha no `settings.rs` (`docs/decisoes.md`, M23, item 5). O `trayTime` bloqueia o M36; os outros, nada.
 38. **Configurações no Windows** (desde o M23). No Windows, o arquivo fica em `%APPDATA%\io.github.kbrianps.tomatito.dev\settings.json`. Repetir os passos 1 a 5 da seção M23 (com o Bloco de Notas) e conferir que a gravação pelo app (`settings_set`, o seletor de tema do M24) não deixa `settings.json.tmp` para trás. A checagem cruzada `cargo clippy --target x86_64-pc-windows-msvc` passa. Entra na ida ao Windows do M48.
 
+39. **Conferir o M24 na tela** (desde o M24). Uns 4 minutos, com os passos em `docs/verificacao-manual.md`, seção M24: trocar de tema pela tela de Configurações, com as miniaturas, e reabrir (3 partidas a frio por tema), além do menu de contexto do WebKit claro no Suave. O Chrome headless e o GNOME aninhado já passaram (clique de verdade, reinício e `theme()`); falta o seu olho e o nome "Tomatito Suave" (ainda provisório, plano 1.2). Não bloqueia o M25.
+40. **Tema nativo no Windows** (desde o M24). No Windows, o `build_main` passa o tema nativo pelo builder (`.theme(...)`), e o `applyTheme` chama `setTheme` a cada troca. Conferir que, no Suave e no Claro, a barra de rolagem e os menus do WebView2 saem claros, e no Lite e no Escuro, escuros, e que `await getCurrentWindow().theme()` (no DevTools) responde `light` no Suave e `dark` no Lite. A checagem cruzada `cargo clippy --target x86_64-pc-windows-msvc` passa. Entra na ida ao Windows do M48.
+
 ## Resolvidas
 
 - **Nome** (1.2, item 1): continua "Tomatito".

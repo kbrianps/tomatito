@@ -50,6 +50,9 @@ export const ICONES = Object.freeze([
   { nome: 'checkmark_circle', estilo: 'regular', tamanhos: [16] },
   { nome: 'dismiss', estilo: 'regular', tamanhos: [16] },
   { nome: 'save', estilo: 'regular', tamanhos: [16] },
+  // Configurações: o ícone do cartão "Tema do aplicativo" (M24), na grade de
+  // 20 do HeaderIcon do SettingsCard do WinUI
+  { nome: 'paint_brush', estilo: 'regular', tamanhos: [20] },
 ]);
 
 /** Os arquivos da lista, no formato do pacote: `play_16_filled.svg`. */

@@ -643,3 +643,26 @@ O que não dá para conferir daqui: o seu olho vendo a janela nascer, sem clarã
 5. [ ] Estrague o arquivo de propósito (apague a última `}`) e abra: nasce no **Lite**, e `ls ~/.local/share/io.github.kbrianps.tomatito.dev/` mostra o `settings.corrompido.json` com o que você escreveu. O terminal mostra "`configurações ilegíveis`".
 6. [ ] Para limpar: `rm ~/.local/share/io.github.kbrianps.tomatito.dev/settings*.json`.
 
+
+## M24. Aparência: seletor com prévia
+
+O que foi conferido de forma automática (28/09/2026):
+
+- `npm test`: o `applyTheme` da 4.6 (a ordem `settings_set` → `setTheme`, a guarda (c) do Sistema, a volta do `<html>` se a gravação falhar, o Full recusado), a marcação da tela (cinco opções, sem o Full, cada prévia com o próprio `data-theme`) e o `contrast.mjs` conferindo a `background_color` do `build_main` contra o `--tt-bg-app` de cada tema (com mutações dos dois lados).
+- `cargo test`: o tema nativo da janela na criação (Lite e Escuro → escuro; Suave e Claro → claro; Sistema → nenhum).
+- `node scripts/preview/aparencia.mjs` (Chrome headless, clique e setas de verdade, 30 conferências): cada prévia pinta os tokens do próprio tema em qualquer tema da página, e cada troca grava o patch certo e fixa o tema nativo certo.
+- Roteiro aninhado `aparencia` (`bash scripts/gnome-aninhado/rodar.sh aparencia`, WebKitGTK e Rust de verdade, 20 conferências): o pixel de cada prévia na tela; o clique na prévia do Suave troca a página, o `theme()` vira `light` e o `settings.json` grava `suave`; fechado e reaberto, o app nasce no Suave com o Suave marcado; Sistema, Escuro e, na terceira abertura, as setas até o Lite. Capturas em `docs/capturas/m24-configuracoes-*.png`.
+- Roteiro aninhado `partida-a-frio` com `TT_TEMA=lite|suave|light|dark` e `TT_PARTIDAS=3`: 12 partidas a frio, nenhum quadro de outro tema ou branco.
+
+O que não dá para conferir daqui: o seu olho e o seu mouse, na sua sessão (GNOME escuro de verdade, com o portal).
+
+### Para conferir (uns 4 minutos)
+
+1. [ ] Com o `dev:app` fechado, apague as configurações de teste: `rm -f ~/.local/share/io.github.kbrianps.tomatito.dev/settings*.json`.
+2. [ ] `cd ~/dev/tomatito && npm run dev:app`. Vá a **Configurações** (Ctrl+,). Em **Aparência > Tema do aplicativo** há cinco opções: Tomatito Lite, Tomatito Suave, Claro, Escuro e "Usar configuração do sistema", cada uma com uma miniatura nas próprias cores (a do sistema com o Claro à esquerda e o Escuro à direita). O Tomatito Full **não** aparece (entra no M51). O Lite vem marcado.
+3. [ ] Clique na miniatura do **Suave**: a janela inteira fica rosada na hora, sem piscar, e a moldura do Suave ganha o contorno vermelho. Clique com o botão direito numa área de texto do app: o menu do WebKit sai **claro** (o tema nativo acompanha).
+4. [ ] Feche o app (Ctrl+C no terminal) e abra de novo: nasce no **Suave**, sem nenhum quadro vermelho ou branco antes, e com o Suave marcado em Configurações.
+5. [ ] Repita o passo 4 mais duas vezes, e depois escolha **Claro**, **Escuro** e **Lite**, fechando e reabrindo três vezes em cada (3 partidas a frio por tema): nunca um quadro de outra cor.
+6. [ ] Com o teclado: Tab até o grupo de temas e setas ← → trocam o tema a cada tecla.
+7. [ ] "Usar configuração do sistema" com o GNOME escuro deixa o app no **Escuro**. O acompanhamento ao vivo das Configurações do GNOME é do M25 (não precisa conferir agora).
+8. [ ] Para limpar: `rm ~/.local/share/io.github.kbrianps.tomatito.dev/settings*.json`.

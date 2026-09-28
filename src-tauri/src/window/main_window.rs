@@ -7,16 +7,17 @@
 //! (`settings.rs`, M23), lido no `setup` antes de a janela existir.
 
 use tauri::window::Color;
-use tauri::{AppHandle, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{AppHandle, Theme, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
-use crate::settings::{ResolvedTheme, Settings};
+use crate::settings::{NormalTheme, ResolvedTheme, Settings};
 
 /// Rótulo da janela; as permissões dela estão em `capabilities/main.json`.
 pub const LABEL: &str = "main";
 
 /// Cor da janela antes da primeira pintura do WebView: o `--tt-bg-app` do tema
-/// resolvido (`src/styles/tokens.css`). O `contrast.mjs` passa a conferir esta
-/// tabela no M24.
+/// resolvido (`src/styles/tokens.css`). O `scripts/contrast.mjs` lê esta
+/// função e confere cada braço contra o token (M24): mudar uma cor aqui ou lá
+/// sem mudar a outra reprova o `npm test`.
 pub fn background_for(resolved_theme: ResolvedTheme) -> Color {
     match resolved_theme {
         ResolvedTheme::Light => Color(0xF3, 0xF3, 0xF3, 0xFF),
@@ -24,6 +25,21 @@ pub fn background_for(resolved_theme: ResolvedTheme) -> Color {
         ResolvedTheme::Suave => Color(0xF6, 0xEC, 0xE9, 0xFF),
         ResolvedTheme::Lite => Color(0xA5, 0x34, 0x2B, 0xFF),
     }
+}
+
+/// Tema nativo da janela (menus e diálogos do sistema, e o `theme()` do JS):
+/// o do `color-scheme` do tema resolvido (4.1: o Lite é escuro, o Suave é
+/// claro), ou nenhum no modo Sistema, que segue o sistema. É o mesmo
+/// `NATIVE` do `applyTheme` (4.6, `src/lib/theme.js`), aplicado já na
+/// criação, para a janela nascer com o tema nativo certo (M24).
+pub fn native_theme(s: &Settings) -> Option<Theme> {
+    if s.last_normal_theme == NormalTheme::System {
+        return None;
+    }
+    Some(match s.resolved_theme {
+        ResolvedTheme::Lite | ResolvedTheme::Dark => Theme::Dark,
+        ResolvedTheme::Suave | ResolvedTheme::Light => Theme::Light,
+    })
 }
 
 /// Script de inicialização: roda antes do parse do HTML, quando o `<html>`
@@ -53,10 +69,22 @@ pub fn build_main(app: &AppHandle, s: &Settings) -> tauri::Result<WebviewWindow>
         // script que pede `set_webview_zoom`, liberado em capabilities/main.json.
         .zoom_hotkeys_enabled(true)
         .background_color(background_for(s.resolved_theme))
+        // Windows: o tema do builder vale. Linux: o tao ignora o do builder e
+        // começa pelo do portal; o `set_theme` logo abaixo corrige.
+        .theme(native_theme(s))
         // Aparece quando o JS chamar `show()`, já pintada.
         .visible(false)
         .initialization_script(init_script(s))
         .build()?;
+    // No Linux, o tao ignora o `theme` do builder (a janela nasce com o
+    // `color-scheme` do portal): sem isto, o Suave abriria com `theme()` =
+    // `dark` e menus GTK escuros num sistema escuro. A janela ainda está
+    // escondida. No modo Sistema, nada: o `setTheme(null)` do tao gravaria
+    // `prefer-dark = false` (4.6, pegadinhas), e o JS resolve no boot.
+    #[cfg(target_os = "linux")]
+    if let Some(t) = native_theme(s) {
+        win.set_theme(Some(t))?;
+    }
     // A borda do DWM na cor do tema (`window::dwm::set_border`) entra no M48.
     Ok(win)
 }
@@ -72,6 +100,35 @@ mod tests {
         assert_eq!(hex(background_for(ResolvedTheme::Suave)), "#F6ECE9FF");
         assert_eq!(hex(background_for(ResolvedTheme::Light)), "#F3F3F3FF");
         assert_eq!(hex(background_for(ResolvedTheme::Dark)), "#202020FF");
+    }
+
+    #[test]
+    fn tema_nativo_segue_o_color_scheme_e_some_no_sistema() {
+        use crate::settings::ThemePref;
+        let nativo = |theme: ThemePref| {
+            let mut s = Settings {
+                theme,
+                ..Settings::default()
+            };
+            s.normalize();
+            native_theme(&s)
+        };
+        assert_eq!(nativo(ThemePref::Lite), Some(Theme::Dark));
+        assert_eq!(nativo(ThemePref::Suave), Some(Theme::Light));
+        assert_eq!(nativo(ThemePref::Light), Some(Theme::Light));
+        assert_eq!(nativo(ThemePref::Dark), Some(Theme::Dark));
+        assert_eq!(nativo(ThemePref::System), None);
+        // No Full, a main mostra o tema normal: o do lastNormalTheme.
+        let mut s = Settings {
+            theme: ThemePref::Full,
+            last_normal_theme: NormalTheme::Suave,
+            ..Settings::default()
+        };
+        s.normalize();
+        assert_eq!(native_theme(&s), Some(Theme::Light));
+        s.last_normal_theme = NormalTheme::System;
+        s.normalize();
+        assert_eq!(native_theme(&s), None);
     }
 
     #[test]

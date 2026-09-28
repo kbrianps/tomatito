@@ -526,7 +526,7 @@ const lista = (ns) => ns.map((n) => virgula(n)).join(' · ');
  * Calcula tudo e devolve { linhas, tomate, notas, falhas, divergencias }.
  * `css` é a lista de { origem, texto } na ordem do <head>.
  */
-export function conferir(css, { referencia = true } = {}) {
+export function conferir(css, { referencia = true, fundosDaJanela = null } = {}) {
   const regras = css.flatMap(({ origem, texto }) => lerRegras(texto, origem));
   const falhas = [];
   const divergencias = [];
@@ -591,14 +591,63 @@ export function conferir(css, { referencia = true } = {}) {
     return { par: nota.par, valor: virgula(medida.direto[0]), nota: nota.nota };
   });
 
-  return { linhas, camada, desabilitados, fluent, tomate, notas, falhas, divergencias };
+  // M24: a background_color da main (main_window.rs, background_for) contra o
+  // --tt-bg-app de cada tema. É a cor da janela antes da primeira pintura do
+  // WebView (4.7): se as duas diferirem, a janela abre com um quadro de outra cor.
+  const janela = fundosDaJanela
+    ? TEMAS.map(([tema, nome], t) => {
+        const token = porTema[t].get('--tt-bg-app');
+        const css = token === undefined ? null : hex(lerCor(token));
+        const rust = fundosDaJanela[tema] ?? null;
+        const ok = css !== null && rust !== null && css === rust;
+        if (!ok) {
+          falhas.push(
+            `${nome}, fundo da janela: background_for dá ${rust ?? 'nada'}, o --tt-bg-app é ${css ?? 'indefinido'} ` +
+              `(${ORIGEM_RUST} e src/styles/tokens.css precisam andar juntos)`,
+          );
+        }
+        return { tema: nome, rust, css, ok };
+      })
+    : [];
+
+  return { linhas, camada, desabilitados, fluent, janela, tomate, notas, falhas, divergencias };
+}
+
+// ---------------------------------------------------------------------------
+// 5b. A background_color da janela main (M24)
+// ---------------------------------------------------------------------------
+
+export const ORIGEM_RUST = 'src-tauri/src/window/main_window.rs';
+const VARIANTES = { Lite: 'lite', Suave: 'suave', Light: 'light', Dark: 'dark' };
+
+/**
+ * As cores do `background_for` do main_window.rs, por tema: `{ lite: '#A5342B', ... }`,
+ * no formato do `hex()` (com o alfa só se não for 255). Lê só o corpo da
+ * função, braço por braço (`ResolvedTheme::X => Color(0x.., 0x.., 0x.., 0x..)`);
+ * um braço em outro formato, uma variante repetida ou um tema sem braço é erro.
+ */
+export function lerFundosDaJanela(rs) {
+  const corpo = /fn background_for\([^)]*\)\s*->\s*Color\s*\{([\s\S]*?)\n\}/.exec(rs)?.[1];
+  if (!corpo) throw new Error(`${ORIGEM_RUST}: não achei a fn background_for`);
+  const fundos = {};
+  const bracos = corpo.split('\n').filter((l) => l.includes('=>'));
+  for (const braco of bracos) {
+    const m = /ResolvedTheme::(\w+)\s*=>\s*Color\(\s*0x([0-9A-Fa-f]{2}),\s*0x([0-9A-Fa-f]{2}),\s*0x([0-9A-Fa-f]{2}),\s*0x([0-9A-Fa-f]{2})\s*\)/.exec(braco);
+    if (!m || !VARIANTES[m[1]]) throw new Error(`${ORIGEM_RUST}: braço do background_for que o script não sabe ler: ${braco.trim()}`);
+    const tema = VARIANTES[m[1]];
+    if (fundos[tema]) throw new Error(`${ORIGEM_RUST}: ResolvedTheme::${m[1]} repetido no background_for`);
+    const [r, g, b, a] = m.slice(2).map((x) => parseInt(x, 16));
+    fundos[tema] = hex([r, g, b, a / 255]);
+  }
+  for (const [tema] of TEMAS) if (!fundos[tema]) throw new Error(`${ORIGEM_RUST}: o background_for não tem o tema ${tema}`);
+  return fundos;
 }
 
 // ---------------------------------------------------------------------------
 // 6. Saída
 // ---------------------------------------------------------------------------
 
-export function formatar({ linhas, camada, desabilitados = [], fluent = [], tomate, notas }) {
+export function formatar({ linhas, camada, desabilitados = [], fluent = [], janela = [], tomate, notas }) {
   const tabela = (cabecalho, corpo) =>
     [cabecalho, cabecalho.map(() => '---'), ...corpo].map((l) => `| ${l.join(' | ')} |`).join('\n');
   return [
@@ -634,6 +683,14 @@ export function formatar({ linhas, camada, desabilitados = [], fluent = [], toma
           '',
         ]
       : []),
+    ...(janela.length
+      ? [
+          `Fundo da janela main (M24): a background_color do ${ORIGEM_RUST} contra o --tt-bg-app.`,
+          '',
+          tabela(['Tema', 'background_for', '--tt-bg-app', 'Igual'], janela.map((j) => [j.tema, j.rust ?? '—', j.css ?? '—', j.ok ? 'sim' : 'NÃO'])),
+          '',
+        ]
+      : []),
     'Tomate (Full), medido sobre o corpo:',
     '',
     tabela(['Estado', ...COLUNAS_TOMATE.map((c) => c.par)], tomate.map((t) => [t.estado, ...t.celulas])),
@@ -661,7 +718,8 @@ function principal(argv) {
   const referencia = !argv.includes('--sem-referencia');
   let resultado;
   try {
-    resultado = conferir(lerArquivos(), { referencia });
+    const fundosDaJanela = lerFundosDaJanela(readFileSync(new URL(`../${ORIGEM_RUST}`, import.meta.url), 'utf8'));
+    resultado = conferir(lerArquivos(), { referencia, fundosDaJanela });
   } catch (erro) {
     console.error(`contrast.mjs: ${erro.message}`);
     return 1;
@@ -673,6 +731,7 @@ function principal(argv) {
     `(${LINHAS.length} × ${TEMAS.length} temas, mais ${LINHAS_CAMADA.length} × ${TEMAS.length} da camada de conteúdo, ` +
     `${LINHAS_FLUENT.length} × ${TEMAS.length} dos estados dos controles Fluent, ` +
     `${COLUNAS_TOMATE.length} × ${ESTADOS.length} estados do tomate e ${NOTAS_TOMATE.length} medidas soltas)`;
+  const fundos = `${resultado.janela.length} fundos da janela main iguais ao --tt-bg-app`;
   console.log('');
   if (falhas.length) console.error(`Abaixo do mínimo (${falhas.length}):\n${falhas.map((f) => `  - ${f}`).join('\n')}`);
   if (divergencias.length) {
@@ -685,6 +744,7 @@ function principal(argv) {
   console.log(
     `${pares}: todos no mínimo ou acima` + (referencia ? ' e iguais à tabela 4.4 do plano.' : '; a tabela do plano não foi conferida.'),
   );
+  console.log(`${fundos}.`);
   console.log(`Mais ${LINHAS_DESABILITADOS.length * TEMAS.length} medidas dos desabilitados, só de registro.`);
   return 0;
 }

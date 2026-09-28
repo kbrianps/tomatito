@@ -26,7 +26,7 @@ import './medidas.js';
 const params = new URLSearchParams(location.search);
 
 // Estado da janela simulada; os botões da barra de título o alteram.
-const janela = { maximizada: params.get('maximizada') === '1', visivel: false };
+const janela = { maximizada: params.get('maximizada') === '1', visivel: false, temaNativo: null };
 const redimensionou = () =>
   emit('tauri://resize', janela.maximizada ? { width: 1920, height: 1080 } : { width: 1000, height: 700 });
 
@@ -208,7 +208,14 @@ const handlers = {
     return null;
   },
   'plugin:window|show': () => ((janela.visivel = true), null),
-  'plugin:window|theme': () => params.get('tema-do-sistema') ?? 'dark',
+  // M24: como o tao no Linux, o theme() responde o tema fixado pelo
+  // setTheme, e o do sistema quando não há um (setTheme(null)).
+  'plugin:window|theme': () => janela.temaNativo ?? params.get('tema-do-sistema') ?? 'dark',
+  'plugin:window|set_theme': ({ value }) => {
+    janela.temaNativo = value ?? null;
+    window.__TOMATITO_PREVIEW_COMANDOS__.push(`set_theme:${value ?? 'null'}`);
+    return null;
+  },
   'plugin:window|minimize': () => (console.info('[prévia] minimizar'), null),
   'plugin:window|close': () => (console.info('[prévia] fechar'), null),
 };

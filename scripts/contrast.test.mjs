@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   arredondarPar,
@@ -13,6 +14,7 @@ import {
   hex,
   lerArquivos,
   lerCor,
+  lerFundosDaJanela,
   lerRegras,
   lerSeletor,
   ORIGEM_GERADO,
@@ -200,4 +202,33 @@ test('M22: estados dos controles Fluent, com os tokens gerados e tingidos, confe
   // sem o gerado, a tabela não sai (e a 4.4 continua a mesma)
   const semGerado = conferir(arquivos.slice(1));
   assert.deepEqual([semGerado.fluent, semGerado.falhas, semGerado.divergencias], [[], [], []]);
+});
+
+test('M24: a background_color do build_main é o --tt-bg-app de cada tema, e uma cor trocada só de um lado reprova', () => {
+  const rs = readFileSync(new URL('../src-tauri/src/window/main_window.rs', import.meta.url), 'utf8');
+  const fundos = lerFundosDaJanela(rs);
+  assert.deepEqual(fundos, { light: '#F3F3F3', dark: '#202020', suave: '#F6ECE9', lite: '#A5342B' });
+  const r = conferir(lerArquivos(), { fundosDaJanela: fundos });
+  assert.deepEqual(r.falhas, []);
+  assert.deepEqual(r.janela.map((j) => [j.tema, j.css, j.ok]), [
+    ['Lite', '#A5342B', true], ['Suave', '#F6ECE9', true], ['Claro', '#F3F3F3', true], ['Escuro', '#202020', true],
+  ]);
+  // Só o Rust muda: o Suave nasceria mais escuro que a página
+  const rsMudado = rs.replace('Color(0xF6, 0xEC, 0xE9, 0xFF)', 'Color(0xF6, 0xEC, 0xE8, 0xFF)');
+  assert.notEqual(rsMudado, rs);
+  const m1 = conferir(lerArquivos(), { fundosDaJanela: lerFundosDaJanela(rsMudado) });
+  assert.match(m1.falhas.join('\n'), /Suave, fundo da janela: background_for dá #F6ECE8, o --tt-bg-app é #F6ECE9/);
+  // Só o CSS muda: o Escuro
+  const css = lerArquivos().map((f) => (f.origem.endsWith('tokens.css') ? { ...f, texto: f.texto.replace('--tt-bg-app:#202020', '--tt-bg-app:#1F1F1F') } : f));
+  const m2 = conferir(css, { fundosDaJanela: fundos });
+  assert.match(m2.falhas.join('\n'), /Escuro, fundo da janela: background_for dá #202020, o --tt-bg-app é #1F1F1F/);
+  // Um braço que o script não entende, um tema faltando ou repetido: erro, não aprovação silenciosa
+  assert.throws(() => lerFundosDaJanela(rs.replace('ResolvedTheme::Dark => Color(0x20, 0x20, 0x20, 0xFF)', 'ResolvedTheme::Dark => ESCURO')), /não sabe ler/);
+  assert.throws(() => lerFundosDaJanela(rs.replace('ResolvedTheme::Suave =>', 'ResolvedTheme::Lite =>')), /repetido/);
+  assert.throws(() => lerFundosDaJanela('fn outra() {}'), /background_for/);
+  // A saída do script mostra a tabela
+  const saida = spawnSync(process.execPath, [script], { encoding: 'utf8' });
+  assert.equal(saida.status, 0, saida.stderr);
+  assert.match(saida.stdout, /^\| Suave \| #F6ECE9 \| #F6ECE9 \| sim \|$/m);
+  assert.match(saida.stdout, /^4 fundos da janela main iguais ao --tt-bg-app\.$/m);
 });

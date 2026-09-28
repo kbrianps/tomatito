@@ -87,6 +87,23 @@ export default Object.freeze({
       encerrada: 'Sessão de foco encerrada.',
     }),
   }),
+  // Tela Configurações. M24: a seção Aparência (views/settings.js), com o
+  // cartão do tema, como o SettingsCard do Relógio (ícone, título e
+  // descrição) e as opções da 4.1. "Tomatito Suave" é nome provisório (1.2).
+  // O Full só entra na lista no M51.
+  configuracoes: Object.freeze({
+    aparencia: 'Aparência',
+    tema: 'Tema do aplicativo',
+    temaDescricao: 'Escolha as cores do Tomatito.',
+    temas: Object.freeze({
+      lite: 'Tomatito Lite',
+      suave: 'Tomatito Suave',
+      light: 'Claro',
+      dark: 'Escuro',
+      system: 'Usar configuração do sistema',
+      full: 'Tomatito Full',
+    }),
+  }),
   // Unidades por extenso, por categoria do Intl.PluralRules('pt-BR')
   // (format.js): o aria-valuetext do seletor de minutos ("25 minutos").
   unidades: Object.freeze({

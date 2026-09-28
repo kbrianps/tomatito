@@ -11,6 +11,7 @@
 #   bash scripts/gnome-aninhado/rodar.sh barra-de-titulo   # roteiro do M07
 #   bash scripts/gnome-aninhado/rodar.sh partida-a-frio    # roteiro do M08
 #   TT_TEMA=dark bash scripts/gnome-aninhado/rodar.sh partida-a-frio   # M23: com um settings.json no Escuro
+#   bash scripts/gnome-aninhado/rodar.sh aparencia         # M24: troca de tema, reinício e theme()
 #   bash scripts/gnome-aninhado/instalado.sh               # o Tomatito instalado (M21b)
 #
 # Pré-requisito: o binário de debug atualizado (`cd src-tauri && cargo build`).
