@@ -584,3 +584,24 @@ O que não dá para conferir daqui: ver os balões no **seu** GNOME, ouvir os so
 6. [ ] **Não perturbe:** no mesmo menu do relógio, ligue **Não perturbe**. Volte à janela, ponha **5** no seletor, inicie e minimize. Uns 5 s depois: as duas notas tocam e **nenhum** balão aparece; no menu do relógio, a notificação **Sessão de foco concluída** / **5 min de foco.** está na lista. Desligue o Não perturbe.
 7. [ ] (Opcional) **Fim atrasado:** com **5** no seletor, inicie e, no mesmo segundo, num terminal, `kill -STOP $(pgrep -f 'debug/tomatito$')`. Espere 70 s e `kill -CONT $(pgrep -f 'debug/tomatito$')`: nenhum som, e um balão só, **Sessão concluída às HH:MM** (hora adiantada, como no passo 2).
 8. [ ] Feche o `tauri dev` (Ctrl+C no terminal).
+
+## M21b. Build de uso diário e ID de desenvolvimento
+
+O que foi conferido de forma automática (28/09/2026):
+
+- `npx tauri build --bundles deb appimage` gera o `.deb` e o AppImage; o `bash scripts/instalar-uso-diario.sh --sem-build` instala o AppImage, o `Tomatito.desktop` (válido no `desktop-file-validate`) e os ícones em `~/.local`, sem `sudo`.
+- **"Pronto quando" na sua sessão:** `gtk-launch Tomatito` (abre pelo `.desktop`, como o menu de apps) e, com ele aberto, `npm run dev:app`: os dois processos rodando juntos (o do AppImage, com o WebKitGTK embutido, e o `debug/tomatito`), cada um com o seu WebKitWebProcess; `ls -d ~/.local/share/io.github.kbrianps.tomatito*` lista `io.github.kbrianps.tomatito` e `io.github.kbrianps.tomatito.dev`. Os dois foram fechados logo depois.
+- **Roteiro aninhado `instalado`** (`bash scripts/gnome-aninhado/instalado.sh`, GNOME Shell 50.1 aninhado): o AppImage abre, a página embutida aparece no Lite (`docs/capturas/m21b-instalado.png`), o shell casa a janela com o `Tomatito.desktop` (nome "Tomatito"), o `app_id` é `tomatito` e fechar encerra o app (6 conferências ok).
+- `npm run build:debug` compila; `npm test` (132), `cargo test --workspace`, `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` e a checagem cruzada para `x86_64-pc-windows-msvc` passam.
+
+O que não dá para conferir daqui: o ícone e o nome no **seu** dock e no Alt+Tab, e abrir pelo menu de apps com o mouse.
+
+### Para conferir (uns 3 minutos)
+
+1. [ ] Aperte a tecla Super e digite **Tomatito**: aparece o Tomatito com o ícone. Clique nele: a janela abre no Lite, e o dock mostra o ícone do Tomatito (não o genérico). No Alt+Tab, "Tomatito" com o ícone.
+2. [ ] Com ele aberto, num terminal: `cd ~/dev/tomatito && npm run dev:app`. Abre uma segunda janela (a de desenvolvimento), sem fechar a primeira. No dock, as duas ficam sob o mesmo ícone (o `app_id` é o mesmo; `docs/decisoes.md`, M21b, item 5).
+3. [ ] Na janela instalada, as setas do seletor andam de **5 em 5**; na de desenvolvimento, de **1 em 1** (build de debug).
+4. [ ] Noutro terminal: `ls -d ~/.local/share/io.github.kbrianps.tomatito*` lista as duas pastas, `io.github.kbrianps.tomatito` e `io.github.kbrianps.tomatito.dev`.
+5. [ ] Feche o `npm run dev:app` (Ctrl+C no terminal). A janela instalada continua aberta; feche-a pelo X.
+6. [ ] Para atualizar o de uso diário depois de outros marcos: `bash scripts/instalar-uso-diario.sh` (gera e reinstala; uns 2 min).
+

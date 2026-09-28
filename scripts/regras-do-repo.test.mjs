@@ -38,6 +38,15 @@ test('a versão vive só no Cargo.toml', () => {
   assert.equal(pkg.version, undefined, 'package.json não precisa de "version"');
 });
 
+test('build de desenvolvimento com ID próprio (M21b)', () => {
+  // O `.dev` tem pasta de dados própria; o de uso diário nunca muda de ID (1.1).
+  assert.equal(tauriConf.identifier, 'io.github.kbrianps.tomatito');
+  const dev = JSON.parse(ler('src-tauri/tauri.dev.conf.json'));
+  assert.deepEqual(dev, { identifier: 'io.github.kbrianps.tomatito.dev' });
+  assert.equal(pkg.scripts['dev:app'], 'tauri dev --config src-tauri/tauri.dev.conf.json');
+  assert.equal(pkg.scripts['build:debug'], 'tauri build --debug --no-bundle --config src-tauri/tauri.dev.conf.json');
+});
+
 test('CSP da seção 3.8 no tauri.conf.json, mais o connect-src do IPC (M08)', () => {
   // O Tauri 2.12 só acrescenta hashes e nonces ao script-src e ao style-src.
   // Sem o connect-src, o fetch do IPC (ipc://localhost no Linux,

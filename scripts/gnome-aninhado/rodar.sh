@@ -10,6 +10,7 @@
 #
 #   bash scripts/gnome-aninhado/rodar.sh barra-de-titulo   # roteiro do M07
 #   bash scripts/gnome-aninhado/rodar.sh partida-a-frio    # roteiro do M08
+#   bash scripts/gnome-aninhado/instalado.sh               # o Tomatito instalado (M21b)
 #
 # Pré-requisito: o binário de debug atualizado (`cd src-tauri && cargo build`).
 # O `npm run build` não é preciso: a página vem do Vite (porta 5173, que
@@ -64,6 +65,10 @@ RUNDIR=$(mktemp -d /tmp/tt-XXXXXX)
 chmod 700 "$RUNDIR"
 ISO=$TT_OUT/iso
 mkdir -p "$ISO"/{config,cache,data,state}
+# M21b: TT_DADOS_EXTRAS é uma pasta no formato de ~/.local/share (com
+# applications/ e icons/) copiada para o XDG_DATA_HOME da rodada, para o shell
+# achar o .desktop do Tomatito instalado e casar a janela com ele.
+[ -n "${TT_DADOS_EXTRAS:-}" ] && cp -r "$TT_DADOS_EXTRAS"/. "$ISO/data/"
 export XDG_RUNTIME_DIR=$RUNDIR XDG_CONFIG_HOME=$ISO/config XDG_CACHE_HOME=$ISO/cache \
   XDG_DATA_HOME=$ISO/data XDG_STATE_HOME=$ISO/state
 export GSETTINGS_BACKEND=memory XDG_CURRENT_DESKTOP=GNOME XDG_SESSION_TYPE=wayland NO_AT_BRIDGE=1

@@ -21,11 +21,14 @@ Requisitos: Node 22.12 ou mais novo, Rust 1.90 ou mais novo e as dependências d
 
 ```bash
 npm ci
-npm run tauri dev                              # o app em modo de desenvolvimento
+npm run dev:app                                # o app em desenvolvimento (ID .dev, pasta de dados própria)
+npm run build:debug                            # build de debug com os arquivos embutidos (CSP, menu de contexto)
 npm test                                       # testes do JS (node --test)
 node scripts/contrast.mjs                      # contraste (WCAG 2.2) dos pares de cada tema
 cd src-tauri && cargo test -p tomatito-core    # testes do motor, sem compilar o Tauri
 ```
+
+Uso diário no Linux, sem `sudo`: `bash scripts/instalar-uso-diario.sh` gera o `.deb` e o AppImage e instala o AppImage em `~/.local/bin`, com o `Tomatito.desktop` e os ícones em `~/.local/share` (`--remover` desfaz). O de uso diário usa o ID `io.github.kbrianps.tomatito`; o de desenvolvimento, `io.github.kbrianps.tomatito.dev`, e os dois abrem ao mesmo tempo com dados separados.
 
 O `src/styles/fluent-tokens.gen.css` (os tokens do Fluent de cada tema) é gerado pelo `scripts/build-theme-css.mjs`, que roda sozinho antes do `npm run dev` e do `npm run build` (e, portanto, do `tauri dev` e do `tauri build`). Ele fica fora do git; para refazê-lo à mão, `node scripts/build-theme-css.mjs`.
 
@@ -42,6 +45,7 @@ bash scripts/gnome-aninhado/rodar.sh responsivo                      # estreitar
 bash scripts/gnome-aninhado/rodar.sh temas-fluent                    # os tokens do Fluent em cada tema, na página e na tela
 bash scripts/gnome-aninhado/rodar.sh controles                       # menus, listas, dicas e diálogo com o ponteiro e o teclado
 bash scripts/gnome-aninhado/rodar.sh botoes                          # botões, anel de foco pelo Tab e a dica dos botões de ícone
+bash scripts/gnome-aninhado/instalado.sh                             # o Tomatito instalado: janela, .desktop no dock e saída
 node scripts/preview/responsivo.mjs                                  # o layout em 15 larguras, no Chrome e no WebKitGTK
 node scripts/preview/temas-fluent.mjs                                # os tokens do Fluent nos cinco temas, no Chrome e no WebKitGTK
 node scripts/preview/controles.mjs                                   # onde abrem os menus, as listas e as dicas, nos dois motores
