@@ -16,7 +16,7 @@ export const EVENTOS = Object.freeze({
   cronometro: 'tt://stopwatch',
 });
 
-/** `get_state`: `{ focus, speed, setup, timers, stopwatch, settings }`. */
+/** `get_state`: `{ focus, speed, setup, timers, stopwatch, settings, recursos }`. */
 export const obterEstado = () => invoke('get_state');
 
 /**
@@ -24,6 +24,12 @@ export const obterEstado = () => invoke('get_state');
  * grava o `state.json` e fecha o app; o mesmo caminho do "Sair" da bandeja.
  */
 export const sair = () => invoke('app_quit');
+
+/**
+ * M39: a versão do app, para o Sobre. O `getVersion()` do Tauri lê a versão
+ * da configuração, que não tem a chave `version` (1.1): vale a do Cargo.toml.
+ */
+export { getVersion as versao } from '@tauri-apps/api/app';
 
 /**
  * Comandos do foco. Cada um devolve o retrato novo (o mesmo do `tt://state`)

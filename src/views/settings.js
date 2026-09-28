@@ -25,11 +25,21 @@
 // própria chave pelo `store.gravarConfiguracoes`. Se o Rust recusar, o
 // controle volta ao valor do store e o erro vai para o console, como na troca
 // de tema (M24): o que se vê nunca fica diferente do que está no disco.
+//
+// M39: depois da Aparência, a seção "Sistema" ("Fechar para a bandeja" e
+// "Tempo na bandeja", em cartões com switch, e "Sair do Tomatito", que chama
+// o mesmo `app_quit` do Ctrl+Q) e a seção "Sobre", com um expansível como o
+// "Sobre" dos apps do WinUI: o nome, a licença e a versão (`getVersion()`,
+// do Cargo.toml) no cabeçalho; aberto, os avisos de terceiros (o botão só
+// funciona a partir do M46) e o aviso de marcas (seção 9 do plano). As
+// opções que dependem de um recurso da plataforma (platform/recursos.js)
+// somem quando ele falta: hoje, o "Tempo na bandeja" sem o ícone da bandeja.
 import t from '../lib/i18n/pt-BR.js';
 import { ESCOLHAS, EVENTO } from '../lib/theme.js';
 import { minutosPorExtenso } from '../lib/format.js';
 import { store as storeDoApp } from '../lib/store.js';
 import * as ipcDoApp from '../lib/ipc.js';
+import { SEM_RECURSOS, assinarRecursos, recursos as recursosAtuais } from '../platform/recursos.js';
 
 const c = t.configuracoes;
 const semIcone = () => '';
@@ -69,12 +79,15 @@ export const escolhaDe = (pref) => (ESCOLHAS.includes(pref) ? pref : null);
 export const FOCOS = Object.freeze([15, 20, 25, 30, 35, 40, 45, 50, 55, 60]);
 export const INTERVALOS = Object.freeze([5, 10, 15]);
 
-/** Os padrões da 3.3 para as chaves desta seção, até o store ter a cópia do Rust. */
+/** Os padrões da 3.3 para as chaves da tela, até o store ter a cópia do Rust. */
 export const PADROES = Object.freeze({
   focusMinutes: 25,
   breakMinutes: 5,
   sounds: Object.freeze({ focusEnd: true, breakEnd: true }),
   volume: 80,
+  // M39
+  closeToTray: true,
+  trayTime: false,
 });
 
 /** Os valores de uma lista com o atual incluído, em ordem. */
@@ -100,6 +113,12 @@ const abertos = new Set();
 /** O texto ao lado do switch. */
 export const textoDoEstado = (ligado) => (ligado ? c.ativado : c.desativado);
 
+/** Escreve o texto ao lado de um switch já desenhado ("Ativado" ou "Desativado"). */
+function escreverEstado(sw) {
+  const el = sw.parentElement?.querySelector('[data-estado]');
+  if (el) el.textContent = textoDoEstado(Boolean(sw.checked));
+}
+
 /** Um volume válido (0 a 100) ou o padrão. */
 const volumeDe = (v) => (Number.isInteger(v) && v >= 0 && v <= 100 ? v : PADROES.volume);
 
@@ -113,15 +132,19 @@ const cabeca = (id, iconeHtml, titulo, descricao) =>
 /**
  * Um cartão expansível (o SettingsExpander): o cabeçalho de 68 px é um botão
  * com o chevron, e `acao` (o switch, nos sons) fica na mesma linha, fora do
- * botão; o conteúdo, embaixo, com uma linha por item.
+ * botão; o conteúdo, embaixo, com uma linha por item. M39: `valor` é um texto
+ * do cabeçalho (a versão, no Sobre), dentro do botão, na coluna do meio, e
+ * entra na descrição acessível.
  */
-function expansor({ id, iconeHtml, titulo, descricao, acao = '', conteudo, chevron, aberto = false }) {
+function expansor({ id, iconeHtml, titulo, descricao, acao = '', valor = null, conteudo, chevron, aberto = false }) {
+  const descritoPor = valor === null ? `config-${id}-desc` : `config-${id}-desc config-${id}-valor`;
   return (
     `<div class="tt-config-cartao tt-expansor" data-cartao="${id}"${aberto ? ' data-aberto' : ''}>` +
     '<div class="tt-expansor-topo">' +
     `<button type="button" class="tt-expansor-botao" data-expansor aria-expanded="${aberto}" ` +
-    `aria-controls="config-${id}-conteudo" aria-labelledby="config-${id}" aria-describedby="config-${id}-desc">` +
+    `aria-controls="config-${id}-conteudo" aria-labelledby="config-${id}" aria-describedby="${descritoPor}">` +
     `<span class="tt-config-cabeca">${cabeca(id, iconeHtml, titulo, descricao)}</span>` +
+    (valor === null ? '' : `<span id="config-${id}-valor" class="tt-expansor-valor">${valor}</span>`) +
     `<span class="tt-expansor-chevron">${chevron}</span></button>` +
     acao +
     '</div>' +
@@ -195,12 +218,100 @@ export function marcacaoDasSessoes(s = PADROES, { icone = semIcone, abertosAgora
   );
 }
 
+// M39: as seções "Sistema" e "Sobre".
+
+/**
+ * Os switches da seção "Sistema": a chave do settings.json, o id do cartão, o
+ * ícone (grade de 20), os textos, o padrão da 3.3 e o recurso de que a opção
+ * precisa (platform/recursos.js). Os dois valem na hora: o Rust lê o
+ * `closeToTray` a cada fechamento e avisa a bandeja do `trayTime` no próprio
+ * `settings_set` (M36).
+ */
+export const OPCOES_DO_SISTEMA = Object.freeze([
+  Object.freeze({ chave: 'closeToTray', id: 'fechar-bandeja', icone: 'arrow_minimize', textos: c.fecharParaBandeja, padrao: true, precisa: null }),
+  Object.freeze({ chave: 'trayTime', id: 'tempo-bandeja', icone: 'clock', textos: c.tempoNaBandeja, padrao: false, precisa: 'bandeja' }),
+]);
+
+/** Se a opção vale com os recursos `rec` (a que não se aplica some da tela). */
+export const seAplica = (opcao, rec) => !opcao.precisa || rec?.[opcao.precisa] === true;
+
+/** O valor de uma opção do sistema nas configurações `s`, ou o padrão. */
+const ligadaEm = (s, opcao) => (typeof s?.[opcao.chave] === 'boolean' ? s[opcao.chave] : opcao.padrao);
+
+/**
+ * HTML da seção "Sistema" com os valores de `s` e os recursos `recursos`: um
+ * cartão com switch por opção (escondido, com `hidden`, se não se aplica) e o
+ * cartão "Sair do Tomatito", com o botão.
+ */
+export function marcacaoDoSistema(s = PADROES, { icone = semIcone, recursos = SEM_RECURSOS } = {}) {
+  const opcoes = OPCOES_DO_SISTEMA.map((o) => {
+    const ligado = ligadaEm(s, o);
+    return (
+      `<div class="tt-config-cartao" data-cartao="${o.id}"${seAplica(o, recursos) ? '' : ' hidden'}><div class="tt-config-cabecalho">` +
+      cabeca(o.id, icone(o.icone, 20), o.textos.titulo, o.textos.descricao) +
+      `<label class="tt-config-controle"><span class="tt-config-estado" data-estado aria-hidden="true">${textoDoEstado(ligado)}</span>` +
+      `<fluent-switch data-config="${o.chave}" aria-labelledby="config-${o.id}" aria-describedby="config-${o.id}-desc"${ligado ? ' checked' : ''}></fluent-switch></label>` +
+      '</div></div>'
+    );
+  }).join('');
+  // O nome do botão é o título do cartão, que começa pelo texto visível (WCAG 2.5.3).
+  const sair =
+    '<div class="tt-config-cartao" data-cartao="sair"><div class="tt-config-cabecalho">' +
+    cabeca('sair', icone('power', 20), c.sair.titulo, c.sair.descricao) +
+    '<span class="tt-config-controle"><button type="button" data-sair aria-labelledby="config-sair" aria-describedby="config-sair-desc">' +
+    `${c.sair.botao}</button></span></div></div>`;
+  return (
+    '<section class="tt-config-secao" aria-labelledby="config-sistema">' +
+    `<h2 id="config-sistema" class="tt-t-body-strong">${c.sistema}</h2>${opcoes}${sair}</section>`
+  );
+}
+
+/** A versão, lida uma vez do Tauri e guardada enquanto o app roda. */
+let versaoConhecida = null;
+
+/**
+ * HTML da seção "Sobre": o expansível com o nome, a licença e a versão
+ * (`versao`, ou vazio até o `getVersion()` responder) e, aberto, os avisos de
+ * terceiros e o aviso de marcas.
+ */
+export function marcacaoDoSobre({ icone = semIcone, versao = null, abertosAgora = new Set() } = {}) {
+  const avisos = item(
+    'config-avisos',
+    c.sobre.avisos,
+    // M46: os avisos entram no pacote (bundle.resources) e este botão os abre.
+    `<button type="button" data-avisos aria-describedby="config-avisos" disabled>${c.sobre.verAvisos}</button>`,
+  );
+  const marcas = `<div class="tt-config-item tt-config-nota"><p id="config-marcas" class="tt-config-descricao tt-t-caption">${c.sobre.marcas}</p></div>`;
+  return (
+    '<section class="tt-config-secao" aria-labelledby="config-sobre-secao">' +
+    `<h2 id="config-sobre-secao" class="tt-t-body-strong">${c.sobre.secao}</h2>` +
+    expansor({
+      id: 'sobre',
+      iconeHtml: icone('info', 20),
+      titulo: t.app.nome,
+      descricao: c.sobre.licenca,
+      valor: versao ? c.sobre.versao(versao) : '',
+      conteudo: avisos + marcas,
+      chevron: icone('chevron_down', 16),
+      aberto: abertosAgora.has('sobre'),
+    }) +
+    '</section>'
+  );
+}
+
 /**
  * HTML da tela. `pref` é o `data-theme-pref` atual; `icone(nome, grade)`, o
  * do components/icon.js (os testes passam um falso); `configuracoes`, a cópia
- * do store (M38).
+ * do store (M38); `recursos` e `versao`, os do M39.
  */
-export function marcacao({ pref = 'lite', icone = semIcone, configuracoes = PADROES, abertosAgora = new Set() } = {}) {
+export function marcacao({
+  pref = 'lite',
+  icone = semIcone,
+  configuracoes = PADROES,
+  abertosAgora = new Set(),
+  recursos = SEM_RECURSOS,
+  versao = null,
+} = {}) {
   const marcada = escolhaDe(pref);
   const opcoes = ESCOLHAS.map(
     (e) =>
@@ -218,7 +329,10 @@ export function marcacao({ pref = 'lite', icone = semIcone, configuracoes = PADR
     `<span id="config-tema-desc" class="tt-config-descricao tt-t-caption">${c.temaDescricao}</span></span></div>` +
     '<fluent-radio-group class="tt-temas" name="tema" orientation="horizontal" ' +
     `aria-labelledby="config-tema" aria-describedby="config-tema-desc"${marcada ? ` value="${marcada}"` : ''}>` +
-    `${opcoes}</fluent-radio-group></div></section></div>`
+    `${opcoes}</fluent-radio-group></div></section>` +
+    marcacaoDoSistema(configuracoes, { icone, recursos }) +
+    marcacaoDoSobre({ icone, versao, abertosAgora }) +
+    '</div>'
   );
 }
 
@@ -247,6 +361,7 @@ export function patchDe(controle, valor) {
     return valor === '' || !Number.isInteger(n) || n < 0 || n > 100 ? null : { volume: n };
   }
   if (SONS.some((s) => s.chave === controle)) return { sounds: { [controle]: Boolean(valor) } };
+  if (OPCOES_DO_SISTEMA.some((o) => o.chave === controle)) return { [controle]: Boolean(valor) };
   return null;
 }
 
@@ -291,10 +406,6 @@ export function ligarSessoes(raiz, { store = storeDoApp, ipc = ipcDoApp, doc = g
     volume.style.setProperty('--tt-fracao', String(v / 100));
     volume.setAttribute('aria-valuetext', c.volume.valor(v));
     valorDoVolume.textContent = String(v);
-  };
-  const escreverEstado = (sw) => {
-    const el = sw.parentElement?.querySelector('[data-estado]');
-    if (el) el.textContent = textoDoEstado(Boolean(sw.checked));
   };
   const garantirOpcao = (dd, v) => {
     if (!Number.isInteger(v) || v < 1) return;
@@ -400,6 +511,92 @@ export function ligarSessoes(raiz, { store = storeDoApp, ipc = ipcDoApp, doc = g
 }
 
 /**
+ * M39: liga as seções "Sistema" e "Sobre" já desenhadas em `raiz` ao store,
+ * aos recursos e ao IPC. Os switches gravam só a própria chave (recusado, o
+ * switch volta ao valor do store); "Sair" chama o `app_quit`, que não
+ * responde (o processo sai antes); o expansível do Sobre abre e fecha; a
+ * versão chega pelo `ipc.versao()` na primeira vez. Devolve a limpeza.
+ */
+export function ligarSistemaESobre(
+  raiz,
+  { store = storeDoApp, ipc = ipcDoApp, recursos = { atuais: () => recursosAtuais, assinar: assinarRecursos } } = {},
+) {
+  const sistema = raiz.querySelector('[aria-labelledby="config-sistema"]');
+  const sobre = raiz.querySelector('[aria-labelledby="config-sobre-secao"]');
+  const switches = [...sistema.querySelectorAll('fluent-switch[data-config]')];
+  let desligado = false;
+
+  const mostrar = (s) => {
+    if (desligado || !s) return;
+    for (const sw of switches) {
+      const ligado = ligadaEm(s, OPCOES_DO_SISTEMA.find((o) => o.chave === sw.dataset.config));
+      if (Boolean(sw.checked) !== ligado) sw.checked = ligado;
+      escreverEstado(sw);
+    }
+  };
+  const aplicarRecursos = (rec) => {
+    if (desligado) return;
+    for (const o of OPCOES_DO_SISTEMA) {
+      const cartao = sistema.querySelector(`[data-cartao="${o.id}"]`);
+      if (cartao) cartao.hidden = !seAplica(o, rec);
+    }
+  };
+  const escreverVersao = (v) => {
+    const el = sobre.querySelector('#config-sobre-valor');
+    if (el) el.textContent = c.sobre.versao(v);
+  };
+
+  const aoMudar = async (ev) => {
+    const sw = ev.target;
+    if (!sw.matches?.('fluent-switch[data-config]')) return;
+    escreverEstado(sw);
+    const patch = patchDe(sw.dataset.config, sw.checked);
+    if (!patch) return;
+    try {
+      await store.gravarConfiguracoes(patch);
+    } catch (erro) {
+      console.error('[configurações]', erro);
+      mostrar(store.configuracoes ?? PADROES);
+    }
+  };
+  const aoClicarNoSistema = (ev) => {
+    if (!ev.target.closest?.('[data-sair]')) return;
+    Promise.resolve(ipc.sair()).catch((erro) => console.error('[sair]', erro));
+  };
+  const aoClicarNoSobre = (ev) => {
+    const botao = ev.target.closest?.('[data-expansor]');
+    if (botao) alternar(botao);
+  };
+
+  sistema.addEventListener('change', aoMudar);
+  sistema.addEventListener('click', aoClicarNoSistema);
+  sobre.addEventListener('click', aoClicarNoSobre);
+  // A marcação saiu com a cópia do store e os recursos de então; daqui em
+  // diante, cada cópia nova (e os recursos, que chegam no mesmo get_state).
+  aplicarRecursos(recursos.atuais());
+  const desassinarRecursos = recursos.assinar(aplicarRecursos);
+  const desassinar = store.assinarConfiguracoes(mostrar);
+  if (versaoConhecida) escreverVersao(versaoConhecida);
+  else {
+    Promise.resolve(ipc.versao?.())
+      .then((v) => {
+        if (typeof v !== 'string' || !v) return;
+        versaoConhecida = v;
+        if (!desligado) escreverVersao(v);
+      })
+      .catch((erro) => console.error('[versão]', erro));
+  }
+  return () => {
+    desligado = true;
+    desassinar();
+    desassinarRecursos();
+    sistema.removeEventListener('change', aoMudar);
+    sistema.removeEventListener('click', aoClicarNoSistema);
+    sobre.removeEventListener('click', aoClicarNoSobre);
+  };
+}
+
+/**
  * `tema.aplicar(pref)` é o `aplicarTema` com as dependências da janela (o
  * main.js o passa pelo contexto do roteador); sem ele, a tela só desenha.
  * `store` e `ipc` (M38) são os do app; os testes passam falsos.
@@ -407,7 +604,14 @@ export function ligarSessoes(raiz, { store = storeDoApp, ipc = ipcDoApp, doc = g
  */
 export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.document, store = storeDoApp, ipc = ipcDoApp } = {}) {
   const h = doc.documentElement;
-  raiz.innerHTML = marcacao({ pref: h.dataset.themePref, icone, configuracoes: store.configuracoes ?? PADROES, abertosAgora: abertos });
+  raiz.innerHTML = marcacao({
+    pref: h.dataset.themePref,
+    icone,
+    configuracoes: store.configuracoes ?? PADROES,
+    abertosAgora: abertos,
+    recursos: recursosAtuais,
+    versao: versaoConhecida,
+  });
   const grupo = raiz.querySelector('.tt-temas');
   const aoMudar = async () => {
     const pref = grupo.value;
@@ -424,9 +628,11 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
   grupo.addEventListener('change', aoMudar);
   h.addEventListener(EVENTO, aoTrocar);
   const desligarSessoes = ligarSessoes(raiz, { store, ipc, doc });
+  const desligarSistema = ligarSistemaESobre(raiz, { store, ipc });
   return () => {
     grupo.removeEventListener('change', aoMudar);
     h.removeEventListener(EVENTO, aoTrocar);
     desligarSessoes();
+    desligarSistema();
   };
 }

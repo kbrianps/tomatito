@@ -223,6 +223,36 @@ test('bandeja: tray-icon e image-png, ícone depois do motor e CloseRequested s�
   assert.match(ler('src-tauri/src/window/mod.rs'), /w\.show\(\);\s*let _ = w\.unminimize\(\);\s*let _ = w\.set_focus\(\);/);
 });
 
+// M39: os recursos da plataforma (3.5 e 3.8), decididos no Rust e montados
+// num lugar só no JS; o Sobre com o getVersion() e o "Sair" das Configurações.
+test('M39: recursos no get_state, montados só no platform/recursos.js, e o Sobre e o Sair das Configurações', () => {
+  const rec = ler('src-tauri/src/recursos.rs');
+  assert.match(rec, /var\("WAYLAND_DISPLAY"\)[\s\S]*var\("GDK_BACKEND"\)/, 'no Linux, pelo WAYLAND_DISPLAY e pelo GDK_BACKEND');
+  assert.match(rec, /#\[serde\(rename_all = "camelCase"\)\]\s*pub struct Recursos \{\s*pub bandeja: bool,\s*pub sempre_na_frente: bool,\s*pub regiao_de_entrada: bool,\s*\}/);
+  assert.match(ler('src-tauri/src/lib.rs'), /^mod recursos;$/m);
+  const cmd = ler('src-tauri/src/commands.rs');
+  assert.match(cmd, /pub struct GetStateDto \{[^}]*pub recursos: Recursos,\s*\}/);
+  assert.match(cmd, /recursos: crate::recursos::agora\(bandeja\.existe\(\)\)/);
+  const js = ler('src/platform/recursos.js');
+  assert.match(js, /^export let recursos = SEM_RECURSOS;$/m);
+  assert.match(js, /bandeja: dto\?\.bandeja === true,\s*sempreNaFrente: dto\?\.sempreNaFrente === true,\s*regiaoDeEntrada: dto\?\.regiaoDeEntrada === true,/);
+  assert.match(ler('src/lib/store.js'), /criarStore\(\{ ipc, eventos: ipc\.EVENTOS, aoReceberRecursos: definirRecursos \}\)/);
+  // Nenhuma tela nem componente pergunta pelo sistema (3.8): usam os recursos.
+  for (const pasta of ['views', 'components']) {
+    for (const arq of readdirSync(new URL(`../src/${pasta}/`, import.meta.url), { recursive: true })) {
+      if (!/\.js$/.test(arq) || /\.test\.js$/.test(arq)) continue;
+      const codigo = ler(`src/${pasta}/${arq}`).split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+      assert.doesNotMatch(codigo, /dataset\.platform|__TT_PLATFORM__|['"](linux|windows|wayland|x11)['"]/i, `${pasta}/${arq}`);
+    }
+  }
+  // A versão vem do getVersion() (Cargo.toml), e "Sair do Tomatito" é o mesmo app_quit.
+  assert.match(ler('src/lib/ipc.js'), /^export \{ getVersion as versao \} from '@tauri-apps\/api\/app';$/m);
+  const tela = ler('src/views/settings.js');
+  assert.match(tela, /ipc\.versao\?\.\(\)/);
+  assert.match(tela, /ipc\.sair\(\)/);
+  assert.match(ler('src-tauri/capabilities/main.json'), /"core:default"/, 'o core:app:allow-version vem no core:default');
+});
+
 // M26: estatísticas no SQLite do Rust (3.3), sem o tauri-plugin-sql.
 test('estatísticas: rusqlite com bundled, banco aberto antes do motor e stats_get registrado', () => {
   const cargo = ler('src-tauri/Cargo.toml');

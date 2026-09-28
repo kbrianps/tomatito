@@ -955,3 +955,23 @@ O que só você consegue: ouvir que o som desligado não toca (e que o ligado to
 8. [ ] Ctrl+Q e `TOMATITO_SPEED=60 npm run dev:app` de novo: em Configurações, os cartões voltam fechados, com 15 e 10 minutos, "Som de fim de foco" desativado e o volume onde você deixou.
 9. [ ] Religue "Som de fim de foco", desligue "Som de fim de intervalo" e repita o passo 7: agora tocam os dois fins de foco, e o fim do intervalo fica mudo.
 10. [ ] Para voltar ao padrão: 25 e 5 minutos, os dois sons ligados e o volume em 80. Ctrl+Q (e Ctrl+C no terminal, se o Vite continuar).
+
+## M39. Configurações: sistema e Sobre
+
+O que já foi conferido sem você:
+- `cargo test` e `npm test`: Wayland ou X11 pelo `WAYLAND_DISPLAY` e pelo `GDK_BACKEND`, o `recursos` no `get_state` e no `platform/recursos.js`, a marcação das seções "Sistema" e "Sobre" e os patches do `settings_set`.
+- `scripts/preview/sistema.mjs` (Chrome headless, nos quatro temas): as medidas dos cartões, "Versão 0.1.0", o hover e a abertura do Sobre, os switches pelo clique e pelo Espaço, a recusa, o "Sair" e o "Tempo na bandeja" sumindo sem o ícone.
+- Roteiro aninhado `config-sistema` (app de verdade no GNOME Shell aninhado, com a extensão AppIndicator): o `recursos.sempreNaFrente === false` no console, o tempo aparecendo e sumindo do lado do ícone na hora, fechar saindo do app com a opção desligada e só escondendo com ela ligada, e o botão "Sair".
+
+O que só você consegue: ver o tempo ao lado do ícone no seu painel, fechar a janela de verdade e rodar a linha do console.
+
+### Para conferir (uns 5 minutos)
+
+1. [ ] `cd ~/dev/tomatito && npm run dev:app`. Abra Configurações (Ctrl+,) e role até o fim: há as seções "Sistema" ("Fechar para a bandeja" ativado, "Tempo na bandeja" desativado e "Sair do Tomatito") e "Sobre" ("Tomatito", "© 2026 kbrianps · Licença MIT" e **"Versão 0.1.0"** à direita).
+2. [ ] Clique em "Sobre": abre com "Avisos de terceiros" (o botão "Ver avisos" fica apagado até o M46) e o aviso "Interface inspirada no Fluent Design. Windows e Segoe são marcas da Microsoft. O Tomatito não é afiliado à Microsoft."
+3. [ ] Botão direito fora de um campo, "Inspecionar elemento", aba Console. Cole `(await import('/src/platform/recursos.js')).recursos.sempreNaFrente === false` e Enter: responde `true` (no Wayland). `(await import('/src/platform/recursos.js')).recursos` mostra `bandeja: true`, `sempreNaFrente: false` e `regiaoDeEntrada: true`. Feche o inspetor.
+4. [ ] Na tela Foco (Ctrl+1), inicie uma sessão. Volte às Configurações e ligue "Tempo na bandeja": ao lado do ícone do Tomatito no painel aparece o tempo ("30 min", ou o que faltar). Desligue: o tempo some.
+5. [ ] Com "Fechar para a bandeja" ativado, feche a janela pelo X: ela some, e o ícone continua no painel. "Mostrar Tomatito" no menu do ícone a traz de volta.
+6. [ ] Desative "Fechar para a bandeja" e feche pelo X: o app fecha de vez (o ícone some do painel). Se o terminal continuar com o Vite, Ctrl+C nele.
+7. [ ] `npm run dev:app` de novo: em Configurações, "Fechar para a bandeja" continua desativado. Ative de novo (é o padrão).
+8. [ ] Clique em "Sair" (cartão "Sair do Tomatito"): o app fecha, e o ícone some do painel (Ctrl+C no terminal, se o Vite continuar).

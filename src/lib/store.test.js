@@ -365,3 +365,19 @@ test('M38: configurações inválidas são ignoradas, e F ou B fora do lugar nã
   m.store.aplicarConfiguracoes({ ...CONFIG, focusMinutes: 0 });
   assert.deepEqual(m.store.preparo, PREPARO_PADRAO);
 });
+
+test('M39: cada get_state entrega os recursos ao aoReceberRecursos, antes de avisar quem assina as configurações', async () => {
+  const ordem = [];
+  const recursos = { bandeja: true, sempreNaFrente: false, regiaoDeEntrada: true };
+  const store = criarStore({
+    ipc: { obterEstado: async () => ({ focus: retrato(0, 'idle'), speed: 1, settings: { focusMinutes: 25, breakMinutes: 5 }, recursos }) },
+    eventos: EVENTOS,
+    aoReceberRecursos: (r) => ordem.push(['recursos', r]),
+  });
+  store.assinarConfiguracoes(() => ordem.push(['configurações']));
+  await store.sincronizar();
+  await store.sincronizar();
+  assert.deepEqual(ordem, [['recursos', recursos], ['configurações'], ['recursos', recursos], ['configurações']]);
+  // Sem o aoReceberRecursos (os outros testes), nada quebra.
+  await montar().store.sincronizar();
+});

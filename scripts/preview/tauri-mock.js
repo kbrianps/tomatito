@@ -36,6 +36,10 @@
 //                               M34: o cronômetro correndo (ou paused@ms,
 //                               pausado) com o decorrido dado, em ms, e as
 //                               voltas (o total em cada uma)
+//   ?recursos=bandeja,sempreNaFrente
+//                               M39: os recursos da plataforma ligados no
+//                               get_state (padrão: os do Wayland, bandeja e
+//                               regiaoDeEntrada; "recursos=" desliga todos)
 // M28: com window.__TOMATITO_PREVIEW_RECUSAR_CONFIGURACOES__ = true (pelo
 // --eval), o settings_set rejeita como o Rust quando não consegue gravar.
 // As globais do initialization_script (?pref, ?ultimo e ?plataforma) não são
@@ -232,6 +236,11 @@ if (params.has('zerar')) configuracoes.resetHour = Number(params.get('zerar'));
 normalizarConfiguracoes(configuracoes);
 window.__TOMATITO_PREVIEW_CONFIGURACOES__ = configuracoes;
 
+// M39: os recursos do get_state (src-tauri/src/recursos.rs). Sem ?recursos=,
+// os de uma sessão Wayland com a bandeja.
+const ligadosNosRecursos = params.has('recursos') ? params.get('recursos').split(',') : ['bandeja', 'regiaoDeEntrada'];
+const recursos = Object.fromEntries(['bandeja', 'sempreNaFrente', 'regiaoDeEntrada'].map((k) => [k, ligadosNosRecursos.includes(k)]));
+
 // M29: as tarefas da prévia (?tarefas=A|B*|C).
 const tarefas = { proximo: 1, lista: [] };
 function tarefa(titulo, agora) {
@@ -345,7 +354,8 @@ const comandoDoCrono = (nome, f) => () => {
 
 const handlers = {
   get_state: () => ({ focus: retratoFoco(), speed: velocidade,
-    setup: { ...preparo, focusMinutes: configuracoes.focusMinutes, breakMinutes: configuracoes.breakMinutes }, timers: retratoDosTempos(), stopwatch: retratoDoCrono(), settings: structuredClone(configuracoes) }),
+    setup: { ...preparo, focusMinutes: configuracoes.focusMinutes, breakMinutes: configuracoes.breakMinutes }, timers: retratoDosTempos(), stopwatch: retratoDoCrono(), settings: structuredClone(configuracoes),
+    recursos: { ...recursos } }),
   stopwatch_start: comandoDoCrono('stopwatch_start', () => {
     if (crono.run === 'running') throw { code: 'alreadyRunning', message: 'o cronômetro já está correndo' };
     Object.assign(crono, { run: 'running', inicio: agoraMotor() });
@@ -424,6 +434,10 @@ const handlers = {
     window.__TOMATITO_PREVIEW_COMANDOS__.push(`sound_test:${sound ?? 'ambos'}`);
     return null;
   },
+  // M39: o "Sair" só anota (o Rust fecha o app e não responde); a versão do
+  // getVersion() é a do Cargo.toml de hoje.
+  app_quit: () => (window.__TOMATITO_PREVIEW_COMANDOS__.push('app_quit'), new Promise(() => {})),
+  'plugin:app|version': () => '0.1.0',
   // M26: os números da URL (?hoje=1500&ontem=...&semana=..., em segundos),
   // com a meta e a hora de zerar das configurações. M27: mais os focos que o
   // motor simulado termina (registrarFoco).

@@ -25,6 +25,7 @@
 #   TT_PIPEWIRE=/run/user/$UID bash scripts/gnome-aninhado/rodar.sh bandeja   # M36: o menu da bandeja pelo D-Bus, fechar para a bandeja e Sair
 #   TT_BIN_BUILD=<cópia do build:debug> bash scripts/gnome-aninhado/rodar.sh instancia   # M37: segunda instância, Ctrl+W, Ctrl+Q, window-state e o build sem menu nem recarga
 #   bash scripts/gnome-aninhado/rodar.sh configuracoes     # M38: períodos, sons e volume, do clique ao fim de fase (sem saída de áudio)
+#   bash scripts/gnome-aninhado/rodar.sh config-sistema    # M39: fechar para a bandeja, tempo na bandeja, Sair, Sobre e os recursos
 #   bash scripts/gnome-aninhado/instalado.sh               # o Tomatito instalado (M21b)
 #
 # Pré-requisito: o binário de debug atualizado (`cd src-tauri && cargo build`).

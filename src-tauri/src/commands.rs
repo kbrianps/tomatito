@@ -14,6 +14,7 @@ use tomatito_core::{Sound, TimeZone};
 use crate::audio::Som;
 use crate::engine::{CommandError, Engine, Preferencias, TauriSink};
 use crate::events::{self, FocusDto, StateDto, StopwatchDto, TimersDto};
+use crate::recursos::Recursos;
 use crate::settings::{Settings, SettingsError, SettingsStore};
 use crate::stats::{Stats, StatsDto};
 use crate::tasks::{TaskDto, TaskError};
@@ -22,21 +23,28 @@ use crate::tray::Bandeja;
 pub type AppEngine = Arc<Engine<TauriSink>>;
 
 /// Resposta do `get_state`: o retrato do motor (`focus`, `speed`, `setup`)
-/// e, a partir do M23, as configurações em `settings`.
+/// e, a partir do M23, as configurações em `settings`; no M39, os
+/// `recursos` da plataforma (3.5 e 3.8, `recursos.rs`).
 #[derive(Debug, Clone, Serialize)]
 pub struct GetStateDto {
     #[serde(flatten)]
     pub state: StateDto,
     pub settings: Settings,
+    pub recursos: Recursos,
 }
 
 /// O retrato inteiro. O JS sempre começa por aqui (3.1) e chama de novo no
 /// `visibilitychange` e quando a janela ganha foco.
 #[tauri::command]
-pub fn get_state(engine: State<'_, AppEngine>, settings: State<'_, SettingsStore>) -> GetStateDto {
+pub fn get_state(
+    engine: State<'_, AppEngine>,
+    settings: State<'_, SettingsStore>,
+    bandeja: State<'_, Arc<Bandeja>>,
+) -> GetStateDto {
     GetStateDto {
         state: engine.state(),
         settings: settings.get(),
+        recursos: crate::recursos::agora(bandeja.existe()),
     }
 }
 

@@ -182,6 +182,11 @@ impl Bandeja {
         self.mudar(|e| e.contagem = Contagem::do_foco(foco));
     }
 
+    /// M39: se o ícone foi criado (o `recursos.bandeja` do `get_state`).
+    pub fn existe(&self) -> bool {
+        self.alcas.get().is_some()
+    }
+
     /// `tt://state`.
     pub fn foco(&self, foco: &FocusDto) {
         self.mudar(|e| e.contagem = Contagem::do_foco(foco));

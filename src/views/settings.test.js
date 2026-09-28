@@ -3,10 +3,27 @@
 // e as setas são conferidos no Chrome pelo scripts/preview/aparencia.mjs e no
 // WebKitGTK pelo roteiro scripts/gnome-aninhado/roteiros/aparencia.js; os
 // cartões expansíveis, as listas, os switches e o volume, pelo
-// scripts/preview/configuracoes.mjs e pelo roteiro configuracoes.js.
+// scripts/preview/configuracoes.mjs e pelo roteiro configuracoes.js. M39: as
+// seções "Sistema" e "Sobre", no Chrome pelo scripts/preview/sistema.mjs e no
+// app de verdade pelo roteiro config-sistema.js.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FOCOS, INTERVALOS, PADROES, escolhaDe, marcacao, marcacaoDasSessoes, patchDe, previa, textoDoEstado, valoresDaLista } from './settings.js';
+import {
+  FOCOS,
+  INTERVALOS,
+  OPCOES_DO_SISTEMA,
+  PADROES,
+  escolhaDe,
+  marcacao,
+  marcacaoDasSessoes,
+  marcacaoDoSistema,
+  marcacaoDoSobre,
+  patchDe,
+  previa,
+  seAplica,
+  textoDoEstado,
+  valoresDaLista,
+} from './settings.js';
 import t from '../lib/i18n/pt-BR.js';
 
 const opcoes = (html) => [...html.matchAll(/<label class="tt-tema" data-tema="(\w+)"/g)].map((m) => m[1]);
@@ -145,8 +162,84 @@ test('patchDe: só a chave do controle, no formato do settings_set, e nada para 
   assert.deepEqual(patchDe('focusMinutes', '25'), { focusMinutes: 25 });
   for (const [chave, valor] of [
     ['focusMinutes', ''], ['focusMinutes', '2.5'], ['breakMinutes', '0'],
-    ['volume', '101'], ['volume', '-1'], ['volume', ''], ['trayTime', true],
+    ['volume', '101'], ['volume', '-1'], ['volume', ''], ['theme', 'dark'], ['linuxX11', true],
   ]) {
     assert.equal(patchDe(chave, valor), null, `${chave} = ${JSON.stringify(valor)}`);
   }
+});
+
+// M39: as seções "Sistema" e "Sobre".
+const RECURSOS = Object.freeze({ bandeja: true, sempreNaFrente: false, regiaoDeEntrada: true });
+
+test('Sistema: fechar para a bandeja e tempo na bandeja com switch, e "Sair do Tomatito" com botão, nos textos do catálogo', () => {
+  const html = marcacaoDoSistema(PADROES, { icone, recursos: RECURSOS });
+  assert.match(html, /^<section class="tt-config-secao" aria-labelledby="config-sistema"><h2 id="config-sistema" class="tt-t-body-strong">Sistema<\/h2>/);
+  assert.deepEqual(cartoes(html), ['fechar-bandeja', 'tempo-bandeja', 'sair']);
+  assert.deepEqual([...html.matchAll(/data-icone="(\w+)" data-grade="20"/g)].map((m) => m[1]), ['arrow_minimize', 'clock', 'power']);
+  for (const [id, titulo, descricao] of [
+    ['fechar-bandeja', 'Fechar para a bandeja', 'Fechar a janela só a esconde: a sessão de foco e os temporizadores continuam.'],
+    ['tempo-bandeja', 'Tempo na bandeja', 'Mostrar no ícone da bandeja quantos minutos faltam da sessão de foco.'],
+    ['sair', 'Sair do Tomatito', 'Encerrar a sessão de foco e fechar o aplicativo.'],
+  ]) {
+    assert.ok(html.includes(`<span id="config-${id}" class="tt-config-titulo">${titulo}</span><span id="config-${id}-desc" class="tt-config-descricao tt-t-caption">${descricao}</span>`), id);
+  }
+  // Os padrões da 3.3: fechar para a bandeja ligado, tempo na bandeja desligado (pendência 37).
+  assert.match(html, /<label class="tt-config-controle"><span class="tt-config-estado" data-estado aria-hidden="true">Ativado<\/span><fluent-switch data-config="closeToTray" aria-labelledby="config-fechar-bandeja" aria-describedby="config-fechar-bandeja-desc" checked><\/fluent-switch><\/label>/);
+  assert.match(html, /<span class="tt-config-estado" data-estado aria-hidden="true">Desativado<\/span><fluent-switch data-config="trayTime" aria-labelledby="config-tempo-bandeja" aria-describedby="config-tempo-bandeja-desc"><\/fluent-switch>/);
+  // O nome do botão é o título do cartão, que começa pelo texto visível.
+  assert.match(html, /<button type="button" data-sair aria-labelledby="config-sair" aria-describedby="config-sair-desc">Sair<\/button>/);
+  assert.ok('Sair do Tomatito'.startsWith(t.configuracoes.sair.botao));
+  // Os valores gravados.
+  const outro = marcacaoDoSistema({ ...PADROES, closeToTray: false, trayTime: true }, { icone, recursos: RECURSOS });
+  assert.match(outro, /Desativado<\/span><fluent-switch data-config="closeToTray"[^>]*"><\/fluent-switch>/);
+  assert.match(outro, /Ativado<\/span><fluent-switch data-config="trayTime"[^>]* checked>/);
+  assert.doesNotMatch(html + outro, /style=/);
+});
+
+test('Sistema: a opção que não se aplica some (o tempo na bandeja sem o ícone); fechar para a bandeja e Sair ficam sempre', () => {
+  const sem = marcacaoDoSistema(PADROES, { icone, recursos: { ...RECURSOS, bandeja: false } });
+  assert.match(sem, /<div class="tt-config-cartao" data-cartao="tempo-bandeja" hidden>/);
+  assert.match(sem, /<div class="tt-config-cartao" data-cartao="fechar-bandeja">/);
+  assert.match(sem, /<div class="tt-config-cartao" data-cartao="sair">/);
+  // Antes do primeiro get_state (SEM_RECURSOS), nada é prometido.
+  assert.match(marcacaoDoSistema(PADROES), /data-cartao="tempo-bandeja" hidden>/);
+  assert.doesNotMatch(marcacaoDoSistema(PADROES, { recursos: RECURSOS }), / hidden>/);
+  const [fechar, tempo] = OPCOES_DO_SISTEMA;
+  assert.equal(seAplica(fechar, { bandeja: false }), true);
+  assert.equal(seAplica(tempo, { bandeja: false }), false);
+  assert.equal(seAplica(tempo, { bandeja: true }), true);
+  assert.equal(seAplica(tempo, undefined), false);
+});
+
+test('Sobre: expansível com o nome, a licença e a versão no cabeçalho; aberto, os avisos (desabilitados até o M46) e o aviso de marcas', () => {
+  const html = marcacaoDoSobre({ icone, versao: '0.1.0' });
+  assert.match(html, /^<section class="tt-config-secao" aria-labelledby="config-sobre-secao"><h2 id="config-sobre-secao" class="tt-t-body-strong">Sobre<\/h2>/);
+  assert.deepEqual(cartoes(html), ['sobre']);
+  assert.match(html, /data-icone="info" data-grade="20"/);
+  // A versão fica dentro do botão e entra na descrição acessível.
+  assert.match(html, /<button type="button" class="tt-expansor-botao" data-expansor aria-expanded="false" aria-controls="config-sobre-conteudo" aria-labelledby="config-sobre" aria-describedby="config-sobre-desc config-sobre-valor">/);
+  assert.match(html, /<span id="config-sobre" class="tt-config-titulo">Tomatito<\/span><span id="config-sobre-desc" class="tt-config-descricao tt-t-caption">© 2026 kbrianps · Licença MIT<\/span>/);
+  assert.match(html, /<span id="config-sobre-valor" class="tt-expansor-valor">Versão 0\.1\.0<\/span><span class="tt-expansor-chevron">/);
+  assert.match(html, /<div id="config-sobre-conteudo" class="tt-expansor-conteudo" role="group" aria-labelledby="config-sobre" hidden>/);
+  assert.match(html, /<span id="config-avisos" class="tt-config-item-rotulo">Avisos de terceiros<\/span><button type="button" data-avisos aria-describedby="config-avisos" disabled>Ver avisos<\/button>/);
+  assert.ok(html.includes('Interface inspirada no Fluent Design. Windows e Segoe são marcas da Microsoft. O Tomatito não é afiliado à Microsoft.'));
+  // Antes do getVersion() responder, o lugar da versão fica vazio; aberto quando lembrado.
+  assert.match(marcacaoDoSobre({ abertosAgora: new Set(['sobre']) }), /<span id="config-sobre-valor" class="tt-expansor-valor"><\/span>/);
+  assert.match(marcacaoDoSobre({ abertosAgora: new Set(['sobre']) }), /data-cartao="sobre" data-aberto>/);
+  // Os expansíveis do M38 continuam sem valor no cabeçalho.
+  assert.doesNotMatch(marcacaoDasSessoes(PADROES), /tt-expansor-valor/);
+});
+
+test('a tela: Sessões de foco, Aparência, Sistema e Sobre, nessa ordem', () => {
+  const html = marcacao({ recursos: RECURSOS, versao: '0.1.0' });
+  assert.deepEqual([...html.matchAll(/<h2 id="([\w-]+)"/g)].map((m) => m[1]), ['config-sessoes', 'config-aparencia', 'config-sistema', 'config-sobre-secao']);
+  assert.match(html, /<\/section><\/div>$/);
+  assert.equal(new Set([...html.matchAll(/ id="([^"]+)"/g)].map((m) => m[1])).size, [...html.matchAll(/ id="([^"]+)"/g)].length, 'ids únicos');
+});
+
+test('patchDe: as opções do sistema gravam só a própria chave, em booleano', () => {
+  assert.deepEqual(patchDe('closeToTray', false), { closeToTray: false });
+  assert.deepEqual(patchDe('trayTime', true), { trayTime: true });
+  assert.deepEqual(PADROES.closeToTray, true);
+  assert.deepEqual(PADROES.trayTime, false);
 });

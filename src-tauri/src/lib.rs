@@ -5,6 +5,7 @@ mod events;
 mod i18n;
 mod notify;
 mod persist;
+mod recursos;
 mod settings;
 mod state_file;
 mod stats;

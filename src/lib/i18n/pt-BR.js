@@ -275,6 +275,33 @@ export default Object.freeze({
       system: 'Usar configuração do sistema',
       full: 'Tomatito Full',
     }),
+    // M39: a seção "Sistema" (fechar para a bandeja, tempo na bandeja e
+    // "Sair do Tomatito", 2.1) e o Sobre, como o expansível "Sobre" dos apps
+    // do WinUI: o nome, a licença e a versão no cabeçalho; dentro, os avisos
+    // de terceiros (o botão funciona a partir do M46) e o aviso de marcas da
+    // seção 9 do plano.
+    sistema: 'Sistema',
+    fecharParaBandeja: Object.freeze({
+      titulo: 'Fechar para a bandeja',
+      descricao: 'Fechar a janela só a esconde: a sessão de foco e os temporizadores continuam.',
+    }),
+    tempoNaBandeja: Object.freeze({
+      titulo: 'Tempo na bandeja',
+      descricao: 'Mostrar no ícone da bandeja quantos minutos faltam da sessão de foco.',
+    }),
+    sair: Object.freeze({
+      titulo: 'Sair do Tomatito',
+      descricao: 'Encerrar a sessão de foco e fechar o aplicativo.',
+      botao: 'Sair',
+    }),
+    sobre: Object.freeze({
+      secao: 'Sobre',
+      licenca: '© 2026 kbrianps · Licença MIT',
+      versao: (v) => `Versão ${v}`,
+      avisos: 'Avisos de terceiros',
+      verAvisos: 'Ver avisos',
+      marcas: 'Interface inspirada no Fluent Design. Windows e Segoe são marcas da Microsoft. O Tomatito não é afiliado à Microsoft.',
+    }),
   }),
   // Unidades por extenso, por categoria do Intl.PluralRules('pt-BR')
   // (format.js): o aria-valuetext do seletor de minutos ("25 minutos").

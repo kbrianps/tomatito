@@ -2,7 +2,7 @@
 
 <!-- Gerado por scripts/copy-icons.mjs; não edite à mão. -->
 
-Cópia de 34 arquivos do pacote npm `@fluentui/svg-icons` 1.1.343
+Cópia de 38 arquivos do pacote npm `@fluentui/svg-icons` 1.1.343
 (Fluent System Icons, repositório `microsoft/fluentui-system-icons`), sem
 nenhuma alteração. Licença MIT, a mesma declarada no `package.json` do pacote;
 o texto completo vai para os avisos de terceiros do app (PLANO.md, 9).
@@ -11,6 +11,7 @@ Só entram os ícones que o Tomatito usa. Para acrescentar um, inclua-o na
 lista `ICONES` de `scripts/copy-icons.mjs` e rode `node scripts/copy-icons.mjs`.
 
 - `add_16_regular.svg`
+- `arrow_minimize_20_regular.svg`
 - `arrow_reset_20_regular.svg`
 - `arrow_reset_24_regular.svg`
 - `checkmark_16_regular.svg`
@@ -21,6 +22,7 @@ lista `ICONES` de `scripts/copy-icons.mjs` e rode `node scripts/copy-icons.mjs`.
 - `chevron_up_16_regular.svg`
 - `circle_16_regular.svg`
 - `circle_20_regular.svg`
+- `clock_20_regular.svg`
 - `clock_alarm_20_regular.svg`
 - `copy_16_regular.svg`
 - `delete_16_regular.svg`
@@ -30,12 +32,14 @@ lista `ICONES` de `scripts/copy-icons.mjs` e rode `node scripts/copy-icons.mjs`.
 - `flag_16_regular.svg`
 - `flag_24_regular.svg`
 - `hourglass_half_16_regular.svg`
+- `info_20_regular.svg`
 - `more_horizontal_16_regular.svg`
 - `paint_brush_20_regular.svg`
 - `pause_16_filled.svg`
 - `pause_24_filled.svg`
 - `play_16_filled.svg`
 - `play_24_filled.svg`
+- `power_20_regular.svg`
 - `save_16_regular.svg`
 - `settings_16_regular.svg`
 - `speaker_2_20_regular.svg`

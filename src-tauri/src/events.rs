@@ -382,8 +382,8 @@ impl From<&StopwatchSnapshot> for StopwatchDto {
     }
 }
 
-/// O retrato do motor. O `get_state` o manda junto com as configurações
-/// (`commands.rs`); os `recursos` (M39) entram quando existirem.
+/// O retrato do motor. O `get_state` o manda junto com as configurações e os
+/// `recursos` da plataforma (M39; `commands.rs`).
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StateDto {

@@ -70,6 +70,12 @@ export const ICONES = Object.freeze([
   { nome: 'checkmark', estilo: 'regular', tamanhos: [16] },
   // M35: o "Copiar" das voltas do cronômetro
   { nome: 'copy', estilo: 'regular', tamanhos: [16] },
+  // M39: os cartões da seção "Sistema" (fechar para a bandeja, tempo na
+  // bandeja e sair) e o do "Sobre", na grade de 20 do SettingsCard
+  { nome: 'arrow_minimize', estilo: 'regular', tamanhos: [20] },
+  { nome: 'clock', estilo: 'regular', tamanhos: [20] },
+  { nome: 'power', estilo: 'regular', tamanhos: [20] },
+  { nome: 'info', estilo: 'regular', tamanhos: [20] },
 ]);
 
 /** Os arquivos da lista, no formato do pacote: `play_16_filled.svg`. */

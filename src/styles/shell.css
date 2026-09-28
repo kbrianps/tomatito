@@ -567,6 +567,17 @@ input.tt-deslizante:focus-visible{ outline:2px solid var(--tt-focus-outer); outl
   input.tt-deslizante:focus-visible{ outline-color:Highlight; }
 }
 
+/* M39: as seções "Sistema" e "Sobre". Os cartões com switch são como o do
+   Volume (o controle a 16 px da borda direita; no estreito, numa linha
+   própria). O cartão que não se aplica à plataforma sai com [hidden]. A
+   versão fica no cabeçalho do Sobre, dentro do botão, na coluna do meio da
+   grade, no texto 2 (e no --tt-fg-2-on-ctl com o hover, como a descrição).
+   O aviso de marcas é uma linha de texto na coluna do título. */
+.tt-config-cartao[hidden]{ display:none; }
+.tt-expansor-valor{ grid-column:2; padding-left:16px; color:var(--tt-fg-2); white-space:nowrap; }
+.tt-expansor-topo:hover .tt-expansor-valor{ color:var(--tt-fg-2-on-ctl); }
+.tt-config-item.tt-config-nota{ justify-content:flex-start; padding-top:14px; padding-bottom:14px; }
+
 /* M32: tela Temporizador (src/views/timers.js), com as medidas da captura do
    Relógio (timers-in-clock-app.png, a 175%; docs/decisoes.md, M32): cards de
    313 × 321 numa grade centrada que quebra de linha, a 16 px um do outro, com

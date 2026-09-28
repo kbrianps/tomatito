@@ -34,8 +34,13 @@
 // arquivo inteiro, e o Rust as emite na ordem das gravações. O F e o B delas
 // entram no preparo, para a frase dos intervalos mudar assim que o período ou
 // o intervalo mudam nas Configurações.
+//
+// M39: cada get_state leva também os `recursos` da plataforma, que vão para o
+// platform/recursos.js (`aoReceberRecursos`) antes das configurações: quem
+// assina as configurações já vê os recursos certos.
 
 import * as ipc from './ipc.js';
+import { definirRecursos } from '../platform/recursos.js';
 
 /** Estados em que uma fase corre e a contagem anda. */
 export const CORRENDO = Object.freeze(['focus', 'break']);
@@ -56,9 +61,10 @@ export const PREPARO_PADRAO = Object.freeze({
 /**
  * Cria o store. `ipc` precisa de `obterEstado()` e `ouvir(evento, cb)`, e
  * `foco.*` para os comandos (o lib/ipc.js; os testes passam um falso).
- * `agora` é o relógio de parede em ms.
+ * `agora` é o relógio de parede em ms. `aoReceberRecursos(dto)` recebe o
+ * `recursos` de cada get_state (M39; no app, o `definirRecursos`).
  */
-export function criarStore({ ipc, eventos, agora = () => Date.now() }) {
+export function criarStore({ ipc, eventos, agora = () => Date.now(), aoReceberRecursos = () => {} }) {
   let foco = null;
   let velocidade = 1;
   let preparo = PREPARO_PADRAO;
@@ -136,6 +142,7 @@ export function criarStore({ ipc, eventos, agora = () => Date.now() }) {
       .then((estado) => {
         if (Number.isFinite(estado?.speed) && estado.speed > 0) velocidade = estado.speed;
         if (preparoValido(estado?.setup)) preparo = Object.freeze({ ...estado.setup });
+        aoReceberRecursos(estado?.recursos);
         aplicarConfiguracoes(estado?.settings);
         aplicarFoco(estado?.focus);
         aplicarTemporizadores(estado?.timers);
@@ -309,4 +316,4 @@ function preparoValido(p) {
 
 // O store do app, ligado ao Rust pelo lib/ipc.js. O main.js chama `ligar()`
 // no boot; as telas só leem e assinam.
-export const store = criarStore({ ipc, eventos: ipc.EVENTOS });
+export const store = criarStore({ ipc, eventos: ipc.EVENTOS, aoReceberRecursos: definirRecursos });
