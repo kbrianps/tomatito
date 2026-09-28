@@ -932,3 +932,30 @@ O que só você consegue: ver o tomate de verdade sobre a sua área de trabalho,
 8. [ ] Engrenagem (em cima, à direita): a janela principal vem para a frente, nas Configurações, e o tomate continua aberto. O ícone de janela (em cima, à esquerda, "Voltar ao modo normal"): a janela principal vem para a frente e o tomate fecha.
 9. [ ] Deuteranopia: com o `npm run dev:app` aberto (o Vite serve na 5173; na worktree `tomatito-full`, na porta que você passou), abra no Chrome `http://localhost:5173/tomato.html` (a página fica sem dados do app; basta ver o desenho). F12 → menu ⋮ → More tools → Rendering → "Emulate vision deficiencies" → Deuteranopia. As folhinhas do cálice continuam visíveis contra o corpo. Repita com Protanopia. Volte para "No emulation".
 10. [ ] Feche o app (Ctrl+C no terminal).
+
+## M51. Alternar para o Full e de volta
+
+O que já foi conferido sem você:
+- `npm test` e `cargo test`: a escolha do Full e a saída pelas Configurações (esperando o `tt://settings` da saída), a ordem do "Entrar" e do "Sair" da 5.7, o limite de 2 s do `tt://tomato-ready`, o início só com a `tomato` e a chave de validação.
+- Prévia no Chrome (`node scripts/preview/aparencia.mjs`, 42 conferências): a opção "Tomatito Full" com o tomate em miniatura, e a ida e a volta pela Aparência em cada tema de partida.
+- Roteiro aninhado `full` (o app de verdade no GNOME Shell 50.1 aninhado, 20 conferências): 20 idas e voltas com uma sessão correndo, sem clarão quadro a quadro (949 quadros do tomate, 820 da janela principal), sem zerar o timer e sem crash; a memória do app e do WebKit +0,7%; o Claro escolhido com o Full ativo; o início direto no Full.
+
+O que só você consegue: ver a troca na sua tela e com o seu teclado.
+
+Desde o M51, o botão "Abrir o tomate" do `#/dev` (passo 1 da seção M50) esconde a janela principal: para os passos do M50 que olham as duas janelas, traga a principal de volta pela engrenagem do tomate.
+
+### Para conferir (uns 5 minutos)
+
+1. [ ] `cd ~/dev/tomatito-full && npm run dev:app` (ou, depois da junção, em `~/dev/tomatito`). Vá em Configurações: em "Tema do aplicativo" há seis opções, e "Tomatito Full" mostra um tomate sobre um fundo cinza.
+2. [ ] Na tela Foco, inicie uma sessão. Volte a Configurações e clique em "Tomatito Full": o tomate aparece e a janela principal some, **sem nenhum quadro branco, preto ou cinza** no lugar do tomate e sem piscar. O tomate mostra o mesmo tempo que a tela Foco mostrava.
+3. [ ] Com o tomate ativo (clique nele, fora dos botões, se precisar), aperte Esc: a janela principal volta, em Configurações, no tema de antes, e o tomate fecha. O tempo continua de onde estava.
+4. [ ] Entre no Full de novo e clique no ícone de janela (em cima, à esquerda do tomate, "Voltar ao modo normal"): o mesmo do passo 3.
+5. [ ] Faça umas 5 idas e voltas seguidas, alternando o Esc e o botão: nenhum clarão, o tempo nunca volta ao começo.
+6. [ ] No Full, clique na engrenagem do tomate: a janela principal aparece em Configurações, com o tomate ainda aberto e "Tomatito Full" marcado. Clique em "Claro": o tomate fecha e a janela principal fica no Claro.
+7. [ ] Escolha "Tomatito Full" de novo e feche o app (Ctrl+C no terminal). Rode `npm run dev:app` outra vez: **só o tomate aparece**, sem a janela principal. Clique na engrenagem: a principal aparece já em Configurações, no Claro. Aperte Esc no tomate: ele fecha e o app fica no Claro.
+8. [ ] (Depois da junção, com o build de uso diário instalado e os outros apps WebKit fechados, como o GNOME Web.) Abra o Tomatito instalado, rode no terminal o comando abaixo, faça 20 idas e voltas (passos 2 e 3) e rode de novo. O segundo número é no máximo 10% maior que o primeiro.
+
+   ```bash
+   ps -o rss= -p "$(pgrep -d, -f 'tomatito|WebKitWebProcess|WebKitNetworkProcess')" | awk '{s+=$1} END{print s" KB"}'
+   ```
+9. [ ] Feche o app (Ctrl+C no terminal).

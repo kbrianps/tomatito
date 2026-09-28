@@ -56,7 +56,17 @@ pub fn settings_set(
     settings: State<'_, SettingsStore>,
     patch: Value,
 ) -> Result<Settings, SettingsError> {
-    settings.set(&patch, |s| {
+    gravar_configuracoes(&app, &settings, &patch)
+}
+
+/// O caminho do `settings_set`, também para o `switch_window_mode` (5.7, M51):
+/// grava, emite `tt://settings` e avisa a bandeja.
+pub fn gravar_configuracoes(
+    app: &AppHandle,
+    settings: &SettingsStore,
+    patch: &Value,
+) -> Result<Settings, SettingsError> {
+    settings.set(patch, |s| {
         if let Err(e) = app.emit(events::SETTINGS, s) {
             eprintln!("[tomatito] {} não saiu: {e}", events::SETTINGS);
         }
@@ -265,26 +275,26 @@ pub fn stopwatch_reset(engine: State<'_, AppEngine>) -> Result<StopwatchDto, Com
     engine.stopwatch_reset()
 }
 
-/// M50: abre a janela `tomato` (ou a traz para a frente), transparente e sem
-/// região, para conferir o tomate ligado ao motor antes da troca de verdade
-/// (`switch_window_mode`, M51), que substitui este comando. Só no build de
-/// debug (`npm run dev:app` e `npm run build:debug`); no de uso diário,
-/// recusa. Async: criar janela num comando síncrono trava no Windows (5.3).
+/// `switch_window_mode{full}` (3.5 e 5.7, M51): entra no Full (grava
+/// `theme = full`, cria a `tomato` escondida, espera o `tt://tomato-ready`
+/// por até 2 s, mostra o tomate e esconde a `main`) ou sai dele (grava
+/// `theme = lastNormalTheme`, mostra a `main`, recriada se preciso, e fecha
+/// a `tomato`). Async: criar janela num comando síncrono trava no Windows
+/// (5.3). Os detalhes estão em `window/tomato.rs`.
 #[tauri::command]
-pub async fn tomato_debug_open(app: AppHandle) -> Result<(), String> {
-    if !cfg!(debug_assertions) {
-        return Err("tomato_debug_open só existe no build de debug".into());
+pub async fn switch_window_mode(app: AppHandle, full: bool) -> Result<(), String> {
+    if full {
+        crate::window::tomato::entrar(&app).await
+    } else {
+        crate::window::tomato::sair(&app).await
     }
-    let s = app.state::<SettingsStore>().get();
-    crate::window::tomato::abrir(&app, &s)
-        .map(|_| ())
-        .map_err(|e| e.to_string())
 }
 
 /// `show_main{route}` (3.5 e 5.7): o botão Configurações do tomate mostra a
 /// `main` sem fechar a `tomato`, já na rota (`#/configuracoes`). Uma rota fora
 /// do formato do roteador é ignorada (`window::rota_valida`). Async pelo
-/// mesmo motivo do `tomato_debug_open`: sem a `main`, ela nasce de novo.
+/// mesmo motivo do `switch_window_mode`: sem a `main`, ela nasce de novo (já
+/// na rota, M51).
 #[tauri::command]
 pub async fn show_main(app: AppHandle, route: Option<String>) -> Result<(), String> {
     crate::window::mostrar_main(&app, route.as_deref()).map_err(|e| e.to_string())

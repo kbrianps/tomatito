@@ -11,6 +11,7 @@ import {
   ligarTema,
   NATIVO,
   refletirConfiguracoes,
+  sairDoFull,
   temaDeBase,
   trocarAtributos,
 } from './theme.js';
@@ -57,8 +58,8 @@ function gravadorFalso(ordem) {
   return gravar;
 }
 
-test('as escolhas da interface são as cinco da 4.1 sem o Full, e o nativo segue o color-scheme', () => {
-  assert.deepEqual(ESCOLHAS, ['lite', 'suave', 'light', 'dark', 'system']);
+test('as escolhas da interface são os cinco temas da 1.1 e o Sistema por último, e o nativo segue o color-scheme', () => {
+  assert.deepEqual(ESCOLHAS, ['lite', 'suave', 'light', 'dark', 'full', 'system']);
   assert.deepEqual(NATIVO, { lite: 'dark', suave: 'light', light: 'light', dark: 'dark' });
 });
 
@@ -123,16 +124,91 @@ test('falha no settings_set: o <html> volta ao tema anterior, o tema nativo não
   assert.deepEqual(h.eventos.at(-1), { pref: 'dark', tema: 'dark' });
 });
 
-test('o Full e nomes desconhecidos são recusados antes de mexer em qualquer coisa; o tomate não troca', async () => {
+test('nomes desconhecidos são recusados antes de mexer em qualquer coisa', async () => {
   const h = htmlFalso();
   const win = janelaFalsa();
   const gravar = gravadorFalso();
-  await assert.rejects(aplicarTema('full', { win, h, gravar, quadro: quadros() }), /indisponível/);
-  await assert.rejects(aplicarTema('roxo', { win, h, gravar, quadro: quadros() }), /desconhecido/);
+  const trocas = [];
+  await assert.rejects(aplicarTema('roxo', { win, h, gravar, trocarModo: async (f) => trocas.push(f), quadro: quadros() }), /desconhecido/);
   assert.deepEqual(gravar.patches, []);
   assert.deepEqual(win.chamadas, []);
-  assert.equal(await aplicarTema('dark', { win: janelaFalsa({ label: 'tomato' }), h, gravar, quadro: quadros() }), null);
-  assert.equal(h.dataset.theme, 'lite');
+  assert.deepEqual(trocas, []);
+});
+
+// Um switch_window_mode falso: anota a chamada e, como o Rust, emite o
+// tt://settings da troca, que chega ao <html> um pouco depois (`atraso` ms).
+function trocaFalsa(h, ordem, { atraso = 20, ultimo = 'lite' } = {}) {
+  return async (full) => {
+    ordem.push(`trocar:${full}`);
+    const pref = full ? 'full' : ultimo;
+    setTimeout(() => {
+      ordem.push(`tt://settings:${pref}`);
+      trocarAtributos(h, pref, ultimo, { quadro: () => {} });
+    }, atraso);
+  };
+}
+
+test('M51: na main, escolher o Full só chama o switch_window_mode(true); o Rust grava e troca as janelas', async () => {
+  const h = htmlFalso({ pref: 'suave', tema: 'suave' });
+  const win = janelaFalsa();
+  const ordem = [];
+  const gravar = gravadorFalso(ordem);
+  assert.equal(await aplicarTema('full', { win, h, gravar, trocarModo: trocaFalsa(h, ordem, { ultimo: 'suave' }), quadro: quadros() }), null);
+  assert.deepEqual(ordem, ['trocar:true']);
+  assert.deepEqual(gravar.patches, []);
+  assert.deepEqual(win.chamadas, [], 'o tema nativo da main não muda: ela continua no Suave');
+});
+
+test('M51: com o Full ativo, escolher Claro na main sai do Full, espera o tt://settings da saída e só então aplica o Claro', async () => {
+  const h = htmlFalso({ pref: 'full', tema: 'lite' });
+  const win = janelaFalsa();
+  const ordem = [];
+  const gravar = gravadorFalso(ordem);
+  await aplicarTema('light', { win, h, gravar, trocarModo: trocaFalsa(h, ordem, { atraso: 30 }), quadro: quadros() });
+  assert.deepEqual(ordem, ['trocar:false', 'tt://settings:lite', 'gravar:light/light']);
+  assert.equal(h.dataset.themePref, 'light');
+  assert.equal(h.dataset.theme, 'light');
+  assert.deepEqual(win.chamadas, ['setTheme:light']);
+  // O último tt-tema é o Claro: o evento da saída não chega depois da escolha.
+  assert.deepEqual(h.eventos.at(-1), { pref: 'light', tema: 'light' });
+});
+
+test('M51: sairDoFull não fica preso se o tt://settings da saída não chegar', async () => {
+  const h = htmlFalso({ pref: 'full', tema: 'lite' });
+  const timers = [];
+  const relogio = { setTimeout: (f, ms) => (timers.push({ f, ms }), timers.length), clearTimeout: () => {} };
+  const trocas = [];
+  const fim = sairDoFull({ h, trocarModo: async (f) => trocas.push(f), espera: 1000, relogio });
+  await new Promise((r) => setImmediate(r));
+  assert.deepEqual(trocas, [false]);
+  assert.equal(timers[0].ms, 1000);
+  timers[0].f();
+  await fim;
+  // Um tt-tema que ainda é o Full (outra gravação no meio) não conta como a saída.
+  const h2 = htmlFalso({ pref: 'full', tema: 'lite' });
+  let saiu = false;
+  const fim2 = sairDoFull({ h: h2, trocarModo: async () => {}, relogio: { setTimeout: () => 0, clearTimeout: () => {} } }).then(() => (saiu = true));
+  trocarAtributos(h2, 'full', 'dark', { quadro: () => {} });
+  await new Promise((r) => setImmediate(r));
+  assert.equal(saiu, false);
+  trocarAtributos(h2, 'dark', 'dark', { quadro: () => {} });
+  await fim2;
+  assert.equal(saiu, true);
+});
+
+test('M51: no tomate, só o Full vale; outra escolha sai do Full pelo switch_window_mode(false)', async () => {
+  const h = htmlFalso({ pref: 'full', tema: 'full' });
+  const win = janelaFalsa({ label: 'tomato' });
+  const ordem = [];
+  const gravar = gravadorFalso(ordem);
+  const trocarModo = async (f) => ordem.push(`trocar:${f}`);
+  assert.equal(await aplicarTema('full', { win, h, gravar, trocarModo, quadro: quadros() }), null);
+  assert.deepEqual(ordem, []);
+  assert.equal(await aplicarTema('dark', { win, h, gravar, trocarModo, quadro: quadros() }), null);
+  assert.deepEqual(ordem, ['trocar:false']);
+  assert.deepEqual(gravar.patches, []);
+  assert.equal(h.dataset.theme, 'full');
+  assert.deepEqual(win.chamadas, []);
 });
 
 test('tt://settings: a main regrava data-theme-pref e data-theme (o resolvedTheme) e guarda o lastNormalTheme', async () => {

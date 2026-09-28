@@ -6,9 +6,9 @@
 //   TT_PORT=5174 bash scripts/gnome-aninhado/rodar.sh tomate   # binário compilado para a 5174
 //
 // O "Pronto quando" do M50, no que dá para medir sem um humano:
-//   1. o comando de debug (`tomato_debug_open`, pedido pela página da main)
-//      abre a `tomato` com 280 × 280 (tomatoSize), no tema full, transparente
-//      e sem região: os quatro cantos são idênticos, pixel a pixel, à captura
+//   1. o `switch_window_mode(true)` (M51; no M50, o comando de debug
+//      `tomato_debug_open`), pedido pela página da main, abre a `tomato`
+//      com 280 × 280 (tomatoSize), no tema full, transparente e sem região: os quatro cantos são idênticos, pixel a pixel, à captura
 //      da área de trabalho sem o tomate;
 //   2. o arraste funciona pelo corpo, pelo cabinho e por uma sépala do cálice
 //      (a janela anda o que o ponteiro andou);
@@ -110,6 +110,11 @@ const LER_TOMATE = `JSON.stringify((() => { const q = (s) => document.querySelec
 const lerTomate = async () => JSON.parse(await comando('tomato', LER_TOMATE));
 const LER_MAIN = `JSON.stringify({ agora: Date.now(), hash: location.hash, minutos: document.querySelector('[data-minutos]')?.textContent ?? null, visivel: document.visibilityState })`;
 const lerMain = async () => JSON.parse(await comando('main', LER_MAIN));
+
+// M51: o tomate abre pelo switch_window_mode (que esconde a main), e o
+// show_main traz a main de volta, para o roteiro do M50 seguir com as duas.
+const ABRIR =
+  "window.__TAURI_INTERNALS__.invoke('switch_window_mode', { full: true }).then(() => window.__TAURI_INTERNALS__.invoke('show_main', { route: null })).then(() => 'aberto', (e) => 'erro: ' + e)";
 
 const segundos = (mmss) => {
   const [m, s] = mmss.split(':').map(Number);
@@ -215,7 +220,8 @@ async function clicarNoTomate(nome) {
 
 async function acharTomate() {
   TOMATO = await esperar(
-    () => janelas().find((w) => w !== MAIN && rect(w).w > 0),
+    // M51: a main escondida e mostrada de novo é outra MetaWindow; o tomate é o de 280 × 280.
+    () => janelas().find((w) => rect(w).w === LADO && rect(w).h === LADO),
     30000,
     'a janela do tomate',
   );
@@ -225,6 +231,13 @@ async function acharTomate() {
     'a página do tomate (sonda)',
   );
   nInfo = sonda().filter((e) => e.janela === 'tomato' && e.tipo === 'info').length;
+  // M51: a main que volta pelo show_main é posta pelo Mutter onde ele quiser,
+  // às vezes por cima do tomate; ela volta para a direita, como no começo.
+  await esperar(() => janelas().find((w) => w !== TOMATO && rect(w).w > LADO), 10000, 'a main de volta');
+  const m = janelas().find((w) => w !== TOMATO && rect(w).w > LADO);
+  m.move_resize_frame(true, 1060, 300, 820, 620);
+  await sleep(600);
+  Main.activateWindow(TOMATO);
   await sleep(800);
 }
 let nInfo = 0;
@@ -254,8 +267,8 @@ async function principal() {
   await sleep(800);
 
   // 1. O comando de debug abre o tomate.
-  const aberto = await comando('main', "window.__TAURI_INTERNALS__.invoke('tomato_debug_open').then(() => 'aberto', (e) => 'erro: ' + e)");
-  checar('tomato_debug_open responde', aberto === 'aberto', aberto);
+  const aberto = await comando('main', ABRIR);
+  checar('switch_window_mode(true) responde (e o show_main traz a main de volta)', aberto === 'aberto', aberto);
   await acharTomate();
   R.medidas.tomato = { frame: rect(TOMATO), buffer: (() => { const b = TOMATO.get_buffer_rect(); return [b.width, b.height]; })(), decorada: TOMATO.decorated };
   checar('a tomato tem 280 × 280, sem moldura', R.medidas.tomato.frame.w === LADO && R.medidas.tomato.frame.h === LADO && R.medidas.tomato.buffer[0] === LADO && !TOMATO.decorated, R.medidas.tomato);
@@ -367,7 +380,7 @@ async function principal() {
     semTomate.status === 'paused' && semTomate.session.id === antes.session.id && semTomate.session.remainingMs === antes.session.remainingMs,
     { antes: [antes.status, antes.session.remainingMs], depois: [semTomate.status, semTomate.session.remainingMs] },
   );
-  await comando('main', "window.__TAURI_INTERNALS__.invoke('tomato_debug_open').then(() => 'aberto', (e) => 'erro: ' + e)");
+  await comando('main', ABRIR);
   await acharTomate();
   await moverJanela(TOMATO, B.x, B.y);
   let tDepois = await lerTomate();
@@ -376,7 +389,7 @@ async function principal() {
   TOMATO.delete(global.get_current_time());
   await esperar(() => janelas().length === 1, 10000, 'o tomate fechado de novo');
   await sleep(4000);
-  await comando('main', "window.__TAURI_INTERNALS__.invoke('tomato_debug_open').then(() => 'aberto', (e) => 'erro: ' + e)");
+  await comando('main', ABRIR);
   await acharTomate();
   await moverJanela(TOMATO, B.x, B.y);
   const motor = await focoDoMotor();

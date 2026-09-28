@@ -649,7 +649,7 @@ test('tomate: tomato.css com os tokens --tt-tomato-*, sem as variáveis do prot�
   assert.match(js, /addEventListener\('contextmenu', \(e\) => e\.preventDefault\(\)\)/);
 });
 
-test('tomate: duas entradas no Vite, janela da 5.3 e comandos async (M50)', () => {
+test('tomate: duas entradas no Vite, janela da 5.3 e comandos async (M50 e M51)', () => {
   const vite = ler('vite.config.js');
   assert.match(vite, /rolldownOptions:\s*\{\s*input:\s*\{\s*main: entrada\('index\.html'\),\s*tomato: entrada\('tomato\.html'\),/);
   const tomato = ler('src-tauri/src/window/tomato.rs');
@@ -672,15 +672,46 @@ test('tomate: duas entradas no Vite, janela da 5.3 e comandos async (M50)', () =
   for (const c of chamadas) assert.ok(tomato.includes(c), `tomato.rs sem ${c}`);
   assert.match(tomato, /let size = f64::from\(s\.tomato_size\);/);
   const comandos = ler('src-tauri/src/commands.rs');
-  assert.match(comandos, /pub async fn tomato_debug_open\(/, 'criar janela num comando síncrono trava no Windows (5.3)');
+  assert.match(comandos, /pub async fn switch_window_mode\(app: AppHandle, full: bool\)/, 'criar janela num comando síncrono trava no Windows (5.3)');
   assert.match(comandos, /pub async fn show_main\(/);
-  assert.match(comandos, /if !cfg!\(debug_assertions\) \{/);
+  assert.doesNotMatch(comandos, /tomato_debug_open/, 'o comando de debug do M50 saiu no M51');
   const lib = ler('src-tauri/src/lib.rs');
-  assert.match(lib, /commands::tomato_debug_open,/);
+  assert.match(lib, /commands::switch_window_mode,/);
   assert.match(lib, /commands::show_main,/);
   for (const arquivo of ['src-tauri/src/window/tomato.rs', 'src-tauri/src/window/mod.rs', 'src/tomato.js']) {
     assert.doesNotMatch(ler(arquivo), /set_ignore_cursor_events|setIgnoreCursorEvents/, `${arquivo}: nunca (5.3)`);
   }
+});
+
+// M51: a troca normal ↔ Full (5.7) e o início direto no Full (4.7).
+test('Full: switch_window_mode pelo caminho do settings_set, tt://tomato-ready com limite de 2 s, início só com a tomato', () => {
+  const tomato = ler('src-tauri/src/window/tomato.rs');
+  assert.match(tomato, /pub const EVENTO_PRONTO: &str = "tt:\/\/tomato-ready";/);
+  assert.match(tomato, /pub const ESPERA_DO_PRONTO: Duration = Duration::from_secs\(2\);/);
+  // Entrar: grava o tema, cria escondida, espera o pronto, mostra, e só então esconde a main.
+  const entrar = tomato.slice(tomato.indexOf('pub async fn entrar('), tomato.indexOf('pub async fn sair('));
+  const ordem = (texto, partes) => partes.map((p) => texto.indexOf(p)).every((i, k, a) => i >= 0 && (k === 0 || i > a[k - 1]));
+  assert.ok(ordem(entrar, ['trava.lock().await', 'gravar_tema(app, ThemePref::Full.as_str())', 'criar_e_mostrar(app, &s)', 'm.hide()']), 'a ordem do "Entrar" (5.7)');
+  const criar = tomato.slice(tomato.indexOf('async fn criar_e_mostrar('), tomato.indexOf('pub async fn entrar('));
+  assert.ok(ordem(criar, ['esperar_pronto()', 'build_tomato(app, s)', 'tokio::time::timeout(ESPERA_DO_PRONTO, rx)', 'w.show()']), 'o ouvinte antes da janela, e o show depois do pronto ou do limite');
+  // Sair: grava o lastNormalTheme, mostra a main (recriada se preciso) e fecha a tomato.
+  const sair = tomato.slice(tomato.indexOf('pub async fn sair('), tomato.indexOf('async fn esperar_visivel('));
+  assert.ok(ordem(sair, ['trava.lock().await', 'gravar_tema(app, atual.last_normal_theme.as_str())', 'm.show()', 'build_main(app, &s)', 't.destroy()']), 'a ordem do "Sair" (5.7)');
+  assert.match(tomato, /crate::commands::gravar_configuracoes\(app, &store, &json!\(\{ "theme": tema \}\)\)/, 'pelo caminho do settings_set (3.3)');
+  assert.doesNotMatch(tomato, /\.hide\(\)[^;]*;[^\n]*LABEL|t\.hide\(\)/, 'a tomato nunca se esconde (5.3)');
+  const comandos = ler('src-tauri/src/commands.rs');
+  assert.match(comandos, /pub fn settings_set\([\s\S]*?\{\s*gravar_configuracoes\(&app, &settings, &patch\)\s*\}/);
+  // Início com theme = full: só a tomato (4.7).
+  const lib = ler('src-tauri/src/lib.rs');
+  assert.match(lib, /window::tomato::ligar\(app\.handle\(\)\);\s*if s\.theme == settings::ThemePref::Full \{\s*window::tomato::abrir_no_inicio\(app\.handle\(\), &s\)\?;\s*\} else \{\s*window::main_window::build_main\(app\.handle\(\), &s\)\?;/);
+  // A página avisa o pronto, e o Esc e o "Voltar ao modo normal" saem pelo mesmo comando.
+  const js = ler('src/tomato.js');
+  assert.match(js, /ipc\.full\s*\.avisarPronto\(\{ userAgent: navigator\.userAgent, renderer: renderizador\(\) \}\)/);
+  assert.match(js, /e\.key !== 'Escape'/);
+  assert.match(js, /voltar: \(\) => sair\(\)/);
+  assert.match(js, /ipc\.full\.trocarModo\(false\)/);
+  assert.match(ler('src/lib/ipc.js'), /trocarModo: \(entrar\) => invoke\('switch_window_mode', \{ full: entrar \}\)/);
+  assert.match(ler('src/main.js'), /trocarModo: ipc\.full\.trocarModo,/);
 });
 
 test('capabilities/tomato.json com as permissões da seção 3.8, só para a tomato', () => {

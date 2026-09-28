@@ -8,7 +8,7 @@
 //
 // Passos, como o console.mjs do M08 faz com a main:
 //   1. acha a página da main entre os alvos do inspetor e, por ela, pede o
-//      `tomato_debug_open` (o comando de debug do M50);
+//      `switch_window_mode(true)` (M51; no M50, o comando de debug `tomato_debug_open`);
 //   2. acha a página nova (tomato.html) e liga o Console: o WebKit reenvia as
 //      mensagens guardadas desde o carregamento, que são as mesmas que o
 //      DevTools mostraria aberto depois;
@@ -137,7 +137,7 @@ try {
   for (const url of lista) if ((await caminho(url)) !== '/tomato.html') main = url;
   if (!main) throw new Error(`sem a main entre os alvos: ${lista}`);
   const cm = await conectar(main);
-  R.abrir = await cm.avaliar("window.__TAURI_INTERNALS__.invoke('tomato_debug_open').then(() => 'aberto', (e) => 'erro: ' + e)");
+  R.abrir = await cm.avaliar("window.__TAURI_INTERNALS__.invoke('switch_window_mode', { full: true }).then(() => 'aberto', (e) => 'erro: ' + e)");
   cm.fechar();
   let tomato = null;
   for (let i = 0; i < 40 && !tomato; i++) {

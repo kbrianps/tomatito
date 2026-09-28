@@ -253,8 +253,8 @@ async function principal() {
   e = await irParaConfiguracoes();
   R.p1_configuracoes = e;
   checar(
-    'Configurações: cinco opções (sem o Full), só o Lite marcado',
-    JSON.stringify(Object.keys(e.molduras)) === '["lite","suave","light","dark","system"]' &&
+    'Configurações: seis opções (o Full desde o M51), só o Lite marcado',
+    JSON.stringify(Object.keys(e.molduras)) === '["lite","suave","light","dark","full","system"]' &&
       JSON.stringify(e.marcadas) === '["lite"]' && JSON.stringify(e.radios) === '["lite"]' && e.valor === 'lite',
     e,
   );
@@ -264,8 +264,10 @@ async function principal() {
   let px = capturar(W, 'm24-configuracoes-lite.png');
   const amostras = {};
   R.p1_dobra = Object.keys(e.molduras).filter((t) => !cabe(e, t));
-  checar('a 1000×700, as cinco opções cabem na janela sem rolar', R.p1_dobra.length === 0, { fora: R.p1_dobra, inner: e.inner });
-  for (const tema of Object.keys(e.molduras)) {
+  checar('a 1000×700, as seis opções cabem na janela sem rolar', R.p1_dobra.length === 0, { fora: R.p1_dobra, inner: e.inner });
+  // O Full é o tomate sobre a área de trabalho, sem o fundo de um tema (M51;
+  // as cores dele são conferidas no Chrome, scripts/preview/aparencia.mjs).
+  for (const tema of Object.keys(e.molduras).filter((t) => t !== 'full')) {
     // Uma prévia fora da janela é rolada para dentro e capturada de novo.
     if (!cabe(e, tema)) {
       e = await mostrar(tema);

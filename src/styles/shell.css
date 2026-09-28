@@ -471,6 +471,17 @@ fluent-radio-group.tt-temas{
 .tt-previa-texto{ height:4px; width:80%; background:var(--tt-fg-1); }
 .tt-previa-curto{ width:55%; background:var(--tt-fg-2); }
 .tt-previa-acao{ height:9px; width:45%; margin-top:3px; background:var(--tt-accent); }
+/* M51, Full: o tomate sobre uma área de trabalho neutra (a janela-tomate não
+   tem fundo), com as cores do próprio tomate (tokens.css, seção 4). */
+.tt-previa-full{
+  align-items:center; justify-content:center; padding:0;
+  background:linear-gradient(160deg, #6A7580, #3E464F);
+}
+.tt-previa-tomate{ display:block; height:78%; aspect-ratio:1; }
+.tt-previa-corpo{ fill:var(--tt-tomato-body-mid); }
+.tt-previa-anel{ fill:none; stroke:var(--tt-tomato-ring); stroke-width:9; stroke-linecap:round; stroke-dasharray:55 200; stroke-dashoffset:-5.5; }
+.tt-previa-cabinho{ fill:var(--tt-tomato-stem); }
+.tt-previa-calice{ fill:var(--tt-tomato-calyx); }
 /* Sistema: a metade esquerda do Claro e a direita do Escuro, como uma janela só. */
 .tt-previa-metade{ display:flex; flex:1 1 50%; min-width:0; overflow:hidden; }
 .tt-previa-metade > .tt-previa{ flex:none; width:200%; }

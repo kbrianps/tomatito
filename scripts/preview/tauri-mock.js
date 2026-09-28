@@ -461,7 +461,15 @@ const handlers = {
   'plugin:window|close': () => (console.info('[prévia] fechar'), null),
   // M50: os comandos do Full só anotam o pedido.
   show_main: ({ route = null } = {}) => (window.__TOMATITO_PREVIEW_COMANDOS__.push(`show_main:${route}`), null),
-  tomato_debug_open: () => (window.__TOMATITO_PREVIEW_COMANDOS__.push('tomato_debug_open'), null),
+  // M51: o switch_window_mode grava o tema como o Rust (full, ou o
+  // lastNormalTheme na saída) e emite tt://settings; não há outra janela.
+  switch_window_mode: ({ full }) => {
+    window.__TOMATITO_PREVIEW_COMANDOS__.push(`switch_window_mode:${full}`);
+    configuracoes.theme = full ? 'full' : configuracoes.lastNormalTheme;
+    normalizarConfiguracoes(configuracoes);
+    setTimeout(() => emit('tt://settings', structuredClone(configuracoes)));
+    return null;
+  },
 };
 
 // M50: a página do tomate (/tomato.html) é a janela `tomato`.

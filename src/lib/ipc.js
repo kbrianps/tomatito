@@ -2,7 +2,7 @@
 // (listen) que as telas usam, com os nomes do Rust num lugar só. O formato dos
 // retratos está em src-tauri/src/events.rs.
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
+import { emit, listen } from '@tauri-apps/api/event';
 
 export const EVENTOS = Object.freeze({
   estado: 'tt://state',
@@ -117,14 +117,19 @@ export const cronometro = Object.freeze({
 });
 
 /**
- * Tomatito Full (3.5 e 5.7). `mostrarMain(rota)` é o `show_main{route}`: mostra
- * a `main` sem fechar a `tomato`, na rota dada (`'#/configuracoes'`) ou na
- * tela em que estava. `abrirTomateDebug()` é o `tomato_debug_open` do M50,
- * só no build de debug, que o `switch_window_mode` do M51 substitui.
+ * Tomatito Full (3.5 e 5.7). `trocarModo(full)` é o `switch_window_mode{full}`
+ * (M51): `true` entra no Full (a `tomato` aparece e a `main` se esconde),
+ * `false` sai (volta ao `lastNormalTheme`, mostra a `main` e fecha a
+ * `tomato`). `mostrarMain(rota)` é o `show_main{route}`: mostra a `main` sem
+ * fechar a `tomato`, na rota dada (`'#/configuracoes'`) ou na tela em que
+ * estava. `avisarPronto(dados)` emite o `tt://tomato-ready` (só a página do
+ * tomate), com `{ userAgent, renderer }`: libera o `show()` do tomate.
  */
 export const full = Object.freeze({
+  EVENTO_PRONTO: 'tt://tomato-ready',
+  trocarModo: (entrar) => invoke('switch_window_mode', { full: entrar }),
   mostrarMain: (rota = null) => invoke('show_main', { route: rota }),
-  abrirTomateDebug: () => invoke('tomato_debug_open'),
+  avisarPronto: (dados) => emit('tt://tomato-ready', dados),
 });
 
 /** Ouve um evento do Rust; `cb` recebe só o conteúdo. Devolve o `unlisten`. */

@@ -9,13 +9,13 @@
 // com uma transição linear de 1 s a cada segundo (tomato.css), e o prazo é o
 // `endsAt` do retrato (lib/tomate.js, restanteDaFase).
 //
-// M50: a janela nasce pelo comando de debug `tomato_debug_open`, sem região
-// de entrada. "Voltar ao modo normal" mostra a `main` e fecha o tomate; a
-// troca de verdade (`switch_window_mode`, com o `tt://tomato-ready`) é do
-// M51. O menu nativo do botão direito e os atalhos (Espaço, Esc e Ctrl+,) são
-// do M56; até lá, o menu de contexto do WebView fica desligado, porque seria
-// uma janela própria, fora do desenho (5.3).
-import { getCurrentWindow } from '@tauri-apps/api/window';
+// M51: a janela nasce escondida pelo `switch_window_mode` (5.7) e só aparece
+// quando esta página avisa `tt://tomato-ready`, com o retrato escrito e as
+// fontes carregadas (o Rust mostra assim mesmo depois de 2 s). "Voltar ao modo
+// normal" e o Esc saem do Full pelo mesmo comando. Ainda sem região de
+// entrada (M53 e M54). O menu nativo do botão direito e os outros atalhos
+// (Espaço e Ctrl+,) são do M56; até lá, o menu de contexto do WebView fica
+// desligado, porque seria uma janela própria, fora do desenho (5.3).
 import * as ipc from './lib/ipc.js';
 import { criarStore } from './lib/store.js';
 import { ligarAnuncioDeFases } from './lib/a11y.js';
@@ -116,10 +116,7 @@ store.assinar(atualizar);
 // Os botões. Um comando recusado (o estado mudou por outro caminho) já pede um
 // get_state no store; aqui só vai para o console.
 const acoes = {
-  voltar: async () => {
-    await ipc.full.mostrarMain();
-    await getCurrentWindow().close();
-  },
+  voltar: () => sair(),
   configuracoes: () => ipc.full.mostrarMain('#/configuracoes'),
   encerrar: () => store.comando('parar'),
   pular: () => store.comando('pular'),
@@ -137,9 +134,38 @@ stage.addEventListener('click', (e) => {
     .catch((erro) => console.warn('[tomate]', erro));
 });
 
+// "Voltar ao modo normal" e o Esc (M51): o Rust volta ao lastNormalTheme,
+// mostra a main e fecha esta janela (5.7). Um pedido de cada vez.
+let saindo = null;
+function sair() {
+  saindo ??= ipc.full.trocarModo(false).finally(() => (saindo = null));
+  return saindo;
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || e.repeat || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+  e.preventDefault();
+  sair().catch((erro) => console.warn('[tomate]', erro));
+});
+
 // O menu de contexto do WebView seria uma janela própria, fora do desenho
 // (5.3); o menu nativo com as ações é do M56.
 document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// O renderizador WebGL, para a validação do M52 (5.9). No WebKitGTK vem
+// mascarado ("Apple GPU"); o Rust junta a versão do WebView e a GPU
+// (window/tomato.rs, chave_de_validacao). O contexto é descartado na hora.
+function renderizador() {
+  try {
+    const gl = document.createElement('canvas').getContext('webgl');
+    if (!gl) return '';
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    const r = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER) ?? '');
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    return r;
+  } catch {
+    return '';
+  }
+}
 
 // Anúncio das fases na região aria-live (a11y.js, a mesma regra da main).
 ligarAnuncioDeFases({ ipc }).catch((erro) => console.error('[anúncio]', erro));
@@ -150,5 +176,12 @@ try {
   console.error('[store]', erro);
 } finally {
   atualizar();
+  // A janela ainda está escondida, e o requestAnimationFrame não dispara numa
+  // janela escondida (docs/decisoes.md, M08): o aviso não espera um quadro, e
+  // a classe só sai dois quadros depois de a janela aparecer.
   requestAnimationFrame(() => requestAnimationFrame(() => h.classList.remove('tt-no-transition')));
+  await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]);
+  ipc.full
+    .avisarPronto({ userAgent: navigator.userAgent, renderer: renderizador() })
+    .catch((erro) => console.error('[tomate] tt://tomato-ready', erro));
 }

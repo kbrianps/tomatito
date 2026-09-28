@@ -14,16 +14,24 @@ pub const TOMATO_LABEL: &str = "tomato";
 /// "Mostrar Tomatito" (3.4), da bandeja (M36) e da segunda instância (M37).
 /// Com `theme = full`, `unminimize` e `set_focus` na `tomato`, sem `hide` nem
 /// `show` (no Linux, ela nunca pode ser escondida e mostrada de novo; 5.3).
-/// Nos outros temas, ou enquanto a `tomato` não existe, `show`,
-/// `unminimize` e `set_focus` na `main`. O GNOME pode só avisar "Tomatito
-/// está pronto" (prevenção de roubo de foco); é aceito.
+/// M51: se a `tomato` não existe (fechada pelo compositor), ela nasce de
+/// novo, pelo mesmo caminho da troca. Nos outros temas, `show`, `unminimize`
+/// e `set_focus` na `main`. O GNOME pode só avisar "Tomatito está pronto"
+/// (prevenção de roubo de foco); é aceito.
 pub fn mostrar(app: &AppHandle) {
     let full = app
         .try_state::<SettingsStore>()
         .is_some_and(|s| s.get().theme == ThemePref::Full);
-    if full && let Some(w) = app.get_webview_window(TOMATO_LABEL) {
-        let _ = w.unminimize();
-        let _ = w.set_focus();
+    if full && app.try_state::<tomato::Troca>().is_some() {
+        // M51: pelo `entrar`, que traz a `tomato` para a frente ou a cria de
+        // novo (fechada pelo compositor), sempre na vez dela: nunca mostra o
+        // tomate antes da página nem no meio de uma troca.
+        let app = app.clone();
+        tauri::async_runtime::spawn(async move {
+            if let Err(e) = tomato::entrar(&app).await {
+                eprintln!("[tomatito] tomate não mostrado: {e}");
+            }
+        });
         return;
     }
     if let Some(w) = app.get_webview_window(main_window::LABEL) {
@@ -62,18 +70,19 @@ pub fn rota_valida(rota: &str) -> bool {
 
 /// `show_main{route}` (3.5 e 5.7): mostra a `main` sem fechar a `tomato`
 /// (`show`, `unminimize` e `set_focus`) e, com uma rota, troca a tela pelo
-/// hash (o roteador ouve o `hashchange`). Sem a `main` (fechada com "fechar
-/// para a bandeja" desligado), ela nasce de novo pelo `build_main` e se
-/// mostra sozinha, na primeira tela; recriar já na rota pedida é do M51, que
-/// recria a `main` ao sair do Full. Chame fora da thread principal (num
-/// comando async), como toda criação de janela (5.3).
+/// hash (o roteador ouve o `hashchange`). Sem a `main` (o app começou no
+/// Full, ou ela foi fechada com "fechar para a bandeja" desligado), ela nasce
+/// de novo pelo `build_main` já na rota pedida (M51) e se mostra sozinha.
+/// Chame fora da thread principal (num comando async), como toda criação de
+/// janela (5.3).
 pub fn mostrar_main(app: &AppHandle, rota: Option<&str>) -> tauri::Result<()> {
+    let rota = rota.filter(|r| rota_valida(r));
     let Some(w) = app.get_webview_window(main_window::LABEL) else {
         let s = app.state::<SettingsStore>().get();
-        main_window::build_main(app, &s)?;
+        main_window::build_main_na_rota(app, &s, rota)?;
         return Ok(());
     };
-    if let Some(r) = rota.filter(|r| rota_valida(r)) {
+    if let Some(r) = rota {
         w.eval(format!("location.hash={}", serde_json::Value::from(r)))?;
     }
     w.show()?;

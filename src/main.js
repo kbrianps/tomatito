@@ -80,6 +80,7 @@ try {
           win,
           h,
           gravar: ipc.configuracoes.gravar,
+          trocarModo: ipc.full.trocarModo, // M51: entrar no Full e sair dele (5.7)
           quadro: requestAnimationFrame,
           escuroPelaMidia: () => midia.matches,
         }),

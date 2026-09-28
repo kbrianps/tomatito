@@ -94,7 +94,7 @@ async function principal() {
     s.close(null);
   }
   const recusas = (lista) => (lista ?? []).filter((m) => /Refused to/i.test(m.texto));
-  checar('o tomate abriu no build (tomato_debug_open) e está no inspetor', c.abrir === 'aberto' && Boolean(c.alvos?.tomato) && Boolean(tomato), { abrir: c.abrir, alvos: c.alvos, erro: c.erro });
+  checar('o tomate abriu no build (switch_window_mode) e está no inspetor', c.abrir === 'aberto' && Boolean(c.alvos?.tomato) && Boolean(tomato), { abrir: c.abrir, alvos: c.alvos, erro: c.erro });
   checar('a página veio de dentro do binário (tauri://), no tema full', /^tauri:\/\/localhost\/tomato\.html/.test(c.estado?.url ?? '') && c.estado?.dataset?.theme === 'full', c.estado);
   checar('a CSP chegou com o tomato.html, com o hash do script de boot', /script-src[^;]*'sha256-/.test(c.estado?.csp ?? '') && /connect-src 'self' ipc: http:\/\/ipc\.localhost/.test(c.estado?.csp ?? ''), c.estado?.csp);
   checar('nenhum "Refused to" no console da tomato, da partida', c.mensagens && recusas(c.mensagens).length === 0, c.mensagens);

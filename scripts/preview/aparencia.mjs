@@ -29,7 +29,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { computar, hex, lerArquivos, lerCor, lerRegras } from '../contrast.mjs';
 
 const AQUI = fileURLToPath(new URL('.', import.meta.url));
-const ESCOLHAS = ['lite', 'suave', 'light', 'dark', 'system'];
+// M51: o Full entre o Escuro e o Sistema (src/lib/theme.js, ESCOLHAS).
+const ESCOLHAS = ['lite', 'suave', 'light', 'dark', 'full', 'system'];
 const NATIVO = { lite: 'dark', suave: 'light', light: 'light', dark: 'dark' };
 // O que o mock responde no theme() com o tema do sistema limpo (tauri-mock.js).
 const DO_SISTEMA = 'dark';
@@ -39,6 +40,7 @@ const regras = lerArquivos().flatMap(({ origem, texto }) => lerRegras(texto, ori
 export function tokensDe(tema) {
   const p = computar(regras, [{ tag: 'html', atributos: { 'data-theme': tema, 'data-platform': 'linux' } }]);
   const cor = (n) => hex(lerCor(p.get(n)));
+  if (tema === 'full') return { corpo: cor('--tt-tomato-body-mid'), calice: cor('--tt-tomato-calyx') };
   return { fundo: cor('--tt-bg-app'), camada: cor('--tt-bg-surface'), cartao: cor('--tt-bg-card'), texto: cor('--tt-fg-1'), acao: cor('--tt-accent') };
 }
 
@@ -54,6 +56,10 @@ const MEDIR = `window.__ttAparencia = () => {
     moldura: caixa(op.querySelector('.tt-previa-moldura')),
     previas: [...op.querySelectorAll('.tt-previa')].map((p) => {
       const pai = p.parentElement.classList.contains('tt-previa-metade') ? p.parentElement : p;
+      if (p.classList.contains('tt-previa-full')) {
+        return { tema: p.dataset.theme, visivel: caixa(pai), tomate: caixa(p.querySelector('svg')),
+          corpo: cor(p.querySelector('.tt-previa-corpo'), 'fill'), calice: cor(p.querySelector('.tt-previa-calice'), 'fill') };
+      }
       return {
         tema: p.dataset.theme,
         visivel: caixa(pai),
@@ -84,7 +90,13 @@ export function conferirPrevias(m, marcada) {
     if (op.previas.map((p) => p.tema).join() !== esperadas.join()) falhas.push(`${op.tema}: prévias ${op.previas.map((p) => p.tema)}`);
     for (const p of op.previas) {
       const t = tokensDe(p.tema);
-      for (const parte of ['fundo', 'camada', 'cartao', 'texto', 'acao']) {
+      if (p.tema === 'full') {
+        // O tomate inteiro dentro da moldura, com as cores do tomate.
+        const [x, y, w, hh] = p.tomate ?? [];
+        const [mx, my, mw, mh] = op.moldura;
+        if (!(w > 20 && x >= mx && y >= my && x + w <= mx + mw + 1 && y + hh <= my + mh + 1)) falhas.push(`full: tomate ${JSON.stringify(p.tomate)} fora da moldura ${JSON.stringify(op.moldura)}`);
+      }
+      for (const parte of p.tema === 'full' ? ['corpo', 'calice'] : ['fundo', 'camada', 'cartao', 'texto', 'acao']) {
         const visto = rgbParaHex(p[parte]);
         if (visto !== t[parte]) falhas.push(`${op.tema}, prévia ${p.tema}, ${parte}: ${visto}, esperado ${t[parte]}`);
       }
@@ -103,16 +115,24 @@ export function conferirPrevias(m, marcada) {
   return falhas;
 }
 
-/** Confere o efeito de escolher `escolha` a partir de uma medida feita depois. */
-export function conferirTroca(m, escolha, { plataforma = 'linux' } = {}) {
+/**
+ * Confere o efeito de escolher `escolha` a partir de uma medida feita depois.
+ * M51: `anterior` é a preferência de antes e `normal`, o último tema normal
+ * (o que a main mostra no Full). Escolher o Full só pede o
+ * switch_window_mode(true), e a página fica no tema normal; sair do Full pede
+ * o switch_window_mode(false) antes da troca comum.
+ */
+export function conferirTroca(m, escolha, { plataforma = 'linux', anterior = null, normal = 'lite' } = {}) {
   const falhas = [];
-  const resolvido = escolha === 'system' ? DO_SISTEMA : escolha;
+  const resolve = (e) => (e === 'system' ? DO_SISTEMA : e);
+  const resolvido = escolha === 'full' ? resolve(normal) : resolve(escolha);
   if (m.pref !== escolha || m.tema !== resolvido) falhas.push(`<html>: ${m.pref}/${m.tema}, esperado ${escolha}/${resolvido}`);
   if (m.salvo !== escolha) falhas.push(`settings.theme ${m.salvo}`);
-  const esperados =
+  const comum =
     escolha === 'system'
       ? ['set_theme:null', ...(plataforma === 'linux' ? [`set_theme:${resolvido}`] : []), `settings_set:{"theme":"system","resolvedTheme":"${resolvido}"}`]
       : [`settings_set:{"theme":"${escolha}","resolvedTheme":"${escolha}"}`, `set_theme:${NATIVO[escolha]}`];
+  const esperados = escolha === 'full' ? ['switch_window_mode:true'] : [...(anterior === 'full' ? ['switch_window_mode:false'] : []), ...comum];
   if (m.comandos.join(' ') !== esperados.join(' ')) falhas.push(`comandos ${JSON.stringify(m.comandos)}, esperado ${JSON.stringify(esperados)}`);
   const marcadas = m.opcoes.filter((o) => o.marcado).map((o) => o.tema);
   if (marcadas.join() !== escolha) falhas.push(`marcadas: ${marcadas}`);
@@ -172,17 +192,25 @@ async function main() {
       continue;
     }
     const [inicial, ...trocas] = r.medidas;
-    const resolvido = partida === 'system' ? DO_SISTEMA : partida;
+    const resolvido = partida === 'system' ? DO_SISTEMA : partida === 'full' ? 'lite' : partida;
     relatar(
       `${partida}: página em ${inicial.tema}, cada prévia com os tokens do próprio tema, "${partida}" marcada`,
       [...(inicial.pref === partida && inicial.tema === resolvido ? [] : [`<html> ${inicial.pref}/${inicial.tema}`]), ...conferirPrevias(inicial, partida)],
     );
-    r.ordem.forEach((e, i) => relatar(`${partida} → ${e} (clique): <html>, settings_set, setTheme e marcação`, [...conferirTroca(trocas[i], e), ...conferirPrevias(trocas[i], e)]));
+    let antes = partida;
+    let normal = partida === 'full' ? 'lite' : partida;
+    const seguir = (e) => {
+      const ctx = { anterior: antes, normal };
+      antes = e;
+      if (e !== 'full') normal = e;
+      return ctx;
+    };
+    r.ordem.forEach((e, i) => relatar(`${partida} → ${e} (clique): <html>, settings_set, setTheme e marcação`, [...conferirTroca(trocas[i], e, seguir(e)), ...conferirPrevias(trocas[i], e)]));
     const ultima = r.ordem.at(-1);
     const anterior = ESCOLHAS[(ESCOLHAS.indexOf(ultima) - 1 + ESCOLHAS.length) % ESCOLHAS.length];
     const seta = trocas.at(-1);
     relatar(`${partida}: seta para a esquerda de ${ultima} → ${anterior}`, [
-      ...conferirTroca(seta, anterior),
+      ...conferirTroca(seta, anterior, seguir(anterior)),
       ...(seta.foco === anterior ? [] : [`foco em ${seta.foco}`]),
     ]);
   }

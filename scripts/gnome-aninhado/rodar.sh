@@ -24,6 +24,7 @@
 #   bash scripts/gnome-aninhado/rodar.sh voltas            # M35: as voltas, o Copiar na área de transferência e o LibreOffice
 #   TT_PIPEWIRE=/run/user/$UID bash scripts/gnome-aninhado/rodar.sh bandeja   # M36: o menu da bandeja pelo D-Bus, fechar para a bandeja e Sair
 #   bash scripts/gnome-aninhado/rodar.sh tomate            # M50: o tomate (Full) ligado ao motor, transparente e sem região
+#   TT_LIMITE=600 bash scripts/gnome-aninhado/rodar.sh full   # M51: 20 idas e voltas ao Full, a memória, o Claro e o início no Full
 #   bash scripts/gnome-aninhado/instalado.sh               # o Tomatito instalado (M21b)
 #
 # Pré-requisito: o binário de debug atualizado (`cd src-tauri && cargo build`).

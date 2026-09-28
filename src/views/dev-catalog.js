@@ -258,7 +258,7 @@ const AMOSTRA = `
 
     <section class="tt-card" aria-labelledby="amostra-tomate" data-amostra="tomate">
       <h2 id="amostra-tomate" class="tt-t-subtitle">Tomate (Full)</h2>
-      <p class="tt-fg-2">M50: abre a janela do tomate, transparente e ainda sem região de entrada, ligada ao mesmo foco desta janela. Só no build de debug; a troca de verdade chega no M51.</p>
+      <p class="tt-fg-2">M51: entra no Full pelo switch_window_mode, como a escolha "Tomatito Full" em Configurações: o tomate aparece e esta janela se esconde. Esc ou "Voltar ao modo normal" traz de volta.</p>
       <div class="tt-linha">
         <button type="button" data-tomate>Abrir o tomate</button>
       </div>
@@ -294,9 +294,9 @@ export function montar(raiz) {
       sons.testar(som.dataset.som).catch((e) => console.error('sound_test', e));
       return;
     }
-    // M50: o comando de debug que abre a janela `tomato`.
+    // M51: entra no Full (5.7).
     if (ev.target.closest?.('[data-tomate]')) {
-      full.abrirTomateDebug().catch((e) => console.error('tomato_debug_open', e));
+      full.trocarModo(true).catch((e) => console.error('switch_window_mode', e));
       return;
     }
     const abre = ev.target.closest?.('[data-abre]');

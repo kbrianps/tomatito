@@ -56,8 +56,29 @@ pub fn init_script(s: &Settings) -> String {
     )
 }
 
+/// M51: a tela em que a `main` recriada abre (`#/configuracoes`, pelo botão
+/// Configurações do tomate), com o formato já conferido pelo
+/// `window::rota_valida`. Um segundo script de inicialização, que troca o
+/// hash vazio sem navegar, antes de o roteador ler; num recarregar (o hash já
+/// está na URL), não faz nada.
+pub fn rota_inicial(rota: &str) -> String {
+    format!(
+        "if(!location.hash)history.replaceState(null,'',{});",
+        serde_json::Value::from(rota)
+    )
+}
+
 pub fn build_main(app: &AppHandle, s: &Settings) -> tauri::Result<WebviewWindow> {
-    let win = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("index.html".into()))
+    build_main_na_rota(app, s, None)
+}
+
+/// [`build_main`] abrindo já em `rota` (M51; ver [`rota_inicial`]).
+pub fn build_main_na_rota(
+    app: &AppHandle,
+    s: &Settings,
+    rota: Option<&str>,
+) -> tauri::Result<WebviewWindow> {
+    let builder = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("index.html".into()))
         .title("Tomatito")
         .inner_size(1000.0, 700.0)
         .min_inner_size(480.0, 500.0)
@@ -74,8 +95,12 @@ pub fn build_main(app: &AppHandle, s: &Settings) -> tauri::Result<WebviewWindow>
         .theme(native_theme(s))
         // Aparece quando o JS chamar `show()`, já pintada.
         .visible(false)
-        .initialization_script(init_script(s))
-        .build()?;
+        .initialization_script(init_script(s));
+    let builder = match rota {
+        Some(r) => builder.initialization_script(rota_inicial(r)),
+        None => builder,
+    };
+    let win = builder.build()?;
     // No Linux, o tao ignora o `theme` do builder (a janela nasce com o
     // `color-scheme` do portal): sem isto, o Suave abriria com `theme()` =
     // `dark` e menus GTK escuros num sistema escuro. A janela ainda está
@@ -139,6 +164,14 @@ mod tests {
             std::env::consts::OS
         );
         assert_eq!(script, esperado);
+    }
+
+    #[test]
+    fn rota_inicial_so_troca_o_hash_vazio() {
+        assert_eq!(
+            rota_inicial("#/configuracoes"),
+            r##"if(!location.hash)history.replaceState(null,'',"#/configuracoes");"##
+        );
     }
 
     #[test]

@@ -72,9 +72,14 @@ pub fn run() {
             tauri::async_runtime::spawn(motor.run());
 
             // As janelas nascem aqui, e não no tauri.conf.json (PLANO.md, 4.7).
-            // Com `theme = full`, a 4.7 cria só a `tomato`; até ela existir
-            // (M50), nasce a `main`, no tema normal (docs/decisoes.md, M23).
-            window::main_window::build_main(app.handle(), &s)?;
+            // Com `theme = full`, só a `tomato`; a `main` nasce sob demanda
+            // (5.7, M51). O ouvinte do `tt://tomato-ready` vem antes.
+            window::tomato::ligar(app.handle());
+            if s.theme == settings::ThemePref::Full {
+                window::tomato::abrir_no_inicio(app.handle(), &s)?;
+            } else {
+                window::main_window::build_main(app.handle(), &s)?;
+            }
             Ok(())
         })
         // Fechar (X, Ctrl+W, Alt+F4) com "fechar para a bandeja" ligado só
@@ -111,7 +116,7 @@ pub fn run() {
             commands::stopwatch_pause,
             commands::stopwatch_lap,
             commands::stopwatch_reset,
-            commands::tomato_debug_open,
+            commands::switch_window_mode,
             commands::show_main,
         ])
         .run(context)
