@@ -1,0 +1,317 @@
+/* Tomatito Full: a janela tomato (PLANO.md, 5.10). O bloco .stage do
+   protótipo tomate-full.html, com as variáveis trocadas pelos tokens
+   --tt-tomato-* do tokens.css (4.2) e as fontes pelas --tt-font-*. As cores
+   de cada estado (Foco, Intervalo e Pausado) estão lá, em
+   [data-theme="full"] .stage[data-state=...]; o ocioso e o concluído (M50)
+   usam as do Foco. A página não tem <style> nem style="...": o que muda em
+   tempo de execução vai por el.style.setProperty (3.8). */
+
+/* A janela é transparente (--tt-bg-app: transparent no Full, pelo base.css).
+   O overflow escondido evita barra de rolagem, que o WebKitGTK pintaria
+   opaca. */
+html,
+body {
+  overflow: hidden;
+}
+
+.stage {
+  --size: 100vw;
+  width: var(--size);
+  aspect-ratio: 1;
+  position: relative;
+  container-type: size; /* cqw = 1% do lado da janela */
+  pointer-events: none; /* só o que é pintado recebe clique */
+  -webkit-user-select: none;
+  user-select: none;
+  font-family: var(--tt-font-text);
+  color: var(--tt-tomato-ink);
+}
+
+.art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.art .hit,
+.art .calyx *,
+.art .stem {
+  pointer-events: visiblePainted;
+}
+.art .depth,
+.art .calyx-vein {
+  pointer-events: none;
+}
+.art .calyx,
+.art .stem {
+  cursor: grab;
+}
+.art .calyx:active,
+.art .stem:active {
+  cursor: grabbing;
+}
+
+.body-hi {
+  stop-color: var(--tt-tomato-body-hi);
+}
+.body-mid {
+  stop-color: var(--tt-tomato-body-mid);
+}
+.body-lo {
+  stop-color: var(--tt-tomato-body-lo);
+}
+/* O véu de 18% na base (5.10). */
+.depth-top {
+  stop-color: #2a0000;
+  stop-opacity: 0;
+}
+.depth-bottom {
+  stop-color: #2a0000;
+  stop-opacity: 0.18;
+}
+.drop {
+  flood-color: var(--tt-tomato-shadow);
+  flood-opacity: 0.28;
+}
+.calyx {
+  fill: var(--tt-tomato-calyx);
+}
+.calyx-vein {
+  fill: none;
+  stroke: var(--tt-tomato-calyx-vein);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+.stem {
+  fill: var(--tt-tomato-stem);
+}
+
+/* Anel (5.10): pathLength=100; a faixa visível vai de 5,5 a 94,5 (89
+   unidades). O progresso é `stroke-dasharray: (0,89·f·100) 200`, gravado
+   pelo tomato.js em --tt-anel; ele avança de forma linear a cada 1 s. */
+.ring-track,
+.ring-progress {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.ring-track {
+  stroke: var(--tt-tomato-ring-track);
+  stroke-dasharray: 89 11;
+  stroke-dashoffset: -5.5;
+}
+.ring-progress {
+  --tt-anel: 0;
+  stroke: var(--tt-tomato-ring);
+  stroke-dasharray: var(--tt-anel) 200;
+  stroke-dashoffset: -5.5;
+  transition:
+    stroke-dasharray 1s linear,
+    stroke 0.4s ease;
+}
+/* Sem anel no ocioso: um traço de comprimento 0 com ponta redonda ainda
+   desenharia um ponto sob o cálice. */
+.stage[data-state='idle'] .ring-progress {
+  visibility: hidden;
+}
+/* Troca de fase (o anel volta ao começo): sem transição. Na primeira
+   pintura, o tomato.js usa a .tt-no-transition do base.css. */
+.stage.sem-transicao .ring-progress {
+  transition: none;
+}
+.body-fill stop {
+  transition: stop-color 0.4s ease;
+}
+
+/* Texto e botões, por cima do desenho. */
+.face {
+  position: absolute;
+  inset: 0;
+}
+.face > * {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+}
+
+.label {
+  top: 41.9%; /* y = 134 */
+  font-size: max(11px, 3.75cqw);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.time {
+  top: 53.75%; /* y = 172 */
+  font-family: var(--tt-font-display);
+  font-size: 16.25cqw; /* 52 unidades: 39 px a 240, 52 px a 320 */
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  white-space: nowrap;
+}
+.count {
+  top: 66.25%; /* y = 212 */
+  font-size: max(11px, 3.75cqw);
+  color: var(--tt-tomato-ink-2);
+  white-space: nowrap;
+}
+
+.btn {
+  pointer-events: auto;
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--tt-tomato-ink-2);
+  background: transparent;
+  width: max(32px, 13.75cqw); /* 44 unidades: 33 px a 240, 44 px a 320 */
+  height: max(32px, 13.75cqw);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
+}
+.btn svg {
+  width: 50%;
+  height: 50%;
+}
+.btn:hover {
+  background: rgb(255 255 255 / 0.16);
+  color: var(--tt-tomato-ink);
+}
+.btn:active {
+  background: rgb(255 255 255 / 0.24);
+  transform: translate(-50%, -50%) scale(0.96);
+}
+/* Foco do teclado: contorno de 2 px (5.10). */
+.btn:focus-visible {
+  outline: 2px solid var(--tt-tomato-ink);
+  outline-offset: 2px;
+  color: var(--tt-tomato-ink);
+}
+/* Sem ação no estado atual (Encerrar e Pular sem sessão, Pular na última
+   fase): continua no lugar, apagado. Segue sendo um <button>, que bloqueia o
+   arraste, para um clique nele não mover a janela. */
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  background: transparent;
+}
+
+.btn-primary {
+  width: max(40px, 16.25cqw); /* 52 unidades: 39 px a 240, 52 px a 320 */
+  height: max(40px, 16.25cqw);
+  background: var(--tt-tomato-btn-bg);
+  color: var(--tt-tomato-btn-ink);
+  box-shadow: 0 1px 2px rgb(58 13 8 / 0.25);
+}
+.btn-primary svg {
+  width: 44%;
+  height: 44%;
+}
+.btn-primary:hover {
+  background: var(--tt-tomato-btn-bg-hover);
+  color: var(--tt-tomato-btn-ink);
+}
+.btn-primary:active {
+  background: var(--tt-tomato-btn-bg-pressed);
+}
+.btn-primary:focus-visible {
+  outline-offset: 3px;
+  color: var(--tt-tomato-btn-ink);
+}
+/* O ícone do botão principal segue a ação (o atributo hidden não vale em
+   SVG): play para iniciar ou retomar, pause para pausar. */
+.btn-primary .icon-play {
+  display: none;
+}
+.btn-primary[data-icone='play'] .icon-play {
+  display: block;
+}
+.btn-primary[data-icone='play'] .icon-pause {
+  display: none;
+}
+
+/* Posições: o centro do botão, em % do lado (o y do viewBox entre
+   parênteses). */
+.face > .pos-restore {
+  left: 27.5%;
+  top: 38.1%;
+} /* (88, 122) */
+.face > .pos-settings {
+  left: 72.5%;
+  top: 38.1%;
+} /* (232, 122) */
+.face > .pos-reset {
+  left: 33.1%;
+  top: 78.75%;
+} /* (106, 252) */
+.face > .pos-play {
+  left: 50%;
+  top: 78.75%;
+} /* (160, 252) */
+.face > .pos-skip {
+  left: 66.9%;
+  top: 78.75%;
+} /* (214, 252) */
+
+.stage[data-state='paused'] .time {
+  color: var(--tt-tomato-ink-2);
+}
+
+/* A região aria-live do anúncio das fases, fora da tela. */
+.tt-anuncio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Sem movimento: a cor e o anel mudam sem transição (5.10). */
+@media (prefers-reduced-motion: reduce) {
+  .ring-progress,
+  .body-fill stop,
+  .btn {
+    transition: none;
+  }
+}
+
+/* Alto contraste do Windows: contorno explícito, sem depender do vermelho. */
+@media (forced-colors: active) {
+  .art .hit {
+    fill: Canvas;
+    stroke: CanvasText;
+    stroke-width: 2;
+  }
+  .art .depth {
+    display: none;
+  }
+  .ring-track {
+    stroke: GrayText;
+  }
+  .ring-progress {
+    stroke: Highlight;
+  }
+  .stage {
+    color: CanvasText;
+  }
+  .btn,
+  .btn-primary {
+    background: ButtonFace;
+    color: ButtonText;
+    border: 1px solid ButtonText;
+  }
+}

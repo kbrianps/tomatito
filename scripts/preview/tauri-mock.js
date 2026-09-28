@@ -459,9 +459,13 @@ const handlers = {
   },
   'plugin:window|minimize': () => (console.info('[prévia] minimizar'), null),
   'plugin:window|close': () => (console.info('[prévia] fechar'), null),
+  // M50: os comandos do Full só anotam o pedido.
+  show_main: ({ route = null } = {}) => (window.__TOMATITO_PREVIEW_COMANDOS__.push(`show_main:${route}`), null),
+  tomato_debug_open: () => (window.__TOMATITO_PREVIEW_COMANDOS__.push('tomato_debug_open'), null),
 };
 
-mockWindows('main');
+// M50: a página do tomate (/tomato.html) é a janela `tomato`.
+mockWindows(location.pathname.includes('tomato') ? 'tomato' : 'main');
 mockIPC(
   (cmd, args) => {
     const h = handlers[cmd];

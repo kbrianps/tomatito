@@ -25,7 +25,7 @@
 // virada para cima perto da borda de baixo (docs/decisoes.md, M12).
 import { Updates } from '@microsoft/fast-element';
 import { grades, icone, NOMES } from '../components/icon.js';
-import { sons } from '../lib/ipc.js';
+import { full, sons } from '../lib/ipc.js';
 
 // Botão só de ícone: aria-label (o nome) e data-dica (a dica com o mesmo texto).
 const deIcone = (classe, nome, rotulo, { grade = 16, extra = '' } = {}) =>
@@ -256,6 +256,14 @@ const AMOSTRA = `
       </div>
     </section>
 
+    <section class="tt-card" aria-labelledby="amostra-tomate" data-amostra="tomate">
+      <h2 id="amostra-tomate" class="tt-t-subtitle">Tomate (Full)</h2>
+      <p class="tt-fg-2">M50: abre a janela do tomate, transparente e ainda sem região de entrada, ligada ao mesmo foco desta janela. Só no build de debug; a troca de verdade chega no M51.</p>
+      <div class="tt-linha">
+        <button type="button" data-tomate>Abrir o tomate</button>
+      </div>
+    </section>
+
     <section class="tt-card tt-amostra-largo" aria-labelledby="amostra-icones" data-amostra="icones">
       <h2 id="amostra-icones" class="tt-t-subtitle">Ícones</h2>
       <p class="tt-fg-2">Todos os copiados para src/assets/icons/, em cada grade copiada (16, 20 ou 24 px).</p>
@@ -284,6 +292,11 @@ export function montar(raiz) {
     const som = ev.target.closest?.('[data-som]');
     if (som) {
       sons.testar(som.dataset.som).catch((e) => console.error('sound_test', e));
+      return;
+    }
+    // M50: o comando de debug que abre a janela `tomato`.
+    if (ev.target.closest?.('[data-tomate]')) {
+      full.abrirTomateDebug().catch((e) => console.error('tomato_debug_open', e));
       return;
     }
     const abre = ev.target.closest?.('[data-abre]');

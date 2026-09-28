@@ -609,3 +609,90 @@ test('dica dos botões só de ícone: ligada no main.js, e todo data-dica do cat
   assert.match(ler('src/components/dica.js'), /setAttribute\('popover', 'manual'\)/, 'popover manual: não fecha um menu aberto');
   assert.doesNotMatch(ler('src/components/dica.js'), /\.style\.(?!setProperty|removeProperty)/, 'sem estilo em linha além do anchor-name (3.8)');
 });
+
+// M50: o tomate definitivo (seções 3.7, 3.8, 4.2, 5.3 e 5.10).
+test('tomate: tomato.html em pt-BR, sem estilo em linha, com o boot do index.html e as folhas da 4.2', () => {
+  const tomato = ler('tomato.html');
+  assert.match(tomato, /<html lang="pt-BR">/);
+  assert.doesNotMatch(tomato, /<style[\s>]/i);
+  assert.doesNotMatch(tomato, /\sstyle\s*=/i);
+  assert.doesNotMatch(tomato, new RegExp(['pomo', 'doro'].join(''), 'i'));
+  const boot = (html) => html.match(/<script>([\s\S]*?)<\/script>/)[1];
+  assert.equal(boot(tomato), boot(indexHtml), 'o mesmo script de boot (4.7)');
+  const links = [...tomato.matchAll(/<link rel="stylesheet" href="\/src\/styles\/([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(links, ['fluent-tokens.gen.css', 'tokens.css', 'bridge.css', 'fonts.css', 'base.css', 'tomato.css']);
+  assert.ok(tomato.indexOf('<link') > tomato.indexOf('<script>'), 'as folhas depois do boot');
+  // Arraste pelo corpo, pelo texto e pelo cálice (5.10); sombra com a classe .shadowed (ajuste 3).
+  assert.match(tomato, /<div class="stage"[^>]*data-tauri-drag-region="deep"/);
+  assert.match(tomato, /<g class="shadowed" filter="url\(#f-shadow\)">/);
+  assert.equal((tomato.match(/<g class="calyx">[\s\S]*?<\/g>/)[0].match(/<path /g) ?? []).length, 5, 'cinco sépalas');
+  assert.match(tomato, /role="timer" aria-live="off"/);
+  assert.match(tomato, /aria-live="polite"[^>]*data-anuncio/);
+  assert.doesNotMatch(tomato, /<select[\s>]/i, 'sem <select>: o popup do WebView2 não é recortado (5.3)');
+  // Os textos saem do catálogo (ajuste 7): os <p> do rosto e os botões nascem vazios.
+  for (const m of tomato.matchAll(/<p class="(label|time[^"]*|count)"[^>]*>([^<]*)<\/p>/g)) assert.equal(m[2], '', m[0]);
+  assert.doesNotMatch(tomato, /aria-label=|title=/, 'rótulos pelo tomato.js, do catálogo');
+});
+
+test('tomate: tomato.css com os tokens --tt-tomato-*, sem as variáveis do protótipo', () => {
+  const css = ler('src/styles/tomato.css');
+  assert.match(css, /--size:\s*100vw/);
+  assert.doesNotMatch(css, /var\(--(body-|ring\b|ring-track|btn-|calyx|stem|shadow|ink|font-ui|font-num)/, 'variáveis do protótipo');
+  for (const token of ['--tt-tomato-body-hi', '--tt-tomato-ring', '--tt-tomato-btn-bg', '--tt-tomato-calyx', '--tt-font-display']) {
+    assert.ok(css.includes(`var(${token})`), token);
+  }
+  assert.match(css, /@media \(forced-colors: active\)/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(css, /\.btn:focus-visible \{\s*outline: 2px solid/);
+  const js = ler('src/tomato.js');
+  assert.doesNotMatch(js, /\.style\.(?!setProperty|removeProperty)/, 'variáveis dinâmicas só por setProperty (3.8)');
+  assert.match(js, /addEventListener\('contextmenu', \(e\) => e\.preventDefault\(\)\)/);
+});
+
+test('tomate: duas entradas no Vite, janela da 5.3 e comandos async (M50)', () => {
+  const vite = ler('vite.config.js');
+  assert.match(vite, /rolldownOptions:\s*\{\s*input:\s*\{\s*main: entrada\('index\.html'\),\s*tomato: entrada\('tomato\.html'\),/);
+  const tomato = ler('src-tauri/src/window/tomato.rs');
+  const chamadas = [
+    'WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("tomato.html".into()))',
+    '.title("Tomatito")',
+    '.inner_size(size, size)',
+    '.decorations(false)',
+    '.transparent(true)',
+    '.shadow(false)',
+    '.resizable(false)',
+    '.maximizable(false)',
+    '.always_on_top(s.tomato_on_top)',
+    '.theme(Some(Theme::Dark))',
+    '.background_color(Color(0, 0, 0, 0))',
+    '.visible(false)',
+    '.initialization_script(init_script())',
+    'builder.no_redirection_bitmap(true)',
+  ];
+  for (const c of chamadas) assert.ok(tomato.includes(c), `tomato.rs sem ${c}`);
+  assert.match(tomato, /let size = f64::from\(s\.tomato_size\);/);
+  const comandos = ler('src-tauri/src/commands.rs');
+  assert.match(comandos, /pub async fn tomato_debug_open\(/, 'criar janela num comando síncrono trava no Windows (5.3)');
+  assert.match(comandos, /pub async fn show_main\(/);
+  assert.match(comandos, /if !cfg!\(debug_assertions\) \{/);
+  const lib = ler('src-tauri/src/lib.rs');
+  assert.match(lib, /commands::tomato_debug_open,/);
+  assert.match(lib, /commands::show_main,/);
+  for (const arquivo of ['src-tauri/src/window/tomato.rs', 'src-tauri/src/window/mod.rs', 'src/tomato.js']) {
+    assert.doesNotMatch(ler(arquivo), /set_ignore_cursor_events|setIgnoreCursorEvents/, `${arquivo}: nunca (5.3)`);
+  }
+});
+
+test('capabilities/tomato.json com as permissões da seção 3.8, só para a tomato', () => {
+  const cap = JSON.parse(ler('src-tauri/capabilities/tomato.json'));
+  assert.deepEqual(cap.windows, ['tomato']);
+  assert.deepEqual([...cap.permissions].sort(), [
+    'core:default',
+    'core:menu:default',
+    'core:window:allow-close',
+    'core:window:allow-minimize',
+    'core:window:allow-set-always-on-top',
+    'core:window:allow-show',
+    'core:window:allow-start-dragging',
+  ]);
+});

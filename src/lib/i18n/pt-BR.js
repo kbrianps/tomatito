@@ -254,4 +254,33 @@ export default Object.freeze({
       horas: Object.freeze({ one: 'hora', other: 'horas' }),
     }),
   }),
+  // M50: o tomate do Tomatito Full (src/tomato.js; PLANO.md, 5.10). O rótulo
+  // do estado vai em caixa alta pelo CSS. A contagem usa o vocabulário da tela
+  // Foco (foco.andamento: "Período de foco (1 de 2)", "A seguir: foco de 25
+  // min"), e não o "Sessão 2 de 4" do protótipo; os botões de sessão reusam os
+  // textos de lá (Iniciar sessão de foco, Pausar, Retomar, Encerrar sessão).
+  tomate: Object.freeze({
+    // Curtos: o rótulo fica entre os dois botões dos ombros, e a 240 px cabem
+    // uns 9 caracteres (o "Intervalo" do protótipo).
+    estados: Object.freeze({
+      idle: 'Pronto',
+      focus: 'Foco',
+      break: 'Intervalo',
+      paused: 'Pausado',
+      completed: 'Concluída',
+    }),
+    // Ocioso e concluída: a duração da sessão ("Sessão de 30 min").
+    sessaoDe: (min) => `Sessão de ${min} min`,
+    voltar: 'Voltar ao modo normal',
+    configuracoes: 'Configurações',
+    // "Pular" leva à próxima fase; na última (ou sem sessão), fica desabilitado.
+    pular: Object.freeze({
+      break: 'Pular para o intervalo',
+      focus: 'Pular para o foco',
+      nenhum: 'Pular',
+    }),
+    // O rótulo do tempo (role="timer"), uma vez por minuto (3.8), com os
+    // plurais de foco.andamento.restantes: "18 minutos restantes".
+    pausadoNoRotulo: (restantes) => `${restantes}, pausado`,
+  }),
 });

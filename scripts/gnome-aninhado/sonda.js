@@ -99,7 +99,10 @@ let ultimoComando = null;
 setInterval(async () => {
   try {
     const c = await (await fetch('/__sonda/comando', { cache: 'no-store' })).json();
-    if (!c.id || c.id === ultimoComando) return;
+    // M50: com a janela tomato aberta, as duas páginas leem o mesmo arquivo;
+    // um comando com `janela` roda só na janela com esse rótulo (sem ela,
+    // em todas, como antes).
+    if (!c.id || c.id === ultimoComando || (c.janela && c.janela !== janela)) return;
     ultimoComando = c.id;
     let resultado;
     try {

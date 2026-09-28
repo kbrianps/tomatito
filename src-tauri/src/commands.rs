@@ -264,3 +264,28 @@ pub fn stopwatch_lap(engine: State<'_, AppEngine>) -> Result<StopwatchDto, Comma
 pub fn stopwatch_reset(engine: State<'_, AppEngine>) -> Result<StopwatchDto, CommandError> {
     engine.stopwatch_reset()
 }
+
+/// M50: abre a janela `tomato` (ou a traz para a frente), transparente e sem
+/// região, para conferir o tomate ligado ao motor antes da troca de verdade
+/// (`switch_window_mode`, M51), que substitui este comando. Só no build de
+/// debug (`npm run dev:app` e `npm run build:debug`); no de uso diário,
+/// recusa. Async: criar janela num comando síncrono trava no Windows (5.3).
+#[tauri::command]
+pub async fn tomato_debug_open(app: AppHandle) -> Result<(), String> {
+    if !cfg!(debug_assertions) {
+        return Err("tomato_debug_open só existe no build de debug".into());
+    }
+    let s = app.state::<SettingsStore>().get();
+    crate::window::tomato::abrir(&app, &s)
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+/// `show_main{route}` (3.5 e 5.7): o botão Configurações do tomate mostra a
+/// `main` sem fechar a `tomato`, já na rota (`#/configuracoes`). Uma rota fora
+/// do formato do roteador é ignorada (`window::rota_valida`). Async pelo
+/// mesmo motivo do `tomato_debug_open`: sem a `main`, ela nasce de novo.
+#[tauri::command]
+pub async fn show_main(app: AppHandle, route: Option<String>) -> Result<(), String> {
+    crate::window::mostrar_main(&app, route.as_deref()).map_err(|e| e.to_string())
+}

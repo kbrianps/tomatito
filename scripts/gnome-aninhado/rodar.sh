@@ -23,11 +23,16 @@
 #   bash scripts/gnome-aninhado/rodar.sh cronometro        # M34: o cronômetro, minimizado e escondido, com o state.json
 #   bash scripts/gnome-aninhado/rodar.sh voltas            # M35: as voltas, o Copiar na área de transferência e o LibreOffice
 #   TT_PIPEWIRE=/run/user/$UID bash scripts/gnome-aninhado/rodar.sh bandeja   # M36: o menu da bandeja pelo D-Bus, fechar para a bandeja e Sair
+#   bash scripts/gnome-aninhado/rodar.sh tomate            # M50: o tomate (Full) ligado ao motor, transparente e sem região
 #   bash scripts/gnome-aninhado/instalado.sh               # o Tomatito instalado (M21b)
 #
 # Pré-requisito: o binário de debug atualizado (`cd src-tauri && cargo build`).
 # O `npm run build` não é preciso: a página vem do Vite (porta 5173, que
-# precisa estar livre), com a sonda injetada só nesse servidor. Para testar um
+# precisa estar livre), com a sonda injetada só nesse servidor. Com TT_PORT, o
+# Vite sobe em outra porta; o binário lê a página do devUrl gravado nele na
+# compilação, então precisa ter sido compilado para a mesma porta:
+#   TAURI_CONFIG='{"build":{"devUrl":"http://localhost:5174"}}' cargo build
+#   TT_PORT=5174 bash scripts/gnome-aninhado/rodar.sh tomate Para testar um
 # build com os arquivos embutidos (`npx tauri build --debug --no-bundle`), aponte
 # TOMATITO_BIN para uma cópia dele; o Vite continua subindo, mas fica sem uso.
 #
@@ -96,7 +101,7 @@ export DBUS_SYSTEM_BUS_ADDRESS="unix:path=$RUNDIR/sistema"
 cd "$RAIZ"
 node node_modules/vite/bin/vite.js --config "$AQUI/sonda.config.mjs" > "$TT_OUT/vite.log" 2>&1 &
 VITE=$!
-for _ in $(seq 100); do curl -sf http://localhost:5173/ > /dev/null && break; sleep 0.2; done
+for _ in $(seq 100); do curl -sf "http://localhost:${TT_PORT:-5173}/" > /dev/null && break; sleep 0.2; done
 
 dbus-run-session -- bash "$AQUI/dentro.sh" > "$TT_OUT/dbus.log" 2>&1
 

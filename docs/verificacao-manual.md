@@ -909,3 +909,26 @@ O que só você consegue: clicar de verdade no ícone do painel, ouvir o som com
 7. [ ] Repita o passo 4 com Alt+F4 e depois com Ctrl+W, e traga a janela de volta por "Mostrar Tomatito" a cada vez.
 8. [ ] Tempo na bandeja (opcional; a opção na tela é do M39): no DevTools (botão direito → Inspecionar → Console), `await window.__TAURI_INTERNALS__.invoke('settings_set', { patch: { trayTime: true } })`. Inicie pela bandeja: ao lado do ícone aparece "30 min", que desce um por segundo a 60× ("Intervalo · N min" num intervalo, "Pausado · N min" no pausado). Volte com `{ trayTime: false }`: o texto some.
 9. [ ] "Sair" no menu: o app fecha e o terminal mostra o `tauri dev` terminando (ou Ctrl+C no terminal, se o Vite continuar).
+
+## M50. Tomate definitivo ligado ao motor
+
+O que já foi conferido sem você:
+- `npm test` e `cargo test`: o que o tomate mostra em cada estado (ocioso, foco, intervalo, pausado, concluída), o restante pelo `endsAt`, a contagem com o vocabulário da tela Foco, as regras do `tomato.html` e do `tomato.css` e a janela da 5.3.
+- Roteiro aninhado `tomate` (o app de verdade no GNOME Shell 50.1 aninhado, com a Mesa da Intel, 28 conferências): cantos transparentes pixel a pixel; arraste pelo corpo, pelo cabinho, pelo cálice e pelo tempo; os botões comandando o motor; o tomate e a `main` com o mesmo tempo; fechar e reabrir sem zerar; Configurações e "Voltar ao modo normal".
+- Roteiro aninhado `tomate-csp` (o binário do `npm run build:debug`, com a CSP): o console da `tomato` vazio, sem nenhum "Refused to", na partida e ao usar os botões.
+- Deuteranopia e protanopia emuladas no Chrome: o cálice do protótipo (`#35603C`) sumia no Intervalo; trocado por `#789F6B` (`docs/capturas/m50-deuteranopia.png`).
+
+O que só você consegue: ver o tomate de verdade sobre a sua área de trabalho, arrastar com o seu mouse e olhar o cálice com a emulação.
+
+### Para conferir (uns 6 minutos)
+
+1. [ ] `cd ~/dev/tomatito-full && npm run dev:app` (ou, depois da junção, em `~/dev/tomatito`). Na janela, abra o DevTools (botão direito → Inspecionar → Console), digite `location.hash = '#/dev'` e, no cartão "Tomate (Full)", clique em "Abrir o tomate".
+2. [ ] O tomate aparece com 280 px, **sem nenhum retângulo em volta**: nos quatro cantos, e em volta do corpo, aparece a sua área de trabalho (ou a janela de trás), sem preto, branco ou cinza. Embaixo do corpo há uma sombra suave.
+3. [ ] Arraste o tomate pelo corpo (numa parte vermelha sem botão), pelo cabinho e pelas folhinhas verdes de cima: ele acompanha o mouse nos três. Clicar num canto transparente ainda fica no tomate (a região de entrada é do M53 e do M54).
+4. [ ] O tomate mostra "PRONTO", "30:00" e "Sessão de 30 min", sem anel. Clique no botão claro do meio: começa uma sessão de 30 min ("FOCO", "30:00" descendo, "Período de foco (1 de 1)"), e a tela Foco da janela principal mostra a mesma sessão, com "30 min" no mostrador. Os minutos da janela principal são os do tomate arredondados para cima (com 29:41 no tomate, "30 min" na principal).
+5. [ ] Clique de novo no botão do meio: "PAUSADO", o corpo fica mais apagado e a janela principal mostra "Pausado". Clique mais uma vez para retomar.
+6. [ ] Feche o tomate com Alt+F4 (com ele ativo). Espere uns 5 s e abra de novo pelo botão do `#/dev`: o tempo continua de onde devia (não voltou a 30:00).
+7. [ ] Clique no quadrado da esquerda embaixo ("Encerrar sessão"): volta a "PRONTO". Na janela principal, inicie uma sessão de 60 min: o tomate mostra "Período de foco (1 de 2)". Clique no botão da direita embaixo ("Pular para o intervalo"): o corpo fica vinho, o anel verde-claro, "INTERVALO" e "A seguir: foco de 27 min".
+8. [ ] Engrenagem (em cima, à direita): a janela principal vem para a frente, nas Configurações, e o tomate continua aberto. O ícone de janela (em cima, à esquerda, "Voltar ao modo normal"): a janela principal vem para a frente e o tomate fecha.
+9. [ ] Deuteranopia: com o `npm run dev:app` aberto (o Vite serve na 5173; na worktree `tomatito-full`, na porta que você passou), abra no Chrome `http://localhost:5173/tomato.html` (a página fica sem dados do app; basta ver o desenho). F12 → menu ⋮ → More tools → Rendering → "Emulate vision deficiencies" → Deuteranopia. As folhinhas do cálice continuam visíveis contra o corpo. Repita com Protanopia. Volte para "No emulation".
+10. [ ] Feche o app (Ctrl+C no terminal).

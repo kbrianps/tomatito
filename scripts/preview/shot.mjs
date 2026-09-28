@@ -14,6 +14,13 @@
 //   --scrollbars classic  barras de rolagem clássicas, que ocupam espaço, como
 //                         no WebView2 do Windows (padrão: hidden, sem barras)
 //   --path /#/foco        caminho aberto (padrão /)
+//   --vision deuteranopia deficiência de visão de cores emulada (M50), a mesma
+//                         do DevTools → Rendering → "Emulate vision
+//                         deficiencies": deuteranopia, protanopia,
+//                         tritanopia, achromatopsia ou blurredVision
+//   --fundo transparente  M50: sem o fundo branco padrão do Chrome, para a
+//                         captura de uma página transparente (o tomate) sair
+//                         com o canal alfa
 // Passos (repetíveis, executados em ordem):
 //   --eval "expr"         avalia na página e imprime o resultado em JSON
 //   --click "seletor"     clique real do mouse no centro do elemento
@@ -67,7 +74,7 @@ function lerTamanho(texto) {
 }
 
 function parseArgs(argv) {
-  const opts = { size: '1000x700', scheme: 'dark', motion: '', path: '/', scrollbars: 'hidden' };
+  const opts = { size: '1000x700', scheme: 'dark', motion: '', path: '/', scrollbars: 'hidden', vision: 'none', fundo: '' };
   const steps = [];
   for (let i = 0; i < argv.length; i += 2) {
     const key = argv[i].replace(/^--/, '');
@@ -383,6 +390,10 @@ async function main() {
         { name: 'prefers-reduced-motion', value: opts.motion },
       ],
     });
+    await page.send('Emulation.setEmulatedVisionDeficiency', { type: opts.vision });
+    if (opts.fundo === 'transparente') {
+      await page.send('Emulation.setDefaultBackgroundColorOverride', { color: { r: 0, g: 0, b: 0, a: 0 } });
+    }
     const loaded = page.once('Page.loadEventFired');
     await page.send('Page.navigate', { url: origin + opts.path });
     await loaded;

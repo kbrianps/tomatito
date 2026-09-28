@@ -111,6 +111,8 @@ pub fn run() {
             commands::stopwatch_pause,
             commands::stopwatch_lap,
             commands::stopwatch_reset,
+            commands::tomato_debug_open,
+            commands::show_main,
         ])
         .run(context)
         .expect("error while building tauri application");

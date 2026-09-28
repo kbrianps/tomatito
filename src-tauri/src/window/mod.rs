@@ -2,12 +2,13 @@
 //! `tauri.conf.json` (`app.windows: []`): todas nascem no `setup`.
 
 pub mod main_window;
+pub mod tomato;
 
 use tauri::{AppHandle, Manager, Window};
 
 use crate::settings::{SettingsStore, ThemePref};
 
-/// Rótulo da janela do tomate (5.3), que nasce no M50.
+/// Rótulo da janela do tomate (5.3; `tomato.rs`, M50).
 pub const TOMATO_LABEL: &str = "tomato";
 
 /// "Mostrar Tomatito" (3.4), da bandeja (M36) e da segunda instância (M37).
@@ -47,4 +48,59 @@ pub fn fechar_para_bandeja(window: &Window) -> bool {
         eprintln!("[tomatito] janela não escondida: {e}");
     }
     ligado
+}
+
+/// Rota que o `show_main` aceita: `#/` e letras minúsculas ou hífen (as do
+/// `src/router.js`, como `#/configuracoes`). O texto vai para um `eval` na
+/// `main`, então nada fora disso passa.
+pub fn rota_valida(rota: &str) -> bool {
+    rota.len() <= 32
+        && rota
+            .strip_prefix("#/")
+            .is_some_and(|r| !r.is_empty() && r.chars().all(|c| c.is_ascii_lowercase() || c == '-'))
+}
+
+/// `show_main{route}` (3.5 e 5.7): mostra a `main` sem fechar a `tomato`
+/// (`show`, `unminimize` e `set_focus`) e, com uma rota, troca a tela pelo
+/// hash (o roteador ouve o `hashchange`). Sem a `main` (fechada com "fechar
+/// para a bandeja" desligado), ela nasce de novo pelo `build_main` e se
+/// mostra sozinha, na primeira tela; recriar já na rota pedida é do M51, que
+/// recria a `main` ao sair do Full. Chame fora da thread principal (num
+/// comando async), como toda criação de janela (5.3).
+pub fn mostrar_main(app: &AppHandle, rota: Option<&str>) -> tauri::Result<()> {
+    let Some(w) = app.get_webview_window(main_window::LABEL) else {
+        let s = app.state::<SettingsStore>().get();
+        main_window::build_main(app, &s)?;
+        return Ok(());
+    };
+    if let Some(r) = rota.filter(|r| rota_valida(r)) {
+        w.eval(format!("location.hash={}", serde_json::Value::from(r)))?;
+    }
+    w.show()?;
+    w.unminimize()?;
+    w.set_focus()?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rotas_do_show_main() {
+        assert!(rota_valida("#/configuracoes"));
+        assert!(rota_valida("#/foco"));
+        for ruim in [
+            "",
+            "#/",
+            "configuracoes",
+            "#/Foco",
+            "#/a'b",
+            "#/a;b",
+            "#/x\"#)",
+        ] {
+            assert!(!rota_valida(ruim), "{ruim}");
+        }
+        assert!(!rota_valida(&format!("#/{}", "a".repeat(40))));
+    }
 }

@@ -116,5 +116,16 @@ export const cronometro = Object.freeze({
   redefinir: () => invoke('stopwatch_reset'),
 });
 
+/**
+ * Tomatito Full (3.5 e 5.7). `mostrarMain(rota)` é o `show_main{route}`: mostra
+ * a `main` sem fechar a `tomato`, na rota dada (`'#/configuracoes'`) ou na
+ * tela em que estava. `abrirTomateDebug()` é o `tomato_debug_open` do M50,
+ * só no build de debug, que o `switch_window_mode` do M51 substitui.
+ */
+export const full = Object.freeze({
+  mostrarMain: (rota = null) => invoke('show_main', { route: rota }),
+  abrirTomateDebug: () => invoke('tomato_debug_open'),
+});
+
 /** Ouve um evento do Rust; `cb` recebe só o conteúdo. Devolve o `unlisten`. */
 export const ouvir = (evento, cb) => listen(evento, (e) => cb(e.payload));
