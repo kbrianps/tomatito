@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sonda de som do A02 (PLANO-ANDROID): um APK de uma tela, sem Gradle, que
+     posta uma notificação num canal com som e fecha. Só para o emulador. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="io.github.kbrianps.tomatito.sonda">
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <application android:label="Sonda de som" android:allowBackup="false">
+        <activity android:name=".Sonda" android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+    </application>
+</manifest>
