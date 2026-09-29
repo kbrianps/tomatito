@@ -26,6 +26,7 @@
 import { Updates } from '@microsoft/fast-element';
 import { grades, icone, NOMES } from '../components/icon.js';
 import { full, sons } from '../lib/ipc.js';
+import { CHAVE as CHAVE_DA_REGIAO } from '../lib/regiao-debug.js';
 
 // Botão só de ícone: aria-label (o nome) e data-dica (a dica com o mesmo texto).
 const deIcone = (classe, nome, rotulo, { grade = 16, extra = '' } = {}) =>
@@ -262,6 +263,7 @@ const AMOSTRA = `
       <div class="tt-linha">
         <button type="button" data-tomate>Abrir o tomate</button>
       </div>
+      <label class="tt-opcao"><fluent-switch data-regiao-debug></fluent-switch>Mostrar as faixas da região no tomate (M53)</label>
     </section>
 
     <section class="tt-card tt-amostra-largo" aria-labelledby="amostra-icones" data-amostra="icones">
@@ -311,10 +313,29 @@ export function montar(raiz) {
     if (ev.target.localName !== 'fluent-dialog' || ev.detail?.newState !== 'closed') return;
     raiz.querySelector(`[data-abre="${ev.target.id}"]`)?.focus();
   };
+  // M53: a sobreposição de debug das faixas da região no tomate
+  // (src/lib/regiao-debug.js), pela chave que as duas janelas leem.
+  const regiao = raiz.querySelector('[data-regiao-debug]');
+  try {
+    regiao.checked = localStorage.getItem(CHAVE_DA_REGIAO) === '1';
+  } catch {
+    // Sem armazenamento, o interruptor começa desligado.
+  }
+  const aoMudar = (ev) => {
+    if (ev.target !== regiao) return;
+    try {
+      if (regiao.checked) localStorage.setItem(CHAVE_DA_REGIAO, '1');
+      else localStorage.removeItem(CHAVE_DA_REGIAO);
+    } catch (e) {
+      console.warn('[região]', e);
+    }
+  };
   raiz.addEventListener('click', aoClicar);
   raiz.addEventListener('toggle', aoAlternar);
+  raiz.addEventListener('change', aoMudar);
   return () => {
     raiz.removeEventListener('click', aoClicar);
     raiz.removeEventListener('toggle', aoAlternar);
+    raiz.removeEventListener('change', aoMudar);
   };
 }

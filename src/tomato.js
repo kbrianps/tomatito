@@ -14,8 +14,10 @@
 // fontes carregadas (o Rust mostra assim mesmo depois de 2 s). Já na tela, a
 // página avisa de novo, `pintado`, depois de dois quadros, e só então o Rust
 // esconde a main (docs/decisoes.md, M51, item 13). "Voltar ao modo
-// normal" e o Esc saem do Full pelo mesmo comando. Ainda sem região de
-// entrada (M53 e M54). O menu nativo do botão direito e os outros atalhos
+// normal" e o Esc saem do Full pelo mesmo comando. M53: a página calcula as
+// faixas da região de entrada (lib/regiao.js) antes do primeiro aviso e a
+// cada troca de tamanho; mandá-las ao Rust é do M54 (Linux) e do M55
+// (Windows). O menu nativo do botão direito e os outros atalhos
 // (Espaço e Ctrl+,) são do M56; até lá, o menu de contexto do WebView fica
 // desligado, porque seria uma janela própria, fora do desenho (5.3).
 import * as ipc from './lib/ipc.js';
@@ -23,6 +25,7 @@ import { criarStore } from './lib/store.js';
 import { ligarAnuncioDeFases } from './lib/a11y.js';
 import t from './lib/i18n/pt-BR.js';
 import { MINUTOS_AO_INICIAR, chaveDaFase, restanteDaFase, rotuloDoTempo, vista } from './lib/tomate.js';
+import { regionStrips } from './lib/regiao.js';
 
 const h = document.documentElement;
 // Sem transições até o primeiro retrato estar na página: a cor do corpo e o
@@ -149,6 +152,39 @@ document.addEventListener('keydown', (e) => {
   sair().catch((erro) => console.warn('[tomate]', erro));
 });
 
+// A região de entrada (5.4; M53): as faixas do corpo, do cabinho e do cálice,
+// em px lógicos no Linux (escala 1) e em px físicos no Windows (o
+// devicePixelRatio, para o SetWindowRgn). Recalculada só quando o lado ou a
+// escala mudam. No modo opaco (B3), o M54 não deve aplicá-la
+// (docs/decisoes.md, M52, item 8). Uma falha aqui vai para o console e não
+// segura o aviso tt://tomato-ready: sem região, o tomate continua usável.
+const escalaDaRegiao = () => (h.dataset.platform === 'windows' ? window.devicePixelRatio || 1 : 1);
+let regiao = null;
+let sobreposicao = null;
+function calcularRegiao() {
+  const lado = window.innerWidth;
+  const escala = escalaDaRegiao();
+  if (regiao && regiao.lado === lado && regiao.escala === escala) return regiao;
+  try {
+    const inicio = performance.now();
+    const faixas = regionStrips(lado, escala);
+    regiao = { lado, escala, faixas, ms: performance.now() - inicio };
+  } catch (erro) {
+    console.error('[região]', erro);
+    regiao = null;
+    return null;
+  }
+  sobreposicao?.desenhar(regiao);
+  return regiao;
+}
+window.addEventListener('resize', () => calcularRegiao());
+// Só no dev: a sobreposição que desenha as faixas (lib/regiao-debug.js).
+if (import.meta.env.DEV) {
+  import('./lib/regiao-debug.js')
+    .then(({ ligarSobreposicao }) => (sobreposicao = ligarSobreposicao(calcularRegiao)))
+    .catch((erro) => console.warn('[região]', erro));
+}
+
 // O menu de contexto do WebView seria uma janela própria, fora do desenho
 // (5.3); o menu nativo com as ações é do M56.
 document.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -192,6 +228,7 @@ try {
   console.error('[store]', erro);
 } finally {
   atualizar();
+  calcularRegiao();
   // A janela ainda está escondida, e o requestAnimationFrame não dispara numa
   // janela escondida (docs/decisoes.md, M08): o aviso não espera um quadro, e
   // a classe só sai dois quadros depois de a janela aparecer.

@@ -983,3 +983,17 @@ O `settings.json` do app de desenvolvimento fica em `~/.local/share/io.github.kb
 7. [ ] Feche o app. Zere de novo a validação (o comando do passo 1), abra o app, entre no Full, clique em Reverter e em "Usar o modo opaco": o tomate aparece **dentro de um quadrado escuro** (vinho quase preto), sem pergunta. Arraste pelo canto do quadrado: o tomate anda junto. Aperte Esc.
 8. [ ] Feche o app e volte ao transparente: `sed -i 's/"fullMode": *"opaque"/"fullMode": "auto"/' ~/.local/share/io.github.kbrianps.tomatito.dev/settings.json`. Rode `WEBKIT_DISABLE_DMABUF_RENDERER=1 npm run dev:app` e entre no Full: o tomate abre opaco, sem pergunta, como no passo 7. (A janela principal pode sair em branco com essa variável; se sair, anote e siga.)
 9. [ ] Feche o app (Ctrl+C no terminal).
+
+## M53. Faixas da região
+
+O que já foi conferido sem você:
+- `npm test`: as faixas de uma máscara, o `mergeRows` (a união não muda), a rasterização com o traço de folga e as formas iguais às do `tomato.html`.
+- `node scripts/preview/regiao.mjs` no Chrome headless e no WebKitGTK fora da tela (46 conferências): a 240, 280 e 320 px, as faixas cobrem todo pixel que o tomate pinta, com folga de até 2 px, em 125, 146 e 162 retângulos, e o cálculo leva de 1 a 4 ms; nas escalas do Windows (1,25 e 1,5), o mesmo, com até 249 retângulos. Capturas com a sobreposição: `docs/capturas/m53-regiao-chrome-280.png` e `m53-regiao-webkit-280.png`.
+
+O que só você consegue: ver a sobreposição por cima do tomate no app de verdade. A região ainda não é aplicada (o clique no canto só atravessa a partir do M54).
+
+### Para conferir (uns 2 minutos)
+
+1. [ ] Rode `cd ~/dev/tomatito-full && npm run dev:app` (depois da junção, em `~/dev/tomatito`). Na janela, abra o DevTools (botão direito → Inspecionar → Console), digite `location.hash = '#/dev'` e, no cartão "Tomate (Full)", ligue "Mostrar as faixas da região no tomate (M53)".
+2. [ ] Clique em "Abrir o tomate" (se aparecer a pergunta do M52, clique em Manter): por cima do tomate há faixas em dois tons de ciano que cobrem o corpo, o cabinho e as sépalas, passando um pouco da borda, e no canto de cima "146 retângulos · … ms · 280 px", com menos de 20 ms. Nada de ciano sobre a sombra de baixo.
+3. [ ] Aperte Esc, desligue o interruptor e abra o tomate de novo: sem as faixas. Aperte Esc e feche o app (Ctrl+C no terminal).

@@ -322,3 +322,34 @@ body {
     border: 1px solid ButtonText;
   }
 }
+
+/* M53: sobreposição de debug com as faixas da região de entrada (só no dev,
+   src/lib/regiao-debug.js). O viewBox é o da região (lado × escala), então
+   cada faixa cai no pixel certo; os retângulos alternam dois tons, para se
+   ver onde um termina e o outro começa. Nada aqui recebe clique. */
+.tt-regiao-debug {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vw;
+  pointer-events: none;
+  z-index: 10;
+}
+.tt-regiao-debug path {
+  fill: rgb(0 190 255 / 0.45);
+  shape-rendering: crispEdges;
+}
+.tt-regiao-debug path + path {
+  fill: rgb(0 190 255 / 0.2);
+}
+.tt-regiao-info {
+  position: fixed;
+  top: 2px;
+  left: 4px;
+  margin: 0;
+  font: 11px/1.3 var(--tt-font-text);
+  color: rgb(0 190 255);
+  pointer-events: none;
+  z-index: 10;
+}

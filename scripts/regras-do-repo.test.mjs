@@ -790,3 +790,18 @@ test('capabilities/tomato.json com as permissões da seção 3.8, só para a tom
     'core:window:allow-start-dragging',
   ]);
 });
+
+test('Full: faixas da região calculadas pela página antes do aviso, e a sobreposição só no dev (M53)', () => {
+  const js = ler('src/tomato.js');
+  assert.match(js, /import \{ regionStrips \} from '\.\/lib\/regiao\.js';/);
+  // Linux: px lógicos (escala 1); Windows: px físicos (5.4).
+  assert.match(js, /h\.dataset\.platform === 'windows' \? window\.devicePixelRatio \|\| 1 : 1/);
+  assert.match(js, /addEventListener\('resize', \(\) => calcularRegiao\(\)\)/);
+  const fim = js.slice(js.lastIndexOf('} finally {'));
+  assert.ok(fim.indexOf('calcularRegiao();') > 0 && fim.indexOf('calcularRegiao();') < fim.indexOf('avisar(false)'), 'antes do tt://tomato-ready');
+  // A sobreposição entra só pelo import dinâmico dentro do DEV.
+  assert.match(js, /if \(import\.meta\.env\.DEV\) \{\s*import\('\.\/lib\/regiao-debug\.js'\)/);
+  assert.equal(js.match(/regiao-debug/g).length, 2, 'só o import do DEV (e o comentário)');
+  // Uma fonte única (5.4): a região não é calculada no Rust.
+  assert.doesNotMatch(ler('src-tauri/src/window/tomato.rs'), /region_approx|fn strips/);
+});
