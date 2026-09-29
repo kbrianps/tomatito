@@ -4,6 +4,9 @@ O que só uma pessoa na frente da tela consegue conferir. Para cada marco: o que
 
 ## M01. Teste de fumaça
 
+> **Superada (29/09/2026).** O switch da tela inicial não existe mais; os controles são conferidos no `#/dev` (M12 e M13). Os passos abaixo ficam só como registro.
+
+
 ### O que já foi conferido sem olhar a tela (26/09/2026)
 
 - **Janela na sessão Wayland:** `npm run tauri dev` com `WAYLAND_DEBUG=client` mostrou `xdg_toplevel.set_title("Tomatito")`, `xdg_toplevel.set_app_id("tomatito")` e os `configure` do compositor, sem `wl_display.error`. A janela ficou aberta uns 5 s e foi fechada.
@@ -57,6 +60,9 @@ O "Pronto quando" (push verde no Linux e no Windows) depende de criar o reposit�
 
 ## M04. Spike A: janela-tomate transparente
 
+> **Superada (29/09/2026)** pela seção M50, que confere a transparência no tomate definitivo. Os passos abaixo ficam só como registro.
+
+
 O código está na branch `spike/full`. O resultado completo, com os números, está em `docs/decisoes.md`, na seção "Spike do Full".
 
 ### O que já foi conferido sem olhar a tela (26/09/2026)
@@ -84,6 +90,9 @@ O código está na branch `spike/full`. O resultado completo, com os números, e
 Se algum passo falhar, anote o que viu em `docs/decisoes.md`, na seção do spike A. Cantos pretos ou brancos no passo 2 mudam o veredito para B3 (plano, 5.8).
 
 ## M05. Spike B: região de entrada e veredito
+
+> **Superada (29/09/2026)** pela seção M54, que confere o clique atravessando com a região definitiva. O passo 8 (monitor na NVIDIA) continua valendo, opcional, com o `npm run dev:app` no lugar da `spike/full`. Os outros passos ficam só como registro.
+
 
 O código está na branch `spike/full`. O resultado completo e o veredito (A) estão em `docs/decisoes.md`, na seção "Spike do Full".
 
@@ -691,6 +700,9 @@ O que não dá para conferir daqui: o painel de Configurações do GNOME de verd
 
 ## M26. Estatísticas
 
+> **Superada (29/09/2026)** pela seção M27: o cartão mostra os mesmos números e confere que eles voltam ao reabrir.
+
+
 O que foi conferido de forma automática (28/09/2026):
 
 - `cargo test --workspace`: os dias e a semana (`days.rs`), com a meia-noite, a hora de zerar às 04:00, a semana de segunda a domingo e o horário de verão; o `stats.sqlite` (migração, regra de soma, reabrir, arquivo corrompido) e o motor gravando os períodos pelo `Effects`.
@@ -754,6 +766,9 @@ O que só você consegue ver: o diálogo na sua tela, o Tab e o anel de foco, e 
 
 
 ## M29. Tarefas: dados
+
+> **Superada (29/09/2026)** pela seção M30, que faz o mesmo pelo cartão "Tarefas".
+
 
 O que foi conferido de forma automática (28/09/2026):
 
@@ -1063,7 +1078,7 @@ O que só você consegue: o seu olho no painel, no dock e no Alt+Tab da sua sess
 
 ### Para conferir (uns 5 minutos, mais o build)
 
-1. [ ] `cd ~/dev/tomatito && bash scripts/instalar-uso-diario.sh` (gera o `.deb` e o AppImage de release, uns minutos, e reinstala o de uso diário em `~/.local` com o ícone novo).
+1. [x] `cd ~/dev/tomatito && bash scripts/instalar-uso-diario.sh` (gera o `.deb` e o AppImage de release, uns minutos, e reinstala o de uso diário em `~/.local` com o ícone novo). Feito em 29/09/2026, no M45.
 2. [ ] Abra o menu de apps (Super) e procure "Tomatito": o ícone é o disco vermelho com o arco creme. Se ainda aparecer o antigo, saia da sessão e entre de novo (cache de ícones do GNOME).
 3. [ ] Abra o Tomatito pelo menu. O mesmo ícone no dock e no Alt+Tab, nítido.
 4. [ ] No painel de cima, à direita, o ícone da bandeja: o disco com o arco, legível sem precisar chegar perto. Nas Configurações → Sistema, ligue "Tempo na bandeja", inicie uma sessão e veja o tempo ao lado do ícone.
@@ -1110,7 +1125,7 @@ O que só você consegue: o seu olho no diálogo do app instalado, e ler se os t
 
 ### Para conferir (uns 3 minutos, mais o build)
 
-1. [ ] `cd ~/dev/tomatito && bash scripts/instalar-uso-diario.sh` (reinstala o de uso diário com o M46; se preferir não reinstalar agora, `npm run dev:app` serve para os passos 2 a 5).
+1. [x] (Feito em 29/09/2026, no M45.) `cd ~/dev/tomatito && bash scripts/instalar-uso-diario.sh` (reinstala o de uso diário com o M46; se preferir não reinstalar agora, `npm run dev:app` serve para os passos 2 a 5).
 2. [ ] Abra o Tomatito, vá a Configurações e abra o cartão "Sobre" (embaixo). Aparecem "Avisos de terceiros" com "Ver avisos" e "Licença da fonte Inter" com "Ver licença", os dois clicáveis.
 3. [ ] Clique em "Ver avisos": abre o diálogo "Avisos de terceiros" com o texto começando por "# Avisos de terceiros". Role com a roda do mouse e com as setas, Page Down e End: o texto vai até o fim (os crates Rust), sem rolagem para o lado.
 4. [ ] Aperte Esc: o diálogo fecha e o foco volta ao "Ver avisos". Clique em "Ver licença": abre a licença da Inter ("Copyright 2016 The Inter Project Authors", "SIL OPEN FONT LICENSE Version 1.1"). Clique em "Fechar".
@@ -1160,7 +1175,7 @@ Desde o M51, o botão "Abrir o tomate" do `#/dev` (passo 1 da seção M50) escon
 5. [ ] Faça umas 5 idas e voltas seguidas, alternando o Esc e o botão: nenhum clarão, o tempo nunca volta ao começo.
 6. [ ] No Full, clique na engrenagem do tomate: a janela principal aparece em Configurações, com o tomate ainda aberto e "Tomatito Full" marcado. Clique em "Claro": o tomate fecha e a janela principal fica no Claro.
 7. [ ] Escolha "Tomatito Full" de novo e feche o app (Ctrl+C no terminal). Rode `npm run dev:app` outra vez: **só o tomate aparece**, sem a janela principal. Clique na engrenagem: a principal aparece já em Configurações, no Claro. Aperte Esc no tomate: ele fecha e o app fica no Claro.
-8. [ ] (Depois da junção, com o build de uso diário instalado e os outros apps WebKit fechados, como o GNOME Web.) Abra o Tomatito instalado, rode no terminal o comando abaixo, faça 20 idas e voltas (passos 2 e 3) e rode de novo. O segundo número é no máximo 10% maior que o primeiro.
+8. [ ] (O build de uso diário instalado já é o da junção, desde 29/09/2026. Feche os outros apps WebKit, como o GNOME Web.) Abra o Tomatito instalado, rode no terminal o comando abaixo, faça 20 idas e voltas (passos 2 e 3) e rode de novo. O segundo número é no máximo 10% maior que o primeiro.
 
    ```bash
    ps -o rss= -p "$(pgrep -d, -f 'tomatito|WebKitWebProcess|WebKitNetworkProcess')" | awk '{s+=$1} END{print s" KB"}'
