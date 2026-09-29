@@ -32,3 +32,12 @@
   --tt-titlebar-bg:transparent; --tt-session-card-bg:var(--tt-bg-card);
   --tt-focus-outer:var(--tt-fg-1); --tt-focus-inner:var(--tt-bg-card);   /* anel duplo: 2 px + 1 px */
 }
+
+/* M41: com movimento reduzido, o que o Fluent move por conta própria (o
+   polegar do switch, que desliza em --durationNormal, e o sublinhado da lista
+   suspensa, que cresce em --durationUltraFast e --durationNormal) muda de uma
+   vez: só os fades de 83 ms (3.8). O diálogo tem regras próprias
+   (controls.css). */
+@media (prefers-reduced-motion:reduce){ [data-theme]{
+  --durationUltraFast:0ms; --durationFaster:0ms; --durationFast:0ms; --durationNormal:0ms;
+  --durationGentle:0ms; --durationSlow:0ms; --durationSlower:0ms; --durationUltraSlow:0ms; } }

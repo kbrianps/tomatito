@@ -110,6 +110,8 @@
       tela.append(bloco);
     }
     await doisQuadros();
+    // M41: a tela nova entra com fade e subida de 24 px; mede no lugar final.
+    await Promise.all([...document.querySelectorAll('.tt-rolagem > *')].flatMap((el) => el.getAnimations()).map((a) => a.finished.catch(() => {})));
     return window.__ttMedidas();
   };
   window.__ttTema = async (tema) => {
@@ -1478,5 +1480,141 @@
     const texto = sel.toString();
     sel.removeAllRanges();
     return texto;
+  };
+
+  // M41: o movimento. __ttGravarMovimento() começa a anotar, a cada quadro,
+  // toda animação em curso (Web Animations, transições e animações de CSS),
+  // na página e nas shadow roots dos componentes Fluent, uma vez cada;
+  // __ttColherMovimento() devolve o que foi anotado e esvazia a lista. Cada
+  // item: { tipo, alvo, props, duracao (ms), curva, de } — `curva` é a do
+  // efeito ou, se ela for linear, a do primeiro quadro (o Chrome põe a
+  // timing-function das transições no quadro), e `de` é o primeiro quadro
+  // (só opacity, transform, translate e scale).
+  // __ttMovimentoApos(acao, ms) vai para a rota ('#/…') ou dá click() no
+  // seletor, espera ms e colhe. __ttSaidaDoDialogo()
+  // clica em Cancelar do diálogo aberto e, 40 ms depois, mede onde a caixa está
+  // (no meio da janela, mesmo fora da camada de cima) antes de colher.
+  // __ttTransicoes() lê a transição calculada dos controles com hover.
+  // __ttSabotarMovimento() devolve o giro do chevron com movimento reduzido
+  // (o controle negativo).
+  const nomeDoAlvo = (el) => {
+    if (!el) return '?';
+    const host = el.getRootNode?.()?.host;
+    const cls = el.getAttribute?.('class');
+    const nome = `${el.localName}${cls ? '.' + cls.trim().split(/\s+/).join('.') : ''}`;
+    return host ? `${host.localName}>${nome}` : nome;
+  };
+  const META = new Set(['offset', 'computedOffset', 'easing', 'composite']);
+  const resumo = (a) => {
+    const ef = a.effect;
+    const t = ef?.getTiming?.() ?? {};
+    const quadros = ef?.getKeyframes?.() ?? [];
+    const props = a.transitionProperty
+      ? [a.transitionProperty]
+      : [...new Set(quadros.flatMap((q) => Object.keys(q).filter((k) => !META.has(k))))];
+    const de = {};
+    for (const k of ['opacity', 'transform', 'translate', 'scale']) if (quadros[0]?.[k] !== undefined) de[k] = String(quadros[0][k]);
+    const curvaEf = t.easing ?? 'linear';
+    return {
+      tipo: a.constructor?.name ?? 'Animation',
+      alvo: nomeDoAlvo(ef?.target) + (ef?.pseudoElement ?? ''),
+      props,
+      duracao: Math.round(Number(t.duration) || 0),
+      curva: curvaEf !== 'linear' ? curvaEf : (quadros[0]?.easing ?? 'linear'),
+      de,
+    };
+  };
+  const todasAsAnimacoes = () => {
+    const lista = new Set(document.getAnimations());
+    for (const el of document.querySelectorAll('*')) if (el.shadowRoot) for (const a of el.shadowRoot.getAnimations()) lista.add(a);
+    return lista;
+  };
+  let vistas = new WeakSet();
+  let anotadas = [];
+  let gravando = false;
+  const anotar = () => {
+    for (const a of todasAsAnimacoes()) {
+      if (vistas.has(a)) continue;
+      vistas.add(a);
+      anotadas.push(resumo(a));
+    }
+  };
+  window.__ttGravarMovimento = () => {
+    if (!gravando) {
+      gravando = true;
+      const laco = () => {
+        anotar();
+        requestAnimationFrame(laco);
+      };
+      requestAnimationFrame(laco);
+    }
+    return { reduzido: matchMedia('(prefers-reduced-motion: reduce)').matches };
+  };
+  window.__ttColherMovimento = () => {
+    anotar();
+    const r = anotadas;
+    anotadas = [];
+    vistas = new WeakSet(todasAsAnimacoes());
+    return r;
+  };
+  const esperarMs = (ms) => new Promise((r) => setTimeout(r, ms));
+  window.__ttMovimentoApos = async (acao, ms = 450) => {
+    window.__ttColherMovimento();
+    vistas = new WeakSet();
+    if (acao.startsWith('#/')) location.hash = acao;
+    else document.querySelector(acao).click();
+    await esperarMs(ms);
+    return window.__ttColherMovimento();
+  };
+  window.__ttSaidaDoDialogo = async () => {
+    window.__ttColherMovimento();
+    vistas = new WeakSet();
+    const host = [...document.querySelectorAll('fluent-dialog')].find((d) => d.shadowRoot?.querySelector('dialog')?.open);
+    if (!host) return { erro: 'nenhum diálogo aberto' };
+    const caixa = host.shadowRoot.querySelector('dialog');
+    host.querySelector('[data-cancelar]').click();
+    await esperarMs(40);
+    const r = caixa.getBoundingClientRect();
+    const meio = { dx: arred(r.x + r.width / 2 - innerWidth / 2), dy: arred(r.y + r.height / 2 - innerHeight / 2), display: getComputedStyle(caixa).display };
+    await esperarMs(410);
+    return { meio, fim: getComputedStyle(caixa).display, animacoes: window.__ttColherMovimento() };
+  };
+  // Os que não estão na tela entram por um instante num <div> da camada de
+  // conteúdo (a mesma cascata da tela).
+  const AMOSTRAS = {
+    '.tt-nav-item': null,
+    'button.tt-caption-btn': null,
+    'button.tt-accent': '<button class="tt-accent">x</button>',
+    'button.tt-sutil': '<button class="tt-sutil">x</button>',
+    '.tt-texto': '<input class="tt-texto">',
+    '.tt-tarefa': '<ul><li class="tt-tarefa">x</li></ul>',
+    'fluent-option': '<fluent-option>x</fluent-option>',
+    'fluent-menu-item': '<fluent-menu-item>x</fluent-menu-item>',
+    '.tt-previa-moldura': '<span class="tt-previa-moldura"></span>',
+    '.tt-expansor-chevron .tt-icone': '<span class="tt-expansor-chevron"><svg class="tt-icone"></svg></span>',
+  };
+  window.__ttTransicoes = () => {
+    const ler = (seletor, html) => {
+      let el = document.querySelector(seletor);
+      let caixa = null;
+      if (!el && html) {
+        caixa = document.createElement('div');
+        caixa.innerHTML = html;
+        document.querySelector('.tt-rolagem').append(caixa);
+        el = caixa.querySelector(seletor);
+      }
+      if (!el) return null;
+      const s = getComputedStyle(el);
+      const r = { prop: s.transitionProperty, dur: s.transitionDuration, curva: s.transitionTimingFunction };
+      caixa?.remove();
+      return r;
+    };
+    return Object.fromEntries(Object.entries(AMOSTRAS).map(([sel, html]) => [sel, ler(sel, html)]));
+  };
+  window.__ttSabotarMovimento = () => {
+    const st = document.createElement('style');
+    st.textContent = '.tt-expansor-chevron .tt-icone{ transition:transform 250ms cubic-bezier(0,0,0,1) !important; }';
+    document.head.append(st);
+    return true;
   };
 })();

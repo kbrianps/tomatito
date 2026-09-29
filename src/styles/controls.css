@@ -125,11 +125,53 @@ fluent-dropdown > button[slot="control"]{ all:unset; flex:1 1 auto; }
    e da camada no Lite, onde a sombra sozinha se perde no vermelho (a mesma
    borda da dica do painel compacto, M10). */
 fluent-listbox,fluent-menu-list,fluent-tooltip{ border-color:var(--tt-border); }
+/* M41: o fundo dos itens de menu e das opções das listas muda em 83 ms,
+   linear, como o dos botões (o hover e o pressionado do Fluent são no próprio
+   elemento, e esta regra, de fora, vence a do componente). */
+fluent-menu-item,fluent-option{ transition:background-color var(--tt-dur-fast) linear; }
 
 /* Fundo atrás do diálogo modal: o --tt-smoke da seção 4.2 (preto a 30%), no
    lugar do colorBackgroundOverlay do Fluent (preto a 40% no claro, 50% no
    escuro). */
 fluent-dialog{ --dialog-backdrop:var(--tt-smoke); }
+
+/* M41: movimento do diálogo, o do ContentDialog do WinUI: a caixa entra
+   da escala 1,05 para 1 em 250 ms (--tt-dur-in) e sai de volta para 1,05 em
+   167 ms (--tt-dur-out), com a curva ControlFastOutSlowInKeySpline (0,0,0,1,
+   o --tt-ease-decel); a opacidade da caixa e do fundo muda em 83 ms, linear,
+   nos dois sentidos. Substitui o do Fluent (escala 0,85, 250 ms nos dois
+   sentidos e nada com movimento reduzido): as regras de ::part() vencem as
+   do componente, e por isso a entrada precisa do próprio @starting-style.
+   Aberto é :modal. O WebKitGTK não tem a propriedade overlay: ao fechar, a
+   caixa sai da camada de cima na hora, e o position: fixed com inset: 0 (o
+   que a camada de cima dá ao modal) a segura no meio da janela enquanto ela
+   some; o fundo, que só existe na camada de cima, some junto. Com movimento
+   reduzido, sem escala: só os fades de 83 ms (3.8). */
+fluent-dialog::part(dialog){
+  position:fixed; inset:0; z-index:100; margin:auto;
+  opacity:0; scale:1.05;
+  transition:opacity var(--tt-dur-fast) linear, scale var(--tt-dur-out) var(--tt-ease-decel),
+    display var(--tt-dur-out) allow-discrete, overlay var(--tt-dur-out) allow-discrete;
+}
+fluent-dialog::part(dialog):modal{
+  opacity:1; scale:1;
+  transition:opacity var(--tt-dur-fast) linear, scale var(--tt-dur-in) var(--tt-ease-decel),
+    display var(--tt-dur-in) allow-discrete, overlay var(--tt-dur-in) allow-discrete;
+}
+fluent-dialog::part(dialog)::backdrop{
+  opacity:0;
+  transition:opacity var(--tt-dur-fast) linear,
+    display var(--tt-dur-out) allow-discrete, overlay var(--tt-dur-out) allow-discrete;
+}
+fluent-dialog::part(dialog):modal::backdrop{ opacity:1; }
+@starting-style{
+  fluent-dialog::part(dialog):modal{ opacity:0; scale:1.05; }
+  fluent-dialog::part(dialog):modal::backdrop{ opacity:0; }
+}
+@media (prefers-reduced-motion:reduce){
+  fluent-dialog::part(dialog), fluent-dialog::part(dialog):modal{ scale:none; }
+  @starting-style{ fluent-dialog::part(dialog):modal{ scale:none; } }
+}
 
 /* M28: diálogo "Editar meta diária" (src/views/focus/goal-dialog.js), como o
    do Relógio (windows-11-focus-sessions-targets.png, a 175%): 320 px de
@@ -182,6 +224,7 @@ fluent-dialog.tt-dialogo-temporizador::part(dialog){ width:360px; max-width:calc
   background:var(--tt-input-bg);
   border:1px solid var(--tt-border); border-bottom-color:var(--tt-stroke-control);
   border-radius:var(--tt-r-ctl); outline:none;
+  transition:background-color var(--tt-dur-fast) linear;   /* M41 */
 }
 .tt-texto::placeholder{ color:var(--tt-fg-2-on-ctl); opacity:1; }
 .tt-texto:hover{ background:var(--tt-ctl-hover); }

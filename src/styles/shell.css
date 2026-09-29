@@ -28,6 +28,9 @@
   container:conteudo / inline-size;
 }
 .tt-rolagem{ flex:1; min-width:0; overflow:auto; }
+/* M41: enquanto a tela nova sobe (lib/movimento.js), os 24 px de baixo não
+   criam barra de rolagem numa tela que cabia sem rolar. */
+.tt-rolagem[data-entrando]{ overflow:hidden; }
 
 /* Barra de título (src/components/title-bar.js) */
 .tt-titlebar{
@@ -391,8 +394,13 @@
 .tt-tarefa:is([data-escolhida], [data-focada]){ border-color:var(--tt-accent); box-shadow:inset 0 0 0 1px var(--tt-accent); }
 .tt-tarefa-escolher[aria-pressed="true"]{ font-weight:600; }
 /* No Lite, o fg-2 sobre o hover cai abaixo de 4,5:1 (4.4): o texto da linha
-   com o mouse em cima volta ao --tt-fg-2-on-ctl. */
-.tt-tarefa:hover{ background-image:linear-gradient(var(--tt-subtle-hover), var(--tt-subtle-hover)); }
+   com o mouse em cima volta ao --tt-fg-2-on-ctl.
+   M41: a camada do hover por cima do fundo é uma propriedade registrada
+   (--tt-camada), para mudar em 83 ms, linear, como o fundo dos botões (um
+   gradiente não tem transição). */
+@property --tt-camada{ syntax:"<color>"; inherits:false; initial-value:transparent; }
+.tt-tarefa{ background-image:linear-gradient(var(--tt-camada), var(--tt-camada)); transition:--tt-camada var(--tt-dur-fast) linear; }
+.tt-tarefa:hover{ --tt-camada:var(--tt-subtle-hover); }
 .tt-tarefa[data-esmaecida]:hover, .tt-tarefa[data-feita]:hover .tt-tarefa-titulo{ color:var(--tt-fg-2-on-ctl); }
 .tt-tarefa-nova{ margin-top:8px; }
 .tt-tarefa-nova[hidden]{ display:none; }
@@ -502,6 +510,13 @@ button.tt-expansor-botao{
 .tt-expansor-chevron{ grid-column:3; justify-self:end; display:flex; align-items:center; justify-content:center; width:32px; height:32px; margin-right:8px; }
 button.tt-expansor-botao .tt-expansor-chevron .tt-icone{ width:12px; height:12px; }
 .tt-expansor[data-aberto] .tt-expansor-chevron .tt-icone{ transform:rotate(180deg); }
+/* M41: o chevron gira em 250 ms ao abrir e em 167 ms ao fechar (os tokens
+   de entrada e saída), com a curva de desaceleração, perto dos tempos do
+   conteúdo do Expander do WinUI (333 ms ao abrir, 167 ao fechar). Com
+   movimento reduzido, vira de uma vez. */
+.tt-expansor-chevron .tt-icone{ transition:transform var(--tt-dur-out) var(--tt-ease-decel); }
+.tt-expansor[data-aberto] .tt-expansor-chevron .tt-icone{ transition-duration:var(--tt-dur-in); }
+@media (prefers-reduced-motion:reduce){ .tt-expansor-chevron .tt-icone{ transition:none; } }
 .tt-expansor-acao{ grid-row:1; grid-column:2; position:relative; display:flex; align-items:center; gap:12px; padding-left:16px; color:var(--tt-fg-1); }
 .tt-expansor-conteudo{ border-top:1px solid var(--tt-border); }
 .tt-expansor-conteudo[hidden]{ display:none; }

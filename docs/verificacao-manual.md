@@ -992,3 +992,21 @@ O que só você consegue: ver a notificação no seu painel, ouvir que nada toca
 4. [ ] Encerre a sessão ("..." → "Encerrar sessão"), ponha **1 minuto** no seletor e inicie. Noutro terminal, `pkill -9 -x tomatito` logo em seguida, e anote a hora em que a sessão terminaria (1 min depois do início).
 5. [ ] Espere **mais de 2 minutos** e abra de novo com `npm run dev:app`. Aparece a notificação **"Sessão concluída às HH:MM"** (a hora do passo 4), **sem som**. Na tela Foco, o cartão "Progresso diário" soma 1 min a mais que antes.
 6. [ ] Ctrl+Q, e `npm run dev:app` de novo: o temporizador de 10 min e o cronômetro continuam correndo, com a volta. Para terminar: redefina os dois e Ctrl+Q (e Ctrl+C no terminal, se o Vite continuar).
+
+## M41. Movimento
+
+O que já foi conferido sem você:
+- `npm test`: a entrada de página (quadros, tempo, curva, a rolagem segura enquanto a tela sobe, a troca no meio da outra) e as regras do CSS (toda transição nos tokens `--tt-dur-*`, hover em 83 ms, o diálogo e o que some com movimento reduzido).
+- `node scripts/preview/movimento.mjs`, no Chrome headless e no WebKitGTK fora da tela, sem preferência e com movimento reduzido (no WebKitGTK, pelo `gtk-enable-animations` desligado, que é o que o "Animações" do GNOME desliga): a tela nova sobe 24 px com o fade em 300 ms; o diálogo entra da escala 1,05 em 250 ms e sai em 167 ms, com a opacidade em 83 ms; o chevron dos cartões das Configurações gira; hover e pressionado em 83 ms, linear; com movimento reduzido, nada passa de 83 ms nem mexe em posição, escala ou giro.
+- Roteiro aninhado `movimento` (o app de verdade no GNOME Shell aninhado, tudo pelo ponteiro virtual): com o "Animações" ligado, a subida da tela e a escala do diálogo; com ele desligado (o `enable-animations` do GSettings, lido pelo app), 38 animações anotadas entre trocas de tela, o diálogo, um cartão das Configurações, um switch e o hover do painel, **todas fades ou trocas de cor de até 83 ms**.
+
+O que só você consegue: ver o movimento com os próprios olhos, na sua sessão, e desligar o "Animações" de verdade.
+
+### Para conferir (uns 4 minutos)
+
+1. [ ] `cd ~/dev/tomatito && npm run dev:app`. Troque de tela pelo painel (Foco, Temporizador, Cronômetro, Configurações): a tela nova sobe um pouco enquanto aparece, rápido e suave, sem piscar e sem barra de rolagem passando. O indicador do painel desliza até o item.
+2. [ ] Na tela Foco, clique no lápis do "Progresso diário": o diálogo aparece crescendo levemente para o tamanho final (vem de um pouco maior), com o fundo escurecendo. "Cancelar": ele some encolhendo de volta (o fundo escuro some de uma vez, no Linux).
+3. [ ] Em Configurações, clique em "Períodos de foco": o chevron à direita gira para cima; clique de novo, gira de volta. Passe o mouse sobre botões, itens do painel e cartões: o fundo muda rápido, sem salto.
+4. [ ] Ctrl+Q. Desligue as animações do GNOME: em Configurações → Acessibilidade → Ver, ligue **"Reduzir animação"** (é o "Animações" desligado), ou num terminal `gsettings set org.gnome.desktop.interface enable-animations false`. Rode `npm run dev:app` de novo.
+5. [ ] Repita os passos 1 a 3: a tela nova só aparece (sem subir), o indicador do painel troca de item sumindo e aparecendo, o diálogo só aparece e some (sem crescer nem encolher), o chevron vira de uma vez, e o switch "Ativado/Desativado" muda sem deslizar. Tudo muito rápido (83 ms).
+6. [ ] Ctrl+Q e **volte as animações**: desligue "Reduzir animação", ou `gsettings set org.gnome.desktop.interface enable-animations true`.

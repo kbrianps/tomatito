@@ -28,6 +28,7 @@ import { iniciarRoteador } from './router.js';
 import { store } from './lib/store.js';
 import * as ipc from './lib/ipc.js';
 import { ligarAnuncioDeFases } from './lib/a11y.js';
+import { entrarPagina } from './lib/movimento.js';
 import { aplicarTema, ligarSistema, ligarTema, temaDeBase } from './lib/theme.js';
 import * as foco from './views/focus/index.js';
 import * as temporizador from './views/timers.js';
@@ -100,7 +101,12 @@ try {
     raiz: document.querySelector('.tt-rolagem'),
     telas: { foco, temporizador, cronometro, configuracoes, dev },
     contexto: { icone, tema },
-    aoMudar: (rota, anterior) => nav.selecionar(rota, { animar: anterior !== null }),
+    // M41: a tela nova entra com fade e subida; a primeira, não (a janela
+    // abre já pintada, 4.7).
+    aoMudar: (rota, anterior) => {
+      nav.selecionar(rota, { animar: anterior !== null });
+      if (anterior !== null) entrarPagina(document.querySelector('.tt-rolagem'));
+    },
   });
   ligarAtalhosDeNavegacao((rota) => roteador.navegar(rota));
   ligarEscDasListas();
