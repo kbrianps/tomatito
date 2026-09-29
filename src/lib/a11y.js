@@ -54,11 +54,14 @@ export function escreverNaRegiao(regiao, texto) {
  * O anúncio pelo lado nativo (M43; src-tauri/src/anuncio.rs): no Linux, pede
  * ao Rust que emita o `announcement` do ATK da janela, que é o que o Orca lê;
  * no Windows, não faz nada (a região aria-live do WebView2 fala com o
- * Narrador). Devolve a promessa do invoke, ou null.
+ * Narrador). `fase: true` só no anúncio das fases (ligarAnuncioDeFases): a
+ * `main` e a `tomato` o repetem, e o Rust fica com o da janela da frente; os
+ * demais (as voltas copiadas, M43) valem de qualquer janela. Devolve a
+ * promessa do invoke, ou null.
  */
-export function anunciarNativo(texto, { doc = globalThis.document, ipc = ipcDoApp } = {}) {
+export function anunciarNativo(texto, { doc = globalThis.document, ipc = ipcDoApp, fase = false } = {}) {
   if (!texto || doc?.documentElement?.dataset?.platform !== 'linux' || !ipc?.anunciarAoLeitor) return null;
-  return ipc.anunciarAoLeitor(texto).catch((erro) => console.warn('[anúncio]', erro));
+  return ipc.anunciarAoLeitor(texto, { fase }).catch((erro) => console.warn('[anúncio]', erro));
 }
 
 /**
@@ -99,7 +102,7 @@ export function criarAnunciador(regiao, { agendar = (cb) => setTimeout(cb, 100),
  */
 export async function ligarAnuncioDeFases({ ipc, doc = globalThis.document } = {}) {
   const anunciador = criarAnunciador(doc?.querySelector('[data-anuncio]'), {
-    nativo: (texto) => anunciarNativo(texto, { doc, ipc }),
+    nativo: (texto) => anunciarNativo(texto, { doc, ipc, fase: true }),
   });
   await ipc.ouvir(ipc.EVENTOS.fase, (e) => anunciador.fase(e));
   return anunciador;

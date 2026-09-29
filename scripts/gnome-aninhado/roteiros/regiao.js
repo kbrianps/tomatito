@@ -238,6 +238,17 @@ async function cliquesAtravessam(lado) {
   const dentro = Object.keys(DENTRO).filter((n) => !todos[n].ok);
   checar(`${lado} px: clicar fora do desenho chega à janela de trás (${Object.keys(FORA).length} pontos)`, fora.length === 0, fora.map((n) => ({ [n]: todos[n] })));
   checar(`${lado} px: clicar no corpo e na sépala fica no tomate`, dentro.length === 0, dentro.map((n) => ({ [n]: todos[n] })));
+  // Um clique que atravessa chega à página da main e pode cair num controle
+  // dela: desde o M42/M43, o "Iniciar" do preparo fica sob a sombra do tomate
+  // no M (280). Isso é o clique atravessando, como deve; o motor volta ao
+  // repouso para os botões do tomate partirem do zero (arrasteEBotoes).
+  const status = (await focoDoMotor()).status;
+  R.medidas[`cliques-${lado}`].motor_depois = status;
+  if (status !== 'idle') {
+    passo(`${lado} px: os cliques na main deixaram o motor em ${status}; encerrando antes dos botões do tomate`);
+    await ipc('focus_stop');
+    await esperar(async () => (await focoDoMotor()).status === 'idle', 5000, 'o motor em repouso');
+  }
   Main.activateWindow(TOMATO);
   await sleep(600);
   await captura(`m54-${lado}.png`, { x: B.x - 20, y: B.y - 20, w: lado + 40, h: lado + 40 });
@@ -248,8 +259,10 @@ async function arrasteEBotoes(lado) {
   await arrastar(lado, 'cabinho', 162, 60, -160, 60);
   await arrastar(lado, 'cálice', 183, 67, -120, -80);
   const r0 = rect(TOMATO);
-  await clicarNoTomate(lado, 'principal');
   let f = await focoDoMotor();
+  const emRepouso = f.status === 'idle';
+  await clicarNoTomate(lado, 'principal');
+  f = await focoDoMotor();
   const iniciou = f.status === 'focus';
   await clicarNoTomate(lado, 'principal');
   f = await focoDoMotor();
@@ -257,7 +270,7 @@ async function arrasteEBotoes(lado) {
   await clicarNoTomate(lado, 'encerrar');
   f = await focoDoMotor();
   const encerrou = f.status === 'idle';
-  checar(`${lado} px: os botões comandam o motor (iniciar, pausar, encerrar)`, iniciou && pausou && encerrou, { iniciou, pausou, encerrou });
+  checar(`${lado} px: os botões comandam o motor (iniciar, pausar, encerrar)`, emRepouso && iniciou && pausou && encerrou, { emRepouso, iniciou, pausou, encerrou });
   checar(`${lado} px: a janela não se mexeu com os cliques nos botões`, JSON.stringify(r0) === JSON.stringify(rect(TOMATO)), { antes: r0, depois: rect(TOMATO) });
 }
 

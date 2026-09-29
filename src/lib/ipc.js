@@ -25,7 +25,9 @@ export const obterEstado = () => invoke('get_state');
  */
 export const sair = () => invoke('app_quit');
 // M43: pede ao leitor de tela do Linux que leia um texto (src-tauri/src/anuncio.rs).
-export const anunciarAoLeitor = (texto) => invoke('a11y_announce', { text: texto });
+// `fase: true` marca o anúncio das fases, que a `main` e a `tomato` repetem:
+// só esse passa pelo filtro da janela da frente; os outros sempre valem.
+export const anunciarAoLeitor = (texto, { fase = false } = {}) => invoke('a11y_announce', { text: texto, fase });
 
 /**
  * M39: a versão do app, para o Sobre. O `getVersion()` do Tauri lê a versão

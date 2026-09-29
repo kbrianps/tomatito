@@ -1309,3 +1309,4 @@ O que já foi conferido sem você: os testes, o clippy (Linux e Windows), o buil
 2. [ ] Abra de novo (ele volta no Full, só o tomate). Rode o app uma segunda vez em outro terminal (`/opt/cargo-target/tomatito/debug/tomatito`): a segunda abertura sai e o tomate vem para a frente.
 3. [ ] Com o Orca ligado (Super+Alt+S) e o Full ativo, inicie uma sessão pelo tomate: o Orca diz "Começou o período de foco…" uma vez só. Saia do Full (Esc) e pule a fase na tela Foco: de novo, uma vez só.
 4. [ ] Em Configurações, a seção "Avançado" (Compatibilidade X11) aparece entre "Sistema" e "Sobre".
+5. [ ] Com o Orca ligado e o Full ativo, abra a main pelo botão "Configurações" do tomate (o tomate continua na tela), vá ao Cronômetro, inicie, marque uma volta e aperte "Copiar": o Orca diz "Voltas copiadas" (o anúncio da main não é descartado por o tomate estar aberto; `docs/decisoes.md`, Junção, correções da verificação).

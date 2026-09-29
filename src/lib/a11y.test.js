@@ -2,7 +2,7 @@
 // aria-live esvaziada antes de cada texto e um anúncio por seq.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { criarAnunciador, escreverNaRegiao, ligarAnuncioDeFases, textoDaFase } from './a11y.js';
+import { anunciarNativo, criarAnunciador, escreverNaRegiao, ligarAnuncioDeFases, textoDaFase } from './a11y.js';
 
 const fase = (kind, n, durationS = 60) => ({ kind, n, durationS });
 const evento = (cause, status, phase = null, of = null, seq = 1) => ({ seq, cause, late: false, status, ended: null, phase, of });
@@ -134,7 +134,7 @@ test('M43: no Linux, cada anúncio também vai ao leitor de tela pelo comando a1
   const ipc = {
     EVENTOS: { fase: 'tt://phase' },
     ouvir: async (nome, cb) => ((ouvidos[nome] = cb), () => {}),
-    anunciarAoLeitor: async (t) => pedidos.push(t),
+    anunciarAoLeitor: async (t, o) => pedidos.push([t, o]),
   };
   const doc = (platform) => ({ documentElement: { dataset: { platform } }, querySelector: (s) => (s === '[data-anuncio]' ? regiao : null) });
   await ligarAnuncioDeFases({ ipc, doc: doc('linux') });
@@ -142,7 +142,7 @@ test('M43: no Linux, cada anúncio também vai ao leitor de tela pelo comando a1
   ouvidos['tt://phase'](e);
   ouvidos['tt://phase'](e);   // repetido: não fala de novo
   await new Promise((r) => setTimeout(r, 150));
-  assert.deepEqual(pedidos, ['Começou o período de foco 1 de 2.']);
+  assert.deepEqual(pedidos, [['Começou o período de foco 1 de 2.', { fase: true }]], 'o das fases vai marcado (anuncio.rs filtra pela janela da frente)');
   pedidos.length = 0;
   await ligarAnuncioDeFases({ ipc, doc: doc('windows') });
   ouvidos['tt://phase'](evento('stopped', 'idle', null, null, 12));
@@ -160,6 +160,17 @@ test('M43: o comando a11y_announce registrado, com o gtk só no Linux, e a regi�
   const cargo = ler('src-tauri/Cargo.toml');
   const linux = cargo.indexOf(`[target.'cfg(target_os = "linux")'.dependencies]`);
   assert.ok(linux > 0 && cargo.indexOf('\ngtk = "0.18"') > linux, 'o gtk só no Linux');
-  assert.match(ler('src/lib/ipc.js'), /invoke\('a11y_announce', \{ text: texto \}\)/);
+  assert.match(ler('src/lib/ipc.js'), /invoke\('a11y_announce', \{ text: texto, fase \}\)/);
   assert.doesNotMatch(ler('index.html'), /role="status"/);
+});
+
+test('Junção: fora das fases, o anúncio nativo vai sem a marca de fase e vale de qualquer janela', async () => {
+  const pedidos = [];
+  const ipc = { anunciarAoLeitor: async (t, o) => pedidos.push([t, o]) };
+  const doc = { documentElement: { dataset: { platform: 'linux' } } };
+  await anunciarNativo('Voltas copiadas.', { doc, ipc });
+  assert.deepEqual(pedidos, [['Voltas copiadas.', { fase: false }]]);
+  const { readFileSync } = await import('node:fs');
+  const rs = readFileSync(new URL('../../src-tauri/src/anuncio.rs', import.meta.url), 'utf8');
+  assert.match(rs, /!fase \|\| rotulo == janela_do_anuncio/);
 });

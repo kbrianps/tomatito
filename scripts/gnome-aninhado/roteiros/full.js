@@ -613,6 +613,23 @@ async function principal() {
   G.parar();
   const mc1 = JSON.parse(await comando('main', LER_MAIN));
   checar('Configurações do tomate mostra a main em #/configuracoes, com o tomate aberto', mc1.hash === '#/configuracoes' && mc1.pref === 'full' && mc1.tema === 'lite' && Boolean(tomate()), { main: mc1, tomate: Boolean(tomate()) });
+  // Junção: com a main na tela e o tomate aberto, o anúncio das fases vale
+  // só pelo tomate, mas os outros anúncios da main (como "Voltas copiadas",
+  // M43) chegam ao leitor de tela (anuncio.rs; o build de debug registra).
+  const antesDoAnuncio = logDoApp().length;
+  const rAnuncio = [
+    await ipc('main', 'a11y_announce', { text: 'Junção: anúncio da main.', fase: false }),
+    await ipc('main', 'a11y_announce', { text: 'Junção: fase pela main.', fase: true }),
+    await ipc('tomato', 'a11y_announce', { text: 'Junção: fase pelo tomate.', fase: true }),
+  ];
+  await sleep(500);
+  const trechoAnuncio = logDoApp().slice(antesDoAnuncio);
+  const anuncios = {
+    main: /\[tomatito\] anúncio \(main\): Junção: anúncio da main\./.test(trechoAnuncio),
+    faseDaMainDescartada: /\[tomatito\] anúncio descartado \(main, fase\): Junção: fase pela main\./.test(trechoAnuncio),
+    faseDoTomate: /\[tomatito\] anúncio \(tomato, fase\): Junção: fase pelo tomate\./.test(trechoAnuncio),
+  };
+  checar('com a main e o tomate na tela, o anúncio da main vale e o das fases fica só com o tomate', rAnuncio.every((r) => r === null) && Object.values(anuncios).every(Boolean), { anuncios, respostas: rAnuncio });
   await clicarNaPrevia('light');
   const fechou = await esperar(() => !tomate() && main(), 6000, 'o tomate fechado').catch(() => null);
   await sleep(800);
