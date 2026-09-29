@@ -168,6 +168,19 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 116. **Conferir o M45 na sua sessão e no Windows** (desde o M45). Uns 5 minutos no Linux e 10 no Windows, com os passos em `docs/verificacao-manual.md`, seção M45: o Tomatito de uso diário (já reinstalado em `~/.local` com os pacotes do M45) abre pelo dock com o ícone e o nome certos no Alt+Tab; se quiser, o `.deb` pelo apt (item 33). No Windows, com os arquivos do rascunho (item 94): o `.exe` instala sem pedir administrador (`currentUser`), em português, e baixa o WebView2 se faltar (`downloadBootstrapper`); o `.msi` instala em português. O roteiro aninhado `instalado` já conferiu o AppImage e o `.deb` extraído (9 de 9 nos dois).
 117. **Limpar as pastas `/tmp/com.google.Chrome.*` que sobraram** (desde o W01b, faixa web; 1 minuto, opcional). O Chrome headless dos scripts de conferência deixava, a cada execução, uma pasta pequena no `/tmp` (o socket de instância única e as baixas do atualizador de componentes). Desde a correção do W01b (o `TMPDIR` do Chrome fica dentro do perfil temporário), nenhuma nova sobra. As antigas (algumas centenas, poucos KB cada; o `/tmp` se esvazia no reinício) podem ser do seu Chrome de uso diário, por isso não foram apagadas. Com o Chrome fechado, se quiser: `rm -rf /tmp/com.google.Chrome.*`.
 
+### Android (faixa Android, `PLANO-ANDROID.md`, 1.2 e 10)
+
+Numeração a partir de 201, para não cruzar com as pendências de outras faixas.
+
+201. **(Opcional, antes do A01) Criar `/opt/android`** (desde o A00). Uma linha: `sudo install -d -o kbrianps -g kbrianps /opt/android`. Hoje ela não existe, e o kit vai para `/opt/cargo-target/android-kit`, sem sudo. Mudar depois é possível (mesmo disco), mas os AVDs teriam de ser recriados.
+202. **Identificador do app** (desde o A00; **bloqueia o A04**). Padrão, já no `tauri.conf.json`: `io.github.kbrianps.tomatito` (debug: `io.github.kbrianps.tomatito.debug`). Alternativa: `com.kbrianps.tomatito`, só no `tauri.android.conf.json`. É permanente na Play. Sem resposta, segue o padrão.
+203. **Nome na loja** (≤ 30 caracteres; antes do primeiro envio, A19). Proposta: "Tomatito: timer de foco".
+204. **E-mail de contato público da ficha** (antes do primeiro envio). O da conta ou outro.
+205. **(Opcional) `sudo usermod -aG kvm kbrianps`** (vale depois de sair e entrar na sessão). Hoje o `/dev/kvm` vem de uma ACL do logind que só existe com a sessão gráfica ativa; sem ela, o emulador perde o KVM.
+206. **Depois do A19:** guardar `~/.config/tomatito/android/upload.jks` e a senha num gerenciador de senhas.
+207. **Play Console, teste fechado com 12 testadores por 14 dias, pedido de produção** (A25, passo a passo em `docs/android/PUBLICAR.md`). Começar a juntar os testadores já. Antes do teste interno: a verificação do aparelho da conta nova no app Play Console, conferir o registro do nome do pacote e, se for instalar pelo `adb`, a depuração USB no celular.
+208. **Login na Cloudflare** (`! npx wrangler login`) para publicar a política de privacidade (A23), se a web ainda não estiver publicada.
+
 ## Resolvidas
 
 - **Itens 1, 6, 7, 43 e 51** (29/09/2026): substituídos por conferências mais novas; o motivo está no próprio item.

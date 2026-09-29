@@ -1503,3 +1503,13 @@ Feitos sem agentes paralelos nem revisor por etapa, a pedido do usuário (econom
 ## W41 (web): publicada (02/10/2026)
 
 **Workers em vez de Pages.** O `wrangler pages deploy` da conta delegou para o Workers e falhou sem publicar ("Missing entry-point to Worker script or to assets directory"). O deploy é `wrangler deploy` com o `wrangler.jsonc` da raiz (arquivos estáticos do `dist-web`, SPA). Endereço: https://tomatito.kbrianps.workers.dev. As conferências do W41 (curl e celular emulado) estão em `docs/web/publicar.md`.
+## Android
+
+Desvios e escolhas da faixa Android (plano: `PLANO-ANDROID.md`), um marco por seção.
+
+### A00
+
+1. **Ponto de partida.** A worktree `~/dev/tomatito-android` (branch `android`) saiu da `main` em 388d845 (v0.1.0), e não depois do W26 (merge da web), como pede o plano. A web corre em paralelo; esta rodada faz só os marcos que não dependem dela (A00–A03). O que depende da web (A05, A17, A23) espera o merge da web na `main`; trazer esse merge para a `android` fica para quando ele existir.
+2. **`node_modules` fora do `/home`.** A pasta é um link para `/opt/cargo-target/tomatito-android/node/node_modules` (206 MB a menos no `/home`, que está com 97%). O `npm ci` roda lá dentro, com cópias do `package.json` e do `package-lock.json`, porque o `npm ci` na worktree apaga o link e cria uma pasta de verdade. Para o git ignorar o link, o `.gitignore` passou de `node_modules/` (só pastas) para `node_modules` (pasta ou link); no desktop, nada muda.
+3. **`.cargo/config.toml`** (fora do git, como no desktop): `target-dir = "/opt/cargo-target/tomatito-android"`. O `CARGO_TARGET_DIR` não foi exportado em lugar nenhum.
+4. **Contagens de partida** (iguais na `main` e na `android`): `npm test` 368; `cargo test --workspace` 151 + 1 ignorado no `tomatito_lib`, 36 no `tomatito_core`, 10 no `cronometro`, 22 no `foco`, 2 no `isolamento`, 13 no `retomada` e 10 no `temporizadores` (244 no total, mais 1 ignorado). O relatório da junção falava em 367 no `npm test`; a `main` de hoje tem 368.
