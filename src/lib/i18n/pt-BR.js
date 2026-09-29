@@ -242,6 +242,16 @@ export default Object.freeze({
       system: 'Usar configuração do sistema',
       full: 'Tomatito Full',
     }),
+    // M57: a opção avançada do plano B2 (views/opcao-x11.js).
+    avancado: 'Avançado',
+    x11: Object.freeze({
+      titulo: 'Compatibilidade X11',
+      descricao:
+        'Abre o Tomatito pelo Xwayland, para o tomate poder ficar sempre na frente. Com escala fracionária, o texto pode ficar borrado.',
+      proximoInicio: 'Vale a partir do próximo início do Tomatito.',
+      reiniciar: 'Reiniciar agora',
+      semXwayland: 'Esta sessão não tem Xwayland, e a opção fica sem efeito.',
+    }),
   }),
   // Unidades por extenso, por categoria do Intl.PluralRules('pt-BR')
   // (format.js): o aria-valuetext do seletor de minutos ("25 minutos").

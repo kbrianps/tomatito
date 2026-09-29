@@ -1,5 +1,6 @@
 mod audio;
 mod commands;
+mod compat_x11;
 mod engine;
 mod events;
 mod i18n;
@@ -23,7 +24,7 @@ pub fn run() {
     // B2 (5.9): a `linuxX11` é lida antes do `Builder`, porque o GDK escolhe
     // o backend quando o GTK inicia (3.3).
     #[cfg(target_os = "linux")]
-    usar_x11_se_pedido(&context.config().identifier);
+    compat_x11::usar_x11_se_pedido(&context.config().identifier);
     let builder = tauri::Builder::default();
     // Plugins na ordem da 3.4: o single-instance (M37) entra antes deste. O
     // de notificação só existe no Windows; no Linux, o `notify.rs` fala
@@ -132,6 +133,8 @@ pub fn run() {
             commands::set_tomato_region,
             commands::tomato_debug_size,
             commands::tomato_on_top_available,
+            compat_x11::x11_compat_get,
+            compat_x11::app_restart,
         ])
         .build(context)
         .expect("error while building tauri application")
@@ -146,23 +149,4 @@ pub fn run() {
                 api.prevent_exit();
             }
         });
-}
-
-/// Plano B2 (5.9): com `linuxX11 = true` no `settings.json`, o app abre pelo
-/// Xwayland. A opção na interface é do M57; a leitura já vale desde o M23.
-#[cfg(target_os = "linux")]
-fn usar_x11_se_pedido(identifier: &str) {
-    let Some(arq) = settings::linux_path(
-        identifier,
-        std::env::var_os("XDG_DATA_HOME").as_deref(),
-        std::env::var_os("HOME").as_deref(),
-    ) else {
-        return;
-    };
-    if settings::linux_x11(&arq) {
-        eprintln!("[tomatito] linuxX11 ligada: GDK_BACKEND=x11");
-        // SAFETY: roda no começo do `run()`, chamado direto do `main`, antes
-        // de o Tauri, o GTK ou o tokio abrirem qualquer thread.
-        unsafe { std::env::set_var("GDK_BACKEND", "x11") };
-    }
 }

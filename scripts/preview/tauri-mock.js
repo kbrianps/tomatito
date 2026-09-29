@@ -468,6 +468,14 @@ const handlers = {
   show_main: ({ route = null } = {}) => (window.__TOMATITO_PREVIEW_COMANDOS__.push(`show_main:${route}`), null),
   // M54: a região só é anotada (quantos retângulos), sem compositor.
   set_tomato_region: ({ strips }) => (window.__TOMATITO_PREVIEW_COMANDOS__.push(`set_tomato_region:${strips.length}`), 'applied'),
+  // M57: a Compatibilidade X11. Com ?x11=wayland (a opção desligada e a
+  // valer), ?x11=ativa (o app aberto pelo Xwayland) ou ?x11=sem-xwayland; sem
+  // o parâmetro, a opção não aparece (como fora do Wayland).
+  x11_compat_get: () => {
+    const x = params.get('x11');
+    return { disponivel: Boolean(x), ativa: x === 'ativa', xwayland: x !== 'sem-xwayland' };
+  },
+  app_restart: () => (window.__TOMATITO_PREVIEW_COMANDOS__.push('app_restart'), null),
   tomato_debug_size: ({ size }) => (window.__TOMATITO_PREVIEW_COMANDOS__.push(`tomato_debug_size:${size}`), null),
   // M51: o switch_window_mode grava o tema como o Rust (full, ou o
   // lastNormalTheme na saída) e emite tt://settings; não há outra janela.

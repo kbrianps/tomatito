@@ -4,7 +4,11 @@
 # o app, se TT_APP_PELO_ROTEIRO estiver definida). No fim, anota se o app saiu
 # sozinho (o roteiro do M07 termina clicando em Fechar).
 AQUI=$(dirname "$0")
-gnome-shell --headless --wayland --no-x11 --wayland-display=tt-aninhado \
+# M57: com TT_X11=1, o shell sobe com o Xwayland (sob demanda), para o
+# roteiro x11 (o plano B2); sem ela, sem X11 nenhum, como sempre.
+X11=--no-x11
+[ -n "${TT_X11:-}" ] && X11=
+gnome-shell --headless --wayland $X11 --wayland-display=tt-aninhado \
   --virtual-monitor 1920x1080 --automation-script="$TT_ROTEIRO" > "$TT_OUT/shell.log" 2>&1 &
 SHELL_PID=$!
 for _ in $(seq 150); do [ -S "$XDG_RUNTIME_DIR/tt-aninhado" ] && break; sleep 0.2; done

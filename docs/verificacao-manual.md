@@ -1096,3 +1096,25 @@ O que só você consegue: o menu e os atalhos na sua sessão, com o seu mouse e 
 2. [ ] Com ele marcado, clique numa outra janela (o Explorador) por cima do tomate: o tomate continua por cima. Desmarque: a outra janela passa a cobrir o tomate. Feche e abra o app: a escolha continua.
 3. [ ] Tamanho › Pequeno e › Grande: o tomate troca de tamanho, e o clique no canto continua atravessando (a região se refaz, como no passo 5 do M55).
 4. [ ] O menu aparece inteiro, sem ser cortado pela forma do tomate, e sem borda estranha.
+
+## M57. Compatibilidade X11 (plano B2, opcional)
+
+O que já foi conferido sem você:
+- `npm test` e `cargo test`: a regra do ambiente (ligar, manter no reinício, desligar e tirar o que o app pôs, ignorar sem Xwayland), a tela (quando aparece, o que grava, quando oferece o reinício) e as regras do repositório.
+- `cargo clippy --target x86_64-pc-windows-msvc`: compila no Windows (lá a opção não aparece).
+- `TT_X11=1 bash scripts/gnome-aninhado/rodar.sh x11` no GNOME Shell aninhado com o Xwayland (25 conferências): ligar a opção, "Reiniciar agora", o app volta como cliente X11, o tomate transparente e por cima pelo código, o "Sempre na frente" liga e desliga, o clique no canto do tomate atravessa, e desligar a opção volta ao Wayland (`docs/capturas/m57-tomate-x11.png`).
+
+O que só você consegue: ver na sua tela se o app pelo Xwayland fica nítido (com a sua escala) e se o tomate por cima e transparente fica bom no dia a dia.
+
+### Para conferir (uns 5 minutos)
+
+1. [ ] Compile o build de debug com a página embutida e rode o binário direto (e **não** pelo `npm run dev:app`: o reinício abre um processo novo, e o `tauri dev` acompanha só o primeiro, então pode encerrar o Vite quando ele sai, e o app novo abriria em branco):
+   ```bash
+   cd ~/dev/tomatito-full && npm run build:debug && /opt/cargo-target/tomatito-full/debug/tomatito
+   ```
+2. [ ] Em Configurações, no fim, a seção "Avançado" tem o cartão "Compatibilidade X11", desligado. Ligue: aparece "Vale a partir do próximo início do Tomatito." e o botão "Reiniciar agora".
+3. [ ] Clique em "Reiniciar agora": a janela fecha e volta sozinha em poucos segundos. No terminal, a linha `[tomatito] linuxX11 ligada: GDK_BACKEND=x11`. Para ter certeza de que é X11: `xprop` no terminal e clique na janela do Tomatito (no Wayland puro, o `xprop` não consegue pegar a janela).
+4. [ ] Com a sua escala (se for fracionária, 125% ou 150%), o texto está nítido ou borrado? Anote; é o custo que a 5.9 prevê.
+5. [ ] Escolha "Tomatito Full" (se aparecer a pergunta do M52, Manter). O tomate aparece com os cantos transparentes. Clique no Nautilus ou num terminal por cima dele: o tomate continua por cima. O botão direito no tomate agora tem "Sempre na frente" (marcado); desmarque: a outra janela passa a cobrir o tomate. Marque de novo.
+6. [ ] O clique no canto da caixa do tomate chega à janela de trás (a região também vale no X11), **já no primeiro clique** depois de o app voltar pelo Xwayland (no aninhado, o primeiro clique numa janela X11 se perdia; `docs/decisoes.md`, M57, item 10).
+7. [ ] Saia do Full (Esc), volte às Configurações, desligue a opção e clique em "Reiniciar agora": o app volta pelo Wayland (a linha `linuxX11 desligada: GDK_BACKEND volta ao padrão` no terminal; o `xprop` não pega mais a janela).

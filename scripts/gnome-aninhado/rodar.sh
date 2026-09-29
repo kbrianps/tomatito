@@ -28,6 +28,7 @@
 #   TT_LIMITE=600 bash scripts/gnome-aninhado/rodar.sh validacao   # M52: a validação de 10 s, as respostas, o modo opaco e a variável do DMA-BUF
 #   bash scripts/gnome-aninhado/rodar.sh regiao            # M54: a região de entrada no Linux (cliques atravessam no M, no P e no G)
 #   bash scripts/gnome-aninhado/rodar.sh menu-tomate       # M56: o menu nativo do tomate, P/M/G, os atalhos, a dica do Alt+Espaço e Fechar
+#   TT_X11=1 bash scripts/gnome-aninhado/rodar.sh x11      # M57: a Compatibilidade X11, o reinício pelo Xwayland e o sempre na frente por código
 #   bash scripts/gnome-aninhado/instalado.sh               # o Tomatito instalado (M21b)
 #
 # Pré-requisito: o binário de debug atualizado (`cd src-tauri && cargo build`).

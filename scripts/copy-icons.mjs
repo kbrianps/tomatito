@@ -66,6 +66,8 @@ export const ICONES = Object.freeze([
   { nome: 'checkmark', estilo: 'regular', tamanhos: [16] },
   // M35: o "Copiar" das voltas do cronômetro
   { nome: 'copy', estilo: 'regular', tamanhos: [16] },
+  // M57: o cartão "Compatibilidade X11" das Configurações, na grade de 20
+  { nome: 'window_wrench', estilo: 'regular', tamanhos: [20] },
 ]);
 
 /** Os arquivos da lista, no formato do pacote: `play_16_filled.svg`. */

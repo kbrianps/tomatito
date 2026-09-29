@@ -15,6 +15,7 @@
 import t from '../lib/i18n/pt-BR.js';
 import { ESCOLHAS, EVENTO } from '../lib/theme.js';
 import { ligarDicaSempreNaFrente } from './dica-sempre-na-frente.js';
+import { ligarOpcaoX11 } from './opcao-x11.js';
 
 const c = t.configuracoes;
 // M56: o `tomato_on_top_available`, carregado só quando a dica precisa (os
@@ -101,7 +102,7 @@ export function marcar(grupo, pref) {
  * `porCodigo()` resolve com o `tomato_on_top_available` (M56, a dica).
  * Devolve a limpeza (o roteador a chama ao sair da tela).
  */
-export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.document, porCodigo = sempreNaFrente } = {}) {
+export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.document, porCodigo = sempreNaFrente, compatX11 } = {}) {
   const h = doc.documentElement;
   raiz.innerHTML = marcacao({ pref: h.dataset.themePref, icone });
   const grupo = raiz.querySelector('.tt-temas');
@@ -121,9 +122,12 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
   h.addEventListener(EVENTO, aoTrocar);
   // M56: a dica do Alt+Espaço no Wayland (dica-sempre-na-frente.js).
   const semDica = ligarDicaSempreNaFrente(raiz.querySelector('.tt-config-secao'), { doc, porCodigo, evento: EVENTO });
+  // M57: a Compatibilidade X11 (opcao-x11.js), no fim da página.
+  const semX11 = ligarOpcaoX11(raiz.querySelector('.tt-pagina'), { doc, icone, ipc: compatX11 });
   return () => {
     grupo.removeEventListener('change', aoMudar);
     h.removeEventListener(EVENTO, aoTrocar);
     semDica();
+    semX11();
   };
 }

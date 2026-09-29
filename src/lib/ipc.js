@@ -152,5 +152,15 @@ export const full = Object.freeze({
   sempreNaFrente: () => invoke('tomato_on_top_available'),
 });
 
+/**
+ * M57, plano B2 (src-tauri/src/compat_x11.rs): `situacao()` é o
+ * `x11_compat_get`, `{ disponivel, ativa, xwayland }`; `reiniciar()` é o
+ * `app_restart`, para a `linuxX11` gravada valer.
+ */
+export const compatX11 = Object.freeze({
+  situacao: () => invoke('x11_compat_get'),
+  reiniciar: () => invoke('app_restart'),
+});
+
 /** Ouve um evento do Rust; `cb` recebe só o conteúdo. Devolve o `unlisten`. */
 export const ouvir = (evento, cb) => listen(evento, (e) => cb(e.payload));

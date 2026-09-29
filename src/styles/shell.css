@@ -427,11 +427,19 @@
 /* M56: a dica do Alt+Espaço no Wayland (views/dica-sempre-na-frente.js),
    em Caption no texto 2, entre o título da seção e o cartão. */
 .tt-config-dica{ margin:0 0 4px 1px; color:var(--tt-fg-2); max-width:70ch; }
+/* M57: a Compatibilidade X11 (views/opcao-x11.js): o interruptor à direita
+   do cabeçalho, como no SettingsCard, e o rodapé do reinício embaixo. */
+.tt-config-controle{ flex:none; margin-left:auto; }
+.tt-config-rodape{
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px;
+  padding:12px 16px 12px 58px; border-top:1px solid var(--tt-border); color:var(--tt-fg-2);
+}
+.tt-config-rodape[hidden]{ display:none; }
 fluent-radio-group.tt-temas{
   display:grid; grid-template-columns:repeat(auto-fill, minmax(156px, 1fr)); gap:16px 12px;
   padding:16px 16px 16px 58px; border-top:1px solid var(--tt-border);
 }
-@container conteudo (width < 560px){ fluent-radio-group.tt-temas{ padding-left:16px; } }
+@container conteudo (width < 560px){ fluent-radio-group.tt-temas, .tt-config-rodape{ padding-left:16px; } }
 
 /* Uma escolha: a prévia em cima e o rádio com o nome embaixo; o rótulo
    inteiro é clicável. A moldura tem o traço da borda em repouso, o do

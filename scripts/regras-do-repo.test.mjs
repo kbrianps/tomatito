@@ -942,3 +942,28 @@ test('Full: menu nativo completo, tamanho e sempre na frente pelo settings_set, 
   assert.match(ler('src/views/settings.js'), /ligarDicaSempreNaFrente\(raiz\.querySelector\('\.tt-config-secao'\)/);
   assert.match(ler('src/lib/ipc.js'), /sempreNaFrente: \(\) => invoke\('tomato_on_top_available'\)/);
 });
+
+test('M57: Compatibilidade X11 (B2) lida antes do Builder, com a marca e o reinício', () => {
+  const lib = ler('src-tauri/src/lib.rs');
+  // A leitura continua a primeira coisa do run(), antes do Builder (3.3).
+  assert.match(lib, /#\[cfg\(target_os = "linux"\)\]\s*compat_x11::usar_x11_se_pedido\(&context\.config\(\)\.identifier\);\s*let builder = tauri::Builder::default\(\);/);
+  assert.match(lib, /compat_x11::x11_compat_get,\s*compat_x11::app_restart,/);
+  const x11 = ler('src-tauri/src/compat_x11.rs');
+  // O ambiente só antes de qualquer thread; o GDK_BACKEND de fora (sem a marca) nunca é mexido.
+  assert.match(x11, /env::set_var\("GDK_BACKEND", "x11"\);\s*env::set_var\(MARCA, "1"\);/);
+  assert.match(x11, /env::remove_var\("GDK_BACKEND"\);\s*env::remove_var\(MARCA\);/);
+  assert.match(x11, /\(false, false, _\) => Acao::Nada,/);
+  // Sem DISPLAY, o GTK não abriria no X11: a opção é ignorada.
+  assert.match(x11, /\(true, false, false\) => Acao::SemXwayland,/);
+  // O reinício pelo caminho que passa pelo ExitRequested com código (o run() só barra o sem código).
+  assert.match(x11, /app\.request_restart\(\);/);
+  assert.doesNotMatch(x11, /\.restart\(\)/);
+  // A tela: um módulo à parte, ligado por uma linha, e só a chave linuxX11 pelo settings_set.
+  assert.match(ler('src/views/settings.js'), /ligarOpcaoX11\(raiz\.querySelector\('\.tt-pagina'\), \{ doc, icone, ipc: compatX11 \}\)/);
+  const opcao = ler('src/views/opcao-x11.js');
+  assert.match(opcao, /api\.gravar\(\{ linuxX11: ligada \}\)/);
+  assert.match(opcao, /dataset\.platform !== 'linux'\) return \(\) => \{\};/);
+  const ipc = ler('src/lib/ipc.js');
+  assert.match(ipc, /situacao: \(\) => invoke\('x11_compat_get'\)/);
+  assert.match(ipc, /reiniciar: \(\) => invoke\('app_restart'\)/);
+});
