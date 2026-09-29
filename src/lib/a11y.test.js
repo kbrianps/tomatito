@@ -2,7 +2,7 @@
 // aria-live esvaziada antes de cada texto e um anúncio por seq.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { criarAnunciador, ligarAnuncioDeFases, textoDaFase } from './a11y.js';
+import { criarAnunciador, escreverNaRegiao, ligarAnuncioDeFases, textoDaFase } from './a11y.js';
 
 const fase = (kind, n, durationS = 60) => ({ kind, n, durationS });
 const evento = (cause, status, phase = null, of = null, seq = 1) => ({ seq, cause, late: false, status, ended: null, phase, of });
@@ -109,4 +109,57 @@ test('index.html: uma única região aria-live, polite e atômica, fora da vista
   const regra = /\.tt-anuncio\{([^}]*)\}/.exec(css)?.[1] ?? '';
   assert.match(regra, /clip-path:inset\(50%\)/);
   assert.doesNotMatch(regra, /display:none|visibility:hidden/);
+});
+
+test('M43: escreverNaRegiao põe o texto num parágrafo novo (o WebKitGTK só avisa filho novo) e esvazia com texto vazio', () => {
+  const filhos = [];
+  const regiao = {
+    textContent: 'antigo',
+    ownerDocument: { createElement: (tag) => ({ tag, textContent: '' }) },
+    replaceChildren: (...n) => filhos.splice(0, filhos.length, ...n),
+  };
+  escreverNaRegiao(regiao, 'Começou o intervalo 1 de 1.');
+  assert.deepEqual(filhos, [{ tag: 'p', textContent: 'Começou o intervalo 1 de 1.' }]);
+  escreverNaRegiao(regiao, '');
+  assert.equal(regiao.textContent, '');
+  const semDoc = { textContent: '' };
+  escreverNaRegiao(semDoc, 'x');
+  assert.equal(semDoc.textContent, 'x');
+});
+
+test('M43: no Linux, cada anúncio também vai ao leitor de tela pelo comando a11y_announce, uma vez', async () => {
+  const regiao = { textContent: '' };
+  const ouvidos = {};
+  const pedidos = [];
+  const ipc = {
+    EVENTOS: { fase: 'tt://phase' },
+    ouvir: async (nome, cb) => ((ouvidos[nome] = cb), () => {}),
+    anunciarAoLeitor: async (t) => pedidos.push(t),
+  };
+  const doc = (platform) => ({ documentElement: { dataset: { platform } }, querySelector: (s) => (s === '[data-anuncio]' ? regiao : null) });
+  await ligarAnuncioDeFases({ ipc, doc: doc('linux') });
+  const e = evento('started', 'focus', fase('focus', 1), 2, 11);
+  ouvidos['tt://phase'](e);
+  ouvidos['tt://phase'](e);   // repetido: não fala de novo
+  await new Promise((r) => setTimeout(r, 150));
+  assert.deepEqual(pedidos, ['Começou o período de foco 1 de 2.']);
+  pedidos.length = 0;
+  await ligarAnuncioDeFases({ ipc, doc: doc('windows') });
+  ouvidos['tt://phase'](evento('stopped', 'idle', null, null, 12));
+  await new Promise((r) => setTimeout(r, 150));
+  assert.deepEqual(pedidos, [], 'no Windows, só a região aria-live (o Narrador lê)');
+  assert.equal(regiao.textContent, 'Sessão de foco encerrada.');
+});
+
+test('M43: o comando a11y_announce registrado, com o gtk só no Linux, e a região sem role="status"', async () => {
+  const { readFileSync } = await import('node:fs');
+  const ler = (c) => readFileSync(new URL(`../../${c}`, import.meta.url), 'utf8');
+  assert.match(ler('src-tauri/src/lib.rs'), /^mod anuncio;$/m);
+  assert.match(ler('src-tauri/src/lib.rs'), /anuncio::a11y_announce,/);
+  assert.match(ler('src-tauri/src/anuncio.rs'), /emit_by_name::<\(\)>\("announcement", &\[&texto\]\)/);
+  const cargo = ler('src-tauri/Cargo.toml');
+  const linux = cargo.indexOf(`[target.'cfg(target_os = "linux")'.dependencies]`);
+  assert.ok(linux > 0 && cargo.indexOf('\ngtk = "0.18"') > linux, 'o gtk só no Linux');
+  assert.match(ler('src/lib/ipc.js'), /invoke\('a11y_announce', \{ text: texto \}\)/);
+  assert.doesNotMatch(ler('index.html'), /role="status"/);
 });

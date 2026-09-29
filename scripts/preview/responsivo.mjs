@@ -42,6 +42,9 @@ const TAMANHOS = [
   [1000, 700, 1], [880, 700, 1], [861, 700, 1], [860, 700, 1], [859, 700, 1], [700, 700, 1],
   [610, 700, 1], [609, 700, 1], [608, 700, 1], [560, 600, 1], [480, 500, 1],
   [480, 500, 1.2], [480, 500, 1.4], [480, 500, 1.5], [480, 500, 1.6],
+  // M43: o "Texto grande" do GNOME vira zoom de 125% no WebKitGTK, que se
+  // multiplica ao do Ctrl + (125% × 140% = 175%; × 160% = 200%).
+  [1000, 700, 1.25], [480, 500, 1.25], [480, 500, 1.75], [480, 500, 2],
 ];
 const TEMAS = { lite: 'rgb(170, 57, 47)', suave: 'rgb(250, 243, 241)', light: 'rgb(249, 249, 249)', dark: 'rgb(40, 40, 40)' };
 const MOTORES = ['chrome', 'chrome-barras', 'webkit', 'webkit-barras'];
@@ -77,6 +80,9 @@ function montarPassos(motor, capturas) {
   for (const [w, h, z] of TAMANHOS) {
     passos.push('--resize', `${w}x${h}${z === 1 ? '' : `@${z}`}`);
     for (const rota of ROTAS) {
+      // O catálogo de desenvolvimento (#/dev) fica fora dos zooms do "Texto
+      // grande" com o Ctrl + (175% e 200%): não é tela do app.
+      if (rota === '#/dev' && z > 1.6) continue;
       medir(`__ttMedir(${JSON.stringify(rota)}${barras ? ', { alto: true }' : ''})`, { tipo: 'layout', w, h, z, rota, barras });
     }
     const chave = `${w}x${h}@${z}`;

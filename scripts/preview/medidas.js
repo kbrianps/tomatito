@@ -1622,3 +1622,101 @@
     return true;
   };
 })();
+// M43: teclado e leitor de tela. O foco é seguido até dentro das shadow roots
+// dos componentes Fluent, e cada elemento ganha um número fixo (WeakMap), para
+// o roteiro comparar o que o Tab visitou com o que deveria visitar.
+//   __ttGravarFoco()   passa a anotar cada foco que chega (focusin)
+//   __ttColherFoco()   devolve e esvazia as anotações
+//   __ttFocoAgora()    o elemento com o foco agora
+//   __ttTabulaveis()   o que o Tab deve alcançar na tela: tabIndex >= 0, sem
+//                      disabled, visível e fora de [hidden], [inert] e da
+//                      barra de título (que fica fora do Tab, 3.8)
+//   __ttFocoEm(sel)    o foco está num elemento que casa com o seletor
+//   __ttArvoreA11y()   nomes e papéis do que o leitor de tela lê na tela
+(() => {
+  const ids = new WeakMap();
+  let proximo = 1;
+  const idDe = (el) => {
+    if (!ids.has(el)) ids.set(el, proximo++);
+    return ids.get(el);
+  };
+  const profundo = () => {
+    let a = document.activeElement;
+    while (a?.shadowRoot?.activeElement) a = a.shadowRoot.activeElement;
+    return a;
+  };
+  const hospedeiro = (el) => el?.getRootNode?.().host ?? null;
+  const nome = (el) => {
+    const rot = el.getAttribute('aria-label') ?? el.getAttribute('title') ?? el.textContent ?? '';
+    return `${el.localName}${el.id ? `#${el.id}` : ''}${el.classList.length ? `.${[...el.classList].slice(0, 2).join('.')}` : ''} "${rot.trim().replace(/\s+/g, ' ').slice(0, 40)}"`;
+  };
+  const anelEm = (el) => {
+    const s = getComputedStyle(el);
+    return (s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0) || (s.boxShadow && s.boxShadow !== 'none');
+  };
+  // O anel pode estar num ancestral próximo (o seletor de minutos desenha o
+  // anel em volta do controle inteiro, .tt-seletor:has(:focus-visible)).
+  const anel = (el) => [el, el.parentElement, el.parentElement?.parentElement].some((a) => a && anelEm(a));
+  const descrever = (el) => {
+    if (!el || el === document.body || el === document.documentElement) return { id: 0, nome: 'body', visivel: false, anel: false };
+    // O elemento que o Tab alcança é o do documento (o hospedeiro, num Fluent).
+    let alvo = el;
+    while (hospedeiro(alvo)) alvo = hospedeiro(alvo);
+    const b = alvo.getBoundingClientRect();
+    return {
+      id: idDe(alvo),
+      nome: nome(alvo),
+      interno: alvo !== el ? nome(el) : null,
+      visivel: alvo.matches(':focus-visible') || el.matches(':focus-visible'),
+      anel: anel(alvo) || anel(el) || alvo.localName.startsWith('fluent-'),
+      area: alvo.closest('.tt-nav') ? 'painel' : alvo.closest('.tt-rolagem') ? 'tela' : alvo.closest('.tt-titlebar') ? 'barra' : alvo.closest('fluent-dialog, dialog') ? 'diálogo' : 'outro',
+      naJanela: naJanela(b),
+      alvo,
+    };
+  };
+  const naJanela = (b) => b.width > 0 && b.bottom > 0 && b.right > 0 && b.top < innerHeight && b.left < innerWidth;
+  const semAlvo = ({ alvo, ...d }) => d;
+  let anotacoes = null;
+  window.__ttGravarFoco = () => {
+    // "Na janela" é medido um quadro depois: o navegador rola até o
+    // elemento depois do focusin.
+    if (anotacoes === null) {
+      document.addEventListener('focusin', () => {
+        const d = descrever(profundo());
+        anotacoes?.push(d);
+        if (d.alvo) requestAnimationFrame(() => { d.naJanela = naJanela(d.alvo.getBoundingClientRect()); });
+      }, true);
+    }
+    anotacoes = [];
+    return true;
+  };
+  window.__ttColherFoco = () => {
+    const r = (anotacoes ?? []).map(semAlvo);
+    anotacoes = [];
+    return r;
+  };
+  window.__ttFocoAgora = () => semAlvo(descrever(profundo()));
+  window.__ttFocoEm = (seletor) => {
+    const el = profundo();
+    let a = el;
+    while (a && !a.matches?.(seletor)) a = hospedeiro(a) ?? a.parentElement;
+    return Boolean(a);
+  };
+  window.__ttTabulaveis = () => {
+    const visivel = (el) => {
+      if (!el.getClientRects().length) return false;
+      const s = getComputedStyle(el);
+      return s.visibility === 'visible' && s.display !== 'none';
+    };
+    return [...document.querySelectorAll('.tt-nav *, .tt-rolagem *')]
+      .filter((el) => el.tabIndex >= 0 && !el.disabled && !el.closest('[hidden], [inert], .tt-titlebar') && visivel(el))
+      // Dentro de um componente Fluent, quem entra no Tab é o componente.
+      .filter((el) => !el.parentElement?.closest('fluent-switch, fluent-checkbox, fluent-radio, fluent-dropdown, fluent-menu-item'))
+      .map((el) => ({ id: idDe(el), nome: nome(el) }));
+  };
+  window.__ttArvoreA11y = () => {
+    const vivos = [...document.querySelectorAll('[aria-live]')].map((el) => ({ live: el.getAttribute('aria-live'), texto: el.textContent }));
+    const imagens = [...document.querySelectorAll('[role="img"]')].map((el) => el.getAttribute('aria-label'));
+    return { titulo: document.querySelector('.tt-rolagem h1')?.textContent ?? null, lang: document.documentElement.lang, vivos, imagens };
+  };
+})();

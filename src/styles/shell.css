@@ -27,6 +27,15 @@
   border-top-left-radius:var(--tt-r-card);
   container:conteudo / inline-size;
 }
+/* M43: os limites das consultas de contêiner (@container) vão em em, e não em
+   px: no WebKitGTK 2.52 com zoom (o Ctrl + ou o "Texto grande" do GNOME), a
+   largura do contêiner é comparada SEM o zoom (a 125%, 512 px CSS de área
+   casavam com "width >= 560px" e davam duas colunas), e o em do limite, que
+   vem da fonte do contêiner (14 px, a do corpo), cresce junto e anula o erro.
+   No Chrome (WebView2), dá o mesmo resultado. Cada limite é o valor em px
+   dividido por 14: 300 = 21,4285em; 560 = 40em; 1000 = 71,428em; e, nos
+   cartões, 266 = 19em e 380 = 27,1428em (arredondados para o lado que mantém
+   o px exato do lado certo). docs/decisoes.md, M43. */
 .tt-rolagem{ flex:1; min-width:0; overflow:auto; }
 /* M41: enquanto a tela nova sobe (lib/movimento.js), os 24 px de baixo não
    criam barra de rolagem numa tela que cabia sem rolar. */
@@ -180,7 +189,13 @@
 
 /* Telas. O título recebe o foco quando a tela troca com o foco dentro da tela
    anterior (src/router.js); o foco ali não precisa de anel. */
-.tt-pagina{ padding:28px 32px 40px; }
+.tt-pagina{ --tt-recuo-pagina:32px; padding:28px var(--tt-recuo-pagina) 40px; }
+/* M43: com zoom alto na janela mínima (o "Texto grande" do GNOME vezes o
+   Ctrl +, de 175% em diante), a área de conteúdo fica abaixo de 300 px CSS, e
+   o recuo cai para 16 px, para os blocos de largura fixa caberem. */
+@container conteudo (width < 21.4285em){
+  .tt-pagina{ --tt-recuo-pagina:16px; }
+}
 .tt-conteudo h1[tabindex="-1"]:focus{ outline:none; }
 /* M42: nas telas sem título visível (Foco, Temporizador e Cronômetro, como no
    Relógio), o conteúdo começa a 16 px da barra de título, o que põe o topo
@@ -193,7 +208,7 @@
    com o título a 16 px da barra de título e, na janela larga (1000 px ou mais
    de conteúdo, a da captura), 56 px de recuo dos lados em vez de 32. */
 .tt-pagina:has(> h1.tt-t-title-large){ padding-top:var(--tt-gap); }
-@container conteudo (width >= 1000px){
+@container conteudo (width >= 71.428em){
   .tt-pagina:has(> h1.tt-t-title-large){ padding-inline:56px; }
 }
 
@@ -209,7 +224,7 @@
   max-width:908px; margin-top:var(--tt-gap);
 }
 .tt-foco-coluna{ display:flex; flex-direction:column; gap:var(--tt-gap); min-width:0; }
-@container conteudo (width >= 560px){
+@container conteudo (width >= 40em){
   .tt-foco-grade{ grid-template-columns:repeat(2, minmax(0,1fr)); }
 }
 
@@ -271,6 +286,9 @@
   font-family:var(--tt-font-display); font-weight:var(--tt-w-semilight);
   font-size:calc(100cqi * 46 / 280); line-height:1; text-align:center; white-space:pre;
 }
+/* M43: a mesma conta com a largura medida pelo JS (lib/larguras.js), porque
+   o WebKitGTK com zoom calcula o cqi do font-size sem o zoom. */
+.tt-mostrador-centro{ font-size:calc(var(--tt-larg-mostrador, 100cqi) * 46 / 280); }
 .tt-mostrador-unidade{ font-size:.61em; color:var(--tt-fg-2); }
 .tt-andamento-botoes{ display:flex; gap:8px; margin-top:19px; }
 .tt-andamento-rodape{ margin:16px 0 0; color:var(--tt-fg-2); }
@@ -339,7 +357,7 @@
    Abaixo de 266 px de conteúdo (a janela mínima com zoom, por exemplo), o
    anel ficaria menor que 120 px: ele vai para cima, até a largura do
    cartão, e Ontem e Esta semana ficam lado a lado embaixo. */
-@container (width < 266px){
+@container (width < 19em){
   .tt-progresso-corpo{ grid-template-columns:repeat(2, minmax(0,1fr)); grid-template-areas:"anel anel"; row-gap:12px; margin-inline:0; }
   .tt-progresso-anel{ grid-area:anel; justify-self:center; width:min(206px, 100%); }
   .tt-progresso-corpo[data-sem-meta]{ min-height:0; }
@@ -396,7 +414,7 @@
    mais estreito (318 px na janela de 1000 × 700, com duas colunas), o
    visível encurta para "Escolher", e o nome (aria-label) fica inteiro. */
 .tt-escolher-curto{ display:none; }
-@container tarefas (width < 380px){
+@container tarefas (width < 27.1428em){
   .tt-escolher-longo{ display:none; }
   .tt-escolher-curto{ display:inline; }
 }
@@ -447,10 +465,10 @@
 .tt-config-textos{ display:flex; flex-direction:column; min-width:0; }
 .tt-config-descricao{ color:var(--tt-fg-2); }
 fluent-radio-group.tt-temas{
-  display:grid; grid-template-columns:repeat(auto-fill, minmax(156px, 1fr)); gap:16px 12px;
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(min(156px, 100%), 1fr)); gap:16px 12px;
   padding:16px 16px 16px 58px; border-top:1px solid var(--tt-border);
 }
-@container conteudo (width < 560px){ fluent-radio-group.tt-temas{ padding-left:16px; } }
+@container conteudo (width < 40em){ fluent-radio-group.tt-temas{ padding-left:16px; } }
 
 /* Uma escolha: a prévia em cima e o rádio com o nome embaixo; o rótulo
    inteiro é clicável. A moldura tem o traço da borda em repouso, o do
@@ -547,7 +565,7 @@ button.tt-expansor-botao .tt-expansor-chevron .tt-icone{ width:12px; height:12px
    uma linha própria, na coluna do título. No expansível com switch, o botão
    ganha uma segunda linha de 32 px (8 px abaixo dos textos), e o switch fica
    nela; nos itens e no volume, a linha quebra. */
-@container conteudo (width < 560px){
+@container conteudo (width < 40em){
   /* O título de uma palavra só não quebra: em Title Large, "Configurações"
      passaria da largura com zoom; no estreito, fica em Title (o do M24). */
   .tt-pagina > h1.tt-t-title-large{ font:var(--tt-type-title); }
@@ -562,6 +580,14 @@ button.tt-expansor-botao .tt-expansor-chevron .tt-icone{ width:12px; height:12px
   .tt-config-cabecalho:has(> .tt-config-controle) > .tt-config-textos{ flex:1 1 0; }
   .tt-config-cabecalho > .tt-config-controle{ flex:1 1 calc(100% - 40px); min-width:0; margin-left:40px; }
   .tt-config-controle > input.tt-deslizante{ flex:1 1 0; width:0; min-width:0; }
+}
+/* M43: abaixo de 300 px de conteúdo (zoom alto na janela mínima), o título
+   das Configurações, uma palavra só, desce mais um degrau (em Title, ainda
+   passaria da largura), e o controle do cabeçalho (o valor e o switch do
+   "Tempo na bandeja") ocupa a linha inteira e pode quebrar. */
+@container conteudo (width < 21.4285em){
+  .tt-pagina > h1.tt-t-title-large{ font:var(--tt-type-subtitle); }
+  .tt-config-cabecalho > .tt-config-controle{ flex-basis:100%; margin-left:0; flex-wrap:wrap; }
 }
 
 /* M38: controle deslizante (o Slider do WinUI, Slider_themeresources.xaml):
@@ -645,6 +671,17 @@ input.tt-deslizante:focus-visible{ outline:2px solid var(--tt-focus-outer); outl
 }
 .tt-temporizador-encerrado[hidden]{ display:none; }
 .tt-temporizador-botoes{ display:flex; gap:10px; margin-top:13px; }
+/* M43: abaixo de 300 px de conteúdo (o "Texto grande" do GNOME com o Ctrl +
+   na janela mínima), o anel encolhe até a largura do cartão, e o tempo desce
+   para Subtitle, para caber dentro dele. */
+@container conteudo (width < 21.4285em){
+  .tt-temporizador-anel{ width:min(210px, 100%); }
+  .tt-temporizador-tempo,
+  :root:not([data-platform="windows"]) .tt-temporizador-tempo,
+  :root:not([data-platform="windows"]) .tt-temporizador[data-vencido] .tt-temporizador-tempo,
+  .tt-temporizador[data-vencido] .tt-temporizador-tempo{ font:var(--tt-type-subtitle); }
+  .tt-temporizador-encerrado{ top:calc(50% - 14px - 20px); }
+}
 
 /* M33: a tela ocupa a altura toda, para a barra do lápis e do "+" ficar no
    canto inferior direito mesmo com poucos cards; com a grade mais alta que a
@@ -692,6 +729,14 @@ input.tt-deslizante:focus-visible{ outline:2px solid var(--tt-focus-outer); outl
    (100cqi menos o recuo de 32 px de cada lado), para não passar da borda
    (docs/decisoes.md, M34). Acima de ~560 px de janela, vale o clamp do plano. */
 .tt-cronometro-tempo{ font-size:min(clamp(68px, 8vw, 110px), calc((100cqi - 64px) / 5.7)); }
+/* M43: com as larguras medidas pelo JS (lib/larguras.js; o vw e o cqi como
+   reserva): no WebKitGTK com zoom, os dois valem a medida sem o zoom dentro
+   do font-size, e o número passava da borda a partir de 120%.
+   A largura é a da área que rola (.tt-rolagem), sem a barra de rolagem
+   clássica, que o cqi da camada inclui (passava 2 px a 160% com a barra). */
+.tt-cronometro-tempo{
+  font-size:min(clamp(68px, calc(var(--tt-vw, 1vw) * 8), 110px), calc((var(--tt-larg-rolagem, 100cqi) - 2 * var(--tt-recuo-pagina)) / 5.7));
+}
 .tt-cronometro-par{ display:inline-flex; flex-direction:column; align-items:center; }
 .tt-cronometro-unidade{
   font-family:var(--tt-font-text); font-size:.25em; line-height:1.4; margin-top:.1em;
@@ -699,6 +744,12 @@ input.tt-deslizante:focus-visible{ outline:2px solid var(--tt-focus-outer); outl
 .tt-cronometro-sep{ padding:0 .02em; }
 .tt-cronometro-centesimos{ font-size:.7em; }
 .tt-cronometro-botoes{ display:flex; gap:24px; margin-top:40px; }
+/* M43: os três botões de 64 px somam 240 px com os vãos; abaixo de 300 px de
+   conteúdo (zoom alto na janela mínima), os vãos caem para 8 px e, se ainda
+   não couber, a fila quebra, centrada. */
+@container conteudo (width < 21.4285em){
+  .tt-cronometro-botoes{ gap:8px; flex-wrap:wrap; justify-content:center; }
+}
 /* M35: as voltas, embaixo dos botões, como a lista do Relógio: colunas Volta,
    Tempo e Total, a mais nova em cima, cabeçalho em --tt-fg-2 e linhas de
    40 px separadas por um traço de --tt-border. Números tabulares (.tt-num,
@@ -711,7 +762,9 @@ input.tt-deslizante:focus-visible{ outline:2px solid var(--tt-focus-outer); outl
 .tt-voltas[hidden]{ display:none; }
 .tt-voltas-topo{ display:flex; align-items:center; gap:12px; }
 .tt-voltas-topo h2{ margin:0; }
-.tt-voltas-aviso{ margin-left:auto; color:var(--tt-fg-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tt-voltas-aviso{ min-width:0; margin-left:auto; color:var(--tt-fg-2); }
+/* M43: o texto vem num parágrafo (lib/a11y.js, escreverNaRegiao). */
+.tt-voltas-aviso > p{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tt-voltas-topo button{ flex:none; }
 .tt-voltas-tabela{ width:100%; margin-top:12px; border-collapse:collapse; cursor:text; }
 .tt-voltas-tabela th, .tt-voltas-tabela td{ height:40px; padding:0 12px; text-align:right; white-space:nowrap; }

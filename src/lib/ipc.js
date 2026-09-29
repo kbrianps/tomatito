@@ -24,6 +24,8 @@ export const obterEstado = () => invoke('get_state');
  * grava o `state.json` e fecha o app; o mesmo caminho do "Sair" da bandeja.
  */
 export const sair = () => invoke('app_quit');
+// M43: pede ao leitor de tela do Linux que leia um texto (src-tauri/src/anuncio.rs).
+export const anunciarAoLeitor = (texto) => invoke('a11y_announce', { text: texto });
 
 /**
  * M39: a versão do app, para o Sobre. O `getVersion()` do Tauri lê a versão

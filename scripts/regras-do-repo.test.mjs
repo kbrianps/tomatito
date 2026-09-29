@@ -488,7 +488,7 @@ test('responsivo: painel compacto de 48 px abaixo de 860 px e grade da Foco em 2
   assert.match(compacto, /\.tt-nav-dica\{[^}]*display:block/);
   assert.match(css, /(?:^|\n)\.tt-nav-dica\{ display:none; \}/, 'fora do painel compacto, a dica não existe');
   assert.equal(css.match(/@media \(width < 860px\)/g).length, 1, 'um limite só para o painel');
-  const grade = bloco('@container conteudo (width >= 560px){');
+  const grade = bloco('@container conteudo (width >= 40em){');
   assert.match(grade, /\.tt-foco-grade\{ grid-template-columns:repeat\(2, minmax\(0,1fr\)\); \}/);
   assert.match(css, /\.tt-foco-grade\{[^}]*grid-template-columns:minmax\(0,1fr\)[^}]*gap:var\(--tt-gap\)/, 'uma coluna abaixo, com gap de 16');
   assert.match(ler('src/styles/tokens.css'), /--tt-gap:16px;/);

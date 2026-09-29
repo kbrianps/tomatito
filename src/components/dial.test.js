@@ -74,7 +74,7 @@ test('litTick: entradas fora da faixa', () => {
 
 test('marcação: role="img" com rótulo, SVG e número fora da árvore de acessibilidade, um traço aceso', () => {
   const html = marcacao({ aceso: 6, minutos: 27, rotulo: '27 minutos restantes, período de foco 1 de 2' });
-  assert.match(html, /^<div class="tt-mostrador" role="img" aria-label="27 minutos restantes, período de foco 1 de 2" data-mostrador>/);
+  assert.match(html, /^<div class="tt-mostrador" role="img" aria-label="27 minutos restantes, período de foco 1 de 2" data-mostrador data-largura="--tt-larg-mostrador">/);
   assert.match(html, /<svg class="tt-mostrador-svg" viewBox="0 0 280 280" aria-hidden="true" focusable="false">/);
   assert.match(html, /<p class="tt-mostrador-centro" aria-hidden="true">/);
   assert.match(html, /<span class="tt-mostrador-numero tt-num" data-minutos>27<\/span><span class="tt-mostrador-unidade"> min<\/span>/);

@@ -4145,6 +4145,7 @@ dependencies = [
 name = "tomatito"
 version = "0.1.0"
 dependencies = [
+ "gtk",
  "jiff",
  "rodio",
  "rusqlite",

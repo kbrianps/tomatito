@@ -28,6 +28,7 @@
 // volta e as colunas separadas por tabulação: colado numa planilha, cada
 // valor cai na sua célula.
 import t from '../lib/i18n/pt-BR.js';
+import { anunciarNativo, escreverNaRegiao } from '../lib/a11y.js';
 import { copiarTexto } from '../lib/copiar.js';
 import { categoria, tempoDoCronometro } from '../lib/format.js';
 import { espacoLivre, teclaLivre } from '../lib/keys.js';
@@ -109,7 +110,7 @@ export function marcacaoDasVoltas(laps = [], icone = semIcone) {
   return (
     `<section class="tt-voltas" data-voltas aria-labelledby="tt-voltas-titulo"${laps.length ? '' : ' hidden'}>` +
     `<div class="tt-voltas-topo"><h2 class="tt-t-body-strong" id="tt-voltas-titulo">${V.titulo}</h2>` +
-    `<span class="tt-voltas-aviso tt-t-caption" role="status" data-aviso></span>` +
+    `<div class="tt-voltas-aviso tt-t-caption" aria-live="polite" data-aviso></div>` +
     `<button type="button" data-copiar>${icone('copy')}<span>${V.copiar}</span></button></div>` +
     `<table class="tt-voltas-tabela tt-num tt-selectable">` +
     `<thead><tr><th scope="col">${V.volta}</th><th scope="col">${V.tempo}</th><th scope="col">${V.total}</th></tr></thead>` +
@@ -171,6 +172,7 @@ export function montar(raiz, {
   copiar = copiarTexto,
   esperar = (f, ms) => setTimeout(f, ms),
   desesperar = (id) => clearTimeout(id),
+  anunciar = (texto) => anunciarNativo(texto, { doc }),
 } = {}) {
   const decorridoAgora = () => store?.decorridoDoCronometro?.() ?? store?.cronometro?.elapsedMs ?? 0;
   raiz.innerHTML = marcacao(store?.cronometro ?? null, { icone, decorrido: store ? decorridoAgora() : 0 });
@@ -195,12 +197,16 @@ export function montar(raiz, {
   let voltasDesenhadas = JSON.stringify(c?.laps ?? []);
   let prazoDoAviso = null;
 
+  // M43: o aviso é uma região viva (aria-live, sem role="status") escrita
+  // como parágrafo novo (lib/a11y.js, escreverNaRegiao).
   const avisar = (texto) => {
-    aviso.textContent = texto;
+    escreverNaRegiao(aviso, texto);
+    // No Linux, também pelo ATK da janela (o Orca não lê a região; a11y.js).
+    anunciar(texto);
     if (prazoDoAviso !== null) desesperar(prazoDoAviso);
     prazoDoAviso = esperar(() => {
       prazoDoAviso = null;
-      aviso.textContent = '';
+      escreverNaRegiao(aviso, '');
     }, 3000);
   };
 
@@ -212,7 +218,7 @@ export function montar(raiz, {
     linhas.innerHTML = corpoDasVoltas(laps);
     if (!laps.length && voltas.contains(doc?.activeElement)) principal.focus();
     voltas.hidden = !laps.length;
-    if (!laps.length) aviso.textContent = '';
+    if (!laps.length) escreverNaRegiao(aviso, '');
   };
 
   const pintar = () => {

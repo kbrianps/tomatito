@@ -1,3 +1,4 @@
+mod anuncio;
 mod audio;
 mod commands;
 mod engine;
@@ -144,6 +145,7 @@ pub fn run() {
             commands::stopwatch_pause,
             commands::stopwatch_lap,
             commands::stopwatch_reset,
+            anuncio::a11y_announce,
         ])
         .run(context)
         .expect("error while building tauri application");

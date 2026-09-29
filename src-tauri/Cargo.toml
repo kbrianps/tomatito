@@ -55,3 +55,6 @@ tauri-plugin-notification = "=2.4.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 zbus = { version = "5.19", default-features = false, features = ["tokio"] }
+# Anúncio ao leitor de tela pelo ATK da janela (anuncio.rs, M43). O mesmo gtk
+# 0.18 que o Tauri já usa no Linux: nada novo no Cargo.lock além da ligação.
+gtk = "0.18"

@@ -84,7 +84,7 @@ export function marcacao({ aceso = 0, minutos = 0, unidade = 'min', rotulo = '' 
     )
     .join('');
   return (
-    `<div class="tt-mostrador" role="img" aria-label="${rotulo}" data-mostrador>` +
+    `<div class="tt-mostrador" role="img" aria-label="${rotulo}" data-mostrador data-largura="--tt-larg-mostrador">` +
     `<svg class="tt-mostrador-svg" viewBox="0 0 ${LADO} ${LADO}" aria-hidden="true" focusable="false">` +
     `<circle class="tt-mostrador-disco" cx="${CENTRO}" cy="${CENTRO}" r="${RAIO_DISCO}"/>${linhas}</svg>` +
     `<p class="tt-mostrador-centro" aria-hidden="true">` +

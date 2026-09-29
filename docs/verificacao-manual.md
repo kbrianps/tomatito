@@ -1026,3 +1026,26 @@ O que só você consegue: julgar a semelhança a olho, com a Segoe UI e no taman
 3. [ ] Em Configurações, com a janela larga (maximizada), os cartões ficam mais afastados das bordas que antes; estreitando a janela, a margem volta a ser menor, sem rolagem lateral.
 4. [ ] No Cronômetro, o botão de volta tem a bandeira preenchida.
 5. [ ] Abra `docs/capturas/fidelidade-*-escuro.png` e a captura do Relógio correspondente em `~/dev/tomatito-ref/` e confira se as diferenças que você enxerga estão em `docs/fidelidade.md`. Anote o que faltar.
+
+## M43. Acessibilidade e escala
+
+O que já foi conferido sem você (29/09/2026):
+- **Roteiro aninhado** `TOMATITO_SPEED=60 TT_LIMITE=900 bash scripts/gnome-aninhado/rodar.sh acessibilidade` (GNOME Shell 50 aninhado, WebKitGTK 2.52, Orca 50.2 rodando dentro do shell aninhado, mudo, lido pelo log): 54 conferências, todas ok (51 do roteiro e 3 dos logs: sem erro de protocolo do Wayland, sem pânico do Rust, nenhum erro na página), numa rodada de uns 10 minutos. Em três partidas:
+  - **só o teclado:** as quatro telas pelo Tab e pelo Shift+Tab, cada controle alcançado, com o anel e dentro da janela, nenhum na barra de título; na Foco, o seletor com PageUp, Iniciar com Enter, pausar e retomar com Espaço e "Encerrar sessão" pelo menu "Mais opções" (Enter, setas, Enter); no Temporizador, iniciar e pausar e o diálogo "+" aberto e fechado com Esc, com o foco de volta no "+"; no Cronômetro, iniciar, volta, "Copiar", pausar e zerar; nas Configurações, um expansível, um switch e o tema pelas setas;
+  - **Orca:** lê a tela Foco (nome, papel e valor de cada controle; "Duração da sessão, spin button, 30 minutos. Sem intervalos."), diz cada troca de fase de uma sessão de 60 min e de uma encerrada **uma única vez** ("Começou o período de foco 1 de 2.", "Começou o intervalo 1 de 1.", "Começou o período de foco 2 de 2.", "Sessão de foco concluída.", "Sessão de foco encerrada."), lê "Voltas copiadas" uma vez e não lê o mostrador sozinho;
+  - **zoom** de 140% e 160% (Ctrl +) a 1000 × 700 e na janela mínima; **escala do GNOME** em 125%, 150% e 200% (a janela cabe na área de trabalho); **"Texto grande"** (zoom de 125% no WebKitGTK) sozinho e com o Ctrl + por cima (175% e 200%): nas quatro telas, nada passa da borda nem rola na horizontal.
+- `node scripts/preview/responsivo.mjs`: de 1000 × 700 a 480 × 500, zoom de 120% a 200%, Chrome e WebKitGTK, com e sem barras de rolagem clássicas: tudo ok (o 150% inclusive).
+- `node scripts/contrast.mjs`: os quatro temas, 138 pares, todos no mínimo.
+
+O que só você consegue: **ouvir** o Orca (no teste ele fala para lugar nenhum), usar o teclado de verdade e mexer na escala e no "Texto grande" da sua sessão.
+
+### Para conferir (uns 10 minutos)
+
+1. [ ] `cd ~/dev/tomatito && TOMATITO_SPEED=60 npm run dev:app`. Sem tocar no mouse: Tab e Shift+Tab passam por todos os controles da tela Foco, com o anel visível; Ctrl+1, Ctrl+2, Ctrl+3 e Ctrl+, trocam de tela; em cada uma, Tab alcança tudo. Enter e Espaço acionam os botões; Esc fecha os diálogos e menus.
+2. [ ] Ligue o Orca (Super+Alt+S). Volte à tela Foco (Ctrl+1) e ande com Tab: ele diz "Duração da sessão, botão giratório, 30 minutos. Sem intervalos.", "Pular intervalos, caixa de seleção…", "Iniciar sessão de foco, botão" e assim por diante.
+3. [ ] Com o foco no seletor, PageUp duas vezes (60 min), Tab até "Iniciar sessão de foco" e Enter. O Orca diz **"Começou o período de foco 1 de 2."** uma vez. Uns 27 s depois, **"Começou o intervalo 1 de 1."** uma vez (e, se as notificações estiverem ligadas, também lê o balão do GNOME, que é outra mensagem; `docs/depois.md`, M43); depois "Começou o período de foco 2 de 2." e "Sessão de foco concluída.", cada uma uma vez. Nenhuma frase repetida, e ele não lê os minutos do mostrador sozinho.
+4. [ ] No Cronômetro, inicie, marque uma volta e aperte "Copiar" pelo teclado: o Orca diz "Voltas copiadas" uma vez. Desligue o Orca (Super+Alt+S).
+5. [ ] Na janela do app, Ctrl+= duas ou três vezes (zoom de 140% a 160%) e passe pelas quatro telas; estreite a janela até o mínimo: nada cortado e nenhuma barra de rolagem na horizontal. Ctrl+0 volta ao normal.
+6. [ ] Configurações do GNOME → Telas → Escala: 125%, depois 150% e 200% (se a 125% e 150% não aparecerem, ligue a "Escala fracionária"). Em cada uma, passe pelas quatro telas: nada cortado nem rolagem lateral, e o texto nítido. Volte à escala de antes.
+7. [ ] Configurações do GNOME → Acessibilidade → Visão → **Texto grande** ligado. Feche e abra o app: tudo 25% maior, sem corte nem rolagem lateral, também com a janela no mínimo e com Ctrl+= por cima. Desligue o "Texto grande" no fim.
+8. [ ] Feche o `dev:app` (Ctrl+Q).

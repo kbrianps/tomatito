@@ -29,6 +29,7 @@ import { store } from './lib/store.js';
 import * as ipc from './lib/ipc.js';
 import { ligarAnuncioDeFases } from './lib/a11y.js';
 import { entrarPagina } from './lib/movimento.js';
+import { ligarLarguras } from './lib/larguras.js';
 import { aplicarTema, ligarSistema, ligarTema, temaDeBase } from './lib/theme.js';
 import * as foco from './views/focus/index.js';
 import * as temporizador from './views/timers.js';
@@ -93,6 +94,11 @@ try {
         }),
       ),
   };
+  // M43: as larguras em px CSS para as fontes que acompanham a janela (o
+  // WebKitGTK erra o vw e o cqi do font-size com zoom). Antes da primeira
+  // tela, para o número dela já sair do tamanho certo.
+  document.querySelector('.tt-rolagem').dataset.largura = '--tt-larg-rolagem';
+  ligarLarguras();
   const nav = montarNavegacao(document.querySelector('.tt-nav'), {
     icone,
     navegar: (rota) => roteador.navegar(rota),

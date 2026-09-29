@@ -101,7 +101,8 @@ test('HTML das voltas: escondido sem voltas, tabela tabular e selecionável, bot
   assert.match(html, /<table class="tt-voltas-tabela tt-num tt-selectable">/);
   assert.match(html, /<th scope="col">Volta<\/th><th scope="col">Tempo<\/th><th scope="col">Total<\/th>/);
   assert.match(html, /<button type="button" data-copiar>\[copy\]<span>Copiar<\/span><\/button>/);
-  assert.match(html, /role="status" data-aviso/);
+  assert.match(html, /<div class="tt-voltas-aviso tt-t-caption" aria-live="polite" data-aviso><\/div>/);
+  assert.doesNotMatch(html, /role="status"/, 'o Orca não lê a "status bar" pelo script da web (M43)');
   // Na tela inteira, as voltas vêm do retrato.
   assert.match(marcacao({ ...c('running', 8_000), laps: LAPS }), /<td>3<\/td><td>01:01:58,99<\/td>/);
 });

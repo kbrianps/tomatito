@@ -9,6 +9,7 @@
 // Pausar e retomar não trocam de fase e não são anunciados (o botão de
 // destaque já muda de rótulo).
 import t from './i18n/pt-BR.js';
+import * as ipcDoApp from './ipc.js';
 
 const f = t.foco.fases;
 
@@ -29,13 +30,45 @@ export function textoDaFase(evento) {
 }
 
 /**
+ * Escreve o texto numa região viva como um parágrafo novo, e não como texto
+ * solto (M43): o WebKitGTK 2.52 não avisa o leitor de tela quando só o texto
+ * de um elemento muda (nenhum text-changed nem children-changed chega ao
+ * Orca, e a troca de fase ficava muda); um filho novo gera o
+ * children-changed:add que o Orca apresenta como mensagem da região. A região
+ * não leva role="status": o Orca 50 não entrega os eventos de uma "status
+ * bar" ao script da web, que é quem lê regiões vivas (script_manager.py).
+ * Texto vazio esvazia a região. Sem documento (os testes), fica o texto.
+ */
+export function escreverNaRegiao(regiao, texto) {
+  const doc = regiao.ownerDocument;
+  if (!texto || !doc?.createElement) {
+    regiao.textContent = texto ?? '';
+    return;
+  }
+  const p = doc.createElement('p');
+  p.textContent = texto;
+  regiao.replaceChildren(p);
+}
+
+/**
+ * O anúncio pelo lado nativo (M43; src-tauri/src/anuncio.rs): no Linux, pede
+ * ao Rust que emita o `announcement` do ATK da janela, que é o que o Orca lê;
+ * no Windows, não faz nada (a região aria-live do WebView2 fala com o
+ * Narrador). Devolve a promessa do invoke, ou null.
+ */
+export function anunciarNativo(texto, { doc = globalThis.document, ipc = ipcDoApp } = {}) {
+  if (!texto || doc?.documentElement?.dataset?.platform !== 'linux' || !ipc?.anunciarAoLeitor) return null;
+  return ipc.anunciarAoLeitor(texto).catch((erro) => console.warn('[anúncio]', erro));
+}
+
+/**
  * O anunciador sobre a região `regiao`. `anunciar(texto)` esvazia a região e
  * escreve o texto um instante depois (`agendar`, um setTimeout): um texto
  * igual ao anterior (duas sessões seguidas) também é lido. `fase(evento)`
  * anuncia um `tt://phase`, uma vez por `seq` (um evento repetido não fala
  * duas vezes).
  */
-export function criarAnunciador(regiao, { agendar = (cb) => setTimeout(cb, 100), cancelar = clearTimeout } = {}) {
+export function criarAnunciador(regiao, { agendar = (cb) => setTimeout(cb, 100), cancelar = clearTimeout, nativo = null } = {}) {
   let pendente = null;
   let ultimoSeq = null;
   const anunciar = (texto) => {
@@ -44,7 +77,10 @@ export function criarAnunciador(regiao, { agendar = (cb) => setTimeout(cb, 100),
     regiao.textContent = '';
     pendente = agendar(() => {
       pendente = null;
-      regiao.textContent = texto;
+      escreverNaRegiao(regiao, texto);
+      // M43: no Linux, o mesmo texto pelo ATK da janela, que é o que o Orca
+      // lê (o WebKitGTK não lhe entrega a região viva; anuncio.rs).
+      nativo?.(texto);
     });
   };
   return {
@@ -62,7 +98,9 @@ export function criarAnunciador(regiao, { agendar = (cb) => setTimeout(cb, 100),
  * escreve na região `.tt-anuncio` do documento. Devolve o anunciador.
  */
 export async function ligarAnuncioDeFases({ ipc, doc = globalThis.document } = {}) {
-  const anunciador = criarAnunciador(doc?.querySelector('[data-anuncio]'));
+  const anunciador = criarAnunciador(doc?.querySelector('[data-anuncio]'), {
+    nativo: (texto) => anunciarNativo(texto, { doc, ipc }),
+  });
   await ipc.ouvir(ipc.EVENTOS.fase, (e) => anunciador.fase(e));
   return anunciador;
 }

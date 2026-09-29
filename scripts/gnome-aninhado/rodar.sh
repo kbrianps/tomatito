@@ -28,6 +28,7 @@
 #   bash scripts/gnome-aninhado/rodar.sh config-sistema    # M39: fechar para a bandeja, tempo na bandeja, Sair, Sobre e os recursos
 #   TT_LIMITE=480 bash scripts/gnome-aninhado/rodar.sh retomada   # M40: kill -9 no meio do foco, fase vencida com o app fechado, e fechar e reabrir
 #   bash scripts/gnome-aninhado/rodar.sh movimento         # M41: entrada de página e diálogo, e só fades de 83 ms com o "Animações" desligado
+#   TOMATITO_SPEED=60 TT_LIMITE=900 bash scripts/gnome-aninhado/rodar.sh acessibilidade   # M43: só o teclado, o Orca (mudo, pelo log), zoom, escala do GNOME e "Texto grande"
 #   bash scripts/gnome-aninhado/instalado.sh               # o Tomatito instalado (M21b)
 #
 # Pré-requisito: o binário de debug atualizado (`cd src-tauri && cargo build`).
