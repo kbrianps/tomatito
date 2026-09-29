@@ -215,7 +215,10 @@ test('Sobre: expansível com o nome, a licença e a versão no cabeçalho; abert
   const html = marcacaoDoSobre({ icone, versao: '0.1.0' });
   assert.match(html, /^<section class="tt-config-secao" aria-labelledby="config-sobre-secao"><h2 id="config-sobre-secao" class="tt-t-body-strong">Sobre<\/h2>/);
   assert.deepEqual(cartoes(html), ['sobre']);
-  assert.match(html, /data-icone="info" data-grade="20"/);
+  // M44: a marca do app no lugar do `info`, com a máscara do arco própria.
+  assert.match(html, /<span class="tt-config-icone"><svg class="tt-marca" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><mask id="(tt-marca-\d+)">.*?<circle cx="8" cy="8" r="7.75" mask="url\(#\1\)"\/><\/svg><\/span>/);
+  assert.doesNotMatch(html, /data-icone="info"/);
+  assert.notEqual(marcacaoDoSobre({ icone }).match(/mask id="([^"]+)"/)[1], html.match(/mask id="([^"]+)"/)[1]);
   // A versão fica dentro do botão e entra na descrição acessível.
   assert.match(html, /<button type="button" class="tt-expansor-botao" data-expansor aria-expanded="false" aria-controls="config-sobre-conteudo" aria-labelledby="config-sobre" aria-describedby="config-sobre-desc config-sobre-valor">/);
   assert.match(html, /<span id="config-sobre" class="tt-config-titulo">Tomatito<\/span><span id="config-sobre-desc" class="tt-config-descricao tt-t-caption">© 2026 kbrianps · Licença MIT<\/span>/);

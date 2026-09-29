@@ -254,8 +254,9 @@ fn montar(app: &AppHandle) -> tauri::Result<Alcas> {
     let item_sair = MenuItem::with_id(app, ITEM_SAIR, t::SAIR, true, None::<&str>)?;
     let separador = PredefinedMenuItem::separator(app)?;
     let menu = Menu::with_items(app, &[&acao, &mostrar, &separador, &item_sair])?;
-    // PNG de 128 px (3.8: pelo menos 64 px, legível entre 16 e 22 px).
-    let imagem = Image::from_bytes(include_bytes!("../icons/128x128.png"))?;
+    // Variante simples da bandeja (M44, icons/tray.svg): PNG de 64 px (3.8:
+    // pelo menos 64 px, legível entre 16 e 22 px).
+    let imagem = Image::from_bytes(include_bytes!("../icons/tray.png"))?;
     let icone = TrayIconBuilder::with_id(ID)
         .icon(imagem)
         .tooltip(i18n::tray_tooltip(None))

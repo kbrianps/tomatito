@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Tomatito, variante da bandeja (M44): o mesmo disco e o mesmo arco do
+       icon.svg, sem o trilho claro e com traço mais grosso, para ler entre
+       16 e 22 px. Desenho próprio, MIT. -->
+  <circle cx="32" cy="32" r="31" fill="#C8452F"/>
+  <path d="M32 14A18 18 0 1 1 14 32" fill="none" stroke="#FFF6F1" stroke-width="9.5" stroke-linecap="round"/>
+</svg>

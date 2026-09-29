@@ -48,7 +48,7 @@
 }
 .tt-titlebar-icone{
   flex:none; width:16px; height:16px; margin-left:16px;               /* x = 16 */
-  fill:none; stroke:var(--tt-accent-fg); stroke-width:2; stroke-linecap:round;
+  fill:var(--tt-accent-fg);                                            /* marca do app (M44) */
 }
 .tt-titlebar-titulo{
   flex:0 1 auto; min-width:0; margin-left:14px;                        /* x = 46 */
@@ -462,6 +462,7 @@
 .tt-config-cabecalho{ display:flex; align-items:center; gap:20px; min-height:36px; padding:16px 16px 16px 18px; }
 .tt-config-icone{ display:flex; flex:none; }
 .tt-config-icone .tt-icone{ display:block; width:20px; height:20px; fill:currentColor; }
+.tt-config-icone .tt-marca{ display:block; width:20px; height:20px; fill:currentColor; }   /* Sobre (M44) */
 .tt-config-textos{ display:flex; flex-direction:column; min-width:0; }
 .tt-config-descricao{ color:var(--tt-fg-2); }
 fluent-radio-group.tt-temas{

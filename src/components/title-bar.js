@@ -12,6 +12,7 @@
 //   borda de 1 px do Linux com a janela maximizada.
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import t from '../lib/i18n/pt-BR.js';
+import { marcaDoApp } from './app-mark.js';
 
 // Glifos de 10 × 10, com traço de 1 px (stroke no shell.css).
 export const GLIFOS = Object.freeze({
@@ -24,11 +25,8 @@ export const GLIFOS = Object.freeze({
   fechar: '<path d="M0 0l10 10M10 0 0 10"/>',
 });
 
-// Ícone provisório de 16 px (um anel com arco, na cor de destaque do tema). O
-// ícone definitivo do app é do M44 e substitui este desenho.
-const ICONE =
-  '<svg class="tt-titlebar-icone" viewBox="0 0 16 16" aria-hidden="true" focusable="false">' +
-  '<circle cx="8" cy="8" r="6" opacity=".35"/><path d="M8 2a6 6 0 1 1-6 6"/></svg>';
+// Ícone de 16 px: a marca do app (M44), na cor de destaque do tema.
+const ICONE = marcaDoApp('tt-titlebar-icone');
 
 const botao = (acao, rotulo, glifo, classe = '') =>
   `<button type="button" class="tt-caption-btn${classe}" data-acao="${acao}" tabindex="-1" ` +

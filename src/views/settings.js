@@ -40,6 +40,7 @@ import { minutosPorExtenso } from '../lib/format.js';
 import { store as storeDoApp } from '../lib/store.js';
 import * as ipcDoApp from '../lib/ipc.js';
 import { SEM_RECURSOS, assinarRecursos, recursos as recursosAtuais } from '../platform/recursos.js';
+import { marcaDoApp } from '../components/app-mark.js';
 
 const c = t.configuracoes;
 const semIcone = () => '';
@@ -287,7 +288,7 @@ export function marcacaoDoSobre({ icone = semIcone, versao = null, abertosAgora 
     `<h2 id="config-sobre-secao" class="tt-t-body-strong">${c.sobre.secao}</h2>` +
     expansor({
       id: 'sobre',
-      iconeHtml: icone('info', 20),
+      iconeHtml: marcaDoApp('tt-marca'),
       titulo: t.app.nome,
       descricao: c.sobre.licenca,
       valor: versao ? c.sobre.versao(versao) : '',

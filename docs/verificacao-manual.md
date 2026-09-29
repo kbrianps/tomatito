@@ -1049,3 +1049,23 @@ O que só você consegue: **ouvir** o Orca (no teste ele fala para lugar nenhum)
 6. [ ] Configurações do GNOME → Telas → Escala: 125%, depois 150% e 200% (se a 125% e 150% não aparecerem, ligue a "Escala fracionária"). Em cada uma, passe pelas quatro telas: nada cortado nem rolagem lateral, e o texto nítido. Volte à escala de antes.
 7. [ ] Configurações do GNOME → Acessibilidade → Visão → **Texto grande** ligado. Feche e abra o app: tudo 25% maior, sem corte nem rolagem lateral, também com a janela no mínimo e com Ctrl+= por cima. Desligue o "Texto grande" no fim.
 8. [ ] Feche o `dev:app` (Ctrl+Q).
+
+## M44. Ícone
+
+O ícone do app é um disco vermelho com um anel de progresso creme, aberto no quadrante de cima à esquerda (`src-tauri/icons/icon.svg`); a bandeja usa uma variante mais simples (`tray.svg`). Dentro do app, a mesma silhueta em uma cor só aparece na barra de título e no cartão "Sobre". Captura: `docs/capturas/m44-icone.png` (em cima, os tamanhos de 16 a 64 px sobre preto e sobre claro; no meio, o painel do GNOME aninhado com o ícone sozinho e com "25 min"; embaixo, a barra de título e o Sobre nos quatro temas).
+
+O que já foi conferido sem você (29/09/2026):
+- **Roteiro aninhado** `TT_PIPEWIRE=/run/user/$UID bash scripts/gnome-aninhado/rodar.sh bandeja` (GNOME Shell 50 aninhado com a extensão AppIndicator): 24 conferências ok; nas capturas, o ícone novo no painel preto, com uns 16 px, legível sozinho e ao lado do tempo.
+- **Prévia no Chrome headless:** a marca na barra de título (x = 16, 16 px) e no Sobre (20 px) no Lite, no Suave, no Claro e no Escuro.
+- `npm test`, `node scripts/copy-icons.mjs --conferir`, `npm run build`, `cargo fmt --check`, `cargo test --workspace`, `cargo clippy` no Linux e no alvo do Windows.
+
+O que só você consegue: o seu olho no painel, no dock e no Alt+Tab da sua sessão, com o app instalado.
+
+### Para conferir (uns 5 minutos, mais o build)
+
+1. [ ] `cd ~/dev/tomatito && bash scripts/instalar-uso-diario.sh` (gera o `.deb` e o AppImage de release, uns minutos, e reinstala o de uso diário em `~/.local` com o ícone novo).
+2. [ ] Abra o menu de apps (Super) e procure "Tomatito": o ícone é o disco vermelho com o arco creme. Se ainda aparecer o antigo, saia da sessão e entre de novo (cache de ícones do GNOME).
+3. [ ] Abra o Tomatito pelo menu. O mesmo ícone no dock e no Alt+Tab, nítido.
+4. [ ] No painel de cima, à direita, o ícone da bandeja: o disco com o arco, legível sem precisar chegar perto. Nas Configurações → Sistema, ligue "Tempo na bandeja", inicie uma sessão e veja o tempo ao lado do ícone.
+5. [ ] Na janela, a barra de título mostra a marca (em creme no Lite) à esquerda de "Tomatito"; nas Configurações, o cartão "Sobre" mostra a mesma marca no lugar do "i". Troque o tema para Claro e Escuro e confira as duas de novo.
+6. [ ] Encerre a sessão e feche o app (Ctrl+Q).

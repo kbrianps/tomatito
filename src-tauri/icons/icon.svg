@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Tomatito, ícone do app (M44): disco vermelho com um anel de progresso
+       creme, aberto no quadrante de cima à esquerda. Desenho próprio, MIT.
+       Sem tomate, sem mostrador e sem ponteiros (plano, 8 e 9). -->
+  <defs>
+    <linearGradient id="corpo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#DD634B"/>
+      <stop offset="1" stop-color="#B8402D"/>
+    </linearGradient>
+  </defs>
+  <circle cx="512" cy="512" r="448" fill="url(#corpo)"/>
+  <circle cx="512" cy="512" r="264" fill="none" stroke="#FFF6F1" stroke-opacity=".18" stroke-width="96"/>
+  <path d="M512 248A264 264 0 1 1 248 512" fill="none" stroke="#FFF6F1" stroke-width="96" stroke-linecap="round"/>
+</svg>

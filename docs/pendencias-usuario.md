@@ -116,6 +116,22 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 84. **Conferir o M43 na sua sessão** (desde o M43). Uns 10 minutos, com os passos em `docs/verificacao-manual.md`, seção M43: o app só pelo teclado, o **Orca de verdade falando** (Super+Alt+S liga e desliga) a tela Foco e as trocas de fase, o zoom de 150% e, nas Configurações do GNOME, a escala em 125/150/200% e o "Texto grande". O roteiro aninhado `acessibilidade` já fez tudo isso com o Orca mudo (lendo o log dele); falta ouvir.
 85. **Escolha do M43 fora do plano** (`docs/decisoes.md`, M43, item 5): no Linux, o anúncio das fases vai ao Orca pelo ATK da janela (comando `a11y_announce`), porque o WebKitGTK não entrega a região `aria-live` ao Orca. A região continua, para o Narrador no Windows. Nos fins de fase, o Orca também lê o balão do GNOME (`docs/depois.md`, M43): diga se prefere que o app fique quieto quando o balão aparece.
 
+86. **Conferir o ícone na sua sessão** (desde o M44). Uns 5 minutos, com os passos em `docs/verificacao-manual.md`, seção M44: reinstalar o de uso diário (`bash scripts/instalar-uso-diario.sh`, que gera o `.deb` e o AppImage com o ícone novo), ver o ícone no menu de apps, no dock, no Alt+Tab e no painel, e a marca na barra de título e no Sobre. O roteiro aninhado `bandeja` já mostrou o ícone novo no painel (24 conferências ok); falta o seu olho.
+87. **Escolha do M44 fora do plano** (`docs/decisoes.md`, M44): o desenho (disco vermelho com arco creme de 270°, aberto no quadrante de cima à esquerda) e a marca em uma cor só na barra de título e no cartão "Sobre" (no lugar do anel provisório e do `info`). Se quiser outro desenho, é trocar `src-tauri/icons/icon.svg` e `tray.svg`, rodar `npx tauri icon src-tauri/icons/icon.svg` (e apagar `android/` e `ios/`) e regerar o `tray.png` (decisoes, M44, item 3); a marca está em `src/components/app-mark.js`.
+88. **Preparar a VM do Windows** (M44; plano 1.2, item 6, e 6.3). Não foi feito: pede `sudo`. Se a decisão for a VM (uns 100 GB no `/` e uns 7 GB de ISO), rode `df -h /home /var/lib/libvirt/images` e depois:
+
+   ```bash
+   sudo apt install virt-manager qemu-system-x86 libvirt-daemon-system swtpm swtpm-tools ovmf
+   sudo usermod -aG libvirt,kvm $USER
+   # saia da sessão e entre de novo; `groups` deve mostrar libvirt e kvm
+   # copie o link da ISO do Windows 11 no navegador (microsoft.com/software-download/windows11) e:
+   sudo wget -c -O /var/lib/libvirt/images/win11.iso '<link>'
+   df -h /home /
+   ```
+
+   A ISO vai direto para o `/`, nunca para `~/Downloads`; se o `/home` ficar abaixo de 3 GB, pare. **Pronto quando:** `groups` mostra `libvirt` e `kvm`, e a ISO está baixando no `/`. Se for um PC com Windows, este item cai. Bloqueia o M47a.
+89. **Ícone no Windows** (desde o M44). No Windows: o `.exe` e o atalho com o ícone novo no Explorer, na barra de tarefas, no Alt+Tab e na área de notificação (o `tray.png`), nítido a 100, 125 e 150% de escala e legível na barra clara e na escura. A checagem cruzada `cargo clippy --target x86_64-pc-windows-msvc` passa e o `resource.rc` aponta o `icon.ico` novo. Entra na ida ao Windows do M48.
+
 ## Resolvidas
 
 - **Nome** (1.2, item 1): continua "Tomatito".
