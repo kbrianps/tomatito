@@ -70,6 +70,10 @@
       barraVertical: rolagem ? rolagem.offsetWidth - rolagem.clientWidth : null,
       rolagem: { pagina: rolaPagina(), conteudo: rolaDentro(rolagem), camada: rolaDentro(cont) },
       foraDaJanela: foraDaJanela(largura),
+      // M42: fontes que o servidor não entregou (um node_modules por link
+      // simbólico fora da raiz do Vite dá 403 na Inter, e o número do
+      // Cronômetro cai numa fonte mais estreita; docs/decisoes.md, M42).
+      fontesComErro: [...(document.fonts ?? [])].filter((f) => f.status === 'error').map((f) => f.family),
       painel: nav && {
         largura: arred(nav.getBoundingClientRect().width),
         rotulosVisiveis: [...nav.querySelectorAll('.tt-nav-rotulo')].filter((r) => r.getBoundingClientRect().width > 1).length,

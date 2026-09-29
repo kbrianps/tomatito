@@ -164,6 +164,7 @@ function conferirLayout(m, { rota, barras }) {
   if (!barras && m.barraVertical !== 0) falhas.push(`barra vertical de ${m.barraVertical} px`);
   if (m.rolagem.pagina !== 0 || m.rolagem.conteudo !== 0 || m.rolagem.camada !== 0) falhas.push(`rolagem horizontal ${JSON.stringify(m.rolagem)}`);
   if (m.foraDaJanela.length) falhas.push(`fora da janela: ${m.foraDaJanela.slice(0, 3).join(', ')}`);
+  if (m.fontesComErro?.length) falhas.push(`fonte que não carregou: ${[...new Set(m.fontesComErro)].join(', ')}`);
   const p = m.painel;
   if (!perto(p.largura, compacto ? 48 : 280)) falhas.push(`painel de ${p.largura} px`);
   if (p.rotulosVisiveis !== (compacto ? 0 : 4)) falhas.push(`${p.rotulosVisiveis} rótulos visíveis`);

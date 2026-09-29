@@ -53,6 +53,10 @@ Legenda: **corrigido** (neste marco, em até 15 min), **depois** (item em `docs/
 15. **Botões "Expandir" e "Manter no topo" acima do número**: já em `docs/depois.md` (os mesmos do item 12).
 16. **"h min s" e a vírgula dos centésimos**, em vez de "hr min sec" e o ponto: **intencional** (pt-BR).
 
+### Rolagem horizontal do Cronômetro com zoom
+
+Esconder o título (item 13) não mudou a largura do número: o `scripts/preview/responsivo.mjs` dá as mesmas 9 linhas FALHA no M41 e no M42, todas no Cronômetro a 480 × 500 com zoom (de 120% no WebKitGTK, e 160% no Chrome com barras clássicas), com a mesma rolagem, de 1 a 48 px. É o transbordo anotado no M38 para o M43; a causa, as medidas e a armadilha da comparação (uma cópia sem a Inter mede menos) estão em `docs/decisoes.md`, M42, item 7, e em `docs/depois.md`.
+
 ### Configurações
 
 17. **Título e recuo.** O título ficava 29 px mais baixo que o "Settings", e os cartões a 32 px dos lados (lá, 58). **Corrigido**: a página começa a 16 px da barra de título, e com 1000 px ou mais de conteúdo (a janela da captura) o recuo dos lados é de 56 px. O topo das letras do título está a 60 px da borda da janela (lá, 43; o resto é o item 1), e os cartões vão de 337 a 1316 px (lá, de 339 a 1315).
