@@ -1064,3 +1064,35 @@ No terminal, a linha `tomate pronto` termina com `(A/B: com no_redirection_bitma
 | Windows 10 | 150% | B (sem) | | | | | |
 
 Sem Windows 10: anote "sem Windows 10" e preencha só as linhas do 11 (o plano aceita).
+
+## M56. P/M/G, menu, atalhos e "Sempre na frente"
+
+O que já foi conferido sem você:
+- `npm test` e `cargo test`: a lista do menu (completa, com os textos dos botões, e sem o "Sempre na frente" no Wayland), a criação item a item (o jeito que não perde as ações), a dica do Alt+Espaço (quando aparece e que aparece uma vez), o corte do Windows 11 para o padrão do `tomatoOnTop`, e as regras do repositório (o tamanho e o "Sempre na frente" só pelo `settings_set`, nunca esconder o tomate, os atalhos pelas regras da `main`).
+- `cargo clippy --target x86_64-pc-windows-msvc`: o "Sempre na frente" e a leitura da versão do Windows compilam.
+- `bash scripts/gnome-aninhado/rodar.sh menu-tomate` no GNOME Shell aninhado (27 conferências): o menu abre pelo botão direito, completo (`docs/capturas/m56-menu-completo.png`); Tamanho → Grande e → Pequeno trocam o tomate, gravam a preferência e refazem a região; Minimizar, Fechar, Espaço, Ctrl+, e Esc funcionam; a dica aparece nas Configurações uma vez (`docs/capturas/m56-dica.png`); a volta ao Full abre no último tamanho.
+
+O que só você consegue: o menu e os atalhos na sua sessão, com o seu mouse e o seu teclado; e o "Sempre na frente" no Windows.
+
+### Para conferir no Linux (uns 4 minutos)
+
+1. [ ] Rode o app (depois da junção, em `~/dev/tomatito` e só com `npm run dev:app`):
+   ```bash
+   cd ~/dev/tomatito-full && npm run dev:app -- --config '{"build":{"devUrl":"http://localhost:5174","beforeDevCommand":"npm run dev -- --port 5174 --strictPort"}}'
+   ```
+   Em Configurações, escolha "Tomatito Full" (se aparecer a pergunta do M52, Manter).
+2. [ ] Clique com o botão direito no tomate: abre um menu escuro, com Iniciar sessão de foco (ou Pausar/Retomar), Pular, Encerrar sessão, Tamanho ›, Configurações, Voltar ao modo normal, Minimizar e Fechar. **Sem** "Sempre na frente" (no Wayland ele não funciona por código). Os itens de sessão acinzentados quando não fazem sentido, como os botões.
+3. [ ] Tamanho › Grande: o tomate cresce na hora; Tamanho › Pequeno: encolhe. Nos dois, o clique no canto da caixa continua atravessando para a janela de trás.
+4. [ ] Com o tomate em foco (clique no corpo), aperte Espaço: a sessão começa; Espaço de novo: pausa; de novo: retoma. Ctrl+, abre a janela principal nas Configurações, e na primeira vez aparece, logo abaixo de "Aparência", a frase "No GNOME, use Alt+Espaço → Sempre na frente das outras janelas para manter o tomate por cima". Feche e abra as Configurações de novo: a frase não volta.
+5. [ ] No tomate, Alt+Espaço → "Sempre na frente das outras janelas": o tomate fica por cima (é do GNOME, não do app).
+6. [ ] Menu → Minimizar: o tomate vai para a barra (ou o Alt+Tab); clique nele para voltar.
+7. [ ] Esc sai do Full; volte ao Full: o tomate abre no último tamanho escolhido.
+8. [ ] Menu → Fechar: o tomate fecha, e o ícone da bandeja continua; "Mostrar Tomatito" na bandeja o traz de volta.
+9. [ ] Pelo teclado: com o tomate em foco, a tecla de menu (ou Shift+F10) abre o mesmo menu, e as setas e o Enter escolhem.
+
+### Para conferir no Windows (uns 5 minutos, junto com a ida ao Windows do M55)
+
+1. [ ] Com o Full ativo, o menu do botão direito tem "Sempre na frente", marcado por padrão no Windows 11 (e desmarcado no Windows 10, se o `settings.json` ainda não tem a chave `tomatoOnTop`).
+2. [ ] Com ele marcado, clique numa outra janela (o Explorador) por cima do tomate: o tomate continua por cima. Desmarque: a outra janela passa a cobrir o tomate. Feche e abra o app: a escolha continua.
+3. [ ] Tamanho › Pequeno e › Grande: o tomate troca de tamanho, e o clique no canto continua atravessando (a região se refaz, como no passo 5 do M55).
+4. [ ] O menu aparece inteiro, sem ser cortado pela forma do tomate, e sem borda estranha.

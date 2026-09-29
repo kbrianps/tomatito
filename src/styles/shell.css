@@ -424,6 +424,9 @@
 .tt-config-icone .tt-icone{ display:block; width:20px; height:20px; fill:currentColor; }
 .tt-config-textos{ display:flex; flex-direction:column; min-width:0; }
 .tt-config-descricao{ color:var(--tt-fg-2); }
+/* M56: a dica do Alt+Espaço no Wayland (views/dica-sempre-na-frente.js),
+   em Caption no texto 2, entre o título da seção e o cartão. */
+.tt-config-dica{ margin:0 0 4px 1px; color:var(--tt-fg-2); max-width:70ch; }
 fluent-radio-group.tt-temas{
   display:grid; grid-template-columns:repeat(auto-fill, minmax(156px, 1fr)); gap:16px 12px;
   padding:16px 16px 16px 58px; border-top:1px solid var(--tt-border);

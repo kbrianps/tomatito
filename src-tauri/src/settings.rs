@@ -40,6 +40,22 @@ pub const BREAK_MINUTES: std::ops::RangeInclusive<u32> = 1..=60;
 pub const DAILY_GOALS: [u32; 9] = [0, 30, 60, 90, 120, 180, 240, 360, 480];
 pub const TOMATO_SIZES: [u32; 3] = [240, 280, 320];
 
+/// O padrão do `tomatoOnTop` (3.3; M56): `true`, salvo no Windows 10 (#15947).
+/// Sem a versão (o `RtlGetVersion` falhou), vale o do Windows 11.
+fn tomato_on_top_padrao() -> bool {
+    #[cfg(windows)]
+    return crate::window::region_windows::versao()
+        .is_none_or(|(maior, build)| windows_11_ou_mais(maior, build));
+    #[cfg(not(windows))]
+    true
+}
+
+/// Windows 11 é o 10.0 a partir do build 22000.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub fn windows_11_ou_mais(maior: u32, build: u32) -> bool {
+    maior > 10 || (maior == 10 && build >= 22000)
+}
+
 /// `theme`: a preferência salva. `system` e `full` não são temas que a
 /// `main` pinte: resolvem para [`ResolvedTheme`] (4.1 e 4.6).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -201,9 +217,8 @@ impl Default for Settings {
             daily_goal_minutes: 120,
             reset_hour: 0,
             tomato_size: 280,
-            // 3.3: `false` no Windows 10 (#15947). A detecção do Windows 10
-            // entra com o Full no Windows (M55).
-            tomato_on_top: true,
+            // 3.3: `false` no Windows 10 (#15947; M56).
+            tomato_on_top: tomato_on_top_padrao(),
             full_mode: FullMode::Auto,
             full_validated: String::new(),
             linux_x11: false,
@@ -552,6 +567,17 @@ mod tests {
             Value::Object(m) => m,
             _ => panic!("não é objeto"),
         }
+    }
+
+    #[test]
+    fn sempre_na_frente_so_a_partir_do_windows_11() {
+        assert!(windows_11_ou_mais(10, 22000));
+        assert!(windows_11_ou_mais(10, 26100));
+        assert!(!windows_11_ou_mais(10, 19045), "Windows 10 22H2");
+        assert!(!windows_11_ou_mais(6, 3));
+        assert!(windows_11_ou_mais(11, 0));
+        #[cfg(not(windows))]
+        assert!(tomato_on_top_padrao());
     }
 
     #[test]

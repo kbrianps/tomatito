@@ -282,6 +282,20 @@ export default Object.freeze({
     // O rótulo do tempo (role="timer"), uma vez por minuto (3.8), com os
     // plurais de foco.andamento.restantes: "18 minutos restantes".
     pausadoNoRotulo: (restantes) => `${restantes}, pausado`,
+    // M56: o menu nativo do botão direito (5.10), com os mesmos textos dos
+    // botões para as ações do foco (vêm da vista, lib/tomate.js).
+    menu: Object.freeze({
+      tamanho: 'Tamanho',
+      tamanhos: Object.freeze({ 240: 'Pequeno', 280: 'Médio', 320: 'Grande' }),
+      // Só no Windows e no X11; no Wayland, a dica abaixo.
+      sempreNaFrente: 'Sempre na frente',
+      minimizar: 'Minimizar',
+      fechar: 'Fechar',
+    }),
+    // M56: no Wayland, mostrada uma vez, nas Configurações (5.7), com o
+    // Full ativo. O nome do item é o do GNOME em pt-BR.
+    dicaSempreNaFrente:
+      'No GNOME, use Alt+Espaço → Sempre na frente das outras janelas para manter o tomate por cima',
     // M52: a validação com reversão (5.9), na janela principal, no padrão da
     // troca de resolução de tela; e, depois de voltar, a oferta do modo opaco
     // (o plano B3).

@@ -60,13 +60,15 @@ pub fn settings_set(
 }
 
 /// O caminho do `settings_set`, também para o `switch_window_mode` (5.7, M51):
-/// grava, emite `tt://settings` e avisa a bandeja.
+/// grava, emite `tt://settings`, avisa a bandeja e, com a `tomato` aberta,
+/// aplica o `tomatoSize` e o `tomatoOnTop` (M56).
 pub fn gravar_configuracoes(
     app: &AppHandle,
     settings: &SettingsStore,
     patch: &Value,
 ) -> Result<Settings, SettingsError> {
-    settings.set(patch, |s| {
+    let antes = settings.get();
+    let depois = settings.set(patch, |s| {
         if let Err(e) = app.emit(events::SETTINGS, s) {
             eprintln!("[tomatito] {} não saiu: {e}", events::SETTINGS);
         }
@@ -74,7 +76,10 @@ pub fn gravar_configuracoes(
         if let Some(b) = app.try_state::<Arc<Bandeja>>() {
             b.tray_time(s.tray_time);
         }
-    })
+    })?;
+    // M56: o tamanho e o "Sempre na frente" do tomate valem na hora.
+    crate::window::tomato::aplicar_preferencias(app, &antes, &depois);
+    Ok(depois)
 }
 
 /// `focus_start{minutes, skip_breaks, task_id}`. No JS: `{ minutes,
@@ -342,4 +347,12 @@ pub async fn tomato_debug_size(app: AppHandle, size: u32) -> Result<(), String> 
         return Err("tomato_debug_size só existe no build de debug".into());
     }
     crate::window::tomato::trocar_tamanho(&app, size)
+}
+
+/// `tomato_on_top_available` (M56): se o "Sempre na frente" do tomate
+/// funciona por código (Windows e X11). No Wayland, não: o menu do tomate não
+/// mostra o item, e as Configurações mostram uma vez a dica do Alt+Espaço.
+#[tauri::command]
+pub fn tomato_on_top_available() -> bool {
+    crate::window::tomato::sempre_na_frente_por_codigo()
 }

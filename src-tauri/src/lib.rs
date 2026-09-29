@@ -74,6 +74,9 @@ pub fn run() {
             // As janelas nascem aqui, e não no tauri.conf.json (PLANO.md, 4.7).
             // Com `theme = full`, só a `tomato`; a `main` nasce sob demanda
             // (5.7, M51). O ouvinte do `tt://tomato-ready` vem antes.
+            // M56: o "Sempre na frente" por código (Windows e X11), lido do
+            // GDK aqui, na thread principal.
+            window::tomato::detectar_sempre_na_frente();
             window::tomato::ligar(app.handle());
             if s.theme == settings::ThemePref::Full {
                 window::tomato::abrir_no_inicio(app.handle(), &s)?;
@@ -85,10 +88,12 @@ pub fn run() {
         // Fechar (X, Ctrl+W, Alt+F4) com "fechar para a bandeja" ligado só
         // esconde a `main` (3.4, M36).
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event
-                && window::fechar_para_bandeja(window)
-            {
-                api.prevent_close();
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window::fechar_para_bandeja(window) {
+                    api.prevent_close();
+                }
+                // M56: o tomate fecha; sem "fechar para a bandeja", o app sai.
+                window::tomato::fechada_pelo_usuario(window);
             }
             // M54: a `tomato` com outro tamanho pede a região de novo (5.4).
             if let tauri::WindowEvent::Resized(tamanho) = event {
@@ -126,9 +131,21 @@ pub fn run() {
             commands::full_validation_answer,
             commands::set_tomato_region,
             commands::tomato_debug_size,
+            commands::tomato_on_top_available,
         ])
-        .run(context)
-        .expect("error while building tauri application");
+        .build(context)
+        .expect("error while building tauri application")
+        .run(|app, evento| {
+            // M56: sem janela nenhuma (o tomate fechado, sem a `main`), o app
+            // fica na bandeja se "fechar para a bandeja" está ligado.
+            if let tauri::RunEvent::ExitRequested {
+                code: None, api, ..
+            } = &evento
+                && window::manter_na_bandeja(app)
+            {
+                api.prevent_exit();
+            }
+        });
 }
 
 /// Plano B2 (5.9): com `linuxX11 = true` no `settings.json`, o app abre pelo

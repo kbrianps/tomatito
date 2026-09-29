@@ -132,8 +132,11 @@ export const cronometro = Object.freeze({
  * do tomate): a região de entrada, em `[x, y, largura, altura]`; devolve
  * `'applied'` ou `'ignored'`. O Rust pede a região de novo, a cada troca de
  * tamanho da janela, pelo `tt://tomato-region` (`EVENTO_REGIAO`).
- * `tamanhoDeDebug(lado)` é o `tomato_debug_size{size}` (só no build de debug;
- * a escolha de P/M/G de verdade é do M56).
+ * `tamanhoDeDebug(lado)` é o `tomato_debug_size{size}` (só no build de debug,
+ * sem gravar; a escolha de verdade grava o `tomatoSize` pelo `settings_set`,
+ * e o Rust troca o tamanho, M56). M56: `sempreNaFrente()` é o
+ * `tomato_on_top_available`: se o "Sempre na frente" funciona por código
+ * (Windows e X11; no Wayland, não).
  */
 export const full = Object.freeze({
   EVENTO_PRONTO: 'tt://tomato-ready',
@@ -146,6 +149,7 @@ export const full = Object.freeze({
   responderValidacao: (resposta) => invoke('full_validation_answer', { answer: resposta }),
   definirRegiao: (faixas) => invoke('set_tomato_region', { strips: faixas }),
   tamanhoDeDebug: (lado) => invoke('tomato_debug_size', { size: lado }),
+  sempreNaFrente: () => invoke('tomato_on_top_available'),
 });
 
 /** Ouve um evento do Rust; `cb` recebe só o conteúdo. Devolve o `unlisten`. */

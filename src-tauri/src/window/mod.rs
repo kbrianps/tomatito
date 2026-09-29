@@ -63,6 +63,17 @@ pub fn fechar_para_bandeja(window: &Window) -> bool {
     ligado
 }
 
+/// `RunEvent::ExitRequested` sem código (a última janela fechou; M56): com
+/// "fechar para a bandeja" ligado, o app continua, na bandeja. Acontece
+/// quando o tomate fecha (o "Fechar" do menu, o Alt+F4) e a `main` não
+/// existe (o app começou no Full). Uma saída pedida (`app.exit`, o "Sair" da
+/// bandeja) vem com código e não passa por aqui. Devolve se a saída deve ser
+/// barrada.
+pub fn manter_na_bandeja(app: &AppHandle) -> bool {
+    app.try_state::<SettingsStore>()
+        .is_some_and(|s| s.get().close_to_tray)
+}
+
 /// Rota que o `show_main` aceita: `#/` e letras minúsculas ou hífen (as do
 /// `src/router.js`, como `#/configuracoes`). O texto vai para um `eval` na
 /// `main`, então nada fora disso passa.

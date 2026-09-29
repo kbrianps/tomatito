@@ -14,8 +14,12 @@
 // troca que venha do `tt://settings` também marca o rádio certo.
 import t from '../lib/i18n/pt-BR.js';
 import { ESCOLHAS, EVENTO } from '../lib/theme.js';
+import { ligarDicaSempreNaFrente } from './dica-sempre-na-frente.js';
 
 const c = t.configuracoes;
+// M56: o `tomato_on_top_available`, carregado só quando a dica precisa (os
+// testes em Node montam a tela sem o Tauri).
+const sempreNaFrente = () => import('../lib/ipc.js').then((ipc) => ipc.full.sempreNaFrente());
 const semIcone = () => '';
 
 // A janela em miniatura: o painel (três itens), a camada de conteúdo e um
@@ -94,9 +98,10 @@ export function marcar(grupo, pref) {
 /**
  * `tema.aplicar(pref)` é o `aplicarTema` com as dependências da janela (o
  * main.js o passa pelo contexto do roteador); sem ele, a tela só desenha.
+ * `porCodigo()` resolve com o `tomato_on_top_available` (M56, a dica).
  * Devolve a limpeza (o roteador a chama ao sair da tela).
  */
-export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.document } = {}) {
+export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.document, porCodigo = sempreNaFrente } = {}) {
   const h = doc.documentElement;
   raiz.innerHTML = marcacao({ pref: h.dataset.themePref, icone });
   const grupo = raiz.querySelector('.tt-temas');
@@ -114,8 +119,11 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
   const aoTrocar = (e) => marcar(grupo, e.detail.pref);
   grupo.addEventListener('change', aoMudar);
   h.addEventListener(EVENTO, aoTrocar);
+  // M56: a dica do Alt+Espaço no Wayland (dica-sempre-na-frente.js).
+  const semDica = ligarDicaSempreNaFrente(raiz.querySelector('.tt-config-secao'), { doc, porCodigo, evento: EVENTO });
   return () => {
     grupo.removeEventListener('change', aoMudar);
     h.removeEventListener(EVENTO, aoTrocar);
+    semDica();
   };
 }

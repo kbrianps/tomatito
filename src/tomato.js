@@ -19,16 +19,22 @@
 // cada troca de tamanho. M54: e as manda ao Rust (`set_tomato_region`) antes
 // do primeiro aviso, então no Linux a região chega antes do show() (5.6); de
 // novo a cada `resize` e a cada pedido do Rust (`tt://tomato-region`). O
-// Windows (M55) usa o mesmo caminho. O menu nativo do botão direito e os
-// outros atalhos (Espaço e Ctrl+,) são do M56; até lá, o menu de contexto do
-// WebView fica desligado, porque seria uma janela própria, fora do desenho
-// (5.3).
+// Windows (M55) usa o mesmo caminho. M56: o menu nativo do botão direito
+// (lib/menu-tomate.js), no lugar do menu do WebView, que seria uma janela
+// própria, fora do desenho (5.3); e os atalhos Espaço (iniciar, pausar ou
+// retomar) e Ctrl+, (Configurações), além do Esc. O tamanho e o "Sempre na
+// frente" escolhidos no menu vão pelo settings_set, e o Rust os aplica.
+import { CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
+import { LogicalPosition } from '@tauri-apps/api/dpi';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import * as ipc from './lib/ipc.js';
 import { criarStore } from './lib/store.js';
 import { ligarAnuncioDeFases } from './lib/a11y.js';
 import t from './lib/i18n/pt-BR.js';
 import { MINUTOS_AO_INICIAR, chaveDaFase, restanteDaFase, rotuloDoTempo, vista } from './lib/tomate.js';
 import { regionStrips } from './lib/regiao.js';
+import { espacoLivre, rotaDoAtalho } from './lib/keys.js';
+import { criarItens, itensDoMenu, ladoDoItem } from './lib/menu-tomate.js';
 
 const h = document.documentElement;
 // Sem transições até o primeiro retrato estar na página: a cor do corpo e o
@@ -149,10 +155,25 @@ function sair() {
   saindo ??= ipc.full.trocarModo(false).finally(() => (saindo = null));
   return saindo;
 }
+const rodar = (acao) =>
+  Promise.resolve()
+    .then(acao)
+    .catch((erro) => console.warn('[tomate]', erro));
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || e.repeat || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
   e.preventDefault();
-  sair().catch((erro) => console.warn('[tomate]', erro));
+  rodar(sair);
+});
+// M56: o Espaço (a regra da tela Foco: sozinho e fora de botões, onde ele já
+// aperta o botão) e o Ctrl+, (a regra da main, lib/keys.js).
+document.addEventListener('keydown', (e) => {
+  if (espacoLivre(e)) {
+    e.preventDefault();
+    rodar(acoes.principal);
+  } else if (rotaDoAtalho(e) === 'configuracoes') {
+    e.preventDefault();
+    rodar(acoes.configuracoes);
+  }
 });
 
 // A região de entrada (5.4; M53): as faixas do corpo, do cabinho e do cálice,
@@ -220,9 +241,60 @@ if (import.meta.env.DEV) {
     .catch((erro) => console.warn('[região]', erro));
 }
 
-// O menu de contexto do WebView seria uma janela própria, fora do desenho
-// (5.3); o menu nativo com as ações é do M56.
-document.addEventListener('contextmenu', (e) => e.preventDefault());
+// O menu do botão direito (5.10; M56): nativo, refeito a cada vez com o
+// estado do foco e as configurações do momento. O do WebView seria uma
+// janela própria, fora do desenho (5.3), e fica sempre desligado. A posição
+// vai explícita: sem ela, no Wayland, o GTK não sabe onde está o ponteiro.
+// Pelo teclado (a tecla de menu ou Shift+F10), abre no elemento com o foco.
+let sempreNaFrente = null;
+let recursos = [];
+let abrindo = false;
+const fabricas = {
+  item: (o) => MenuItem.new(o),
+  marcar: (o) => CheckMenuItem.new(o),
+  submenu: (o) => Submenu.new(o),
+  separador: () => PredefinedMenuItem.new({ item: 'Separator' }),
+};
+async function abrirMenu(x, y) {
+  if (abrindo) return;
+  abrindo = true;
+  try {
+    sempreNaFrente ??= await ipc.full.sempreNaFrente().catch(() => false);
+    const s = await ipc.configuracoes.obter();
+    const v = ultima ?? vista(store.foco, restante());
+    const itens = itensDoMenu({ vista: v, tamanho: s.tomatoSize, sempreNaFrente, naFrente: s.tomatoOnTop });
+    // Só no dev: os roteiros do GNOME aninhado conferem o menu que abriu.
+    if (import.meta.env.DEV) window.__TT_MENU__ = itens;
+    // O anterior já foi fechado pelo usuário; os recursos dele saem agora.
+    for (const r of recursos.splice(0)) r.close().catch(() => {});
+    const itensDoTauri = await criarItens(itens, (id) => rodar(() => doMenu(id, s)), fabricas, recursos);
+    const menu = await Menu.new({ items: itensDoTauri });
+    recursos.push(menu);
+    await menu.popup(new LogicalPosition(x, y));
+  } finally {
+    abrindo = false;
+  }
+}
+function doMenu(id, s) {
+  const lado = ladoDoItem(id);
+  if (lado) return ipc.configuracoes.gravar({ tomatoSize: lado });
+  if (id === 'sempre-na-frente') return ipc.configuracoes.gravar({ tomatoOnTop: !s.tomatoOnTop });
+  // Minimizar, e nunca esconder (5.3). Fechar passa pelo CloseRequested: o
+  // Rust decide entre ficar na bandeja e sair (window/tomato.rs).
+  if (id === 'minimizar') return getCurrentWindow().minimize();
+  if (id === 'fechar') return getCurrentWindow().close();
+  return acoes[id]?.();
+}
+document.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  let { clientX: x, clientY: y } = e;
+  if (x === 0 && y === 0) {
+    const r = (document.activeElement ?? stage).getBoundingClientRect();
+    x = r.left + r.width / 2;
+    y = r.top + r.height / 2;
+  }
+  rodar(() => abrirMenu(x, y));
+});
 
 // O renderizador WebGL, para a validação do M52 (5.9). No WebKitGTK vem
 // mascarado ("Apple GPU"); o Rust junta a versão do WebView e a GPU

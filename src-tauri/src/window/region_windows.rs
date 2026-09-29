@@ -92,3 +92,20 @@ pub fn sem_borda(win: &WebviewWindow) -> tauri::Result<()> {
         }
     })
 }
+
+/// A versão do Windows, `(maior, build)`, pelo `RtlGetVersion` do `ntdll`
+/// (M56): o `GetVersionExW` mente sem o `supportedOS` no manifesto e dá 6.2.
+/// Serve ao padrão do `tomatoOnTop` (3.3: `false` no Windows 10, #15947).
+pub fn versao() -> Option<(u32, u32)> {
+    use windows::Wdk::System::SystemServices::RtlGetVersion;
+    use windows::Win32::System::SystemInformation::OSVERSIONINFOW;
+    let mut v = OSVERSIONINFOW {
+        dwOSVersionInfoSize: size_of::<OSVERSIONINFOW>() as u32,
+        ..Default::default()
+    };
+    // SAFETY: a estrutura é nossa, com o tamanho preenchido, como a função pede.
+    let status = unsafe { RtlGetVersion(&mut v) };
+    status
+        .is_ok()
+        .then_some((v.dwMajorVersion, v.dwBuildNumber))
+}

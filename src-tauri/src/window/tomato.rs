@@ -29,8 +29,12 @@
 //! desligada e o teste A/B do `no_redirection_bitmap`
 //! ([`sem_redirecionamento`], pela variável [`VAR_AB_NRB`] no build de debug).
 //!
-//! Ficam para depois: o menu nativo, os atalhos e a escolha de P/M/G (M56;
-//! até lá, [`trocar_tamanho`] só pelo comando de debug).
+//! M56: o `tomatoSize` e o `tomatoOnTop` gravados pelo `settings_set` valem
+//! na hora na `tomato` aberta ([`aplicar_preferencias`]); o "Sempre na
+//! frente" só existe onde o código consegue ([`sempre_na_frente_por_codigo`]:
+//! Windows e X11); e fechar o tomate segue o "fechar para a bandeja"
+//! ([`fechada_pelo_usuario`]). O menu nativo e os atalhos são da página
+//! (`src/tomato.js` e `src/lib/menu-tomate.js`).
 
 use std::ffi::OsStr;
 use std::sync::{Arc, Mutex};
@@ -759,8 +763,8 @@ pub fn redimensionada(janela: &tauri::Window, tamanho: PhysicalSize<u32>) {
 
 /// Troca o lado da `tomato` para P, M ou G ([`TAMANHOS`]), em px lógicos. A
 /// região vem depois, pelo `Resized` ([`redimensionada`]) e pelo `resize` da
-/// página. No M54, só pelo comando de debug `tomato_debug_size`; a escolha
-/// na interface, a gravação do `tomatoSize` e o menu são do M56.
+/// página. Chamada pelo [`aplicar_preferencias`] (o `tomatoSize` gravado,
+/// M56) e pelo comando de debug `tomato_debug_size` (sem gravar nada).
 pub fn trocar_tamanho(app: &AppHandle, lado: u32) -> Result<(), String> {
     if !TAMANHOS.contains(&lado) {
         return Err(format!("tamanho fora de {TAMANHOS:?}: {lado}"));
@@ -785,6 +789,72 @@ fn redimensionar(t: &WebviewWindow, lado: u32) -> tauri::Result<()> {
 fn redimensionar(t: &WebviewWindow, lado: u32) -> tauri::Result<()> {
     let lado = f64::from(lado);
     t.set_size(tauri::LogicalSize::new(lado, lado))
+}
+
+/// Se o "Sempre na frente" funciona por código (5.1 e 5.10; M56): no Windows
+/// e no Linux pelo X11 (o B2 ou uma sessão X11), e não no Wayland, onde só o
+/// Alt+Espaço do GNOME o liga. Lido do GDK uma vez, na thread principal
+/// ([`detectar_sempre_na_frente`], no `setup`).
+static SEMPRE_NA_FRENTE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+/// Guarda o [`sempre_na_frente_por_codigo`]. Chame no `setup`: no Linux, o
+/// GDK só pode ser lido na thread principal.
+pub fn detectar_sempre_na_frente() {
+    #[cfg(target_os = "linux")]
+    let sim = {
+        use gtk::prelude::*;
+        gtk::gdk::Display::default().is_some_and(|d| d.backend().is_x11())
+    };
+    #[cfg(not(target_os = "linux"))]
+    let sim = cfg!(windows);
+    let _ = SEMPRE_NA_FRENTE.set(sim);
+}
+
+/// Ver [`SEMPRE_NA_FRENTE`]. Antes do `setup`, só o Windows.
+pub fn sempre_na_frente_por_codigo() -> bool {
+    SEMPRE_NA_FRENTE.get().copied().unwrap_or(cfg!(windows))
+}
+
+/// Depois de cada `settings_set` (M56): com a `tomato` aberta, o
+/// `tomatoSize` novo troca o lado (e a região vem pelo `Resized`), e o
+/// `tomatoOnTop` novo liga ou desliga o "Sempre na frente" (só onde funciona
+/// por código; no Wayland, a chamada nem é feita). Serve ao menu do tomate e
+/// a qualquer outra tela que grave as duas chaves (as Configurações da frente
+/// A, M38 e M39).
+pub fn aplicar_preferencias(app: &AppHandle, antes: &Settings, depois: &Settings) {
+    let Some(t) = app.get_webview_window(LABEL) else {
+        return;
+    };
+    if antes.tomato_size != depois.tomato_size
+        && let Err(e) = redimensionar(&t, depois.tomato_size)
+    {
+        eprintln!("[tomatito] tamanho do tomate não trocado: {e}");
+    }
+    if antes.tomato_on_top != depois.tomato_on_top
+        && sempre_na_frente_por_codigo()
+        && let Err(e) = t.set_always_on_top(depois.tomato_on_top)
+    {
+        eprintln!("[tomatito] sempre na frente não trocado: {e}");
+    }
+}
+
+/// `CloseRequested` da `tomato` (o "Fechar" do menu, o Alt+F4; M56). O tomate
+/// fecha, sem esconder (5.3), e o tema continua `full`. Com "fechar para a
+/// bandeja" ligado, o app fica na bandeja, mesmo sem nenhuma janela (o
+/// `ExitRequested` é barrado em `window::manter_na_bandeja`), e "Mostrar
+/// Tomatito" cria o tomate de novo. Desligado, o app sai, como fecharia a
+/// `main`: sem isso, a `main` escondida seguraria o app sem janela nenhuma.
+/// A saída do Full (`sair`) usa o `destroy()`, que não passa por aqui.
+pub fn fechada_pelo_usuario(janela: &tauri::Window) {
+    if janela.label() != LABEL {
+        return;
+    }
+    let bandeja = janela
+        .try_state::<SettingsStore>()
+        .is_none_or(|s| s.get().close_to_tray);
+    if !bandeja {
+        janela.app_handle().exit(0);
+    }
 }
 
 /// Início com `theme = full` (4.7 e 5.7): o `setup` cria só a `tomato`, e a

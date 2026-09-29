@@ -646,7 +646,8 @@ test('tomate: tomato.css com os tokens --tt-tomato-*, sem as variáveis do prot�
   assert.match(css, /\.btn:focus-visible \{\s*outline: 2px solid/);
   const js = ler('src/tomato.js');
   assert.doesNotMatch(js, /\.style\.(?!setProperty|removeProperty)/, 'variáveis dinâmicas só por setProperty (3.8)');
-  assert.match(js, /addEventListener\('contextmenu', \(e\) => e\.preventDefault\(\)\)/);
+  // M56: o menu do WebView sempre desligado, e o nativo no lugar dele.
+  assert.match(js, /addEventListener\('contextmenu', \(e\) => \{\s*e\.preventDefault\(\);/);
 });
 
 test('tomate: duas entradas no Vite, janela da 5.3 e comandos async (M50 e M51)', () => {
@@ -897,4 +898,47 @@ test('Full: região no Windows pelo SetWindowRgn, sem a borda do DWM, e o A/B do
   const js = ler('src/tomato.js');
   assert.match(js, /fisico > 0 && lado > 0 && h\.dataset\.platform === 'windows' \? fisico \/ lado : escalaDaRegiao\(\)/);
   assert.match(js, /enviarRegiao\(Array\.isArray\(tamanho\) \? tamanho\[0\] : 0\)/);
+});
+
+// M56: P/M/G, o menu nativo, os atalhos e o "Sempre na frente" (5.10 e 5.7).
+test('Full: menu nativo completo, tamanho e sempre na frente pelo settings_set, atalhos e a dica do Wayland (M56)', () => {
+  const js = ler('src/tomato.js');
+  const ordem = (texto, partes) => partes.map((p) => texto.indexOf(p)).every((i, k, a) => i >= 0 && (k === 0 || i > a[k - 1]));
+  // O Menu.popup() nativo, na posição do clique (no Wayland, o GTK não sabe onde está o ponteiro).
+  assert.match(js, /import \{ CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu \} from '@tauri-apps\/api\/menu';/);
+  assert.match(js, /await menu\.popup\(new LogicalPosition\(x, y\)\);/);
+  assert.match(js, /for \(const r of recursos\.splice\(0\)\) r\.close\(\)/, 'o menu anterior sai da tabela de recursos');
+  // Cada item criado à parte: dentro do Menu.new, o Tauri 2.12 perde o canal da ação.
+  assert.match(js, /criarItens\(itens, /);
+  assert.doesNotMatch(js, /Menu\.new\(\{ items: (?!itensDoTauri)/);
+  // Tamanho e "Sempre na frente" só pelo settings_set (o Rust aplica); nunca esconder (5.3).
+  assert.match(js, /ipc\.configuracoes\.gravar\(\{ tomatoSize: lado \}\)/);
+  assert.match(js, /ipc\.configuracoes\.gravar\(\{ tomatoOnTop: !s\.tomatoOnTop \}\)/);
+  assert.match(js, /getCurrentWindow\(\)\.minimize\(\)/);
+  assert.doesNotMatch(js, /\.hide\(\)|setAlwaysOnTop|setSize/);
+  // Atalhos: Espaço e Ctrl+, pelas regras da main (lib/keys.js), além do Esc.
+  assert.match(js, /import \{ espacoLivre, rotaDoAtalho \} from '\.\/lib\/keys\.js';/);
+  assert.match(js, /if \(espacoLivre\(e\)\) \{\s*e\.preventDefault\(\);\s*rodar\(acoes\.principal\);/);
+  assert.match(js, /rotaDoAtalho\(e\) === 'configuracoes'\) \{\s*e\.preventDefault\(\);\s*rodar\(acoes\.configuracoes\);/);
+  // O Rust aplica o tamanho e o sempre na frente depois de cada settings_set.
+  const comandos = ler('src-tauri/src/commands.rs');
+  const gravar = comandos.slice(comandos.indexOf('pub fn gravar_configuracoes('));
+  assert.ok(ordem(gravar, ['let antes = settings.get();', 'settings.set(patch', 'aplicar_preferencias(app, &antes, &depois)']));
+  assert.match(comandos, /pub fn tomato_on_top_available\(\) -> bool/);
+  const tomato = ler('src-tauri/src/window/tomato.rs');
+  const aplicar = tomato.slice(tomato.indexOf('pub fn aplicar_preferencias('), tomato.indexOf('pub fn fechada_pelo_usuario('));
+  assert.ok(ordem(aplicar, ['antes.tomato_size != depois.tomato_size', 'redimensionar(&t, depois.tomato_size)', 'antes.tomato_on_top != depois.tomato_on_top', 'sempre_na_frente_por_codigo()', 't.set_always_on_top(depois.tomato_on_top)']));
+  assert.match(tomato, /d\.backend\(\)\.is_x11\(\)/, 'no Linux, só pelo X11');
+  const lib = ler('src-tauri/src/lib.rs');
+  assert.match(lib, /commands::tomato_on_top_available,/);
+  assert.ok(lib.indexOf('window::tomato::detectar_sempre_na_frente();') < lib.indexOf('window::tomato::ligar(app.handle());'), 'no setup, na thread principal');
+  // Fechar o tomate segue o "fechar para a bandeja".
+  assert.match(lib, /window::tomato::fechada_pelo_usuario\(window\);/);
+  assert.match(lib, /tauri::RunEvent::ExitRequested \{\s*code: None, api, \.\.\s*\} = &evento\s*&& window::manter_na_bandeja\(app\)/);
+  // 3.3: false no Windows 10.
+  assert.match(ler('src-tauri/src/settings.rs'), /tomato_on_top: tomato_on_top_padrao\(\),/);
+  // A dica do Wayland, com o texto do catálogo, ligada nas Configurações.
+  assert.match(ler('src/lib/i18n/pt-BR.js'), /'No GNOME, use Alt\+Espaço → Sempre na frente das outras janelas para manter o tomate por cima'/);
+  assert.match(ler('src/views/settings.js'), /ligarDicaSempreNaFrente\(raiz\.querySelector\('\.tt-config-secao'\)/);
+  assert.match(ler('src/lib/ipc.js'), /sempreNaFrente: \(\) => invoke\('tomato_on_top_available'\)/);
 });
