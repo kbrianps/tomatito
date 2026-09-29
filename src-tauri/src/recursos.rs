@@ -83,16 +83,24 @@ pub fn linux(bandeja: bool, sessao: Sessao) -> Recursos {
 
 /// Os recursos desta máquina agora. `bandeja`: se o ícone foi criado
 /// (`tray::Bandeja::existe`).
+///
+/// No Linux, depois do `setup`, o `sempreNaFrente` é o que o GDK disse
+/// (`window::tomato::detectar_sempre_na_frente`, M56, o mesmo do
+/// `tomato_on_top_available`); antes, a leitura das variáveis.
 #[cfg(target_os = "linux")]
 pub fn agora(bandeja: bool) -> Recursos {
     let var = |n: &str| std::env::var(n).ok();
-    linux(
+    let mut r = linux(
         bandeja,
         sessao_linux(
             var("WAYLAND_DISPLAY").as_deref(),
             var("GDK_BACKEND").as_deref(),
         ),
-    )
+    );
+    if let Some(x11) = crate::window::tomato::sempre_na_frente_detectado() {
+        r.sempre_na_frente = x11;
+    }
+    r
 }
 
 #[cfg(windows)]

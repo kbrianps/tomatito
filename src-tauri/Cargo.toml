@@ -52,9 +52,15 @@ jiff = "0.2.37"
 # a notificação quando a conexão de quem a mandou some (docs/decisoes.md, M21).
 [target.'cfg(windows)'.dependencies]
 tauri-plugin-notification = "=2.4.0"
+# Região da `tomato` (window/region_windows.rs, M55): `SetWindowRgn` e a borda
+# do DWM; e a versão do Windows (M56, `RtlGetVersion`). A mesma versão que o
+# Tauri usa (3.6), senão o tipo `HWND` não bate.
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Dwm", "Wdk_System_SystemServices", "Win32_System_SystemInformation"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 zbus = { version = "5.19", default-features = false, features = ["tokio"] }
-# Anúncio ao leitor de tela pelo ATK da janela (anuncio.rs, M43). O mesmo gtk
-# 0.18 que o Tauri já usa no Linux: nada novo no Cargo.lock além da ligação.
+# O gtk 0.18 que o Tauri já usa no Linux (3.6), senão o tipo da GtkWindow não
+# bate: a região de entrada da `tomato` no nível do GtkWidget
+# (window/region_linux.rs, M54) e o anúncio ao leitor de tela pelo ATK da
+# janela (anuncio.rs, M43).
 gtk = "0.18"

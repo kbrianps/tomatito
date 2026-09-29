@@ -99,7 +99,10 @@ let ultimoComando = null;
 setInterval(async () => {
   try {
     const c = await (await fetch('/__sonda/comando', { cache: 'no-store' })).json();
-    if (!c.id || c.id === ultimoComando) return;
+    // M50: com a janela tomato aberta, as duas páginas leem o mesmo arquivo;
+    // um comando com `janela` roda só na janela com esse rótulo (sem ela,
+    // em todas, como antes).
+    if (!c.id || c.id === ultimoComando || (c.janela && c.janela !== janela)) return;
     ultimoComando = c.id;
     let resultado;
     try {
@@ -148,4 +151,18 @@ if (CONTROLE === 'tema-errado') {
   h.dataset.theme = certo === 'light' ? 'dark' : 'light';
   window.__TAURI_INTERNALS__.invoke('plugin:window|show', { label: janela });
   setTimeout(() => (h.dataset.theme = certo), 600);
+}
+
+// M51 (correções): controles negativos do roteiro full, só na página do
+// tomate. "tomate-lento" segura a página 2,5 s antes dos módulos do app, e o
+// limite de 2 s do tt://tomato-ready estoura em toda ida; "aviso-cedo" faz o
+// mesmo, mas antes avisa tt://tomato-ready com pintado = true e a página
+// vazia, e o Rust esconde a main com o tomate ainda sem pintar (a conferência
+// do vazio precisa acusar).
+if (janela === 'tomato' && (CONTROLE === 'tomate-lento' || CONTROLE === 'aviso-cedo')) {
+  if (CONTROLE === 'aviso-cedo') {
+    window.__TAURI_INTERNALS__.invoke('plugin:event|emit', { event: 'tt://tomato-ready', payload: { userAgent: 'aviso-cedo', renderer: '', pintado: true } });
+  }
+  const ate = performance.now() + 2500;
+  while (performance.now() < ate);
 }

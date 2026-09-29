@@ -32,6 +32,11 @@
 //                               min) com o estado dado: id@restante correndo,
 //                               id~restante pausado (ms; negativo depois do
 //                               zero, já com o fim disparado)
+//   ?validacao=asking|timeout|revert
+//                               M52: o retrato da validação do Full que o
+//                               full_validation_get devolve: a pergunta (10 s
+//                               a partir da abertura) ou a oferta do modo
+//                               opaco (depois do prazo ou do Reverter)
 //   ?cronometro=running@1870[&voltas=900,1500]
 //                               M34: o cronômetro correndo (ou paused@ms,
 //                               pausado) com o decorrido dado, em ms, e as
@@ -499,9 +504,62 @@ const handlers = {
   },
   'plugin:window|minimize': () => (console.info('[prévia] minimizar'), null),
   'plugin:window|close': () => (console.info('[prévia] fechar'), null),
+  // M50: os comandos do Full só anotam o pedido.
+  show_main: ({ route = null } = {}) => (window.__TOMATITO_PREVIEW_COMANDOS__.push(`show_main:${route}`), null),
+  // M54: a região só é anotada (quantos retângulos), sem compositor.
+  set_tomato_region: ({ strips }) => (window.__TOMATITO_PREVIEW_COMANDOS__.push(`set_tomato_region:${strips.length}`), 'applied'),
+  // M57: a Compatibilidade X11. Com ?x11=wayland (a opção desligada e a
+  // valer), ?x11=ativa (o app aberto pelo Xwayland) ou ?x11=sem-xwayland; sem
+  // o parâmetro, a opção não aparece (como fora do Wayland).
+  x11_compat_get: () => {
+    const x = params.get('x11');
+    return { disponivel: Boolean(x), ativa: x === 'ativa', xwayland: x !== 'sem-xwayland' };
+  },
+  app_restart: () => (window.__TOMATITO_PREVIEW_COMANDOS__.push('app_restart'), null),
+  tomato_debug_size: ({ size }) => (window.__TOMATITO_PREVIEW_COMANDOS__.push(`tomato_debug_size:${size}`), null),
+  // M51: o switch_window_mode grava o tema como o Rust (full, ou o
+  // lastNormalTheme na saída) e emite tt://settings; não há outra janela.
+  switch_window_mode: ({ full }) => {
+    window.__TOMATITO_PREVIEW_COMANDOS__.push(`switch_window_mode:${full}`);
+    configuracoes.theme = full ? 'full' : configuracoes.lastNormalTheme;
+    normalizarConfiguracoes(configuracoes);
+    setTimeout(() => emit('tt://settings', structuredClone(configuracoes)));
+    return null;
+  },
+  // M52: a validação do Full (window/validacao.rs), sem o prazo: a pergunta
+  // fica até a resposta. As respostas seguem o Rust (Manter e o modo opaco
+  // fecham; Reverter vira a oferta do B3; "Agora não" fecha a oferta).
+  full_validation_get: () => structuredClone(validacao.retrato),
+  full_validation_answer: ({ answer }) => {
+    window.__TOMATITO_PREVIEW_COMANDOS__.push(`full_validation_answer:${answer}`);
+    const estado = validacao.retrato.state;
+    const trocar = (r) => {
+      validacao.retrato = { seq: validacao.retrato.seq + 1, ...r };
+      setTimeout(() => emit('tt://full-validation', structuredClone(validacao.retrato)));
+    };
+    if (answer === 'keep' && estado === 'asking') trocar({ state: 'none' });
+    else if (answer === 'revert' && estado === 'asking') trocar({ state: 'reverted', reason: 'revert' });
+    else if (answer === 'dismiss' && estado === 'reverted') trocar({ state: 'none' });
+    else if (answer === 'opaque') {
+      configuracoes.fullMode = 'opaque';
+      trocar({ state: 'none' });
+    }
+    return structuredClone(validacao.retrato);
+  },
 };
 
-mockWindows('main');
+// M52: o retrato inicial da validação (?validacao=).
+const validacao = {
+  retrato: (() => {
+    const p = params.get('validacao');
+    if (p === 'asking') return { seq: 1, state: 'asking', deadlineMs: Date.now() + 10000, seconds: 10 };
+    if (p === 'timeout' || p === 'revert') return { seq: 1, state: 'reverted', reason: p };
+    return { seq: 0, state: 'none' };
+  })(),
+};
+
+// M50: a página do tomate (/tomato.html) é a janela `tomato`.
+mockWindows(location.pathname.includes('tomato') ? 'tomato' : 'main');
 mockIPC(
   (cmd, args) => {
     const h = handlers[cmd];

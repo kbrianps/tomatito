@@ -77,6 +77,8 @@ export const ICONES = Object.freeze([
   { nome: 'arrow_minimize', estilo: 'regular', tamanhos: [20] },
   { nome: 'clock', estilo: 'regular', tamanhos: [20] },
   { nome: 'power', estilo: 'regular', tamanhos: [20] },
+  // M57: o cartão "Compatibilidade X11" das Configurações, na grade de 20
+  { nome: 'window_wrench', estilo: 'regular', tamanhos: [20] },
 ]);
 
 /** Os arquivos da lista, no formato do pacote: `play_16_filled.svg`. */

@@ -315,6 +315,16 @@ export default Object.freeze({
       }),
       marcas: 'Interface inspirada no Fluent Design. Windows e Segoe são marcas da Microsoft. O Tomatito não é afiliado à Microsoft.',
     }),
+    // M57: a opção avançada do plano B2 (views/opcao-x11.js).
+    avancado: 'Avançado',
+    x11: Object.freeze({
+      titulo: 'Compatibilidade X11',
+      descricao:
+        'Abre o Tomatito pelo Xwayland, para o tomate poder ficar sempre na frente. Com escala fracionária, o texto pode ficar borrado.',
+      proximoInicio: 'Vale a partir do próximo início do Tomatito.',
+      reiniciar: 'Reiniciar agora',
+      semXwayland: 'Esta sessão não tem Xwayland, e a opção fica sem efeito.',
+    }),
   }),
   // Unidades por extenso, por categoria do Intl.PluralRules('pt-BR')
   // (format.js): o aria-valuetext do seletor de minutos ("25 minutos").
@@ -325,6 +335,67 @@ export default Object.freeze({
     palavras: Object.freeze({
       minutos: Object.freeze({ one: 'minuto', other: 'minutos' }),
       horas: Object.freeze({ one: 'hora', other: 'horas' }),
+    }),
+  }),
+  // M50: o tomate do Tomatito Full (src/tomato.js; PLANO.md, 5.10). O rótulo
+  // do estado vai em caixa alta pelo CSS. A contagem usa o vocabulário da tela
+  // Foco (foco.andamento: "Período de foco (1 de 2)", "A seguir: foco de 25
+  // min"), e não o "Sessão 2 de 4" do protótipo; os botões de sessão reusam os
+  // textos de lá (Iniciar sessão de foco, Pausar, Retomar, Encerrar sessão).
+  tomate: Object.freeze({
+    // Curtos: o rótulo fica entre os dois botões dos ombros, e a 240 px cabem
+    // uns 9 caracteres (o "Intervalo" do protótipo).
+    estados: Object.freeze({
+      idle: 'Pronto',
+      focus: 'Foco',
+      break: 'Intervalo',
+      paused: 'Pausado',
+      completed: 'Concluída',
+    }),
+    // Ocioso e concluída: a duração da sessão ("Sessão de 30 min").
+    sessaoDe: (min) => `Sessão de ${min} min`,
+    voltar: 'Voltar ao modo normal',
+    configuracoes: 'Configurações',
+    // "Pular" leva à próxima fase; na última (ou sem sessão), fica desabilitado.
+    pular: Object.freeze({
+      break: 'Pular para o intervalo',
+      focus: 'Pular para o foco',
+      nenhum: 'Pular',
+    }),
+    // O rótulo do tempo (role="timer"), uma vez por minuto (3.8), com os
+    // plurais de foco.andamento.restantes: "18 minutos restantes".
+    pausadoNoRotulo: (restantes) => `${restantes}, pausado`,
+    // M56: o menu nativo do botão direito (5.10), com os mesmos textos dos
+    // botões para as ações do foco (vêm da vista, lib/tomate.js).
+    menu: Object.freeze({
+      tamanho: 'Tamanho',
+      tamanhos: Object.freeze({ 240: 'Pequeno', 280: 'Médio', 320: 'Grande' }),
+      // Só no Windows e no X11; no Wayland, a dica abaixo.
+      sempreNaFrente: 'Sempre na frente',
+      minimizar: 'Minimizar',
+      fechar: 'Fechar',
+    }),
+    // M56: no Wayland, mostrada uma vez, nas Configurações (5.7), com o
+    // Full ativo. O nome do item é o do GNOME em pt-BR.
+    dicaSempreNaFrente:
+      'No GNOME, use Alt+Espaço → Sempre na frente das outras janelas para manter o tomate por cima',
+    // M52: a validação com reversão (5.9), na janela principal, no padrão da
+    // troca de resolução de tela; e, depois de voltar, a oferta do modo opaco
+    // (o plano B3).
+    validacao: Object.freeze({
+      titulo: 'O tomate aparece com o fundo transparente?',
+      explicacao: 'Se ele aparece dentro de um quadrado preto, branco ou vazio, escolha Reverter.',
+      prazo: (s) => `Voltando ao tema anterior em ${s} ${s === 1 ? 'segundo' : 'segundos'}.`,
+      manter: 'Manter',
+      reverter: 'Reverter',
+      opacoTitulo: 'Usar o modo opaco?',
+      revertida: Object.freeze({
+        timeout: 'Sem resposta, o Tomatito voltou ao tema anterior.',
+        revert: 'O Tomatito voltou ao tema anterior.',
+      }),
+      opacoExplicacao: 'No modo opaco, o tomate aparece dentro de um quadrado escuro e não depende da transparência.',
+      usarOpaco: 'Usar o modo opaco',
+      agoraNao: 'Agora não',
     }),
   }),
 });

@@ -10,21 +10,46 @@
 //! `object:announcement`. O JS decide o texto (lib/a11y.js) e chama este
 //! comando só no Linux; no Windows, a região `aria-live` do WebView2 fala com
 //! o Narrador, e o comando não faz nada.
+//!
+//! Junção com o Full (M50–M57): a `main` e a `tomato` ligam o mesmo anúncio
+//! das fases (lib/a11y.js), e as duas chamam o comando a cada fase. Só a
+//! chamada da janela que está na frente vale ([`janela_do_anuncio`]): a
+//! `tomato` no Full, a `main` fora dele. Assim o Orca lê uma vez só, e no
+//! início direto no Full (sem a `main`) ele lê pelo tomate.
 
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager, WebviewWindow};
+
+use crate::settings::{SettingsStore, ThemePref};
+use crate::window::{TOMATO_LABEL, main_window};
 
 /// `a11y_announce{text}`: pede ao leitor de tela que leia `text` uma vez.
 /// Postado na thread principal (a do GTK), sem esperar.
 #[tauri::command]
-pub fn a11y_announce(app: AppHandle, text: String) {
-    anunciar(&app, text);
+pub fn a11y_announce(app: AppHandle, window: WebviewWindow, text: String) {
+    let full = app
+        .try_state::<SettingsStore>()
+        .is_some_and(|s| s.get().theme == ThemePref::Full);
+    let tomate = app.get_webview_window(TOMATO_LABEL).is_some();
+    if window.label() != janela_do_anuncio(full, tomate) {
+        return;
+    }
+    anunciar(&app, window.label().to_owned(), text);
+}
+
+/// A janela cujo anúncio vale: a `tomato` no Full, se ela existe; senão, a
+/// `main`.
+pub fn janela_do_anuncio(full: bool, tomate_aberto: bool) -> &'static str {
+    if full && tomate_aberto {
+        TOMATO_LABEL
+    } else {
+        main_window::LABEL
+    }
 }
 
 #[cfg(target_os = "linux")]
-fn anunciar(app: &AppHandle, text: String) {
+fn anunciar(app: &AppHandle, rotulo: String, text: String) {
     use gtk::glib::prelude::ObjectExt;
     use gtk::prelude::WidgetExt;
-    use tauri::Manager;
 
     let texto = text.trim().to_owned();
     if texto.is_empty() {
@@ -32,7 +57,7 @@ fn anunciar(app: &AppHandle, text: String) {
     }
     let alca = app.clone();
     let r = app.run_on_main_thread(move || {
-        let Some(janela) = alca.get_webview_window("main") else {
+        let Some(janela) = alca.get_webview_window(&rotulo) else {
             return;
         };
         let Ok(gtk) = janela.gtk_window() else {
@@ -50,4 +75,18 @@ fn anunciar(app: &AppHandle, text: String) {
 }
 
 #[cfg(not(target_os = "linux"))]
-fn anunciar(_app: &AppHandle, _text: String) {}
+fn anunciar(_app: &AppHandle, _rotulo: String, _text: String) {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn anuncio_pela_janela_da_frente() {
+        assert_eq!(janela_do_anuncio(true, true), TOMATO_LABEL);
+        // O tomate fechado pelo compositor: a `main`, se existir.
+        assert_eq!(janela_do_anuncio(true, false), main_window::LABEL);
+        assert_eq!(janela_do_anuncio(false, true), main_window::LABEL);
+        assert_eq!(janela_do_anuncio(false, false), main_window::LABEL);
+    }
+}

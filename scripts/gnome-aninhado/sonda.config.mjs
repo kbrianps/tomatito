@@ -27,7 +27,10 @@ export default {
   ...base,
   root: fileURLToPath(new URL('../..', import.meta.url)),
   configFile: false,
-  server: { ...base.server, port: 5173, strictPort: true },
+  // TT_PORT (padrão 5173): a porta do Vite, a mesma do devUrl com que o
+  // binário de debug foi compilado (TAURI_CONFIG, no rodar.sh). Outra porta
+  // deixa dois testes rodarem em paralelo, cada um na sua worktree.
+  server: { ...base.server, port: Number(process.env.TT_PORT) || 5173, strictPort: true },
   plugins: [
     ...(base.plugins ?? []),
     {

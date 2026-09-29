@@ -1089,3 +1089,223 @@ O que só você consegue: o seu olho no diálogo do app instalado, e ler se os t
 3. [ ] Clique em "Ver avisos": abre o diálogo "Avisos de terceiros" com o texto começando por "# Avisos de terceiros". Role com a roda do mouse e com as setas, Page Down e End: o texto vai até o fim (os crates Rust), sem rolagem para o lado.
 4. [ ] Aperte Esc: o diálogo fecha e o foco volta ao "Ver avisos". Clique em "Ver licença": abre a licença da Inter ("Copyright 2016 The Inter Project Authors", "SIL OPEN FONT LICENSE Version 1.1"). Clique em "Fechar".
 5. [ ] Troque o tema para Claro e Escuro e abra "Ver avisos" de novo: o texto legível nos dois. Feche o app (Ctrl+Q).
+
+## M50. Tomate definitivo ligado ao motor
+
+O que já foi conferido sem você:
+- `npm test` e `cargo test`: o que o tomate mostra em cada estado (ocioso, foco, intervalo, pausado, concluída), o restante pelo `endsAt`, a contagem com o vocabulário da tela Foco, as regras do `tomato.html` e do `tomato.css` e a janela da 5.3.
+- Roteiro aninhado `tomate` (o app de verdade no GNOME Shell 50.1 aninhado, com a Mesa da Intel, 28 conferências): cantos transparentes pixel a pixel; arraste pelo corpo, pelo cabinho, pelo cálice e pelo tempo; os botões comandando o motor; o tomate e a `main` com o mesmo tempo; fechar e reabrir sem zerar; Configurações e "Voltar ao modo normal".
+- Roteiro aninhado `tomate-csp` (o binário do `npm run build:debug`, com a CSP): o console da `tomato` vazio, sem nenhum "Refused to", na partida e ao usar os botões.
+- Deuteranopia e protanopia emuladas no Chrome: o cálice do protótipo (`#35603C`) sumia no Intervalo; trocado por `#789F6B` (`docs/capturas/m50-deuteranopia.png`).
+
+O que só você consegue: ver o tomate de verdade sobre a sua área de trabalho, arrastar com o seu mouse e olhar o cálice com a emulação.
+
+### Para conferir (uns 6 minutos)
+
+1. [ ] `cd ~/dev/tomatito && npm run dev:app`. Na janela, abra o DevTools (botão direito → Inspecionar → Console), digite `location.hash = '#/dev'` e, no cartão "Tomate (Full)", clique em "Abrir o tomate".
+2. [ ] O tomate aparece com 280 px, **sem nenhum retângulo em volta**: nos quatro cantos, e em volta do corpo, aparece a sua área de trabalho (ou a janela de trás), sem preto, branco ou cinza. Embaixo do corpo há uma sombra suave.
+3. [ ] Arraste o tomate pelo corpo (numa parte vermelha sem botão), pelo cabinho e pelas folhinhas verdes de cima: ele acompanha o mouse nos três. Clicar num canto transparente ainda fica no tomate (a região de entrada é do M53 e do M54).
+4. [ ] O tomate mostra "PRONTO", "30:00" e "Sessão de 30 min", sem anel. Clique no botão claro do meio: começa uma sessão de 30 min ("FOCO", "30:00" descendo, "Período de foco (1 de 1)"), e a tela Foco da janela principal mostra a mesma sessão, com "30 min" no mostrador. Os minutos da janela principal são os do tomate arredondados para cima (com 29:41 no tomate, "30 min" na principal).
+5. [ ] Clique de novo no botão do meio: "PAUSADO", o corpo fica mais apagado e a janela principal mostra "Pausado". Clique mais uma vez para retomar.
+6. [ ] Feche o tomate com Alt+F4 (com ele ativo). Espere uns 5 s e abra de novo pelo botão do `#/dev`: o tempo continua de onde devia (não voltou a 30:00).
+7. [ ] Clique no quadrado da esquerda embaixo ("Encerrar sessão"): volta a "PRONTO". Na janela principal, inicie uma sessão de 60 min: o tomate mostra "Período de foco (1 de 2)". Clique no botão da direita embaixo ("Pular para o intervalo"): o corpo fica vinho, o anel verde-claro, "INTERVALO" e "A seguir: foco de 27 min".
+8. [ ] Engrenagem (em cima, à direita): a janela principal vem para a frente, nas Configurações, e o tomate continua aberto. O ícone de janela (em cima, à esquerda, "Voltar ao modo normal"): a janela principal vem para a frente e o tomate fecha.
+9. [ ] Deuteranopia: com o `npm run dev:app` aberto (o Vite serve na 5173), abra no Chrome `http://localhost:5173/tomato.html` (a página fica sem dados do app; basta ver o desenho). F12 → menu ⋮ → More tools → Rendering → "Emulate vision deficiencies" → Deuteranopia. As folhinhas do cálice continuam visíveis contra o corpo. Repita com Protanopia. Volte para "No emulation".
+10. [ ] Feche o app (Ctrl+C no terminal).
+
+## M51. Alternar para o Full e de volta
+
+O que já foi conferido sem você:
+- `npm test` e `cargo test`: a escolha do Full e a saída pelas Configurações (esperando o `tt://settings` da saída), a ordem do "Entrar" e do "Sair" da 5.7, o limite de 2 s do `tt://tomato-ready`, o início só com a `tomato` e a chave de validação.
+- Prévia no Chrome (`node scripts/preview/aparencia.mjs`, 42 conferências): a opção "Tomatito Full" com o tomate em miniatura, e a ida e a volta pela Aparência em cada tema de partida.
+- Roteiro aninhado `full` (o app de verdade no GNOME Shell 50.1 aninhado, 20 conferências): 20 idas e voltas com uma sessão correndo, sem clarão quadro a quadro (949 quadros do tomate, 820 da janela principal), sem zerar o timer e sem crash; a memória do app e do WebKit +0,7%; o Claro escolhido com o Full ativo; o início direto no Full.
+- Correções da verificação (`docs/decisoes.md`, M51, item 13; 21 conferências): a janela principal só some quando o tomate já está desenhado, também quando a página do tomate passa do limite de 2 s (com a página atrasada de propósito), e o registro do app é lido em UTF-8, de modo que o limite atingido aparece na conferência.
+
+O que só você consegue: ver a troca na sua tela e com o seu teclado.
+
+Desde o M51, o botão "Abrir o tomate" do `#/dev` (passo 1 da seção M50) esconde a janela principal: para os passos do M50 que olham as duas janelas, traga a principal de volta pela engrenagem do tomate.
+
+### Para conferir (uns 5 minutos)
+
+1. [ ] `cd ~/dev/tomatito && npm run dev:app`. Vá em Configurações: em "Tema do aplicativo" há seis opções, e "Tomatito Full" mostra um tomate sobre um fundo cinza.
+2. [ ] Na tela Foco, inicie uma sessão. Volte a Configurações e clique em "Tomatito Full": o tomate aparece e a janela principal some, **sem nenhum quadro branco, preto ou cinza** no lugar do tomate, sem piscar e sem um instante em que nenhuma das duas está na tela. O tomate mostra o mesmo tempo que a tela Foco mostrava.
+3. [ ] Com o tomate ativo (clique nele, fora dos botões, se precisar), aperte Esc: a janela principal volta, em Configurações, no tema de antes, e o tomate fecha. O tempo continua de onde estava.
+4. [ ] Entre no Full de novo e clique no ícone de janela (em cima, à esquerda do tomate, "Voltar ao modo normal"): o mesmo do passo 3.
+5. [ ] Faça umas 5 idas e voltas seguidas, alternando o Esc e o botão: nenhum clarão, o tempo nunca volta ao começo.
+6. [ ] No Full, clique na engrenagem do tomate: a janela principal aparece em Configurações, com o tomate ainda aberto e "Tomatito Full" marcado. Clique em "Claro": o tomate fecha e a janela principal fica no Claro.
+7. [ ] Escolha "Tomatito Full" de novo e feche o app (Ctrl+C no terminal). Rode `npm run dev:app` outra vez: **só o tomate aparece**, sem a janela principal. Clique na engrenagem: a principal aparece já em Configurações, no Claro. Aperte Esc no tomate: ele fecha e o app fica no Claro.
+8. [ ] (Depois da junção, com o build de uso diário instalado e os outros apps WebKit fechados, como o GNOME Web.) Abra o Tomatito instalado, rode no terminal o comando abaixo, faça 20 idas e voltas (passos 2 e 3) e rode de novo. O segundo número é no máximo 10% maior que o primeiro.
+
+   ```bash
+   ps -o rss= -p "$(pgrep -d, -f 'tomatito|WebKitWebProcess|WebKitNetworkProcess')" | awk '{s+=$1} END{print s" KB"}'
+   ```
+9. [ ] Feche o app (Ctrl+C no terminal).
+
+## M52. Validação com reversão e B3
+
+O que já foi conferido sem você:
+- `npm test` e `cargo test`: o diálogo (a pergunta, a contagem, a oferta do modo opaco, o Esc, a ordem dos retratos e o foco que não volta ao rádio), o `full_mode()` com e sem a `WEBKIT_DISABLE_DMABUF_RENDERER` (`"1"`, vazia, `"0"`) e com `fullMode = opaque`, a janela opaca da 5.3 e a ordem da entrada com a pergunta.
+- Prévia no Chrome: o diálogo nas duas perguntas, com o foco no botão de destaque e o Esc levando da pergunta à oferta.
+- Roteiro aninhado `validacao` (o app de verdade no GNOME Shell 50.1 aninhado, 22 conferências): sem resposta, o tomate fechou 9,9 s depois de a pergunta aparecer, a janela principal voltou ao Lite e ofereceu o modo opaco, com a sessão de foco intacta; Reverter, o Esc, "Agora não", Manter (a chave gravada), a entrada seguinte sem pergunta, "Usar o modo opaco", o início direto no Full (a principal nasce com a pergunta) e, com `WEBKIT_DISABLE_DMABUF_RENDERER=1`, o tomate opaco sem pergunta e arrastável pelo canto. Capturas: `docs/capturas/m52-app-pergunta.png`, `m52-app-oferta.png` e `m52-app-opaco.png`.
+
+O que só você consegue: ver o tomate na sua área de trabalho enquanto a pergunta está na tela, e o modo opaco com o seu olho.
+
+O `settings.json` do app de desenvolvimento fica em `~/.local/share/io.github.kbrianps.tomatito.dev/`. Os comandos `sed` abaixo só mexem nele, e só com o app fechado.
+
+### Para conferir (uns 6 minutos)
+
+1. [ ] Com o app fechado, zere a validação (se o arquivo ainda não existe, pule): `sed -i 's/"fullValidated": *"[^"]*"/"fullValidated": ""/; s/"fullMode": *"opaque"/"fullMode": "auto"/' ~/.local/share/io.github.kbrianps.tomatito.dev/settings.json`. Rode `cd ~/dev/tomatito && npm run dev:app`.
+2. [ ] Em Configurações, clique em "Tomatito Full": o tomate aparece **com o fundo transparente** e a janela principal **continua na tela**, com "O tomate aparece com o fundo transparente?", Manter, Reverter e "Voltando ao tema anterior em 10 segundos." contando.
+3. [ ] Não responda: em 10 s o tomate fecha, a janela principal fica no tema de antes e pergunta "Usar o modo opaco?" com "Sem resposta, o Tomatito voltou ao tema anterior.". Clique em "Agora não": o diálogo fecha e **nada mais acontece** (o Full não abre de novo).
+4. [ ] Clique em "Tomatito Full" de novo e em Reverter: a volta é na hora, com a mesma oferta. Aperte Esc: a oferta fecha.
+5. [ ] Clique em "Tomatito Full" e, com a pergunta na tela, aperte Esc: é o mesmo que Reverter.
+6. [ ] Clique em "Tomatito Full" e em Manter: a janela principal some e fica só o tomate. Aperte Esc no tomate e entre no Full de novo: **sem pergunta**, como no M51.
+7. [ ] Feche o app. Zere de novo a validação (o comando do passo 1), abra o app, entre no Full, clique em Reverter e em "Usar o modo opaco": o tomate aparece **dentro de um quadrado escuro** (vinho quase preto), sem pergunta. Arraste pelo canto do quadrado: o tomate anda junto. Aperte Esc.
+8. [ ] Feche o app e volte ao transparente: `sed -i 's/"fullMode": *"opaque"/"fullMode": "auto"/' ~/.local/share/io.github.kbrianps.tomatito.dev/settings.json`. Rode `WEBKIT_DISABLE_DMABUF_RENDERER=1 npm run dev:app` e entre no Full: o tomate abre opaco, sem pergunta, como no passo 7. (A janela principal pode sair em branco com essa variável; se sair, anote e siga.)
+9. [ ] Feche o app (Ctrl+C no terminal).
+
+## M53. Faixas da região
+
+O que já foi conferido sem você:
+- `npm test`: as faixas de uma máscara, o `mergeRows` (a união não muda), a rasterização com o traço de folga e as formas iguais às do `tomato.html`.
+- `node scripts/preview/regiao.mjs` no Chrome headless e no WebKitGTK fora da tela (46 conferências): a 240, 280 e 320 px, as faixas cobrem todo pixel que o tomate pinta, com folga de até 2 px, em 125, 146 e 162 retângulos, e o cálculo leva de 1 a 4 ms; nas escalas do Windows (1,25 e 1,5), o mesmo, com até 249 retângulos. Capturas com a sobreposição: `docs/capturas/m53-regiao-chrome-280.png` e `m53-regiao-webkit-280.png`.
+
+O que só você consegue: ver a sobreposição por cima do tomate no app de verdade. A região ainda não é aplicada (o clique no canto só atravessa a partir do M54).
+
+### Para conferir (uns 2 minutos)
+
+1. [ ] Rode `cd ~/dev/tomatito && npm run dev:app`. Na janela, abra o DevTools (botão direito → Inspecionar → Console), digite `location.hash = '#/dev'` e, no cartão "Tomate (Full)", ligue "Mostrar as faixas da região no tomate (M53)".
+2. [ ] Clique em "Abrir o tomate" (se aparecer a pergunta do M52, clique em Manter): por cima do tomate há faixas em dois tons de ciano que cobrem o corpo, o cabinho e as sépalas, passando um pouco da borda, e no canto de cima "146 retângulos · … ms · 280 px", com menos de 20 ms. Nada de ciano sobre a sombra de baixo.
+3. [ ] Aperte Esc, desligue o interruptor e abra o tomate de novo: sem as faixas. Aperte Esc e feche o app (Ctrl+C no terminal).
+
+## M54. Região no Linux
+
+O que já foi conferido sem você:
+- `npm test` e `cargo test`: o `set_tomato_region` só aceita a `tomato` e faixas dentro da janela (de 1 a 1000), ignora o modo opaco, e o `Resized` só pede a região de novo quando o tamanho muda; a região vai no widget, nunca na `GdkWindow`, e a página a manda antes do primeiro aviso (e, portanto, antes do show).
+- `TT_PORT=5174 bash scripts/gnome-aninhado/rodar.sh regiao` no GNOME Shell aninhado (30 conferências): no M (280), no P (240) e no G (320), clicar nos quatro cantos, ao lado do corpo, acima do cabinho, no ombro e na sombra de baixo chega à `main` atrás; clicar no corpo e na sépala fica no tomate; arrastar pelo corpo, pelo cabinho e pelo cálice move a janela; os botões iniciam, pausam e encerram sem mexer nela. No log do `WAYLAND_DEBUG`, a página manda a região antes do show, e o primeiro `wl_surface.set_input_region` do tomate vem depois do show e antes do primeiro quadro; depois de cada troca, sai um novo, com a área da região nova. Capturas da rodada: `docs/capturas/m54-240.png`, `m54-280.png` e `m54-320.png`.
+
+O que só você consegue: clicar no canto do tomate na sua tela, com uma janela de verdade atrás (um terminal ou o Nautilus), e ver o comando do "Pronto quando" na sua sessão.
+
+### Para conferir (uns 4 minutos)
+
+1. [ ] Rode, num terminal (depois da junção, em `~/dev/tomatito` e só com `npm run dev:app`):
+   ```bash
+   cd ~/dev/tomatito && WAYLAND_DEBUG=client npm run dev:app -- --config '{"build":{"devUrl":"http://localhost:5174","beforeDevCommand":"npm run dev -- --port 5174 --strictPort"}}' 2>&1 | tee /tmp/tt-m54.log | grep --line-buffered set_input_region
+   ```
+   A saída corre bastante: o GTK manda a região das duas janelas a cada `configure` (foco, arraste). Deixe correndo.
+2. [ ] Na janela, abra o DevTools (botão direito → Inspecionar → Console), digite `location.hash = '#/dev'` e clique em "Abrir o tomate" (se aparecer a pergunta do M52, clique em Manter).
+3. [ ] Ponha o tomate por cima de um terminal ou do Nautilus e clique num canto da caixa do tomate, fora do desenho (uns 5 px para dentro do canto): o clique vai para a janela de trás, que vem para a frente. Clique também logo acima do cabinho e na sombra embaixo do corpo: o mesmo.
+4. [ ] Arraste o tomate pelo corpo e pelas folhas do cálice: ele anda junto. Clique em Iniciar e em Pausar no tomate: o tempo começa e para, e a janela não se mexe.
+5. [ ] Traga a `main` de volta (a engrenagem do tomate) e, no cartão "Tomate (Full)" do `#/dev`, clique em "P (240)" e depois em "G (320)". O tomate encolhe e cresce, e o clique no canto continua atravessando nos dois tamanhos.
+6. [ ] Aperte Esc no tomate, feche o app (Ctrl+C no terminal) e rode `node scripts/gnome-aninhado/resumo-regiao.mjs --log /tmp/tt-m54.log`: as linhas "ok" dizem que a região chegou antes do primeiro quadro e de novo depois de cada troca, com 157, 133 e 175 retângulos no M, no P e no G (o cairo reparte em bandas os 146, 125 e 162 que a página manda; a área é a mesma).
+
+## M55. Região no Windows e A/B do `noRedirectionBitmap`
+
+O que já foi conferido sem você:
+- `cargo clippy --target x86_64-pc-windows-msvc`: o código do Windows (`src-tauri/src/window/region_windows.rs`, o `SetWindowRgn` e a borda do DWM) compila e passa no clippy, com as assinaturas do crate `windows` 0.62.
+- `npm test` e `cargo test`: a região vai pela thread principal, só as regiões temporárias são apagadas, a borda sai antes do show, e a variável do A/B só vale no build de debug e nunca na janela opaca.
+- Chrome headless (o Chromium do WebView2): a página manda 146 retângulos a 100% e 219 a 150% (280 px), e, numa troca de escala, usa o tamanho físico que o Rust manda, mesmo antes de o `devicePixelRatio` mudar.
+
+O que só você consegue: tudo o que acontece de fato no Windows (esta máquina não tem Windows). É a ida ao Windows do M55, junto com as pendências 103, 106 e 109.
+
+### Para conferir (uns 30 minutos, no Windows 11; repetir no Windows 10 se tiver um)
+
+Em cada rodada, no PowerShell, na pasta do projeto:
+
+```powershell
+# Lado A (o padrão): com o no_redirection_bitmap
+Remove-Item Env:TOMATITO_AB_NRB -ErrorAction SilentlyContinue; npm run dev:app
+# Lado B: sem o no_redirection_bitmap
+$env:TOMATITO_AB_NRB = "0"; npm run dev:app
+```
+
+No terminal, a linha `tomate pronto` termina com `(A/B: com no_redirection_bitmap)` ou `(A/B: sem no_redirection_bitmap)`: confira que é o lado que você quis.
+
+1. [ ] Escala de 100% (Configurações > Sistema > Tela > Escala). Rode o lado A. No DevTools da `main` (F12), `location.hash = '#/dev'` e "Abrir o tomate" (se aparecer a pergunta do M52, Manter). Olhe o instante em que o tomate aparece: **nenhum clarão** (retângulo branco ou preto piscando) na criação.
+2. [ ] Com uma janela atrás (o Explorador de Arquivos ou o Bloco de Notas), clique nos quatro cantos da caixa do tomate (uns 5 px para dentro), logo acima do cabinho e ao lado do corpo: o clique vai para a janela de trás. Clique no corpo e nas folhas: fica no tomate.
+3. [ ] Olhe o contorno: **sem retângulo** em volta, **sem a borda de 1 px** do Windows 11 e sem cantos arredondados de janela. Os cantos da caixa ficam totalmente transparentes.
+4. [ ] Arraste o tomate pelo corpo e pelo cálice; clique em Iniciar e em Pausar: os botões funcionam, e a janela não se mexe com eles.
+5. [ ] No `#/dev` da `main`, "P (240)" e depois "G (320)": o tomate encolhe e cresce, e o passo 2 continua valendo nos dois tamanhos (a região se refaz).
+6. [ ] Olhe a borda do desenho de perto (a Lupa do Windows, Win + "+"): a borda do tomate não sai cortada nem serrilhada além do antisserrilhado normal. Se sair cortada, anote "folga 2" na tabela (a folga padrão é 1 px; `docs/decisoes.md`, M53, item 2, e M55, item 7).
+7. [ ] Esc no tomate, feche o app e repita os passos 1 a 6 com o lado B.
+8. [ ] Mude a escala para 150% e repita os passos 1 a 7. Com o tomate aberto, mude a escala de 150% para 100% e de volta: o passo 2 continua valendo (a região vem pelo tamanho físico).
+9. [ ] Se tiver um segundo monitor com outra escala, arraste o tomate de um para o outro: o passo 2 continua valendo nos dois.
+10. [ ] Anote o resultado na tabela abaixo e mande (ou cole aqui). Com "falha" no lado A e "ok" no lado B, o padrão passa a ser sem o `no_redirection_bitmap`; com falha de transparência nos dois lados (fundo preto ou branco) no Windows 10 ou numa placa AMD, é o plano B só do Windows (5.9; `docs/decisoes.md`, M55, item 9).
+
+| Sistema | Escala | Lado | Clique atravessa | Sem retângulo nem borda | Sem clarão na criação | Borda do desenho | Observações |
+|---|---|---|---|---|---|---|---|
+| Windows 11 | 100% | A (com) | | | | | |
+| Windows 11 | 100% | B (sem) | | | | | |
+| Windows 11 | 150% | A (com) | | | | | |
+| Windows 11 | 150% | B (sem) | | | | | |
+| Windows 10 | 100% | A (com) | | | | | |
+| Windows 10 | 100% | B (sem) | | | | | |
+| Windows 10 | 150% | A (com) | | | | | |
+| Windows 10 | 150% | B (sem) | | | | | |
+
+Sem Windows 10: anote "sem Windows 10" e preencha só as linhas do 11 (o plano aceita).
+
+## M56. P/M/G, menu, atalhos e "Sempre na frente"
+
+O que já foi conferido sem você:
+- `npm test` e `cargo test`: a lista do menu (completa, com os textos dos botões, e sem o "Sempre na frente" no Wayland), a criação item a item (o jeito que não perde as ações), a dica do Alt+Espaço (quando aparece e que aparece uma vez), o corte do Windows 11 para o padrão do `tomatoOnTop`, e as regras do repositório (o tamanho e o "Sempre na frente" só pelo `settings_set`, nunca esconder o tomate, os atalhos pelas regras da `main`).
+- `cargo clippy --target x86_64-pc-windows-msvc`: o "Sempre na frente" e a leitura da versão do Windows compilam.
+- `bash scripts/gnome-aninhado/rodar.sh menu-tomate` no GNOME Shell aninhado (27 conferências): o menu abre pelo botão direito, completo (`docs/capturas/m56-menu-completo.png`); Tamanho → Grande e → Pequeno trocam o tomate, gravam a preferência e refazem a região; Minimizar, Fechar, Espaço, Ctrl+, e Esc funcionam; a dica aparece nas Configurações uma vez (`docs/capturas/m56-dica.png`); a volta ao Full abre no último tamanho.
+
+O que só você consegue: o menu e os atalhos na sua sessão, com o seu mouse e o seu teclado; e o "Sempre na frente" no Windows.
+
+### Para conferir no Linux (uns 4 minutos)
+
+1. [ ] Rode o app (depois da junção, em `~/dev/tomatito` e só com `npm run dev:app`):
+   ```bash
+   cd ~/dev/tomatito && npm run dev:app -- --config '{"build":{"devUrl":"http://localhost:5174","beforeDevCommand":"npm run dev -- --port 5174 --strictPort"}}'
+   ```
+   Em Configurações, escolha "Tomatito Full" (se aparecer a pergunta do M52, Manter).
+2. [ ] Clique com o botão direito no tomate: abre um menu escuro, com Iniciar sessão de foco (ou Pausar/Retomar), Pular, Encerrar sessão, Tamanho ›, Configurações, Voltar ao modo normal, Minimizar e Fechar. **Sem** "Sempre na frente" (no Wayland ele não funciona por código). Os itens de sessão acinzentados quando não fazem sentido, como os botões.
+3. [ ] Tamanho › Grande: o tomate cresce na hora; Tamanho › Pequeno: encolhe. Nos dois, o clique no canto da caixa continua atravessando para a janela de trás.
+4. [ ] Com o tomate em foco (clique no corpo), aperte Espaço: a sessão começa; Espaço de novo: pausa; de novo: retoma. Ctrl+, abre a janela principal nas Configurações, e na primeira vez aparece, logo abaixo de "Aparência", a frase "No GNOME, use Alt+Espaço → Sempre na frente das outras janelas para manter o tomate por cima". Feche e abra as Configurações de novo: a frase não volta.
+5. [ ] No tomate, Alt+Espaço → "Sempre na frente das outras janelas": o tomate fica por cima (é do GNOME, não do app).
+6. [ ] Menu → Minimizar: o tomate vai para a barra (ou o Alt+Tab); clique nele para voltar.
+7. [ ] Esc sai do Full; volte ao Full: o tomate abre no último tamanho escolhido.
+8. [ ] Menu → Fechar: o tomate fecha, e o ícone da bandeja continua; "Mostrar Tomatito" na bandeja o traz de volta.
+9. [ ] Pelo teclado: com o tomate em foco, a tecla de menu (ou Shift+F10) abre o mesmo menu, e as setas e o Enter escolhem.
+
+### Para conferir no Windows (uns 5 minutos, junto com a ida ao Windows do M55)
+
+1. [ ] Com o Full ativo, o menu do botão direito tem "Sempre na frente", marcado por padrão no Windows 11 (e desmarcado no Windows 10, se o `settings.json` ainda não tem a chave `tomatoOnTop`).
+2. [ ] Com ele marcado, clique numa outra janela (o Explorador) por cima do tomate: o tomate continua por cima. Desmarque: a outra janela passa a cobrir o tomate. Feche e abra o app: a escolha continua.
+3. [ ] Tamanho › Pequeno e › Grande: o tomate troca de tamanho, e o clique no canto continua atravessando (a região se refaz, como no passo 5 do M55).
+4. [ ] O menu aparece inteiro, sem ser cortado pela forma do tomate, e sem borda estranha.
+
+## M57. Compatibilidade X11 (plano B2, opcional)
+
+O que já foi conferido sem você:
+- `npm test` e `cargo test`: a regra do ambiente (ligar, manter no reinício, desligar e tirar o que o app pôs, ignorar sem Xwayland), a tela (quando aparece, o que grava, quando oferece o reinício) e as regras do repositório.
+- `cargo clippy --target x86_64-pc-windows-msvc`: compila no Windows (lá a opção não aparece).
+- `TT_X11=1 bash scripts/gnome-aninhado/rodar.sh x11` no GNOME Shell aninhado com o Xwayland (25 conferências): ligar a opção, "Reiniciar agora", o app volta como cliente X11, o tomate transparente e por cima pelo código, o "Sempre na frente" liga e desliga, o clique no canto do tomate atravessa, e desligar a opção volta ao Wayland (`docs/capturas/m57-tomate-x11.png`).
+
+O que só você consegue: ver na sua tela se o app pelo Xwayland fica nítido (com a sua escala) e se o tomate por cima e transparente fica bom no dia a dia.
+
+### Para conferir (uns 5 minutos)
+
+1. [ ] Compile o build de debug com a página embutida e rode o binário direto (e **não** pelo `npm run dev:app`: o reinício abre um processo novo, e o `tauri dev` acompanha só o primeiro, então pode encerrar o Vite quando ele sai, e o app novo abriria em branco):
+   ```bash
+   cd ~/dev/tomatito && npm run build:debug && /opt/cargo-target/tomatito/debug/tomatito
+   ```
+2. [ ] Em Configurações, antes do "Sobre", a seção "Avançado" tem o cartão "Compatibilidade X11", desligado. Ligue: aparece "Vale a partir do próximo início do Tomatito." e o botão "Reiniciar agora".
+3. [ ] Clique em "Reiniciar agora": a janela fecha e volta sozinha em poucos segundos. No terminal, a linha `[tomatito] linuxX11 ligada: GDK_BACKEND=x11`. Para ter certeza de que é X11: `xprop` no terminal e clique na janela do Tomatito (no Wayland puro, o `xprop` não consegue pegar a janela).
+4. [ ] Com a sua escala (se for fracionária, 125% ou 150%), o texto está nítido ou borrado? Anote; é o custo que a 5.9 prevê.
+5. [ ] Escolha "Tomatito Full" (se aparecer a pergunta do M52, Manter). O tomate aparece com os cantos transparentes. Clique no Nautilus ou num terminal por cima dele: o tomate continua por cima. O botão direito no tomate agora tem "Sempre na frente" (marcado); desmarque: a outra janela passa a cobrir o tomate. Marque de novo.
+6. [ ] O clique no canto da caixa do tomate chega à janela de trás (a região também vale no X11), **já no primeiro clique** depois de o app voltar pelo Xwayland (no aninhado, o primeiro clique numa janela X11 se perdia; `docs/decisoes.md`, M57, item 10).
+7. [ ] Saia do Full (Esc), volte às Configurações, desligue a opção e clique em "Reiniciar agora": o app volta pelo Wayland (a linha `linuxX11 desligada: GDK_BACKEND volta ao padrão` no terminal; o `xprop` não pega mais a janela).
+
+## Junção (M37–M46 com o Full, M50–M57)
+
+O que já foi conferido sem você: os testes, o clippy (Linux e Windows), o build e os roteiros aninhados listados em `docs/decisoes.md`, seção Junção.
+
+### Para conferir (uns 5 minutos)
+
+1. [ ] `cd ~/dev/tomatito && npm run dev:app`. Escolha "Tomatito Full" em Configurações. Com o tomate na tela, aperte Ctrl+Q: o app sai (sem ficar na bandeja).
+2. [ ] Abra de novo (ele volta no Full, só o tomate). Rode o app uma segunda vez em outro terminal (`/opt/cargo-target/tomatito/debug/tomatito`): a segunda abertura sai e o tomate vem para a frente.
+3. [ ] Com o Orca ligado (Super+Alt+S) e o Full ativo, inicie uma sessão pelo tomate: o Orca diz "Começou o período de foco…" uma vez só. Saia do Full (Esc) e pule a fase na tela Foco: de novo, uma vez só.
+4. [ ] Em Configurações, a seção "Avançado" (Compatibilidade X11) aparece entre "Sistema" e "Sobre".

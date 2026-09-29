@@ -465,11 +465,22 @@
 .tt-config-icone .tt-marca{ display:block; width:20px; height:20px; fill:currentColor; }   /* Sobre (M44) */
 .tt-config-textos{ display:flex; flex-direction:column; min-width:0; }
 .tt-config-descricao{ color:var(--tt-fg-2); }
+/* M56: a dica do Alt+Espaço no Wayland (views/dica-sempre-na-frente.js),
+   em Caption no texto 2, entre o título da seção e o cartão. */
+.tt-config-dica{ margin:0 0 4px 1px; color:var(--tt-fg-2); max-width:70ch; }
+/* M57: a Compatibilidade X11 (views/opcao-x11.js): o interruptor à direita
+   do cabeçalho, como no SettingsCard, e o rodapé do reinício embaixo. */
+.tt-config-controle{ flex:none; margin-left:auto; }
+.tt-config-rodape{
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px;
+  padding:12px 16px 12px 58px; border-top:1px solid var(--tt-border); color:var(--tt-fg-2);
+}
+.tt-config-rodape[hidden]{ display:none; }
 fluent-radio-group.tt-temas{
   display:grid; grid-template-columns:repeat(auto-fill, minmax(min(156px, 100%), 1fr)); gap:16px 12px;
   padding:16px 16px 16px 58px; border-top:1px solid var(--tt-border);
 }
-@container conteudo (width < 40em){ fluent-radio-group.tt-temas{ padding-left:16px; } }
+@container conteudo (width < 40em){ fluent-radio-group.tt-temas, .tt-config-rodape{ padding-left:16px; } }
 
 /* Uma escolha: a prévia em cima e o rádio com o nome embaixo; o rótulo
    inteiro é clicável. A moldura tem o traço da borda em repouso, o do
@@ -512,6 +523,17 @@ fluent-radio-group.tt-temas{
 .tt-previa-texto{ height:4px; width:80%; background:var(--tt-fg-1); }
 .tt-previa-curto{ width:55%; background:var(--tt-fg-2); }
 .tt-previa-acao{ height:9px; width:45%; margin-top:3px; background:var(--tt-accent); }
+/* M51, Full: o tomate sobre uma área de trabalho neutra (a janela-tomate não
+   tem fundo), com as cores do próprio tomate (tokens.css, seção 4). */
+.tt-previa-full{
+  align-items:center; justify-content:center; padding:0;
+  background:linear-gradient(160deg, #6A7580, #3E464F);
+}
+.tt-previa-tomate{ display:block; height:78%; aspect-ratio:1; }
+.tt-previa-corpo{ fill:var(--tt-tomato-body-mid); }
+.tt-previa-anel{ fill:none; stroke:var(--tt-tomato-ring); stroke-width:9; stroke-linecap:round; stroke-dasharray:55 200; stroke-dashoffset:-5.5; }
+.tt-previa-cabinho{ fill:var(--tt-tomato-stem); }
+.tt-previa-calice{ fill:var(--tt-tomato-calyx); }
 /* Sistema: a metade esquerda do Claro e a direita do Escuro, como uma janela só. */
 .tt-previa-metade{ display:flex; flex:1 1 50%; min-width:0; overflow:hidden; }
 .tt-previa-metade > .tt-previa{ flex:none; width:200%; }

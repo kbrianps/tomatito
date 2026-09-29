@@ -2,6 +2,7 @@ mod anuncio;
 mod audio;
 mod avisos;
 mod commands;
+mod compat_x11;
 mod engine;
 mod events;
 mod i18n;
@@ -26,7 +27,7 @@ pub fn run() {
     // B2 (5.9): a `linuxX11` é lida antes do `Builder`, porque o GDK escolhe
     // o backend quando o GTK inicia (3.3).
     #[cfg(target_os = "linux")]
-    usar_x11_se_pedido(&context.config().identifier);
+    compat_x11::usar_x11_se_pedido(&context.config().identifier);
     // Plugins na ordem da 3.4. O single-instance é o primeiro (a documentação
     // oficial pede): numa segunda abertura, ele avisa a instância que já roda
     // e sai antes de qualquer outro plugin ou do `setup` (M37). A instância
@@ -106,18 +107,32 @@ pub fn run() {
             tauri::async_runtime::spawn(motor.run());
 
             // As janelas nascem aqui, e não no tauri.conf.json (PLANO.md, 4.7).
-            // Com `theme = full`, a 4.7 cria só a `tomato`; até ela existir
-            // (M50), nasce a `main`, no tema normal (docs/decisoes.md, M23).
-            window::main_window::build_main(app.handle(), &s)?;
+            // Com `theme = full`, só a `tomato`; a `main` nasce sob demanda
+            // (5.7, M51). O ouvinte do `tt://tomato-ready` vem antes.
+            // M56: o "Sempre na frente" por código (Windows e X11), lido do
+            // GDK aqui, na thread principal.
+            window::tomato::detectar_sempre_na_frente();
+            window::tomato::ligar(app.handle());
+            if s.theme == settings::ThemePref::Full {
+                window::tomato::abrir_no_inicio(app.handle(), &s)?;
+            } else {
+                window::main_window::build_main(app.handle(), &s)?;
+            }
             Ok(())
         })
         // Fechar (X, Ctrl+W, Alt+F4) com "fechar para a bandeja" ligado só
         // esconde a `main` (3.4, M36).
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event
-                && window::fechar_para_bandeja(window)
-            {
-                api.prevent_close();
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window::fechar_para_bandeja(window) {
+                    api.prevent_close();
+                }
+                // M56: o tomate fecha; sem "fechar para a bandeja", o app sai.
+                window::tomato::fechada_pelo_usuario(window);
+            }
+            // M54: a `tomato` com outro tamanho pede a região de novo (5.4).
+            if let tauri::WindowEvent::Resized(tamanho) = event {
+                window::tomato::redimensionada(window, *tamanho);
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -148,26 +163,27 @@ pub fn run() {
             commands::stopwatch_reset,
             anuncio::a11y_announce,
             avisos::notices_read,
+            commands::switch_window_mode,
+            commands::show_main,
+            commands::full_validation_get,
+            commands::full_validation_answer,
+            commands::set_tomato_region,
+            commands::tomato_debug_size,
+            commands::tomato_on_top_available,
+            compat_x11::x11_compat_get,
+            compat_x11::app_restart,
         ])
-        .run(context)
-        .expect("error while building tauri application");
-}
-
-/// Plano B2 (5.9): com `linuxX11 = true` no `settings.json`, o app abre pelo
-/// Xwayland. A opção na interface é do M57; a leitura já vale desde o M23.
-#[cfg(target_os = "linux")]
-fn usar_x11_se_pedido(identifier: &str) {
-    let Some(arq) = settings::linux_path(
-        identifier,
-        std::env::var_os("XDG_DATA_HOME").as_deref(),
-        std::env::var_os("HOME").as_deref(),
-    ) else {
-        return;
-    };
-    if settings::linux_x11(&arq) {
-        eprintln!("[tomatito] linuxX11 ligada: GDK_BACKEND=x11");
-        // SAFETY: roda no começo do `run()`, chamado direto do `main`, antes
-        // de o Tauri, o GTK ou o tokio abrirem qualquer thread.
-        unsafe { std::env::set_var("GDK_BACKEND", "x11") };
-    }
+        .build(context)
+        .expect("error while building tauri application")
+        .run(|app, evento| {
+            // M56: sem janela nenhuma (o tomate fechado, sem a `main`), o app
+            // fica na bandeja se "fechar para a bandeja" está ligado.
+            if let tauri::RunEvent::ExitRequested {
+                code: None, api, ..
+            } = &evento
+                && window::manter_na_bandeja(app)
+            {
+                api.prevent_exit();
+            }
+        });
 }

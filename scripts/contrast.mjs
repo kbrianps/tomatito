@@ -492,7 +492,9 @@ export const COLUNAS_TOMATE = [
 // As duas medidas soltas da 4.4, abaixo da tabela do tomate.
 export const NOTAS_TOMATE = [
   { par: 'Cálice / corpo', frente: '--tt-tomato-calyx', fundos: [['--tt-tomato-body-mid']], min: null,
-    nota: 'decorativo, isento pelo 1.4.11', ref: [1.34], atributos: {} },
+    // M50: #789F6B no lugar do #35603C (1,34), que sumia com a deuteranopia
+    // emulada (4.4; docs/decisoes.md, M50).
+    nota: 'decorativo, isento pelo 1.4.11', ref: [1.8], atributos: {} },
   { par: 'Corpo / fundo no plano B3', frente: '--tt-tomato-body-mid', fundos: [['--tt-bg-app']], min: null,
     nota: 'data-full-mode="opaque"', ref: [3.61], atributos: { 'data-full-mode': 'opaque' } },
 ];

@@ -73,7 +73,19 @@ pub fn settings_set(
     settings: State<'_, SettingsStore>,
     patch: Value,
 ) -> Result<Settings, SettingsError> {
-    settings.set(&patch, |s| {
+    gravar_configuracoes(&app, &settings, &patch)
+}
+
+/// O caminho do `settings_set`, também para o `switch_window_mode` (5.7, M51):
+/// grava, emite `tt://settings`, avisa a bandeja e, com a `tomato` aberta,
+/// aplica o `tomatoSize` e o `tomatoOnTop` (M56).
+pub fn gravar_configuracoes(
+    app: &AppHandle,
+    settings: &SettingsStore,
+    patch: &Value,
+) -> Result<Settings, SettingsError> {
+    let antes = settings.get();
+    let depois = settings.set(patch, |s| {
         if let Err(e) = app.emit(events::SETTINGS, s) {
             eprintln!("[tomatito] {} não saiu: {e}", events::SETTINGS);
         }
@@ -90,7 +102,10 @@ pub fn settings_set(
         if let Some(som) = app.try_state::<Arc<Som>>() {
             som.definir_volume(s.volume);
         }
-    })
+    })?;
+    // M56: o tamanho e o "Sempre na frente" do tomate valem na hora.
+    crate::window::tomato::aplicar_preferencias(app, &antes, &depois);
+    Ok(depois)
 }
 
 /// `focus_start{minutes, skip_breaks, task_id}`. No JS: `{ minutes,
@@ -290,4 +305,81 @@ pub fn stopwatch_lap(engine: State<'_, AppEngine>) -> Result<StopwatchDto, Comma
 #[tauri::command]
 pub fn stopwatch_reset(engine: State<'_, AppEngine>) -> Result<StopwatchDto, CommandError> {
     engine.stopwatch_reset()
+}
+
+/// `switch_window_mode{full}` (3.5 e 5.7, M51): entra no Full (grava
+/// `theme = full`, cria a `tomato` escondida, espera o `tt://tomato-ready`
+/// por até 2 s, mostra o tomate e esconde a `main`) ou sai dele (grava
+/// `theme = lastNormalTheme`, mostra a `main`, recriada se preciso, e fecha
+/// a `tomato`). Async: criar janela num comando síncrono trava no Windows
+/// (5.3). Os detalhes estão em `window/tomato.rs`.
+#[tauri::command]
+pub async fn switch_window_mode(app: AppHandle, full: bool) -> Result<(), String> {
+    if full {
+        crate::window::tomato::entrar(&app).await
+    } else {
+        crate::window::tomato::sair(&app).await
+    }
+}
+
+/// `show_main{route}` (3.5 e 5.7): o botão Configurações do tomate mostra a
+/// `main` sem fechar a `tomato`, já na rota (`#/configuracoes`). Uma rota fora
+/// do formato do roteador é ignorada (`window::rota_valida`). Async pelo
+/// mesmo motivo do `switch_window_mode`: sem a `main`, ela nasce de novo (já
+/// na rota, M51).
+#[tauri::command]
+pub async fn show_main(app: AppHandle, route: Option<String>) -> Result<(), String> {
+    crate::window::mostrar_main(&app, route.as_deref()).map_err(|e| e.to_string())
+}
+
+/// `full_validation_get` (M52): o retrato da validação com reversão do Full
+/// (5.9), que a `main` pede ao ligar (depois, ela segue o
+/// `tt://full-validation`). Ver `window/validacao.rs`.
+#[tauri::command]
+pub fn full_validation_get(app: AppHandle) -> Value {
+    crate::window::validacao::atual(&app)
+}
+
+/// `full_validation_answer{answer}` (M52): `keep` ou `revert` na pergunta,
+/// `opaque` ou `dismiss` na oferta do B3. Async: reverter fecha a `tomato`, e
+/// o modo opaco a cria de novo (5.3). Devolve o retrato depois da resposta.
+#[tauri::command]
+pub async fn full_validation_answer(
+    app: AppHandle,
+    answer: crate::window::validacao::Resposta,
+) -> Result<Value, String> {
+    crate::window::validacao::responder(&app, answer).await
+}
+
+/// `set_tomato_region{strips}` (3.5, 5.4 e 5.6; M54): a região de entrada da
+/// `tomato`, em faixas `[x, y, largura, altura]` calculadas pela página. Só a
+/// `tomato` pode pedir. Devolve `"applied"` ou `"ignored"` (modo opaco, ou o
+/// Windows até o M55). Ver `window/tomato.rs`, `definir_regiao`.
+#[tauri::command]
+pub fn set_tomato_region(
+    webview_window: tauri::WebviewWindow,
+    strips: Vec<[i32; 4]>,
+) -> Result<&'static str, String> {
+    crate::window::tomato::definir_regiao(&webview_window, strips).map(|r| r.as_str())
+}
+
+/// `tomato_debug_size{size}` (M54, só no build de debug): troca o lado da
+/// `tomato` para 240, 280 ou 320, sem gravar o `tomatoSize`. Serve para
+/// conferir a região depois da troca de P para G; a escolha de verdade (menu
+/// e preferência) é do M56. Async, como os outros comandos que mexem em
+/// janela.
+#[tauri::command]
+pub async fn tomato_debug_size(app: AppHandle, size: u32) -> Result<(), String> {
+    if !cfg!(debug_assertions) {
+        return Err("tomato_debug_size só existe no build de debug".into());
+    }
+    crate::window::tomato::trocar_tamanho(&app, size)
+}
+
+/// `tomato_on_top_available` (M56): se o "Sempre na frente" do tomate
+/// funciona por código (Windows e X11). No Wayland, não: o menu do tomate não
+/// mostra o item, e as Configurações mostram uma vez a dica do Alt+Espaço.
+#[tauri::command]
+pub fn tomato_on_top_available() -> bool {
+    crate::window::tomato::sempre_na_frente_por_codigo()
 }

@@ -25,7 +25,8 @@
 // virada para cima perto da borda de baixo (docs/decisoes.md, M12).
 import { Updates } from '@microsoft/fast-element';
 import { grades, icone, NOMES } from '../components/icon.js';
-import { sons } from '../lib/ipc.js';
+import { full, sons } from '../lib/ipc.js';
+import { CHAVE as CHAVE_DA_REGIAO } from '../lib/regiao-debug.js';
 
 // Botão só de ícone: aria-label (o nome) e data-dica (a dica com o mesmo texto).
 const deIcone = (classe, nome, rotulo, { grade = 16, extra = '' } = {}) =>
@@ -256,6 +257,21 @@ const AMOSTRA = `
       </div>
     </section>
 
+    <section class="tt-card" aria-labelledby="amostra-tomate" data-amostra="tomate">
+      <h2 id="amostra-tomate" class="tt-t-subtitle">Tomate (Full)</h2>
+      <p class="tt-fg-2">M51: entra no Full pelo switch_window_mode, como a escolha "Tomatito Full" em Configurações: o tomate aparece e esta janela se esconde. Esc ou "Voltar ao modo normal" traz de volta.</p>
+      <div class="tt-linha">
+        <button type="button" data-tomate>Abrir o tomate</button>
+      </div>
+      <p class="tt-fg-2">M54: troca o tamanho do tomate aberto (só no build de debug; não grava a preferência). A região de entrada vai de novo a cada troca.</p>
+      <div class="tt-linha">
+        <button type="button" data-tomate-lado="240">P (240)</button>
+        <button type="button" data-tomate-lado="280">M (280)</button>
+        <button type="button" data-tomate-lado="320">G (320)</button>
+      </div>
+      <label class="tt-opcao"><fluent-switch data-regiao-debug></fluent-switch>Mostrar as faixas da região no tomate (M53)</label>
+    </section>
+
     <section class="tt-card tt-amostra-largo" aria-labelledby="amostra-icones" data-amostra="icones">
       <h2 id="amostra-icones" class="tt-t-subtitle">Ícones</h2>
       <p class="tt-fg-2">Todos os copiados para src/assets/icons/, em cada grade copiada (16, 20 ou 24 px).</p>
@@ -286,6 +302,17 @@ export function montar(raiz) {
       sons.testar(som.dataset.som).catch((e) => console.error('sound_test', e));
       return;
     }
+    // M51: entra no Full (5.7).
+    if (ev.target.closest?.('[data-tomate]')) {
+      full.trocarModo(true).catch((e) => console.error('switch_window_mode', e));
+      return;
+    }
+    // M54: P/M/G no tomate aberto, pelo comando de debug.
+    const lado = ev.target.closest?.('[data-tomate-lado]');
+    if (lado) {
+      full.tamanhoDeDebug(Number(lado.dataset.tomateLado)).catch((e) => console.error('tomato_debug_size', e));
+      return;
+    }
     const abre = ev.target.closest?.('[data-abre]');
     if (abre) {
       raiz.querySelector(`#${abre.dataset.abre}`)?.show();
@@ -298,10 +325,29 @@ export function montar(raiz) {
     if (ev.target.localName !== 'fluent-dialog' || ev.detail?.newState !== 'closed') return;
     raiz.querySelector(`[data-abre="${ev.target.id}"]`)?.focus();
   };
+  // M53: a sobreposição de debug das faixas da região no tomate
+  // (src/lib/regiao-debug.js), pela chave que as duas janelas leem.
+  const regiao = raiz.querySelector('[data-regiao-debug]');
+  try {
+    regiao.checked = localStorage.getItem(CHAVE_DA_REGIAO) === '1';
+  } catch {
+    // Sem armazenamento, o interruptor começa desligado.
+  }
+  const aoMudar = (ev) => {
+    if (ev.target !== regiao) return;
+    try {
+      if (regiao.checked) localStorage.setItem(CHAVE_DA_REGIAO, '1');
+      else localStorage.removeItem(CHAVE_DA_REGIAO);
+    } catch (e) {
+      console.warn('[região]', e);
+    }
+  };
   raiz.addEventListener('click', aoClicar);
   raiz.addEventListener('toggle', aoAlternar);
+  raiz.addEventListener('change', aoMudar);
   return () => {
     raiz.removeEventListener('click', aoClicar);
     raiz.removeEventListener('toggle', aoAlternar);
+    raiz.removeEventListener('change', aoMudar);
   };
 }

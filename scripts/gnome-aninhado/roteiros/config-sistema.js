@@ -289,7 +289,8 @@ async function principal() {
   R.inicial = e0;
   checar(
     'Sistema e Sobre na tela, nos padrões (fechar para a bandeja ligado, tempo na bandeja desligado, Sair) e com "Versão 0.1.0"',
-    JSON.stringify(e0.secoes) === '["Sessões de foco","Aparência","Sistema","Sobre"]' &&
+    // Junção com o M57: no Wayland, a seção Avançado (Compatibilidade X11) entra antes do Sobre.
+    JSON.stringify(e0.secoes) === '["Sessões de foco","Aparência","Sistema","Avançado","Sobre"]' &&
       e0.fechar?.visivel && e0.fechar.ligado === true && e0.fechar.estado === 'Ativado' &&
       e0.tempo?.visivel && e0.tempo.ligado === false && e0.tempo.estado === 'Desativado' &&
       e0.sair === 'Sair' && e0.versao === 'Versão 0.1.0' && e0.sobreAberto === 'false',

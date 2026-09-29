@@ -29,11 +29,21 @@
 #   TT_LIMITE=480 bash scripts/gnome-aninhado/rodar.sh retomada   # M40: kill -9 no meio do foco, fase vencida com o app fechado, e fechar e reabrir
 #   bash scripts/gnome-aninhado/rodar.sh movimento         # M41: entrada de página e diálogo, e só fades de 83 ms com o "Animações" desligado
 #   TOMATITO_SPEED=60 TT_LIMITE=900 bash scripts/gnome-aninhado/rodar.sh acessibilidade   # M43: só o teclado, o Orca (mudo, pelo log), zoom, escala do GNOME e "Texto grande"
+#   bash scripts/gnome-aninhado/rodar.sh tomate            # M50: o tomate (Full) ligado ao motor, transparente e sem região
+#   TT_LIMITE=600 bash scripts/gnome-aninhado/rodar.sh full   # M51: 20 idas e voltas ao Full, a memória, o Claro e o início no Full
+#   TT_LIMITE=600 bash scripts/gnome-aninhado/rodar.sh validacao   # M52: a validação de 10 s, as respostas, o modo opaco e a variável do DMA-BUF
+#   bash scripts/gnome-aninhado/rodar.sh regiao            # M54: a região de entrada no Linux (cliques atravessam no M, no P e no G)
+#   bash scripts/gnome-aninhado/rodar.sh menu-tomate       # M56: o menu nativo do tomate, P/M/G, os atalhos, a dica do Alt+Espaço e Fechar
+#   TT_X11=1 bash scripts/gnome-aninhado/rodar.sh x11      # M57: a Compatibilidade X11, o reinício pelo Xwayland e o sempre na frente por código
 #   bash scripts/gnome-aninhado/instalado.sh               # o Tomatito instalado (M21b)
 #
 # Pré-requisito: o binário de debug atualizado (`cd src-tauri && cargo build`).
 # O `npm run build` não é preciso: a página vem do Vite (porta 5173, que
-# precisa estar livre), com a sonda injetada só nesse servidor. Para testar um
+# precisa estar livre), com a sonda injetada só nesse servidor. Com TT_PORT, o
+# Vite sobe em outra porta; o binário lê a página do devUrl gravado nele na
+# compilação, então precisa ter sido compilado para a mesma porta:
+#   TAURI_CONFIG='{"build":{"devUrl":"http://localhost:5174"}}' cargo build
+#   TT_PORT=5174 bash scripts/gnome-aninhado/rodar.sh tomate Para testar um
 # build com os arquivos embutidos (`npx tauri build --debug --no-bundle`), aponte
 # TOMATITO_BIN para uma cópia dele; o Vite continua subindo, mas fica sem uso.
 #
@@ -102,7 +112,7 @@ export DBUS_SYSTEM_BUS_ADDRESS="unix:path=$RUNDIR/sistema"
 cd "$RAIZ"
 node node_modules/vite/bin/vite.js --config "$AQUI/sonda.config.mjs" > "$TT_OUT/vite.log" 2>&1 &
 VITE=$!
-for _ in $(seq 100); do curl -sf http://localhost:5173/ > /dev/null && break; sleep 0.2; done
+for _ in $(seq 100); do curl -sf "http://localhost:${TT_PORT:-5173}/" > /dev/null && break; sleep 0.2; done
 
 dbus-run-session -- bash "$AQUI/dentro.sh" > "$TT_OUT/dbus.log" 2>&1
 

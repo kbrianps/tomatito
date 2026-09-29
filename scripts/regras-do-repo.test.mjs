@@ -665,9 +665,14 @@ test('M37: single-instance primeiro, window-state restrito, app_quit e os bloque
   const main = ler('src/main.js');
   assert.match(main, /^if \(import\.meta\.env\.PROD\) ligarBloqueiosDeProducao\(\);\nelse ligarRecargaDoDev\(\);$/m);
   assert.match(main, /ligarAtalhosDaJanela\(\{ fechar: \(\) => win\.close\(\), sair: ipc\.sair \}\)/);
+  // Junção com o Full: a página do tomate liga as mesmas regras (3.8), e o
+  // Ctrl+W e o Ctrl+Q.
+  const tomate = ler('src/tomato.js');
+  assert.match(tomate, /^if \(import\.meta\.env\.PROD\) ligarBloqueiosDeProducao\(\);\nelse ligarRecargaDoDev\(\);$/m);
+  assert.match(tomate, /ligarAtalhosDaJanela\(\{ fechar: \(\) => getCurrentWindow\(\)\.close\(\), sair: ipc\.sair \}\)/);
   // Nenhum outro lugar liga os bloqueios.
   for (const arq of readdirSync(new URL('../src/', import.meta.url), { recursive: true })) {
-    if (!/\.js$/.test(arq) || /\.test\.js$/.test(arq) || arq === 'main.js' || arq.endsWith('producao.js')) continue;
+    if (!/\.js$/.test(arq) || /\.test\.js$/.test(arq) || arq === 'main.js' || arq === 'tomato.js' || arq.endsWith('producao.js')) continue;
     assert.doesNotMatch(ler(`src/${arq}`), /ligarBloqueiosDeProducao|ligarRecargaDoDev/, arq);
   }
 });
@@ -694,4 +699,364 @@ test('M40: state.json carregado ao abrir, antes da bandeja e do laço, e o foco 
   assert.match(motor, /pub fn restaurar\(&self, r: Restored\)[\s\S]*focus\.advance_to\(now[\s\S]*timers\.advance_to\(/);
   // Nenhum tick grava o arquivo: o laço só emite o tt://tick.
   assert.doesNotMatch(motor.slice(motor.indexOf('fn tick(&self, tick: &TickDto)'), motor.indexOf('fn phase(&self')), /estado/);
+});
+
+// M50: o tomate definitivo (seções 3.7, 3.8, 4.2, 5.3 e 5.10).
+test('tomate: tomato.html em pt-BR, sem estilo em linha, com o boot do index.html e as folhas da 4.2', () => {
+  const tomato = ler('tomato.html');
+  assert.match(tomato, /<html lang="pt-BR">/);
+  assert.doesNotMatch(tomato, /<style[\s>]/i);
+  assert.doesNotMatch(tomato, /\sstyle\s*=/i);
+  assert.doesNotMatch(tomato, new RegExp(['pomo', 'doro'].join(''), 'i'));
+  const boot = (html) => html.match(/<script>([\s\S]*?)<\/script>/)[1];
+  assert.equal(boot(tomato), boot(indexHtml), 'o mesmo script de boot (4.7)');
+  const links = [...tomato.matchAll(/<link rel="stylesheet" href="\/src\/styles\/([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(links, ['fluent-tokens.gen.css', 'tokens.css', 'bridge.css', 'fonts.css', 'base.css', 'tomato.css']);
+  assert.ok(tomato.indexOf('<link') > tomato.indexOf('<script>'), 'as folhas depois do boot');
+  // Arraste pelo corpo, pelo texto e pelo cálice (5.10); sombra com a classe .shadowed (ajuste 3).
+  assert.match(tomato, /<div class="stage"[^>]*data-tauri-drag-region="deep"/);
+  assert.match(tomato, /<g class="shadowed" filter="url\(#f-shadow\)">/);
+  assert.equal((tomato.match(/<g class="calyx">[\s\S]*?<\/g>/)[0].match(/<path /g) ?? []).length, 5, 'cinco sépalas');
+  assert.match(tomato, /role="timer" aria-live="off"/);
+  assert.match(tomato, /aria-live="polite"[^>]*data-anuncio/);
+  assert.doesNotMatch(tomato, /<select[\s>]/i, 'sem <select>: o popup do WebView2 não é recortado (5.3)');
+  // Os textos saem do catálogo (ajuste 7): os <p> do rosto e os botões nascem vazios.
+  for (const m of tomato.matchAll(/<p class="(label|time[^"]*|count)"[^>]*>([^<]*)<\/p>/g)) assert.equal(m[2], '', m[0]);
+  assert.doesNotMatch(tomato, /aria-label=|title=/, 'rótulos pelo tomato.js, do catálogo');
+});
+
+test('tomate: tomato.css com os tokens --tt-tomato-*, sem as variáveis do protótipo', () => {
+  const css = ler('src/styles/tomato.css');
+  assert.match(css, /--size:\s*100vw/);
+  assert.doesNotMatch(css, /var\(--(body-|ring\b|ring-track|btn-|calyx|stem|shadow|ink|font-ui|font-num)/, 'variáveis do protótipo');
+  for (const token of ['--tt-tomato-body-hi', '--tt-tomato-ring', '--tt-tomato-btn-bg', '--tt-tomato-calyx', '--tt-font-display']) {
+    assert.ok(css.includes(`var(${token})`), token);
+  }
+  assert.match(css, /@media \(forced-colors: active\)/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(css, /\.btn:focus-visible \{\s*outline: 2px solid/);
+  const js = ler('src/tomato.js');
+  assert.doesNotMatch(js, /\.style\.(?!setProperty|removeProperty)/, 'variáveis dinâmicas só por setProperty (3.8)');
+  // M56: o menu do WebView sempre desligado, e o nativo no lugar dele.
+  assert.match(js, /addEventListener\('contextmenu', \(e\) => \{\s*e\.preventDefault\(\);/);
+});
+
+test('tomate: duas entradas no Vite, janela da 5.3 e comandos async (M50 e M51)', () => {
+  const vite = ler('vite.config.js');
+  assert.match(vite, /rolldownOptions:\s*\{\s*input:\s*\{\s*main: entrada\('index\.html'\),\s*tomato: entrada\('tomato\.html'\),/);
+  const tomato = ler('src-tauri/src/window/tomato.rs');
+  const chamadas = [
+    'WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("tomato.html".into()))',
+    '.title("Tomatito")',
+    '.inner_size(size, size)',
+    '.decorations(false)',
+    // M52: transparente, salvo no B3 (a janela opaca, com o fundo --tt-tomato-10).
+    '.transparent(!opaca)',
+    '.shadow(false)',
+    '.resizable(false)',
+    '.maximizable(false)',
+    '.always_on_top(s.tomato_on_top)',
+    '.theme(Some(Theme::Dark))',
+    '.background_color(fundo)',
+    '.visible(false)',
+    '.initialization_script(init_script(modo))',
+    // M55: o A/B do no_redirection_bitmap (ligado por padrão, nunca na opaca).
+    'builder.no_redirection_bitmap(sem_redirecionamento(',
+  ];
+  for (const c of chamadas) assert.ok(tomato.includes(c), `tomato.rs sem ${c}`);
+  assert.match(tomato, /let fundo = if opaca \{\s*FUNDO_OPACO\s*\} else \{\s*Color\(0, 0, 0, 0\)\s*\};/);
+  assert.match(tomato, /let size = f64::from\(s\.tomato_size\);/);
+  const comandos = ler('src-tauri/src/commands.rs');
+  assert.match(comandos, /pub async fn switch_window_mode\(app: AppHandle, full: bool\)/, 'criar janela num comando síncrono trava no Windows (5.3)');
+  assert.match(comandos, /pub async fn show_main\(/);
+  assert.doesNotMatch(comandos, /tomato_debug_open/, 'o comando de debug do M50 saiu no M51');
+  const lib = ler('src-tauri/src/lib.rs');
+  assert.match(lib, /commands::switch_window_mode,/);
+  assert.match(lib, /commands::show_main,/);
+  for (const arquivo of ['src-tauri/src/window/tomato.rs', 'src-tauri/src/window/mod.rs', 'src/tomato.js']) {
+    assert.doesNotMatch(ler(arquivo), /set_ignore_cursor_events|setIgnoreCursorEvents/, `${arquivo}: nunca (5.3)`);
+  }
+});
+
+// M51: a troca normal ↔ Full (5.7) e o início direto no Full (4.7).
+test('Full: switch_window_mode pelo caminho do settings_set, tt://tomato-ready com limite de 2 s, início só com a tomato', () => {
+  const tomato = ler('src-tauri/src/window/tomato.rs');
+  assert.match(tomato, /pub const EVENTO_PRONTO: &str = "tt:\/\/tomato-ready";/);
+  assert.match(tomato, /pub const ESPERA_DO_PRONTO: Duration = Duration::from_secs\(2\);/);
+  // Entrar: grava o tema, cria escondida, espera o pronto, mostra, e só então esconde a main.
+  const entrar = tomato.slice(tomato.indexOf('pub async fn entrar('), tomato.indexOf('pub async fn sair('));
+  const ordem = (texto, partes) => partes.map((p) => texto.indexOf(p)).every((i, k, a) => i >= 0 && (k === 0 || i > a[k - 1]));
+  // M52: o modo do full_mode() e, na primeira entrada em cada combinação, a pergunta no lugar do hide.
+  assert.ok(
+    ordem(entrar, ['trava.lock().await', 'gravar_tema(app, ThemePref::Full.as_str())', 'let modo = full_mode(&s);', 'criar_e_mostrar(app, &s, modo)', 'chave_a_validar(&s, modo)', 'validacao::perguntar(app, chave)', 'e.esperar_pintura().await', 'm.hide()']),
+    'a ordem do "Entrar" (5.7)',
+  );
+  const criar = tomato.slice(tomato.indexOf('async fn criar_e_mostrar('), tomato.indexOf('pub async fn entrar('));
+  assert.ok(ordem(criar, ['esperar_pronto()', 'build_tomato(app, s, modo)', 'Entrada::mostrar(w, rx, t0)']), 'o ouvinte antes da janela');
+  const mostrar = tomato.slice(tomato.indexOf('async fn mostrar('), tomato.indexOf('async fn esperar_pintura('));
+  assert.ok(ordem(mostrar, ['tokio::time::timeout(ESPERA_DO_PRONTO, rx.recv())', 'janela.show()', 'tokio::time::Instant::now() + ESPERA_DA_PINTURA']), 'o show depois do pronto ou do limite');
+  // A main só some quando o tomate avisa, já na tela, que pintou (docs/decisoes.md, M51, item 13).
+  assert.match(tomato, /pub const ESPERA_DA_PINTURA: Duration = Duration::from_secs\(8\);/);
+  const pintura = tomato.slice(tomato.indexOf('async fn esperar_pintura('), tomato.indexOf('async fn chave_a_validar('));
+  assert.ok(ordem(pintura, ['while !self.pintado', 'timeout_at(self.fim_da_pintura, self.rx.recv())']), 'depois do show, a espera do aviso de pintado');
+  // Sair: grava o lastNormalTheme, mostra a main (recriada se preciso) e fecha a tomato.
+  const sair = tomato.slice(tomato.indexOf('pub async fn sair('), tomato.indexOf('async fn esperar_visivel('));
+  assert.ok(ordem(sair, ['trava.lock().await', 'gravar_tema(app, atual.last_normal_theme.as_str())', 'm.show()', 'build_main(app, &s)', 't.destroy()']), 'a ordem do "Sair" (5.7)');
+  assert.match(tomato, /crate::commands::gravar_configuracoes\(app, &store, &json!\(\{ "theme": tema \}\)\)/, 'pelo caminho do settings_set (3.3)');
+  assert.doesNotMatch(tomato, /\.hide\(\)[^;]*;[^\n]*LABEL|t\.hide\(\)/, 'a tomato nunca se esconde (5.3)');
+  const comandos = ler('src-tauri/src/commands.rs');
+  assert.match(comandos, /pub fn settings_set\([\s\S]*?\{\s*gravar_configuracoes\(&app, &settings, &patch\)\s*\}/);
+  // Início com theme = full: só a tomato (4.7).
+  const lib = ler('src-tauri/src/lib.rs');
+  assert.match(lib, /window::tomato::ligar\(app\.handle\(\)\);\s*if s\.theme == settings::ThemePref::Full \{\s*window::tomato::abrir_no_inicio\(app\.handle\(\), &s\)\?;\s*\} else \{\s*window::main_window::build_main\(app\.handle\(\), &s\)\?;/);
+  // A página avisa o pronto, e o Esc e o "Voltar ao modo normal" saem pelo mesmo comando.
+  const js = ler('src/tomato.js');
+  assert.match(js, /const dados = \{ userAgent: navigator\.userAgent, renderer: renderizador\(\) \};/);
+  assert.match(js, /ipc\.full\.avisarPronto\(\{ \.\.\.dados, pintado \}\)/);
+  assert.match(js, /if \(document\.visibilityState !== 'visible'\) avisar\(false\);\s*await naTela\(\);\s*await quadroPintado\(\);\s*avisar\(true\);/, 'escondida, o primeiro aviso; na tela, o de pintado depois de dois quadros');
+  assert.match(js, /e\.key !== 'Escape'/);
+  assert.match(js, /voltar: \(\) => sair\(\)/);
+  assert.match(js, /ipc\.full\.trocarModo\(false\)/);
+  assert.match(ler('src/lib/ipc.js'), /trocarModo: \(entrar\) => invoke\('switch_window_mode', \{ full: entrar \}\)/);
+  assert.match(ler('src/main.js'), /trocarModo: ipc\.full\.trocarModo,/);
+});
+
+// M52: a validação com reversão (5.9) e o plano B3 (fullMode=opaque e a variável do DMA-BUF, 5.6).
+test('Full: validação de 10 s pelo fullValidated, full_mode() com o WEBKIT_DISABLE_DMABUF_RENDERER e a tomato opaca', () => {
+  const tomato = ler('src-tauri/src/window/tomato.rs');
+  // O full_mode() da 5.6: lê a variável do ambiente, compara com "0" e decide só o modo.
+  assert.match(tomato, /pub fn full_mode\(s: &Settings\) -> FullMode \{\s*full_mode_com\(s, std::env::var_os\(VARIAVEL_DMABUF\)\.as_deref\(\)\)/);
+  assert.match(tomato, /pub const VARIAVEL_DMABUF: &str = "WEBKIT_DISABLE_DMABUF_RENDERER";/);
+  assert.match(tomato, /cfg!\(target_os = "linux"\) && dmabuf\.is_some_and\(\|v\| v\.to_str\(\) != Some\("0"\)\)/);
+  assert.match(tomato, /dmabuf_off \|\| s\.full_mode == settings::FullMode::Opaque/);
+  // Nunca exportar nem apagar a variável do usuário (5.6).
+  for (const arq of readdirSync(new URL('../src-tauri/src/', import.meta.url), { recursive: true }).filter((a) => a.endsWith('.rs'))) {
+    assert.doesNotMatch(ler(`src-tauri/src/${arq}`), /(set_var|remove_var)\((VARIAVEL_DMABUF|"WEBKIT_DISABLE_DMABUF_RENDERER")/, arq);
+  }
+  // O fundo da tomato opaca é o --tt-tomato-10 do tokens.css, e o B3 do tokens.css pinta o <html>.
+  const tokens = ler('src/styles/tokens.css');
+  const t10 = /--tt-tomato-10:#([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2});/i.exec(tokens).slice(1).map((h) => `0x${h.toUpperCase()}`);
+  assert.ok(tomato.includes(`pub const FUNDO_OPACO: Color = Color(${t10.join(', ')}, 0xFF);`), `FUNDO_OPACO = --tt-tomato-10 (${t10})`);
+  assert.match(tokens, /\[data-theme="full"\]\[data-full-mode="opaque"\]\{ --tt-bg-app:var\(--tt-tomato-10\); \}/);
+  assert.match(ler('src/styles/tomato.css'), /\[data-full-mode='opaque'\] \.stage \{\s*pointer-events: auto;/);
+  assert.match(tomato, /FullMode::Opaque => format!\("window\.__TT_FULL_MODE__=\{\};", json\("opaque"\)\)/);
+  // O início direto no Full também passa pelo full_mode() e pela validação.
+  const inicio = tomato.slice(tomato.indexOf('pub fn abrir_no_inicio('));
+  const ordem = (texto, partes) => partes.map((p) => texto.indexOf(p)).every((i, k, a) => i >= 0 && (k === 0 || i > a[k - 1]));
+  assert.ok(ordem(inicio, ['let modo = full_mode(s);', 'build_tomato(app, s, modo)', 'Entrada::mostrar(w, rx, t0)', 'drop(vez)', 'chave_a_validar(&s, modo)', 'validacao::perguntar(&app, chave)']));
+  // Só a janela transparente é validada, e só quando a chave difere do fullValidated (5.7, passo 5).
+  const chave = tomato.slice(tomato.indexOf('async fn chave_a_validar('), tomato.indexOf('fn registrar('));
+  assert.ok(ordem(chave, ['if modo == FullMode::Opaque', 'return None;', 'chave_de_validacao(', '(chave != s.full_validated).then_some(chave)']));
+  // Sair no meio cancela a pergunta.
+  const sair = tomato.slice(tomato.indexOf('pub async fn sair('), tomato.indexOf('async fn esperar_visivel('));
+  assert.ok(ordem(sair, ['trava.lock().await', 'validacao::cancelar(app)', 'gravar_tema(']));
+  // O prazo corre no Rust (10 s), e a reversão é o "Sair" da 5.7, antes da oferta do B3.
+  const val = ler('src-tauri/src/window/validacao.rs');
+  assert.match(val, /pub const PRAZO: Duration = Duration::from_secs\(10\);/);
+  assert.match(val, /pub const EVENTO: &str = "tt:\/\/full-validation";/);
+  assert.ok(ordem(val, ['tokio::time::sleep(PRAZO).await;', 'expirar(&app, id).await;']));
+  const reverter = val.slice(val.indexOf('async fn reverter('));
+  assert.ok(ordem(reverter, ['tomato::sair(app).await', 'avisar(app, Fase::Revertida(motivo))']));
+  assert.match(val, /gravar_configuracoes\(\s*app,\s*&store,\s*&json!\(\{ "fullValidated": chave \}\),?\s*\)/, 'Manter grava pelo caminho do settings_set');
+  assert.match(val, /gravar_configuracoes\(app, &store, &json!\(\{ "fullMode": "opaque" \}\)\)/, 'o B3 grava pelo caminho do settings_set');
+  const lib = ler('src-tauri/src/lib.rs');
+  assert.match(lib, /commands::full_validation_get,\s*commands::full_validation_answer,/);
+  assert.match(ler('src-tauri/src/commands.rs'), /pub async fn full_validation_answer\(/);
+  // A main liga o diálogo antes de aparecer (a pergunta de uma main recriada chega pelo get).
+  const main = ler('src/main.js');
+  assert.ok(main.indexOf('ligarValidacaoDoFull({ ipc })') > 0 && main.indexOf('ligarValidacaoDoFull({ ipc })') < main.indexOf('await win.show()'));
+  const ipc = ler('src/lib/ipc.js');
+  assert.match(ipc, /EVENTO_VALIDACAO: 'tt:\/\/full-validation'/);
+  assert.match(ipc, /responderValidacao: \(resposta\) => invoke\('full_validation_answer', \{ answer: resposta \}\)/);
+});
+
+test('capabilities/tomato.json com as permissões da seção 3.8, só para a tomato', () => {
+  const cap = JSON.parse(ler('src-tauri/capabilities/tomato.json'));
+  assert.deepEqual(cap.windows, ['tomato']);
+  assert.deepEqual([...cap.permissions].sort(), [
+    'core:default',
+    'core:menu:default',
+    'core:window:allow-close',
+    'core:window:allow-minimize',
+    'core:window:allow-set-always-on-top',
+    'core:window:allow-show',
+    'core:window:allow-start-dragging',
+  ]);
+});
+
+test('Full: faixas da região calculadas pela página antes do aviso, e a sobreposição só no dev (M53)', () => {
+  const js = ler('src/tomato.js');
+  assert.match(js, /import \{ regionStrips \} from '\.\/lib\/regiao\.js';/);
+  // Linux: px lógicos (escala 1); Windows: px físicos (5.4).
+  assert.match(js, /h\.dataset\.platform === 'windows' \? window\.devicePixelRatio \|\| 1 : 1/);
+  // M54: o cálculo vem pelo envio (enviarRegiao chama o calcularRegiao).
+  assert.match(js, /addEventListener\('resize', \(\) => enviarRegiao\(\)\)/);
+  assert.match(js, /function enviarRegiao\(fisico\) \{[\s\S]*?const r = calcularRegiao\(fisico\);/);
+  const fim = js.slice(js.lastIndexOf('} finally {'));
+  assert.ok(fim.indexOf('await enviarRegiao();') > 0 && fim.indexOf('await enviarRegiao();') < fim.indexOf('avisar(false)'), 'antes do tt://tomato-ready');
+  // A sobreposição entra só pelo import dinâmico dentro do DEV.
+  assert.match(js, /if \(import\.meta\.env\.DEV\) \{\s*import\('\.\/lib\/regiao-debug\.js'\)/);
+  assert.equal(js.match(/regiao-debug/g).length, 2, 'só o import do DEV (e o comentário)');
+  // Uma fonte única (5.4): a região não é calculada no Rust.
+  assert.doesNotMatch(ler('src-tauri/src/window/tomato.rs'), /region_approx|fn strips/);
+});
+
+test('Full: região de entrada no Linux pelo set_tomato_region, antes do show e a cada troca de tamanho (M54)', () => {
+  // Linux (5.6): o gtk da mesma versão do Tauri, só no Linux; a região no
+  // widget (gtk_window), nunca na GdkWindow, e montada na thread principal.
+  const cargo = ler('src-tauri/Cargo.toml');
+  const linux = cargo.slice(cargo.indexOf(`[target.'cfg(target_os = "linux")'.dependencies]`));
+  assert.match(linux.split(/\n\[/)[0], /^gtk = "0\.18"$/m);
+  assert.equal(cargo.match(/^gtk = /gm).length, 1, 'gtk só na seção do Linux');
+  const rl = ler('src-tauri/src/window/region_linux.rs');
+  assert.match(rl, /run_on_main_thread\(move \|\| \{[\s\S]*Region::create\(\)[\s\S]*w\.gtk_window\(\)[\s\S]*input_shape_combine_region\(Some\(&region\)\)/);
+  assert.doesNotMatch(rl, /\.window\(\)/, 'nunca a GdkWindow (5.6, "Proibido")');
+  assert.match(ler('src-tauri/src/window/mod.rs'), /#\[cfg\(target_os = "linux"\)\]\npub mod region_linux;/);
+  // Nunca setIgnoreCursorEvents (5.3): apagaria a região no Linux.
+  for (const arq of ['src-tauri/src/window/tomato.rs', 'src-tauri/src/window/region_linux.rs', 'src-tauri/src/lib.rs', 'src/tomato.js']) {
+    assert.doesNotMatch(ler(arq), /set_ignore_cursor_events|setIgnoreCursorEvents/, arq);
+  }
+  // O comando: só a tomato, faixas validadas, ignorado no modo opaco (B3).
+  const rs = ler('src-tauri/src/window/tomato.rs');
+  const definir = rs.slice(rs.indexOf('pub fn definir_regiao'), rs.indexOf('fn aplicar('));
+  assert.ok(definir.indexOf('janela.label() != LABEL') < definir.indexOf('faixas_validas(&strips)?'));
+  assert.ok(definir.indexOf('FullMode::Opaque') < definir.indexOf('aplicar(janela, strips)'), 'opaca: sem região');
+  assert.match(rs, /#\[cfg\(target_os = "linux"\)\]\nfn aplicar\([\s\S]*?region_linux::apply_region/);
+  assert.match(rs, /#\[cfg\(not\(any\(target_os = "linux", windows\)\)\)\]\nfn aplicar\(/);
+  // O modo vem da janela construída (build_tomato), e não das configurações.
+  const build = rs.slice(rs.indexOf('pub fn build_tomato'), rs.indexOf('pub const EVENTO_PRONTO'));
+  assert.ok(build.indexOf('builder.build()?') < build.indexOf('t.nova_janela(modo)'));
+  // A cada troca de tamanho: o Resized da tomato pede a região de novo.
+  const lib = ler('src-tauri/src/lib.rs');
+  assert.match(lib, /if let tauri::WindowEvent::Resized\(tamanho\) = event \{\s*window::tomato::redimensionada\(window, \*tamanho\);/);
+  assert.match(lib, /commands::set_tomato_region,\s*commands::tomato_debug_size,/);
+  assert.match(rs, /pub const EVENTO_REGIAO: &str = "tt:\/\/tomato-region";/);
+  assert.match(rs, /t\.tamanho_mudou\(tamanho\)[\s\S]{0,40}janela\.emit_to\(LABEL, EVENTO_REGIAO/);
+  const cmds = ler('src-tauri/src/commands.rs');
+  assert.match(cmds, /pub fn set_tomato_region\(\s*webview_window: tauri::WebviewWindow,\s*strips: Vec<\[i32; 4\]>,/);
+  assert.match(cmds, /pub async fn tomato_debug_size[\s\S]*?if !cfg!\(debug_assertions\) \{\s*return Err/);
+  // A página: o envio antes do aviso (e portanto antes do show), a cada
+  // resize e a cada pedido do Rust; nada no modo opaco.
+  const js = ler('src/tomato.js');
+  assert.match(js, /\.ouvir\(ipc\.full\.EVENTO_REGIAO, \(tamanho\) => enviarRegiao\(/);
+  assert.match(js, /h\.dataset\.fullMode === 'opaque' \|\| !r/);
+  assert.match(js, /await ipc\.full\.definirRegiao\(r\.faixas\)/);
+  // Escondida, o innerWidth é 0: o lado vem do Rust, e a região vai antes do show.
+  assert.match(js, /const ladoDaJanela = \(\) => window\.innerWidth \|\| Number\(window\.__TT_TOMATO_SIZE__\) \|\| 0;/);
+  assert.match(js, /const lado = ladoDaJanela\(\);/);
+  assert.match(build, /\.initialization_script\(init_lado\(s\.tomato_size\)\)/);
+  const ipcJs = ler('src/lib/ipc.js');
+  assert.match(ipcJs, /EVENTO_REGIAO: 'tt:\/\/tomato-region'/);
+  assert.match(ipcJs, /definirRegiao: \(faixas\) => invoke\('set_tomato_region', \{ strips: faixas \}\)/);
+});
+
+test('Full: região no Windows pelo SetWindowRgn, sem a borda do DWM, e o A/B do no_redirection_bitmap (M55)', () => {
+  // O crate windows na mesma versão do Tauri (0.62), só no Windows (3.6).
+  const cargo = ler('src-tauri/Cargo.toml');
+  const win = cargo.slice(cargo.indexOf(`[target.'cfg(windows)'.dependencies]`)).split(/\n\[/)[0];
+  assert.match(win, /^windows = \{ version = "0\.62", features = \[[^\]]*"Win32_Graphics_Gdi"[^\]]*"Win32_Graphics_Dwm"[^\]]*\] \}$/m);
+  assert.equal(cargo.match(/^windows = /gm).length, 1, 'windows só na seção do Windows');
+  assert.match(ler('src-tauri/src/window/mod.rs'), /#\[cfg\(windows\)\]\npub mod region_windows;/);
+  const rw = ler('src-tauri/src/window/region_windows.rs');
+  // 5.5: o HWND passa como número (não é Send), tudo na thread principal, a
+  // união das faixas e o SetWindowRgn; só as temporárias são apagadas, e a
+  // região final só quando o SetWindowRgn falha.
+  const apply = rw.slice(rw.indexOf('pub fn apply_region'), rw.indexOf('pub fn sem_borda'));
+  assert.match(apply, /let raw = win\.hwnd\(\)\?\.0 as isize;\s*win\.run_on_main_thread\(move \|\| \{/);
+  assert.match(apply, /CombineRgn\(Some\(rgn\), Some\(rgn\), Some\(r\), RGN_OR\)/);
+  assert.match(apply, /let _ = DeleteObject\(r\.into\(\)\);/);
+  assert.match(apply, /if SetWindowRgn\(HWND\(raw as _\), Some\(rgn\), true\) == 0 \{[^}]*DeleteObject\(rgn\.into\(\)\)/);
+  assert.equal(apply.match(/DeleteObject\(rgn/g).length, 1, 'a região entregue ao sistema nunca é apagada');
+  const borda = rw.slice(rw.indexOf('pub fn sem_borda'));
+  assert.match(borda, /let cor: u32 = DWMWA_COLOR_NONE;[\s\S]*DWMWA_BORDER_COLOR,\s*\(&raw const cor\)/);
+  assert.match(borda, /DWMWA_WINDOW_CORNER_PREFERENCE/);
+  assert.match(borda, /DWMWCP_DONOTROUND/);
+  // O comando: o mesmo do Linux, com o aplicar do Windows sob cfg.
+  const rs = ler('src-tauri/src/window/tomato.rs');
+  assert.match(rs, /#\[cfg\(windows\)\]\nfn aplicar\([\s\S]*?region_windows::apply_region/);
+  // A borda sai logo depois do build, antes de qualquer show.
+  const build = rs.slice(rs.indexOf('pub fn build_tomato'), rs.indexOf('pub const VAR_AB_NRB'));
+  assert.ok(build.indexOf('builder.build()?') < build.indexOf('region_windows::sem_borda(&w)'));
+  assert.match(build, /#\[cfg\(windows\)\]\s*if let Err\(e\) = super::region_windows::sem_borda\(&w\)/);
+  // O A/B: a variável só no build de debug, e nunca na opaca.
+  assert.match(rs, /pub const VAR_AB_NRB: &str = "TOMATITO_AB_NRB";/);
+  assert.match(rs, /pub fn sem_redirecionamento\(opaca: bool, var: Option<&OsStr>, debug: bool\) -> bool \{\s*let lado_b = debug && var == Some\(OsStr::new\("0"\)\);\s*!opaca && !lado_b\s*\}/);
+  assert.match(build, /std::env::var_os\(VAR_AB_NRB\)\.as_deref\(\),\s*cfg!\(debug_assertions\),/);
+  // Nunca setIgnoreCursorEvents (5.3): no Windows, vale para a janela inteira.
+  assert.doesNotMatch(rw, /set_ignore_cursor_events/);
+  // A página: px físicos no Windows; no pedido do Rust, o tamanho físico
+  // que ele manda vale mais que o devicePixelRatio (a troca de DPI).
+  const js = ler('src/tomato.js');
+  assert.match(js, /fisico > 0 && lado > 0 && h\.dataset\.platform === 'windows' \? fisico \/ lado : escalaDaRegiao\(\)/);
+  assert.match(js, /enviarRegiao\(Array\.isArray\(tamanho\) \? tamanho\[0\] : 0\)/);
+});
+
+// M56: P/M/G, o menu nativo, os atalhos e o "Sempre na frente" (5.10 e 5.7).
+test('Full: menu nativo completo, tamanho e sempre na frente pelo settings_set, atalhos e a dica do Wayland (M56)', () => {
+  const js = ler('src/tomato.js');
+  const ordem = (texto, partes) => partes.map((p) => texto.indexOf(p)).every((i, k, a) => i >= 0 && (k === 0 || i > a[k - 1]));
+  // O Menu.popup() nativo, na posição do clique (no Wayland, o GTK não sabe onde está o ponteiro).
+  assert.match(js, /import \{ CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu \} from '@tauri-apps\/api\/menu';/);
+  assert.match(js, /await menu\.popup\(new LogicalPosition\(x, y\)\);/);
+  assert.match(js, /for \(const r of recursos\.splice\(0\)\) r\.close\(\)/, 'o menu anterior sai da tabela de recursos');
+  // Cada item criado à parte: dentro do Menu.new, o Tauri 2.12 perde o canal da ação.
+  assert.match(js, /criarItens\(itens, /);
+  assert.doesNotMatch(js, /Menu\.new\(\{ items: (?!itensDoTauri)/);
+  // Tamanho e "Sempre na frente" só pelo settings_set (o Rust aplica); nunca esconder (5.3).
+  assert.match(js, /ipc\.configuracoes\.gravar\(\{ tomatoSize: lado \}\)/);
+  assert.match(js, /ipc\.configuracoes\.gravar\(\{ tomatoOnTop: !s\.tomatoOnTop \}\)/);
+  assert.match(js, /getCurrentWindow\(\)\.minimize\(\)/);
+  assert.doesNotMatch(js, /\.hide\(\)|setAlwaysOnTop|setSize/);
+  // Atalhos: Espaço e Ctrl+, pelas regras da main (lib/keys.js), além do Esc.
+  assert.match(js, /import \{ espacoLivre, ligarAtalhosDaJanela, rotaDoAtalho \} from '\.\/lib\/keys\.js';/);
+  assert.match(js, /if \(espacoLivre\(e\)\) \{\s*e\.preventDefault\(\);\s*rodar\(acoes\.principal\);/);
+  assert.match(js, /rotaDoAtalho\(e\) === 'configuracoes'\) \{\s*e\.preventDefault\(\);\s*rodar\(acoes\.configuracoes\);/);
+  // O Rust aplica o tamanho e o sempre na frente depois de cada settings_set.
+  const comandos = ler('src-tauri/src/commands.rs');
+  const gravar = comandos.slice(comandos.indexOf('pub fn gravar_configuracoes('));
+  assert.ok(ordem(gravar, ['let antes = settings.get();', 'settings.set(patch', 'aplicar_preferencias(app, &antes, &depois)']));
+  assert.match(comandos, /pub fn tomato_on_top_available\(\) -> bool/);
+  const tomato = ler('src-tauri/src/window/tomato.rs');
+  const aplicar = tomato.slice(tomato.indexOf('pub fn aplicar_preferencias('), tomato.indexOf('pub fn fechada_pelo_usuario('));
+  assert.ok(ordem(aplicar, ['antes.tomato_size != depois.tomato_size', 'redimensionar(&t, depois.tomato_size)', 'antes.tomato_on_top != depois.tomato_on_top', 'sempre_na_frente_por_codigo()', 't.set_always_on_top(depois.tomato_on_top)']));
+  assert.match(tomato, /d\.backend\(\)\.is_x11\(\)/, 'no Linux, só pelo X11');
+  const lib = ler('src-tauri/src/lib.rs');
+  assert.match(lib, /commands::tomato_on_top_available,/);
+  assert.ok(lib.indexOf('window::tomato::detectar_sempre_na_frente();') < lib.indexOf('window::tomato::ligar(app.handle());'), 'no setup, na thread principal');
+  // Fechar o tomate segue o "fechar para a bandeja".
+  assert.match(lib, /window::tomato::fechada_pelo_usuario\(window\);/);
+  assert.match(lib, /tauri::RunEvent::ExitRequested \{\s*code: None, api, \.\.\s*\} = &evento\s*&& window::manter_na_bandeja\(app\)/);
+  // 3.3: false no Windows 10.
+  assert.match(ler('src-tauri/src/settings.rs'), /tomato_on_top: tomato_on_top_padrao\(\),/);
+  // A dica do Wayland, com o texto do catálogo, ligada nas Configurações.
+  assert.match(ler('src/lib/i18n/pt-BR.js'), /'No GNOME, use Alt\+Espaço → Sempre na frente das outras janelas para manter o tomate por cima'/);
+  assert.match(ler('src/views/settings.js'), /ligarDicaSempreNaFrente\(raiz\.querySelector\('\.tt-config-secao'\)/);
+  assert.match(ler('src/lib/ipc.js'), /sempreNaFrente: \(\) => invoke\('tomato_on_top_available'\)/);
+});
+
+test('M57: Compatibilidade X11 (B2) lida antes do Builder, com a marca e o reinício', () => {
+  const lib = ler('src-tauri/src/lib.rs');
+  // A leitura continua a primeira coisa do run(), antes do Builder (3.3).
+  // Junção com o M37: o single-instance é o primeiro plugin do Builder.
+  assert.match(lib, /#\[cfg\(target_os = "linux"\)\]\s*compat_x11::usar_x11_se_pedido\(&context\.config\(\)\.identifier\);[^;]*let builder =\s*tauri::Builder::default\(\)\.plugin\(tauri_plugin_single_instance::init\(/);
+  assert.match(lib, /compat_x11::x11_compat_get,\s*compat_x11::app_restart,/);
+  const x11 = ler('src-tauri/src/compat_x11.rs');
+  // O ambiente só antes de qualquer thread; o GDK_BACKEND de fora (sem a marca) nunca é mexido.
+  assert.match(x11, /env::set_var\("GDK_BACKEND", "x11"\);\s*env::set_var\(MARCA, "1"\);/);
+  assert.match(x11, /env::remove_var\("GDK_BACKEND"\);\s*env::remove_var\(MARCA\);/);
+  assert.match(x11, /\(false, false, _\) => Acao::Nada,/);
+  // Sem DISPLAY, o GTK não abriria no X11: a opção é ignorada.
+  assert.match(x11, /\(true, false, false\) => Acao::SemXwayland,/);
+  // O reinício pelo caminho que passa pelo ExitRequested com código (o run() só barra o sem código).
+  assert.match(x11, /app\.request_restart\(\);/);
+  assert.doesNotMatch(x11, /\.restart\(\)/);
+  // A tela: um módulo à parte, ligado por uma linha, e só a chave linuxX11 pelo settings_set.
+  assert.match(ler('src/views/settings.js'), /ligarOpcaoX11\(raiz\.querySelector\('\.tt-pagina'\), \{ icone, ipc: compatX11 \}\)/);
+  const opcao = ler('src/views/opcao-x11.js');
+  assert.match(opcao, /api\.gravar\(\{ linuxX11: ligada \}\)/);
+  // Junção com o M39: a tela não pergunta pelo sistema (3.8); quem decide é o disponivel do Rust.
+  assert.match(opcao, /if \(desligada \|\| !situacao\?\.disponivel\) return;/);
+  const ipc = ler('src/lib/ipc.js');
+  assert.match(ipc, /situacao: \(\) => invoke\('x11_compat_get'\)/);
+  assert.match(ipc, /reiniciar: \(\) => invoke\('app_restart'\)/);
 });

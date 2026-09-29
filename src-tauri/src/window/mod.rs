@@ -2,6 +2,12 @@
 //! `tauri.conf.json` (`app.windows: []`): todas nascem no `setup`.
 
 pub mod main_window;
+#[cfg(target_os = "linux")]
+pub mod region_linux;
+#[cfg(windows)]
+pub mod region_windows;
+pub mod tomato;
+pub mod validacao;
 
 use std::sync::Arc;
 
@@ -12,7 +18,7 @@ use crate::commands::AppEngine;
 use crate::settings::{SettingsStore, ThemePref};
 use crate::state_file::StateStore;
 
-/// Rótulo da janela do tomate (5.3), que nasce no M50.
+/// Rótulo da janela do tomate (5.3; `tomato.rs`, M50).
 pub const TOMATO_LABEL: &str = "tomato";
 
 /// O que o `window-state` guarda da `main` (3.4, M37): tamanho, posição e
@@ -26,16 +32,24 @@ pub const ESTADO_DA_JANELA: StateFlags = StateFlags::SIZE
 /// "Mostrar Tomatito" (3.4), da bandeja (M36) e da segunda instância (M37).
 /// Com `theme = full`, `unminimize` e `set_focus` na `tomato`, sem `hide` nem
 /// `show` (no Linux, ela nunca pode ser escondida e mostrada de novo; 5.3).
-/// Nos outros temas, ou enquanto a `tomato` não existe, `show`,
-/// `unminimize` e `set_focus` na `main`. O GNOME pode só avisar "Tomatito
-/// está pronto" (prevenção de roubo de foco); é aceito.
+/// M51: se a `tomato` não existe (fechada pelo compositor), ela nasce de
+/// novo, pelo mesmo caminho da troca. Nos outros temas, `show`, `unminimize`
+/// e `set_focus` na `main`. O GNOME pode só avisar "Tomatito está pronto"
+/// (prevenção de roubo de foco); é aceito.
 pub fn mostrar(app: &AppHandle) {
     let full = app
         .try_state::<SettingsStore>()
         .is_some_and(|s| s.get().theme == ThemePref::Full);
-    if full && let Some(w) = app.get_webview_window(TOMATO_LABEL) {
-        let _ = w.unminimize();
-        let _ = w.set_focus();
+    if full && app.try_state::<tomato::Troca>().is_some() {
+        // M51: pelo `entrar`, que traz a `tomato` para a frente ou a cria de
+        // novo (fechada pelo compositor), sempre na vez dela: nunca mostra o
+        // tomate antes da página nem no meio de uma troca.
+        let app = app.clone();
+        tauri::async_runtime::spawn(async move {
+            if let Err(e) = tomato::entrar(&app).await {
+                eprintln!("[tomatito] tomate não mostrado: {e}");
+            }
+        });
         return;
     }
     if let Some(w) = app.get_webview_window(main_window::LABEL) {
@@ -85,6 +99,50 @@ pub fn sair(app: &AppHandle) {
     app.exit(0);
 }
 
+/// `RunEvent::ExitRequested` sem código (a última janela fechou; M56): com
+/// "fechar para a bandeja" ligado, o app continua, na bandeja. Acontece
+/// quando o tomate fecha (o "Fechar" do menu, o Alt+F4) e a `main` não
+/// existe (o app começou no Full). Uma saída pedida (`app.exit`, o "Sair" da
+/// bandeja) vem com código e não passa por aqui. Devolve se a saída deve ser
+/// barrada.
+pub fn manter_na_bandeja(app: &AppHandle) -> bool {
+    app.try_state::<SettingsStore>()
+        .is_some_and(|s| s.get().close_to_tray)
+}
+
+/// Rota que o `show_main` aceita: `#/` e letras minúsculas ou hífen (as do
+/// `src/router.js`, como `#/configuracoes`). O texto vai para um `eval` na
+/// `main`, então nada fora disso passa.
+pub fn rota_valida(rota: &str) -> bool {
+    rota.len() <= 32
+        && rota
+            .strip_prefix("#/")
+            .is_some_and(|r| !r.is_empty() && r.chars().all(|c| c.is_ascii_lowercase() || c == '-'))
+}
+
+/// `show_main{route}` (3.5 e 5.7): mostra a `main` sem fechar a `tomato`
+/// (`show`, `unminimize` e `set_focus`) e, com uma rota, troca a tela pelo
+/// hash (o roteador ouve o `hashchange`). Sem a `main` (o app começou no
+/// Full, ou ela foi fechada com "fechar para a bandeja" desligado), ela nasce
+/// de novo pelo `build_main` já na rota pedida (M51) e se mostra sozinha.
+/// Chame fora da thread principal (num comando async), como toda criação de
+/// janela (5.3).
+pub fn mostrar_main(app: &AppHandle, rota: Option<&str>) -> tauri::Result<()> {
+    let rota = rota.filter(|r| rota_valida(r));
+    let Some(w) = app.get_webview_window(main_window::LABEL) else {
+        let s = app.state::<SettingsStore>().get();
+        main_window::build_main_na_rota(app, &s, rota)?;
+        return Ok(());
+    };
+    if let Some(r) = rota {
+        w.eval(format!("location.hash={}", serde_json::Value::from(r)))?;
+    }
+    w.show()?;
+    w.unminimize()?;
+    w.set_focus()?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -99,5 +157,23 @@ mod tests {
         assert!(!ESTADO_DA_JANELA.contains(StateFlags::VISIBLE));
         assert!(!ESTADO_DA_JANELA.contains(StateFlags::DECORATIONS));
         assert!(!ESTADO_DA_JANELA.contains(StateFlags::FULLSCREEN));
+    }
+
+    #[test]
+    fn rotas_do_show_main() {
+        assert!(rota_valida("#/configuracoes"));
+        assert!(rota_valida("#/foco"));
+        for ruim in [
+            "",
+            "#/",
+            "configuracoes",
+            "#/Foco",
+            "#/a'b",
+            "#/a;b",
+            "#/x\"#)",
+        ] {
+            assert!(!rota_valida(ruim), "{ruim}");
+        }
+        assert!(!rota_valida(&format!("#/{}", "a".repeat(40))));
     }
 }

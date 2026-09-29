@@ -4158,6 +4158,7 @@ dependencies = [
  "tauri-plugin-window-state",
  "tokio",
  "tomatito-core",
+ "windows",
  "zbus",
 ]
 

@@ -2,7 +2,7 @@
 // (listen) que as telas usam, com os nomes do Rust num lugar só. O formato dos
 // retratos está em src-tauri/src/events.rs.
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
+import { emit, listen } from '@tauri-apps/api/event';
 
 export const EVENTOS = Object.freeze({
   estado: 'tt://state',
@@ -138,6 +138,52 @@ export const cronometro = Object.freeze({
   pausar: () => invoke('stopwatch_pause'),
   volta: () => invoke('stopwatch_lap'),
   redefinir: () => invoke('stopwatch_reset'),
+});
+
+/**
+ * Tomatito Full (3.5 e 5.7). `trocarModo(full)` é o `switch_window_mode{full}`
+ * (M51): `true` entra no Full (a `tomato` aparece e a `main` se esconde),
+ * `false` sai (volta ao `lastNormalTheme`, mostra a `main` e fecha a
+ * `tomato`). `mostrarMain(rota)` é o `show_main{route}`: mostra a `main` sem
+ * fechar a `tomato`, na rota dada (`'#/configuracoes'`) ou na tela em que
+ * estava. `avisarPronto(dados)` emite o `tt://tomato-ready` (só a página do
+ * tomate), com `{ userAgent, renderer }`: libera o `show()` do tomate.
+ * M52: `validacao()` é o `full_validation_get` e `responderValidacao(r)` o
+ * `full_validation_answer{answer}` (`keep`, `revert`, `opaque` ou
+ * `dismiss`); os dois devolvem o retrato da validação com reversão (5.9),
+ * que também chega pelo `tt://full-validation` (window/validacao.rs).
+ * M54: `definirRegiao(faixas)` é o `set_tomato_region{strips}` (só a página
+ * do tomate): a região de entrada, em `[x, y, largura, altura]`; devolve
+ * `'applied'` ou `'ignored'`. O Rust pede a região de novo, a cada troca de
+ * tamanho da janela, pelo `tt://tomato-region` (`EVENTO_REGIAO`).
+ * `tamanhoDeDebug(lado)` é o `tomato_debug_size{size}` (só no build de debug,
+ * sem gravar; a escolha de verdade grava o `tomatoSize` pelo `settings_set`,
+ * e o Rust troca o tamanho, M56). M56: `sempreNaFrente()` é o
+ * `tomato_on_top_available`: se o "Sempre na frente" funciona por código
+ * (Windows e X11; no Wayland, não).
+ */
+export const full = Object.freeze({
+  EVENTO_PRONTO: 'tt://tomato-ready',
+  EVENTO_VALIDACAO: 'tt://full-validation',
+  EVENTO_REGIAO: 'tt://tomato-region',
+  trocarModo: (entrar) => invoke('switch_window_mode', { full: entrar }),
+  mostrarMain: (rota = null) => invoke('show_main', { route: rota }),
+  avisarPronto: (dados) => emit('tt://tomato-ready', dados),
+  validacao: () => invoke('full_validation_get'),
+  responderValidacao: (resposta) => invoke('full_validation_answer', { answer: resposta }),
+  definirRegiao: (faixas) => invoke('set_tomato_region', { strips: faixas }),
+  tamanhoDeDebug: (lado) => invoke('tomato_debug_size', { size: lado }),
+  sempreNaFrente: () => invoke('tomato_on_top_available'),
+});
+
+/**
+ * M57, plano B2 (src-tauri/src/compat_x11.rs): `situacao()` é o
+ * `x11_compat_get`, `{ disponivel, ativa, xwayland }`; `reiniciar()` é o
+ * `app_restart`, para a `linuxX11` gravada valer.
+ */
+export const compatX11 = Object.freeze({
+  situacao: () => invoke('x11_compat_get'),
+  reiniciar: () => invoke('app_restart'),
 });
 
 /** Ouve um evento do Rust; `cb` recebe só o conteúdo. Devolve o `unlisten`. */

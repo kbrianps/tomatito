@@ -241,6 +241,20 @@ fluent-dialog.tt-dialogo-avisos::part(dialog){ width:640px; max-width:calc(100vw
 .tt-dialogo-avisos .tt-dialogo-meta-erro{ margin:12px 0 0; }
 @media (forced-colors:active){ .tt-dialogo-avisos-texto:focus-visible{ outline-color:Highlight; } }
 
+/* M52: diálogo da validação do Tomatito Full (views/validacao-full.js), com o
+   corpo e os botões lado a lado dos outros diálogos, em 400 px (os textos são
+   mais longos que os da meta). A contagem usa algarismos de largura fixa,
+   para a frase não tremer a cada segundo. */
+fluent-dialog.tt-dialogo-validacao::part(dialog){ width:400px; max-width:calc(100vw - 32px); box-shadow:var(--shadow64); }
+.tt-dialogo-validacao fluent-dialog-body::part(actions){
+  flex-direction:row; align-items:stretch; justify-content:stretch;
+  margin-block-start:0; padding-block-start:24px;
+}
+.tt-dialogo-validacao [slot="action"]{ flex:1 1 0; min-width:0; }
+.tt-dialogo-validacao-texto{ display:flex; flex-direction:column; gap:12px; padding-top:12px; }
+.tt-dialogo-validacao-texto p{ margin:0; }
+.tt-dialogo-validacao-prazo{ font-variant-numeric:tabular-nums; }
+
 /* M30: caixa de texto (o TextBox do WinUI): 32 px de altura, raio 4, fundo
    --tt-input-bg, borda --tt-border com o sublinhado --tt-stroke-control; com
    o foco, o sublinhado vira 2 px do accent e o fundo fica o do cartão (o

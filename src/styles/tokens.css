@@ -99,7 +99,7 @@
   --tt-tomato-ring:#FFF4EE; --tt-tomato-ring-track:rgb(255 255 255/.24);
   --tt-tomato-btn-bg:#FFF6F1; --tt-tomato-btn-bg-hover:#FFFFFF; --tt-tomato-btn-bg-pressed:#F6E9E4;
   --tt-tomato-btn-ink:#A3261C;
-  --tt-tomato-calyx:#35603C; --tt-tomato-calyx-vein:#447A4B; --tt-tomato-stem:#56683A;
+  --tt-tomato-calyx:#789F6B; --tt-tomato-calyx-vein:#447A4B; --tt-tomato-stem:#56683A;   /* M50: #35603C sumia na deuteranopia (4.4) */
   --tt-tomato-shadow:#3A0D08;
 }
 [data-theme="full"] .stage[data-state="break"]{

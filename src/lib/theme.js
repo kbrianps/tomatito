@@ -5,10 +5,11 @@
 // `settings_set`, e a main reflete cada gravação pelo `tt://settings`
 // (`ligarTema`), inclusive as que não saíram desta janela.
 //
-// O Full (a janela-tomate) só aparece em Configurações no M51, e o
-// `switch_window_mode` só existe a partir do M50: até lá, `aplicarTema('full')`
-// recusa, e sair de um `theme = full` gravado à mão é só uma gravação comum
-// (docs/decisoes.md, M24).
+// O Full (a janela-tomate; M51): escolher o Full chama o `switch_window_mode`
+// (o Rust grava `theme = full`, mostra a `tomato` e esconde a main); na main
+// com o Full ativo, escolher outro tema sai do Full antes (o Rust volta ao
+// `lastNormalTheme`, mostra a main e fecha a `tomato`) e depois aplica a
+// escolha, como no `applyTheme` da 4.6.
 //
 // O modo Sistema segue a guarda (c) da 4.6: `setTheme(null)`, depois
 // `theme()`, depois, no Linux, `setTheme(t)`. As guardas (a) e (b), com o
@@ -17,8 +18,11 @@
 /** O tema nativo (menus e diálogos do sistema) de cada tema resolvido, pelo color-scheme. */
 export const NATIVO = Object.freeze({ lite: 'dark', suave: 'light', light: 'light', dark: 'dark' });
 
-/** As escolhas da interface, na ordem de Configurações > Aparência. O Full entra no M51. */
-export const ESCOLHAS = Object.freeze(['lite', 'suave', 'light', 'dark', 'system']);
+/**
+ * As escolhas da interface, na ordem de Configurações > Aparência: os cinco
+ * temas e, por último, a opção do sistema (1.1, item 3). O Full entrou no M51.
+ */
+export const ESCOLHAS = Object.freeze(['lite', 'suave', 'light', 'dark', 'full', 'system']);
 
 /** Evento do documento a cada troca de tema (daqui ou do `tt://settings`): `detail` = `{ pref, tema }`. */
 export const EVENTO = 'tt-tema';
@@ -52,17 +56,52 @@ export async function temaDoSistema(win, { plataforma, escuroPelaMidia = () => f
 }
 
 /**
+ * Sai do Full pela main (4.6 e 5.7): pede o `switch_window_mode(false)` e
+ * espera o `tt://settings` da saída chegar ao <html> (o evento `tt-tema` com
+ * uma preferência que não é o Full), por no máximo `espera` ms. Sem essa
+ * espera, o evento da saída (o `lastNormalTheme`) poderia chegar depois da
+ * escolha nova e pintar a main de volta no tema anterior por um instante.
+ */
+export async function sairDoFull({ h, trocarModo, espera = 1000, relogio = globalThis } = {}) {
+  const refletido = new Promise((resolve) => {
+    if (!h.addEventListener) return resolve();
+    const fim = () => {
+      relogio.clearTimeout(limite);
+      h.removeEventListener(EVENTO, aoTrocar);
+      resolve();
+    };
+    const aoTrocar = (e) => e.detail?.pref !== 'full' && fim();
+    const limite = relogio.setTimeout(fim, espera);
+    h.addEventListener(EVENTO, aoTrocar);
+  });
+  await trocarModo(false);
+  await refletido;
+}
+
+/**
  * `applyTheme` da 4.6. `deps`:
  *   - `win`: a janela atual (`getCurrentWindow()`), com `label`, `setTheme` e `theme`;
  *   - `gravar(patch)`: o `settings_set` (lib/ipc.js, `configuracoes.gravar`);
+ *   - `trocarModo(full)`: o `switch_window_mode` (lib/ipc.js, `full.trocarModo`);
  *   - `h`: o <html>; `quadro`: o requestAnimationFrame;
  *   - `escuroPelaMidia()`: o `prefers-color-scheme: dark`, reserva do modo Sistema.
- * Resolve com as configurações que o Rust devolveu. Se a gravação falhar, os
- * atributos voltam ao que eram e o erro sobe (`{ code, message }`).
+ * O Full (M51): na main, escolher o Full só chama `trocarModo(true)` (o Rust
+ * grava o `theme` e troca as janelas); com o Full ativo, outra escolha sai
+ * do Full antes (`sairDoFull`). No tomate, só o Full vale; outra escolha
+ * chama `trocarModo(false)`.
+ * Resolve com as configurações que o Rust devolveu (nada, nas trocas de
+ * janela). Se a gravação falhar, os atributos voltam ao que eram e o erro
+ * sobe (`{ code, message }`).
  */
-export async function aplicarTema(pref, { win, gravar, h, quadro, escuroPelaMidia } = {}) {
-  if (!ESCOLHAS.includes(pref)) throw new Error(`tema desconhecido ou ainda indisponível: ${pref}`);
-  if (win.label === 'tomato') return null; // o tomate é sempre "full" (a janela só existe a partir do M50)
+export async function aplicarTema(pref, { win, gravar, trocarModo, h, quadro, escuroPelaMidia } = {}) {
+  if (!ESCOLHAS.includes(pref)) throw new Error(`tema desconhecido: ${pref}`);
+  const tomate = win.label === 'tomato';
+  if (!tomate && h.dataset.themePref === 'full' && pref !== 'full') await sairDoFull({ h, trocarModo }); // sai do Full pelas Configurações (5.7)
+  if ((pref === 'full') !== tomate) {
+    await trocarModo(pref === 'full'); // entra no Full (5.7), ou o tomate sai dele
+    return null;
+  }
+  if (tomate) return null; // o tomate é sempre "full"
   const antes = { pref: h.dataset.themePref, tema: h.dataset.theme };
   let tema = pref;
   if (pref === 'system') tema = await temaDoSistema(win, { plataforma: h.dataset.platform, escuroPelaMidia });
