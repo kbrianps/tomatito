@@ -1,0 +1,10 @@
+0	npm run build
+0	cargo fmt --all --check
+0	cargo clippy --workspace --all-targets -- -D warnings
+0	cargo test --workspace
+0	npm test
+0	node scripts/contrast.mjs
+0	npm run build:debug
+0	invariante: dist/ sem arquivos nem strings da web
+0	invariante: desktop-sem-celular (390x844, toque)
+0	capturas (shot.mjs, 3 temas)

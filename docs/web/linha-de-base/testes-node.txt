@@ -1,0 +1,368 @@
+↑/↓ andam um passo, PageUp/PageDown 15 min e Home/End vão aos limites (3.8)
+24 traços de 23 × 6 com ponta redonda, de 98 a 121 do centro, a cada 15° a partir das 12 h
+aberto pelo Xwayland: ligada, sem rodapé; desligar pede o reinício
+abrir: um fluent-dialog no <body>; o texto do arquivo entra como texto, e o foco vai para o bloco
+ação principal por estado
+ação principal por estado
+a chave da fase muda com a fase e o fim, e não com a pausa
+a linha de comando grava o arquivo do repositório e diz o que fez
+a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenchidos) mais o pincel do M24, o aviso de erro do M28, o check preenchido do M30 , a lixeira e o check do M33, o copiar do M35 e os cartões do M38 e do M39
+a palavra proibida não aparece no nome, na descrição, no README nem na interface
+aparência (M19): a fase e o pausado viram atributos do bloco
+Aparência: seis opções (os cinco temas da 1.1 e o Sistema por último), com o nome do catálogo
+API recusada: cai no execCommand com um textarea que some depois
+a ponte vem depois do gerado e cobre os tokens da seção 4.3 com a mesma especificidade
+a rampa vem do :root do tokens.css e é a da seção 4.5
+a região esvazia e recebe o texto um instante depois; texto repetido é lido de novo
+a resposta de uma abertura anterior não escreve na seguinte
+aria-current="page" e focusgroupstart só no item da tela atual (nenhum no \#/dev)
+ARIA: spinbutton com mínimo, máximo, valor e o valor por extenso
+as cinco rotas da seção 3.7, com a Foco como padrão
+as escolhas da interface são os cinco temas da 1.1 e o Sistema por último, e o nativo segue o color-scheme
+as globais lidas pelo boot são as que o initialization_script do Rust define
+a tabela 4.4 sai dos tokens de verdade, no mínimo e igual à do plano
+a tela: Sessões de foco, Aparência, Sistema e Sobre, nessa ordem
+a velocidade do get_state acelera a estimativa (TOMATITO_SPEED)
+a versão vive só no Cargo.toml
+avisos: cabeçalho em pt-BR, sem "Pomodoro", com o aviso de marcas e a OFL referida
+avisos: cada crate que entra no binário (Linux e Windows) está nos avisos, e nenhum fora do Cargo.lock
+avisos: cada pacote npm do app, na versão instalada, com o texto da licença
+bandeja: tray-icon e image-png, ícone depois do motor e CloseRequested só esconde
+barra de título: região de arraste no index.html, borda do Linux e glifos sem fonte de ícones
+botão de destaque: pausar com a fase correndo, retomar pausado
+botões do M13 no controls.css: padrão, destaque, sutil, circular, desabilitados e o anel duplo
+build de desenvolvimento com ID próprio (M21b)
+cabeçalho: "Período de foco" e "(1 de 2)"; no intervalo, só "Intervalo"; pausado, "Pausado"
+cada cartão é uma <section> com o título do catálogo em Subtitle, e a tela tem o <h1> focável
+cada prévia é um elemento data-theme do próprio tema, decorativa; o Sistema mostra o Claro e o Escuro
+camada de conteúdo: fundo, borda de 1 px em cima e à esquerda, canto de 8 px, e a rolagem por dentro
+caminhos de arquivo nos scripts do Node saem do fileURLToPath e do pathToFileURL (o CI também roda no Windows)
+cancelar fecha sem gravar; o clique no fundo não fecha; outros cliques passam
+capabilities/main.json com as permissões da seção 3.8, só para a main
+capabilities/tomato.json com as permissões da seção 3.8, só para a tomato
+cartão Tarefas: card-tasks.js ligado na tela Foco e a escolhida no focus_start
+cascata: ordem no empate, especificidade, herança, var() com alternativa e ciclo
+chamadas seguidas de sincronizar dividem um pedido
+CI do M03: Linux e Windows, com os seis passos na ordem do plano
+comando aplica a resposta; comando recusado ressincroniza e rejeita
+composição em 8 bits, com empate para o par, como o pal/lib.py
+concluída: anel cheio, "Concluída", 00:00 e a duração da sessão; o principal inicia outra
+configurações no Rust: settings_get, settings_set e tt://settings, sem o plugin do store
+contagem: troca o texto a cada segundo e para quando a pergunta sai
+contraste da WCAG 2.2: extremos e valores conhecidos
+controles do M12: o \#/dev tem todos os componentes Fluent da seção 1.1, e a ponte e o controls.css os ajustam ao tema
+Copiar: cabeçalho e linhas da tela, separados por tabulação
+Copiar: cada linha da tela aparece igual no texto
+copiar() numa pasta vazia, de novo sem mudar nada, e a conferência acusando cada diferença
+cores: hex curto, longo e com alfa; rgb() com barra, vírgula e porcentagem
+correndo: o arco é o que falta pelo segundo mostrado
+correndo: volta e redefinir habilitados, o decorrido de agora
+crates do Tauri fixados com "=" e no mesmo major.minor dos pacotes @tauri-apps/*
+cria cada item à parte (o canal da ação não se perde), em ordem, e guarda todos para fechar
+criar: um fluent-dialog no <body>, com nome; abrir mostra os valores e põe o foco na primeira lista, com os nomes
+cronômetro: comandos stopwatch_*, tt://stopwatch, state.json e a tela
+cronômetro: correndo, o decorrido sai do startedAt pelo relógio de parede, sem desviar
+cronômetro: no relógio acelerado, estima pela velocidade a partir do retrato
+cronômetro: nunca menos que o retrato, mesmo com o relógio do JS atrás
+cronômetro: o get_state traz o retrato, e o evento é ouvido quando existe
+cronômetro: retrato velho é descartado, e o comando recusado ressincroniza
+CSP da seção 3.8 no tauri.conf.json, mais o connect-src do IPC (M08)
+CSS: com movimento reduzido, o chevron vira de uma vez e o Fluent não move nada
+CSS: hover e pressionado em 83 ms, linear, nos controles feitos à mão e nos itens do Fluent
+CSS: nenhum font-size com vw ou cqi soltos, e os limites de @container em em (o zoom do WebKitGTK)
+CSS: o diálogo escala de 1,05 (250 ms na entrada, 167 na saída) e, com movimento reduzido, fica sem escala
+CSS: toda transição usa os tokens --tt-dur-* (que a mídia de movimento reduzido baixa), salvo o anel de 1 s, que tem a sua regra
+Ctrl+1/2/3 e Ctrl+, abrem Foco, Temporizador, Cronômetro e Configurações
+Ctrl+W e Ctrl+Q só com Ctrl sozinho e sem repetição
+Ctrl+W fecha e Ctrl+Q sai, pelo caractere, com a posição de reserva
+definirRecursos: o export vivo muda, quem assina é avisado só na mudança, e lixo é ignorado
+dependências npm com versão exata (sem ^, ~ nem faixas)
+desabilitados e foco dos componentes Fluent pela ponte (M13)
+desligar: fecha se estiver aberto, tira os ouvintes e o elemento do <body>
+desligar tira os dois ouvintes
+deslocamento: a circunferência vezes o que falta, com a fração entre 0 e 1
+deveMostrar: no Full, na tela, não vista e sem sempre na frente por código
+dica dos botões só de ícone: ligada no main.js, e todo data-dica do catálogo com aria-label
+dígitos pela posição (AZERTY e teclado numérico) e vírgula pelo caractere
+duração: a partir de 60 min, horas com uma casa decimal, sem o ",0", arredondadas para baixo
+duração: até 59 min, "N minutos"; o zero no plural
+duração: número e unidade separados, para empilhar no cartão
+duração zero não chega ao Rust; um erro do Rust deixa o diálogo aberto com o aviso
+durante uma troca pela interface, os sinais esperam; o claro intermediário da guarda (c) não chega à página
+editar: abre com os valores do temporizador e salva com o id
+entrada de página: fade com subida de 24 px na curva do token; reduzida, só o fade, linear
+entrarPagina anima cada filho da raiz, com os tokens, e segura a rolagem só enquanto a tela sobe
+entrarPagina: numa tela que já rola, ou com movimento reduzido, a rolagem fica como está
+entrarPagina sem duração (token ausente) não anima
+entrarPagina: uma troca no meio da outra cancela a anterior, e o fim dela não mexe na nova
+entre ticks, o restante desconta o relógio de parede (minimizar, suspender)
+erros: o título longo tem aviso próprio; o resto, o genérico
+Esc com uma lista suspensa aberta cancela o padrão (o diálogo em volta não fecha); fechada, não
+escolher o Full com a tela aberta não mostra (a janela some logo); ao voltar à tela, mostra
+escrever(): gera o arquivo que falta, não regrava o que já está em dia e acompanha a rampa
+Esc: Reverter na pergunta e "Agora não" na oferta; outras teclas passam
+Espaço com o foco fora de botões e campos: vale
+Espaço: inicia no preparo (ocioso ou concluído), pausa correndo, retoma pausado
+Espaço num controle, repetido, com modificador ou já tratado: não vale
+estado do desenho: ocioso, foco, intervalo, pausado e concluída
+estatísticas: rusqlite com bundled, banco aberto antes do motor e stats_get registrado
+F5 e Ctrl+R (e as variantes do Chromium) são recarga
+falha no settings_set: o <html> volta ao tema anterior, o tema nativo não muda e o erro sobe
+fechado por outro caminho, vale o Esc; a oferta aceita o modo opaco
+foco correndo: a contagem da tela Foco, o tempo em mm:ss e o anel pela fração decorrida
+Foco, Temporizador e Cronômetro em cima e Configurações no rodapé, como links
+folhas de estilo como <link> no index.html, na ordem da seção 4.2, e nunca por import no JS
+fonts.css só com a Inter latin e latin-ext em opsz (sem cirílico, grego nem vietnamita)
+fora da grade, o passo para no primeiro ponto da grade antes do alvo
+fora do Linux (o x11_compat_get com tudo falso), não mostra nada
+frase dos intervalos com PluralRules, e "Sem intervalos." no zero
+Full com o lastNormalTheme = system: a main segue o sistema
+Full: faixas da região calculadas pela página antes do aviso, e a sobreposição só no dev (M53)
+Full: menu nativo completo, tamanho e sempre na frente pelo settings_set, atalhos e a dica do Wayland (M56)
+Full na main: mostra o último tema normal (as Configurações abertas do tomate ficam opacas)
+Full: região de entrada no Linux pelo set_tomato_region, antes do show e a cada troca de tamanho (M54)
+Full: região no Windows pelo SetWindowRgn, sem a borda do DWM, e o A/B do no_redirection_bitmap (M55)
+Full: switch_window_mode pelo caminho do settings_set, tt://tomato-ready com limite de 2 s, início só com a tomato
+Full: validação de 10 s pelo fullValidated, full_mode() com o WEBKIT_DISABLE_DMABUF_RENDERER e a tomato opaca
+geometria: o anel do Relógio, 206 px com traço de 18 (raio do meio 94)
+glifos em SVG inline de 10 × 10, sem fonte de ícones
+grade com duas colunas: sessão e tarefas na primeira, progresso na segunda
+gravação recusada: o interruptor volta
+guarda (b) sem laço mesmo contra uma janela que nunca obedece
+hash vazio, desconhecido ou fora do formato \#/rota não é rota
+HTML das voltas: escondido sem voltas, tabela tabular e selecionável, botão Copiar
+HTML do card: nome escapado, rótulo "Encerrado há" e botões
+HTML em pt-BR, sem <style> nem style="..." (senão o nonce anula o unsafe-inline)
+HTML: número com unidades, centésimos depois da vírgula e três botões de 64 px
+ícone de 16 px e título do catálogo antes dos botões
+ícone fora do pacote é erro (nome ou grade que não existe)
+ícones só da pasta copiada: nada do @fluentui/svg-icons no código do app
+index.html: uma única região aria-live, polite e atômica, fora da vista
+intervalo: "A seguir: foco de 27 min" e Pular para o foco
+intervalos: as bordas da regra, a faixa inteira e o "Pular intervalos"
+intervalos: entrada inválida dá 0
+intervalos: os exemplos do plan.rs (30, 45, 60, 90 e 185 min, com F = 25 e B = 5)
+janela tomato: sempre "full", e data-full-mode só no plano B3
+Junção: fora das fases, o anúncio nativo vai sem a marca de fase e vale de qualquer janela
+lado do item de tamanho
+leitura: minutos arredondados para cima e o traço do progresso
+leitura recusada: o bloco some e o aviso de erro aparece, com o motivo no console; tenta de novo na próxima abertura
+ler o campo: só algarismos, as duas últimas casas, no limite
+ligado: no limite, o chevron desabilita, e o clique no desabilitado não faz nada
+ligado: o mousedown nos chevrons não tira o foco; configurar troca a faixa; desligar solta tudo
+ligado: teclas e chevrons mudam o valor, o ARIA e o número
+ligarAnel: anima pela propriedade CSS, só quando muda, e vai direto com animar: false
+ligar: antes da primeira leitura, o lápis abre com as configurações; sem clique, nenhum diálogo
+ligarAnuncioDeFases ouve o tt://phase e escreve na região [data-anuncio]
+ligar: ao voltar à tela, a marcação já vem com os últimos números
+ligar: a primeira resposta vai direto ao valor; as seguintes andam (fim de fase)
+ligarAtalhosDaJanela chama a ação, cancela o padrão e respeita quem já tratou
+ligarBloqueiosDeProducao cancela o menu fora dos campos e a recarga, e desliga
+ligar grava linuxX11 e oferece o reinício; o botão reinicia
+ligarLarguras: elementos novos das telas entram, e os que saíram deixam de ser observados
+ligarLarguras: --tt-vw no <html> e a largura de cada [data-largura], na hora e a cada mudança
+ligar: o lápis cria o diálogo uma vez, abre com a meta e a hora da última leitura, e salvar relê na hora
+ligar: ouve o evento antes de pedir o retrato, e abre a pergunta pendente (a main recriada)
+ligar ouve os dois eventos e faz o primeiro get_state
+ligar: tt://settings e a releitura por minuto (só com a janela visível) pedem de novo; a limpeza desliga tudo
+ligar: uma resposta velha que chega depois de uma nova é descartada
+linha concluída: o check preenchido, marcada, sem "Escolher"
+linha escolhida: aria-pressed e "Escolhida"
+linha pendente: o círculo (checkbox desmarcado, com o título como nome), o título, "Escolher para a sessão" e o apagar
+linhas das voltas: a mais nova em cima, com o tempo da volta e o total
+linhas na sessão: a da sessão sem apagar nem escolher; as outras esmaecidas (--tt-fg-2)
+Linux, Sistema: o GNOME escurece; guarda (a): data-theme, resolvedTheme gravado e o theme() do tao acompanha
+Linux, tema explícito: guarda (b) reaplica o nativo uma vez, sem mexer no data-theme nem gravar
+litTick: entradas fora da faixa
+litTick, modo minuto: uma volta por minuto de fase decorrido
+litTick, modo período (padrão): ⌊decorrido / duração × 24⌋, de 0 a 23
+M10: cada item traz a dica do painel compacto, decorativa e com o mesmo texto do rótulo
+M10: texto sobre a camada de conteúdo, fora da tabela 4.4, conferido contra o mínimo
+M13: desabilitados, só de registro (sem mínimo), com o Lite e o Suave na faixa do Claro e do Escuro
+M17: cada tela recebe a raiz e o contexto (o ícone)
+M17: o preparo vem do get_state, com o padrão antes e diante de um setup inválido
+M17: os ícones vêm do contexto (play no botão, chevrons no seletor; M18: pause e "..." na sessão; M28: o lápis do progresso; M30: as tarefas)
+M18: minutos restantes do mostrador, arredondados para cima
+M22: as âncoras caem nas cores do tema, as mesmas da ponte
+M22: estados dos controles Fluent, com os tokens gerados e tingidos, conferidos contra o mínimo
+M22: light recebe o createLightTheme e dark, o createDarkTheme; suave, lite e full, os tingidos
+M22: o tingimento só troca os neutros; o resto (rampa, status, sombras, medidas) fica igual
+M22, "Pronto quando": hover, pressionado e selecionado avermelhados no Lite e rosados no Suave, sem cinza
+M24: a background_color do build_main é o --tt-bg-app de cada tema, e uma cor trocada só de um lado reprova
+M32: duração curta (os exemplos do timer_duration do i18n.rs)
+M32: tempo do temporizador, positivo e negativo
+M33: a barra do canto inferior direito, com o lápis (ou Concluído) e o "+"
+M33: cada card traz Editar e Excluir (o CSS só os mostra no modo de edição), com o card na descrição
+M34: teclaLivre, o L do cronômetro, com as regras do Espaço
+M34: tempoDoCronometro corta para baixo e separa os centésimos com vírgula
+M37: single-instance primeiro, window-state restrito, app_quit e os bloqueios só em produção
+M38: configurações inválidas são ignoradas, e F ou B fora do lugar não mexem no preparo
+M38: gravarConfiguracoes aplica a resposta; recusado, rejeita e nada muda
+M38: o get_state traz as configurações; o tt://settings as troca, e o F e o B entram no preparo
+M39: cada get_state entrega os recursos ao aoReceberRecursos, antes de avisar quem assina as configurações
+M39: recursos no get_state, montados só no platform/recursos.js, e o Sobre e o Sair das Configurações
+M40: state.json carregado ao abrir, antes da bandeja e do laço, e o foco gravado a cada transição
+M43: escreverNaRegiao põe o texto num parágrafo novo (o WebKitGTK só avisa filho novo) e esvazia com texto vazio
+M43: no Linux, cada anúncio também vai ao leitor de tela pelo comando a11y_announce, uma vez
+M43: o comando a11y_announce registrado, com o gtk só no Linux, e a região sem role="status"
+M45: release.yml por tag v*, rascunho nos dois sistemas, e as opções de bundle do plano
+M46: "Ver avisos" e "Ver licença" abrem o diálogo com o documento certo, criado no primeiro clique e desfeito na limpeza
+M51: com o Full ativo, escolher Claro na main sai do Full, espera o tt://settings da saída e só então aplica o Claro
+M51: na main, escolher o Full só chama o switch_window_mode(true); o Rust grava e troca as janelas
+M51: no tomate, só o Full vale; outra escolha sai do Full pelo switch_window_mode(false)
+M51: sairDoFull não fica preso se o tt://settings da saída não chegar
+M57: Compatibilidade X11 (B2) lida antes do Builder, com a marca e o reinício
+main.js: a tela entra animada só nas trocas, e não na primeira (a janela abre já pintada)
+main.js: espera só as tags importadas e as fontes, com prazo, e mostra a janela sem requestAnimationFrame
+manifesto do Windows (Common Controls v6) que o build.rs passa ao linker
+Manter: responde keep uma vez só, com os botões esperando, e fecha pelo retrato
+marcação: "+" e "…" com nome e dica, o campo com o limite do Rust, e o estado vazio "Mantenha o rumo"
+marcação: antes da primeira resposta, o tamanho final com os números escondidos (sem esconder o anel)
+marcação: a oferta do modo opaco, com o motivo
+marcação: a pergunta da 5.9, Manter em destaque e com o foco, e a contagem
+marcação: com a fração 0, o arco fica escondido (a ponta redonda desenharia um ponto)
+marcação: mostrador, pausar de destaque, "..." com o menu e o rodapé
+marcação: o lápis (botão sutil só de ícone, com nome e dica) vem antes dos números
+marcação: role="img" com rótulo, SVG e número fora da árvore de acessibilidade, um traço aceso
+marcação: role="img" com rótulo, trilho e arco girado para começar às 12 h, SVG fora da árvore
+marcacao: seção Avançado, o interruptor rotulado e o rodapé
+marcação: título, as 9 metas por extenso e as 24 horas, com os valores atuais escolhidos
+marcação: título do documento, o bloco rolável com nome, carregando, o erro escondido e "Fechar"
+marcação: título, os três campos com role=spinbutton, o nome escapado e os botões
+marcação: três colunas (Ontem, o anel com a meta dentro, Esta semana) e o rodapé
+maximizada, o botão do meio vira Restaurar, com o glifo de dois quadrados
+minutos inteiros e a categoria com o zero no plural
+minutos por extenso e a escolha da forma
+mm:ss arredonda o segundo para cima
+mm:ss não para em 59 minutos
+mm:ss no fim e com valores fora da faixa
+modo minuto: o traço anda a cada 2,5 s
+montar(raiz) desenha a marcação
+montarRecursos: os três campos, só true liga, e o objeto é congelado
+movimentoReduzido pergunta pela mídia prefers-reduced-motion: reduce
+msDoToken lê ms e s, e 0 no que não é tempo
+mutações: token abaixo do mínimo falha; token mudado sem atualizar a tabela diverge
+nada no X11 (sempre na frente por código), no Windows e fora do Full
+navegação: <nav> e <main> vazios no index.html, com a amostra do M06 fora dele (vai para o \#/dev)
+navegação: medidas do NavigationView e tokens da seção M09 no shell.css e no nav-view.js
+nenhuma janela no tauri.conf.json: a main nasce no setup, com o builder da seção 4.7
+node scripts/contrast.mjs termina com 0 e imprime a tabela 4.4
+no dev, F5 e Ctrl+R recarregam (o WebKitGTK não tem esses atalhos), uma vez por tecla
+nomes desconhecidos são recusados antes de mexer em qualquer coisa
+novo: abre com 00:05:00, põe o foco nas horas, salva sem id e devolve o foco ao "+"
+no Wayland com o Full, aparece uma vez com o texto do catálogo
+números: meta desativada (0) ou inválida some com o anel e o rótulo
+números: Ontem, Esta semana e a meta pela regra das durações; o anel pela fração da meta
+números: o rodapé sempre em minutos; acima da meta, o anel cheio e o rótulo com a fração de verdade
+o <head> abre com o charset e logo depois o script de boot, antes de qualquer folha e de qualquer outro script
+o <html> não traz tema nem plataforma fixos: quem grava é o script de boot
+o atributo focusgroup e a definição do polyfill dizem a mesma coisa
+o botão principal inicia a mesma duração do seletor da tela Foco e da bandeja
+ocioso: sem anel, "Pronto", 30:00 e "Sessão de 30 min"; Encerrar e Pular desabilitados
+o clique no fundo não fecha; desligar fecha, tira os ouvintes e remove o elemento
+o DOM só é tocado quando o número ou o traço aceso mudam
+OFL da Inter, bundle.resources e o README dos sons
+o gerado só tem tokens do Fluent: nenhum --tt-*, nada que feche a regra, sem :root nem html
+o grupo de rádios tem nome e descrição do cartão e marca a preferência atual (o Full também, M51)
+OKLab à mão: valores de referência, ida e volta e croma reduzido fora da gama
+o menu completo: ações do foco, tamanho, sempre na frente, configurações, voltar, minimizar e fechar
+o menu do WebView só nos campos de texto
+o ouvinte navega, cancela o padrão e respeita quem já cancelou
+ordem do HTML (e do Tab) é a da leitura numa coluna só: sessão, tarefas, progresso
+o restante vem do endsAt (ends_at_ms) no relógio real, e da estimativa no acelerado
+o resto não é recarga
+os expansíveis: botão com aria-expanded e aria-controls, fechados por padrão, abertos quando lembrados
+os limites seguram o valor: 5 e 240
+os rótulos de estado cabem entre os botões dos ombros (até 9 caracteres, como "Intervalo")
+o texto guardado e o erro aparecem mesmo com o <dialog> abrindo depois do show()
+o tick corrige o desvio; tick velho é ignorado; tick de outra fase pede get_state
+o título do usuário vai escapado para o HTML
+outras teclas e atalhos com Ctrl, Alt ou Meta não são do seletor
+parado, nenhum quadro é pedido; retomar volta a pedir
+parado: tempo cheio, anel só com o trilho, "Redefinir" desabilitado
+partes e duração: ida e volta, com as horas até 99
+patch: as duas chaves, só com valores das listas
+patchDe: as opções do sistema gravam só a própria chave, em booleano
+patchDe: só a chave do controle, no formato do settings_set, e nada para valor inválido
+pausado e ocioso não contam
+pausado: rótulo Pausado, a contagem da fase e Retomar
+pausado: volta desabilitada, redefinir habilitado
+períodos: as listas do F e do B, com a escolha marcada e os minutos por extenso
+prévia aninhada: <div data-theme="suave"> dentro do Lite recalcula os derivados
+pular, encerrar e casos sem texto
+"Pular intervalo" só vale num intervalo
+px arredonda para 3 casas e larguraDaEntrada lê a caixa de conteúdo
+regiao: as formas são as do tomato.html (corpo, cabinho, cinco sépalas e a elipse da base)
+regiao: a sobreposição de debug desenha um retângulo por faixa e resume a região
+regiao: faixasDaMascara acha cada sequência pintada, linha a linha, até a borda
+regiao: faixasDaMascara conta qualquer alfa acima de 0 (a borda antisserrilhada)
+regiao: mergeRows junta faixas iguais em linhas seguidas
+regiao: mergeRows mantém a união das faixas (máscaras aleatórias)
+regiao: mergeRows não junta através de uma linha vazia nem com outro x ou outra largura
+regiao: regionStrips rasteriza as formas com o traço de folga, no lado × escala
+responsivo: painel compacto de 48 px abaixo de 860 px e grade da Foco em 2 colunas a partir de 560 px de área
+retrato mais velho que o atual é descartado; o de mesmo seq entra
+roda no predev e no prebuild, que o tauri dev e o tauri build chamam; o gerado fica fora do git
+rodapé: "A seguir:" e a próxima fase; nada na última
+rodape: reiniciar quando o gravado difere do que vale; aviso sem Xwayland
+rótulo correndo muda só a cada minuto
+rótulo do anel, uma vez por minuto
+rótulo do mostrador: minutos por extenso e a fase
+sai da tela antes da resposta: não insere nada
+salvar: com a gravação recusada, o diálogo fica aberto com o aviso; a segunda tentativa grava
+salvar: grava as duas chaves de uma vez, fecha, devolve o foco ao lápis e avisa o cartão
+segundosAte: para cima, nunca negativo
+seletores do tokens.css e a especificidade de cada um
+sem API: execCommand; recusado ou com erro, resolve false
+sem Ctrl, com outro modificador ou outra tecla, não é atalho
+sem globais (navegador comum): Lite e plataforma web
+sem hash, abre a Foco sem criar entrada no histórico, e troca de tela com location.replace
+sem "Sempre na frente" onde o código não consegue (Wayland)
+sem sessão Wayland (disponivel falso), não mostra nada
+sem setTheme() do Fluent em runtime: nada do app importa o set-theme nem o @fluentui/tokens
+sem texto vazio no menu
+seq: um retrato velho (o get que chega depois do evento) não desfaz o novo
+Sessões de foco: quatro cartões na ordem do Relógio, com os ícones de 20 e os textos do catálogo
+Sistema: a guarda (c) — tema nativo limpo, lido e, no Linux, fixado de novo — antes de gravar
+Sistema: a opção que não se aplica some (o tempo na bandeja sem o ícone); fechar para a bandeja e Sair ficam sempre
+Sistema: fechar para a bandeja e tempo na bandeja com switch, e "Sair do Tomatito" com botão, nos textos do catálogo
+Sistema resolve para Claro ou Escuro pelo prefers-color-scheme, nunca para Lite nem Suave
+situação na sessão: "Você está focando em", a tarefa da sessão vem do retrato (e não da escolhida)
+situação sem sessão: "Escolha uma tarefa para a sessão" e a escolhida só se estiver pendente
+Sobre: expansível com o nome, a licença e a versão no cabeçalho; aberto, os avisos, a licença da fonte (M46) e o aviso de marcas
+sons: o switch no cabeçalho, fora do botão, com o nome do cartão; o "Testar" dentro, com o nome do som
+src/assets/icons/ está em dia com a lista e com o pacote (node scripts/copy-icons.mjs --conferir)
+tarefas: tasks.rs no banco das estatísticas e os quatro comandos task_* registrados
+teclado nos campos: ↑ troca o número, Enter salva, Esc durante a gravação espera
+teclas: ↑/↓ dão a volta, PageUp/PageDown andam 10, Home/End vão aos limites
+tela: o título e a grade, vazia sem retrato
+temaDeBase: a escolha salva ou, no Full, o lastNormalTheme
+tema fixo: grava os atributos sem transição, grava pelo settings_set e depois fixa o tema nativo
+temas normais: o data-theme é a própria preferência
+temporizadores: barra, diálogo e state.json gravado pelo persist.rs a cada transição
+temporizadores: comando aplica a resposta; recusado, ressincroniza e rejeita
+temporizadores: comandos timer_*, tt://timers e o fim com som e notificação
+temporizadores: dois correndo descontam o relógio, passam do zero e o pausado fica parado
+temporizadores: o get_state traz o retrato, e o evento é ouvido quando existe
+temporizadores: retrato velho é descartado e os ouvintes recebem o novo
+texto de cada troca de fase de uma sessão de 60 min
+texto do erro pelo código do Rust
+tintNeutrals: interpola entre as âncoras no OKLab e recusa âncoras que não servem
+título: o nome, ou a duração curta sem nome
+título: preparo, foco, intervalo e pausado
+todo fluent-* usado tem o seu import (o base.css esconde o que não foi definido)
+tomate: duas entradas no Vite, janela da 5.3 e comandos async (M50 e M51)
+tomate: tomato.css com os tokens --tt-tomato-*, sem as variáveis do protótipo
+tomate: tomato.html em pt-BR, sem estilo em linha, com o boot do index.html e as folhas da 4.2
+três botões na ordem do sistema, com aria-label do catálogo e fora do Tab
+trocarAtributos avisa as telas com o evento tt-tema
+tt://settings: a main regrava data-theme-pref e data-theme (o resolvedTheme) e guarda o lastNormalTheme
+última fase: Pular desabilitado (Encerrar continua)
+um anúncio por seq: o mesmo evento duas vezes fala uma vez
+uma resposta recusada fica no console e devolve os botões
+usa o navigator.clipboard quando existe
+vencido: -00:00:12, sem arco; no zero exato, só com o fim disparado
+visibilitychange (visível) e foco da janela ressincronizam
+volume: deslizante de 0 a 100 com o nome do cartão, o valor em texto e em aria-valuetext
+Windows, Sistema: o onThemeChanged da janela é o sinal, e o tema vem do theme()
+zerado: volta e redefinir desabilitados
