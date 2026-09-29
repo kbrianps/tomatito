@@ -22,6 +22,12 @@ use crate::tray::Bandeja;
 
 pub type AppEngine = Arc<Engine<TauriSink>>;
 
+/// A resposta dos comandos que só existem no desktop (a janela, o tomate, a
+/// região e a validação do Full), chamados no Android (A03, PLANO-ANDROID
+/// 4.1). A tela do Android nem os oferece (a `casca`, A05).
+#[cfg(mobile)]
+const INDISPONIVEL: &str = "não disponível no Android";
+
 /// Resposta do `get_state`: o retrato do motor (`focus`, `speed`, `setup`)
 /// e, a partir do M23, as configurações em `settings`; no M39, os
 /// `recursos` da plataforma (3.5 e 3.8, `recursos.rs`).
@@ -52,9 +58,17 @@ pub fn get_state(
 /// Configurações (M39). O mesmo caminho do item da bandeja
 /// (`window::sair`, 3.4): encerra a sessão com o parcial, grava o
 /// `state.json` e fecha o app.
+#[cfg(desktop)]
 #[tauri::command]
 pub fn app_quit(app: AppHandle) {
     crate::window::sair(&app);
+}
+
+/// No Android, quem fecha o app é o sistema: não há "Sair".
+#[cfg(mobile)]
+#[tauri::command]
+pub fn app_quit() -> Result<(), String> {
+    Err(INDISPONIVEL.into())
 }
 
 /// `settings_get`: as configurações atuais, no formato do `settings.json`.
@@ -84,6 +98,7 @@ pub fn gravar_configuracoes(
     settings: &SettingsStore,
     patch: &Value,
 ) -> Result<Settings, SettingsError> {
+    #[cfg(desktop)]
     let antes = settings.get();
     let depois = settings.set(patch, |s| {
         if let Err(e) = app.emit(events::SETTINGS, s) {
@@ -104,6 +119,7 @@ pub fn gravar_configuracoes(
         }
     })?;
     // M56: o tamanho e o "Sempre na frente" do tomate valem na hora.
+    #[cfg(desktop)]
     crate::window::tomato::aplicar_preferencias(app, &antes, &depois);
     Ok(depois)
 }
@@ -313,6 +329,7 @@ pub fn stopwatch_reset(engine: State<'_, AppEngine>) -> Result<StopwatchDto, Com
 /// `theme = lastNormalTheme`, mostra a `main`, recriada se preciso, e fecha
 /// a `tomato`). Async: criar janela num comando síncrono trava no Windows
 /// (5.3). Os detalhes estão em `window/tomato.rs`.
+#[cfg(desktop)]
 #[tauri::command]
 pub async fn switch_window_mode(app: AppHandle, full: bool) -> Result<(), String> {
     if full {
@@ -335,6 +352,7 @@ pub async fn show_main(app: AppHandle, route: Option<String>) -> Result<(), Stri
 /// `full_validation_get` (M52): o retrato da validação com reversão do Full
 /// (5.9), que a `main` pede ao ligar (depois, ela segue o
 /// `tt://full-validation`). Ver `window/validacao.rs`.
+#[cfg(desktop)]
 #[tauri::command]
 pub fn full_validation_get(app: AppHandle) -> Value {
     crate::window::validacao::atual(&app)
@@ -343,6 +361,7 @@ pub fn full_validation_get(app: AppHandle) -> Value {
 /// `full_validation_answer{answer}` (M52): `keep` ou `revert` na pergunta,
 /// `opaque` ou `dismiss` na oferta do B3. Async: reverter fecha a `tomato`, e
 /// o modo opaco a cria de novo (5.3). Devolve o retrato depois da resposta.
+#[cfg(desktop)]
 #[tauri::command]
 pub async fn full_validation_answer(
     app: AppHandle,
@@ -355,6 +374,7 @@ pub async fn full_validation_answer(
 /// `tomato`, em faixas `[x, y, largura, altura]` calculadas pela página. Só a
 /// `tomato` pode pedir. Devolve `"applied"` ou `"ignored"` (modo opaco, ou o
 /// Windows até o M55). Ver `window/tomato.rs`, `definir_regiao`.
+#[cfg(desktop)]
 #[tauri::command]
 pub fn set_tomato_region(
     webview_window: tauri::WebviewWindow,
@@ -368,6 +388,7 @@ pub fn set_tomato_region(
 /// conferir a região depois da troca de P para G; a escolha de verdade (menu
 /// e preferência) é do M56. Async, como os outros comandos que mexem em
 /// janela.
+#[cfg(desktop)]
 #[tauri::command]
 pub async fn tomato_debug_size(app: AppHandle, size: u32) -> Result<(), String> {
     if !cfg!(debug_assertions) {
@@ -379,7 +400,49 @@ pub async fn tomato_debug_size(app: AppHandle, size: u32) -> Result<(), String> 
 /// `tomato_on_top_available` (M56): se o "Sempre na frente" do tomate
 /// funciona por código (Windows e X11). No Wayland, não: o menu do tomate não
 /// mostra o item, e as Configurações mostram uma vez a dica do Alt+Espaço.
+#[cfg(desktop)]
 #[tauri::command]
 pub fn tomato_on_top_available() -> bool {
     crate::window::tomato::sempre_na_frente_por_codigo()
+}
+
+// A03: os mesmos comandos no Android, para o `generate_handler!` ser um só.
+// O tomate em tela cheia do Android (A16a) troca o `switch_window_mode`.
+
+#[cfg(mobile)]
+#[tauri::command]
+pub async fn switch_window_mode() -> Result<(), String> {
+    Err(INDISPONIVEL.into())
+}
+
+/// Sem Full de desktop, nunca há validação: o retrato "nenhuma", o mesmo do
+/// `window::validacao::retrato(0, &Fase::Nenhuma)`.
+#[cfg(mobile)]
+#[tauri::command]
+pub fn full_validation_get() -> Value {
+    serde_json::json!({ "seq": 0, "state": "none" })
+}
+
+#[cfg(mobile)]
+#[tauri::command]
+pub async fn full_validation_answer() -> Result<Value, String> {
+    Err(INDISPONIVEL.into())
+}
+
+#[cfg(mobile)]
+#[tauri::command]
+pub fn set_tomato_region() -> Result<&'static str, String> {
+    Err(INDISPONIVEL.into())
+}
+
+#[cfg(mobile)]
+#[tauri::command]
+pub async fn tomato_debug_size() -> Result<(), String> {
+    Err(INDISPONIVEL.into())
+}
+
+#[cfg(mobile)]
+#[tauri::command]
+pub fn tomato_on_top_available() -> bool {
+    false
 }

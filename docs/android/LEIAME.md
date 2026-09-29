@@ -17,4 +17,5 @@ O plano é o `PLANO-ANDROID.md` (fora do repositório, em `~/dev/tomatito-ref/`)
 - **Worktree:** `~/dev/tomatito-android`, branch `android`.
 - **Rust:** `/opt/cargo-target/tomatito-android` (pelo `.cargo/config.toml`, fora do git).
 - **Dependências do npm:** `node_modules` é um link para `/opt/cargo-target/tomatito-android/node/node_modules`, para não gastar o `/home`. Para reinstalar, rode o `npm ci` **dentro** de `/opt/cargo-target/tomatito-android/node` (com o `package.json` e o `package-lock.json` copiados da worktree); um `npm ci` na worktree troca o link por uma pasta de verdade no `/home`.
+- **Guarda do Rust (A03):** `bash scripts/android/check.sh` compila o app para `x86_64-linux-android` e `aarch64-linux-android` com o clang do NDK e reprova com qualquer aviso. Entra na bateria de todo marco daqui em diante, junto com a do desktop.
 - **Kit Android, AVDs, Gradle e saídas do Gradle:** no `/`, na raiz `$TT_ANDROID` do `kit.md` (A01). O `~/Android/Sdk` é de outro projeto e fica intocado.

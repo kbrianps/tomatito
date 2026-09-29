@@ -222,7 +222,8 @@ test('configurações no Rust: settings_get, settings_set e tt://settings, sem o
   // Um generate_context! só (ele embute a página), e o linuxX11 lido antes do Builder.
   assert.equal(lib.match(/generate_context!\(\)/g)?.length, 1);
   // M37: o Builder já nasce com o single-instance (o primeiro plugin, 3.4).
-  assert.match(lib, /usar_x11_se_pedido\(&context\.config\(\)\.identifier\);\s*(?:\/\/.*\n\s*)*let builder =\s*tauri::Builder::default\(\)/);
+  // A03: o Builder com o single-instance é só do desktop (`#[cfg(desktop)]`).
+  assert.match(lib, /usar_x11_se_pedido\(&context\.config\(\)\.identifier\);\s*(?:(?:\/\/.*|#\[cfg\(desktop\)\])\n\s*)*let builder =\s*tauri::Builder::default\(\)/);
   assert.match(ler('src-tauri/tomatito-motor/src/events.rs'), /pub const SETTINGS: &str = "tt:\/\/settings";/);
   const ipcJs = ler('src/lib/ipc.js');
   assert.match(ipcJs, /configuracoes: 'tt:\/\/settings'/);

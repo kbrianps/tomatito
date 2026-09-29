@@ -1,21 +1,34 @@
 //! Janelas do app (PLANO.md, 3.4 e 5). Nenhuma janela vem do
 //! `tauri.conf.json` (`app.windows: []`): todas nascem no `setup`.
+//!
+//! No Android (A03, PLANO-ANDROID 4.1), só a `main`: o tomate, a região, a
+//! validação do Full, a bandeja e o "Sair" são do desktop.
 
 pub mod main_window;
 #[cfg(target_os = "linux")]
 pub mod region_linux;
 #[cfg(windows)]
 pub mod region_windows;
+#[cfg(desktop)]
 pub mod tomato;
+#[cfg(desktop)]
 pub mod validacao;
 
+#[cfg(desktop)]
 use std::sync::Arc;
 
-use tauri::{AppHandle, Manager, Window};
+#[cfg(desktop)]
+use tauri::Window;
+use tauri::{AppHandle, Manager};
+#[cfg(desktop)]
 use tauri_plugin_window_state::StateFlags;
 
+#[cfg(desktop)]
 use crate::commands::AppEngine;
-use crate::settings::{SettingsStore, ThemePref};
+use crate::settings::SettingsStore;
+#[cfg(desktop)]
+use crate::settings::ThemePref;
+#[cfg(desktop)]
 use crate::state_file::StateStore;
 
 /// Rótulo da janela do tomate (5.3; `tomato.rs`, M50).
@@ -25,6 +38,7 @@ pub const TOMATO_LABEL: &str = "tomato";
 /// maximizada. O padrão do plugin (`all()`) inclui `VISIBLE`, e sair com a
 /// janela escondida na bandeja faria o app reabrir invisível; `DECORATIONS`
 /// também fica de fora.
+#[cfg(desktop)]
 pub const ESTADO_DA_JANELA: StateFlags = StateFlags::SIZE
     .union(StateFlags::POSITION)
     .union(StateFlags::MAXIMIZED);
@@ -36,6 +50,7 @@ pub const ESTADO_DA_JANELA: StateFlags = StateFlags::SIZE
 /// novo, pelo mesmo caminho da troca. Nos outros temas, `show`, `unminimize`
 /// e `set_focus` na `main`. O GNOME pode só avisar "Tomatito está pronto"
 /// (prevenção de roubo de foco); é aceito.
+#[cfg(desktop)]
 pub fn mostrar(app: &AppHandle) {
     let full = app
         .try_state::<SettingsStore>()
@@ -63,6 +78,7 @@ pub fn mostrar(app: &AppHandle) {
 /// padrão), a `main` só se esconde, e o motor, o som e as notificações
 /// seguem. Desligado, a janela fecha e, sendo a última, o app sai. Devolve
 /// se o fechamento foi impedido.
+#[cfg(desktop)]
 pub fn fechar_para_bandeja(window: &Window) -> bool {
     if window.label() != main_window::LABEL {
         return false;
@@ -87,6 +103,7 @@ pub fn fechar_para_bandeja(window: &Window) -> bool {
 /// 3. Fecha o app com código 0. O `RunEvent::Exit` que o `exit` dispara faz o
 ///    `window-state` gravar o tamanho da janela (mesmo escondida) e o
 ///    `single-instance` soltar o nome no D-Bus.
+#[cfg(desktop)]
 pub fn sair(app: &AppHandle) {
     if let Some(motor) = app.try_state::<AppEngine>() {
         let _ = motor.stop();
@@ -105,6 +122,7 @@ pub fn sair(app: &AppHandle) {
 /// existe (o app começou no Full). Uma saída pedida (`app.exit`, o "Sair" da
 /// bandeja) vem com código e não passa por aqui. Devolve se a saída deve ser
 /// barrada.
+#[cfg(desktop)]
 pub fn manter_na_bandeja(app: &AppHandle) -> bool {
     app.try_state::<SettingsStore>()
         .is_some_and(|s| s.get().close_to_tray)
@@ -137,9 +155,13 @@ pub fn mostrar_main(app: &AppHandle, rota: Option<&str>) -> tauri::Result<()> {
     if let Some(r) = rota {
         w.eval(format!("location.hash={}", serde_json::Value::from(r)))?;
     }
-    w.show()?;
-    w.unminimize()?;
-    w.set_focus()?;
+    // No Android, a `main` é a única janela e já está na tela.
+    #[cfg(desktop)]
+    {
+        w.show()?;
+        w.unminimize()?;
+        w.set_focus()?;
+    }
     Ok(())
 }
 
@@ -147,6 +169,7 @@ pub fn mostrar_main(app: &AppHandle, rota: Option<&str>) -> tauri::Result<()> {
 mod tests {
     use super::*;
 
+    #[cfg(desktop)]
     #[test]
     fn estado_da_janela_sem_visivel_nem_decoracoes() {
         // O `StateFlags` não tem `PartialEq`: compara os bits.

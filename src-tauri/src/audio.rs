@@ -25,24 +25,35 @@
 //! **Erro nunca derruba o app.** Sem dispositivo, com o WAV ruim ou com um
 //! pânico dentro do rodio, a thread registra no stderr e segue para o pedido
 //! seguinte. Se a própria thread tiver morrido, o [`Som::tocar`] só registra.
+//!
+//! **Android (A03, PLANO-ANDROID 5.5).** Sem rodio: o som de fim vem do canal
+//! da notificação, tocado pelo sistema mesmo com o app fechado. A thread
+//! existe do mesmo jeito, mas a saída descarta o pedido; o "Testar" das
+//! Configurações vai pelo plugin (A08).
 
+#[cfg(desktop)]
 use std::io::Cursor;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
+#[cfg(desktop)]
 use std::time::Duration;
 
+#[cfg(desktop)]
 use rodio::{Decoder, DeviceSinkBuilder, Source};
 use tomatito_core::Sound;
 
 /// Os WAVs gerados por `scripts/gen-sounds.py` (mono, 44,1 kHz, 16 bits, 1 s).
+#[cfg(desktop)]
 const FOCUS_END: &[u8] = include_bytes!("../sounds/focus-end.wav");
+#[cfg(desktop)]
 const BREAK_END: &[u8] = include_bytes!("../sounds/break-end.wav");
 
 /// Quanto tempo a saída fica aberta depois de receber o som: o WAV tem 1 s, e
 /// a folga cobre o buffer do dispositivo (fechar antes corta o fim).
+#[cfg(desktop)]
 pub const SEGURAR: Duration = Duration::from_millis(1500);
 
 /// O padrão do `volume` das configurações (3.3: "a confirmar"), de 0 a 100.
@@ -50,6 +61,7 @@ pub const SEGURAR: Duration = Duration::from_millis(1500);
 pub use tomatito_motor::settings::VOLUME_PADRAO;
 
 /// Os bytes do WAV de cada som.
+#[cfg(desktop)]
 pub fn wav(sound: Sound) -> &'static [u8] {
     match sound {
         Sound::FocusEnd => FOCUS_END,
@@ -66,6 +78,7 @@ pub struct Pedido {
 
 impl Pedido {
     /// O fator do `amplify`: linear, de 0,0 a 1,0.
+    #[cfg(desktop)]
     pub fn ganho(&self) -> f32 {
         f32::from(self.volume.min(100)) / 100.0
     }
@@ -176,6 +189,7 @@ where
 }
 
 /// Decodifica o WAV embutido e aplica o volume.
+#[cfg(desktop)]
 pub fn fonte(pedido: Pedido) -> Result<impl Source + Send + 'static, String> {
     let decoder = Decoder::new_wav(Cursor::new(wav(pedido.sound)))
         .map_err(|e| format!("WAV inválido: {e}"))?;
@@ -183,6 +197,7 @@ pub fn fonte(pedido: Pedido) -> Result<impl Source + Send + 'static, String> {
 }
 
 /// Os três passos do M20 na saída padrão do momento.
+#[cfg(desktop)]
 fn tocar_na_saida_padrao(pedido: Pedido) -> Result<(), String> {
     if pedido.volume == 0 {
         return Ok(());
@@ -194,6 +209,12 @@ fn tocar_na_saida_padrao(pedido: Pedido) -> Result<(), String> {
     saida.log_on_drop(false);
     saida.mixer().add(fonte);
     thread::sleep(SEGURAR);
+    Ok(())
+}
+
+/// No Android, nada: o som de fim é o do canal da notificação (5.5).
+#[cfg(mobile)]
+fn tocar_na_saida_padrao(_pedido: Pedido) -> Result<(), String> {
     Ok(())
 }
 
