@@ -214,6 +214,33 @@ fluent-dialog.tt-dialogo-temporizador::part(dialog){ width:360px; max-width:calc
 .tt-duracao-rotulo{ font:var(--tt-type-caption); color:var(--tt-fg-2); }
 .tt-dialogo-temporizador-nome{ width:100%; }
 
+/* M46: diálogo dos avisos de terceiros e da licença da fonte
+   (views/notices-dialog.js), com o corpo e a sombra dos outros. O texto do
+   arquivo vai num bloco rolável de 12/16 na fonte monoespaçada dos tokens,
+   com a quebra de linha do arquivo, dentro de uma moldura de controle (raio 4,
+   borda --tt-border); o bloco recebe o foco ao abrir, para rolar pelo
+   teclado, com o anel duplo dos botões. "Fechar" ocupa a largura toda, como
+   o botão único do ContentDialog. O aviso de erro é o da meta. */
+fluent-dialog.tt-dialogo-avisos::part(dialog){ width:640px; max-width:calc(100vw - 32px); box-shadow:var(--shadow64); }
+.tt-dialogo-avisos fluent-dialog-body::part(actions){
+  flex-direction:row; align-items:stretch; justify-content:stretch;
+  margin-block-start:0; padding-block-start:24px;
+}
+.tt-dialogo-avisos [slot="action"]{ flex:1 1 0; min-width:0; }
+.tt-dialogo-avisos-texto{
+  box-sizing:border-box; margin:12px 0 0; padding:8px 12px;
+  height:min(420px, calc(100vh - 220px)); min-height:120px; overflow:auto;
+  font:12px/16px var(--fontFamilyMonospace); color:var(--tt-fg-1);
+  white-space:pre-wrap; overflow-wrap:anywhere; tab-size:4;
+  background:var(--tt-bg-card); border:1px solid var(--tt-border); border-radius:var(--tt-r-ctl);
+  outline:none;
+}
+.tt-dialogo-avisos-texto[aria-busy]{ color:var(--tt-fg-2); }
+.tt-dialogo-avisos-texto:focus-visible{ outline:2px solid var(--tt-focus-outer); outline-offset:1px; box-shadow:0 0 0 1px var(--tt-focus-inner); }
+.tt-dialogo-avisos-texto[hidden]{ display:none; }
+.tt-dialogo-avisos .tt-dialogo-meta-erro{ margin:12px 0 0; }
+@media (forced-colors:active){ .tt-dialogo-avisos-texto:focus-visible{ outline-color:Highlight; } }
+
 /* M30: caixa de texto (o TextBox do WinUI): 32 px de altura, raio 4, fundo
    --tt-input-bg, borda --tt-border com o sublinhado --tt-stroke-control; com
    o foco, o sublinhado vira 2 px do accent e o fundo fica o do cartão (o

@@ -1,5 +1,6 @@
 mod anuncio;
 mod audio;
+mod avisos;
 mod commands;
 mod engine;
 mod events;
@@ -146,6 +147,7 @@ pub fn run() {
             commands::stopwatch_lap,
             commands::stopwatch_reset,
             anuncio::a11y_announce,
+            avisos::notices_read,
         ])
         .run(context)
         .expect("error while building tauri application");

@@ -34,6 +34,16 @@ export const anunciarAoLeitor = (texto) => invoke('a11y_announce', { text: texto
 export { getVersion as versao } from '@tauri-apps/api/app';
 
 /**
+ * M46: os arquivos de licença do pacote (bundle.resources), lidos pelo Rust
+ * (src-tauri/src/avisos.rs). `ler('avisos')` resolve com o texto do
+ * THIRD_PARTY_NOTICES.md e `ler('ofl')`, com o do OFL-Inter.txt; sem o
+ * arquivo, rejeita com `{ code: 'notFound', message }`.
+ */
+export const avisos = Object.freeze({
+  ler: (doc) => invoke('notices_read', { doc }),
+});
+
+/**
  * Comandos do foco. Cada um devolve o retrato novo (o mesmo do `tt://state`)
  * ou rejeita com `{ code, message }` (engine.rs, `CommandError`).
  */

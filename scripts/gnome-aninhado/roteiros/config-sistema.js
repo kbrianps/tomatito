@@ -305,8 +305,8 @@ async function principal() {
   await clicar('[data-cartao="sobre"] [data-expansor]');
   const e1 = await ler();
   checar(
-    'o clique abre o Sobre, com "Ver avisos" desabilitado (M46) e o aviso de marcas',
-    e1?.sobreAberto === 'true' && e1.sobreVisivel && e1.avisosDesabilitado === true &&
+    'o clique abre o Sobre, com "Ver avisos" habilitado (M46) e o aviso de marcas',
+    e1?.sobreAberto === 'true' && e1.sobreVisivel && e1.avisosDesabilitado === false &&
       /Windows e Segoe são marcas da Microsoft\. O Tomatito não é afiliado à Microsoft\./.test(e1.marcas ?? ''),
     { aberto: e1?.sobreAberto, visivel: e1?.sobreVisivel, avisos: e1?.avisosDesabilitado, marcas: e1?.marcas },
   );
@@ -314,6 +314,12 @@ async function principal() {
   mover(janelaDoApp().get_frame_rect().x + 150, janelaDoApp().get_frame_rect().y + 780);
   await sleep(400);
   capturar('m39-configuracoes-sistema-lite.png');
+  // M46: no build de debug (fora de uma pasta "target"), os avisos vêm da
+  // pasta do binário, onde o tauri-build os copiou (src-tauri/src/avisos.rs).
+  const avisos = await comando(
+    "window.__TAURI_INTERNALS__.invoke('notices_read', { doc: 'avisos' }).then((t) => t.slice(0, 22), (e) => ({ erro: e }))",
+  );
+  checar('M46: no build de debug, o notices_read acha os avisos na pasta do binário', avisos === '# Avisos de terceiros\n', avisos);
 
   // O tempo na bandeja, na hora, com uma sessão correndo.
   const inicio = await invoke('focus_start', { minutes: 30 });

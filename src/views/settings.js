@@ -30,8 +30,9 @@
 // "Tempo na bandeja", em cartões com switch, e "Sair do Tomatito", que chama
 // o mesmo `app_quit` do Ctrl+Q) e a seção "Sobre", com um expansível como o
 // "Sobre" dos apps do WinUI: o nome, a licença e a versão (`getVersion()`,
-// do Cargo.toml) no cabeçalho; aberto, os avisos de terceiros (o botão só
-// funciona a partir do M46) e o aviso de marcas (seção 9 do plano). As
+// do Cargo.toml) no cabeçalho; aberto, os avisos de terceiros e o aviso de
+// marcas (seção 9 do plano). M46: "Ver avisos" e "Ver licença" (a OFL da
+// Inter) abrem o diálogo com os arquivos do pacote (notices-dialog.js). As
 // opções que dependem de um recurso da plataforma (platform/recursos.js)
 // somem quando ele falta: hoje, o "Tempo na bandeja" sem o ícone da bandeja.
 import t from '../lib/i18n/pt-BR.js';
@@ -41,6 +42,7 @@ import { store as storeDoApp } from '../lib/store.js';
 import * as ipcDoApp from '../lib/ipc.js';
 import { SEM_RECURSOS, assinarRecursos, recursos as recursosAtuais } from '../platform/recursos.js';
 import { marcaDoApp } from '../components/app-mark.js';
+import { criar as criarDialogoAvisos } from './notices-dialog.js';
 
 const c = t.configuracoes;
 const semIcone = () => '';
@@ -276,12 +278,12 @@ let versaoConhecida = null;
  * terceiros e o aviso de marcas.
  */
 export function marcacaoDoSobre({ icone = semIcone, versao = null, abertosAgora = new Set() } = {}) {
-  const avisos = item(
-    'config-avisos',
-    c.sobre.avisos,
-    // M46: os avisos entram no pacote (bundle.resources) e este botão os abre.
-    `<button type="button" data-avisos aria-describedby="config-avisos" disabled>${c.sobre.verAvisos}</button>`,
-  );
+  // M46: os dois arquivos vão no pacote (bundle.resources), e cada botão abre
+  // o seu no diálogo. O nome do botão é o texto dele; o rótulo da linha, a
+  // descrição.
+  const avisos =
+    item('config-avisos', c.sobre.avisos, `<button type="button" data-avisos="avisos" aria-describedby="config-avisos">${c.sobre.verAvisos}</button>`) +
+    item('config-fonte', c.sobre.fonte, `<button type="button" data-avisos="ofl" aria-describedby="config-fonte">${c.sobre.verLicenca}</button>`);
   const marcas = `<div class="tt-config-item tt-config-nota"><p id="config-marcas" class="tt-config-descricao tt-t-caption">${c.sobre.marcas}</p></div>`;
   return (
     '<section class="tt-config-secao" aria-labelledby="config-sobre-secao">' +
@@ -516,16 +518,25 @@ export function ligarSessoes(raiz, { store = storeDoApp, ipc = ipcDoApp, doc = g
  * aos recursos e ao IPC. Os switches gravam só a própria chave (recusado, o
  * switch volta ao valor do store); "Sair" chama o `app_quit`, que não
  * responde (o processo sai antes); o expansível do Sobre abre e fecha; a
- * versão chega pelo `ipc.versao()` na primeira vez. Devolve a limpeza.
+ * versão chega pelo `ipc.versao()` na primeira vez. M46: os botões dos avisos
+ * abrem o diálogo (`criarDialogo`, criado no primeiro clique e desfeito na
+ * limpeza). Devolve a limpeza.
  */
 export function ligarSistemaESobre(
   raiz,
-  { store = storeDoApp, ipc = ipcDoApp, recursos = { atuais: () => recursosAtuais, assinar: assinarRecursos } } = {},
+  {
+    store = storeDoApp,
+    ipc = ipcDoApp,
+    recursos = { atuais: () => recursosAtuais, assinar: assinarRecursos },
+    icone = semIcone,
+    criarDialogo = (opcoes) => criarDialogoAvisos(opcoes),
+  } = {},
 ) {
   const sistema = raiz.querySelector('[aria-labelledby="config-sistema"]');
   const sobre = raiz.querySelector('[aria-labelledby="config-sobre-secao"]');
   const switches = [...sistema.querySelectorAll('fluent-switch[data-config]')];
   let desligado = false;
+  let dialogo = null;
 
   const mostrar = (s) => {
     if (desligado || !s) return;
@@ -566,7 +577,14 @@ export function ligarSistemaESobre(
   };
   const aoClicarNoSobre = (ev) => {
     const botao = ev.target.closest?.('[data-expansor]');
-    if (botao) alternar(botao);
+    if (botao) {
+      alternar(botao);
+      return;
+    }
+    const abre = ev.target.closest?.('[data-avisos]');
+    if (!abre) return;
+    dialogo ??= criarDialogo({ doc: raiz.ownerDocument ?? globalThis.document, icone, ipc });
+    dialogo.abrir(abre.dataset.avisos, abre);
   };
 
   sistema.addEventListener('change', aoMudar);
@@ -594,6 +612,7 @@ export function ligarSistemaESobre(
     sistema.removeEventListener('change', aoMudar);
     sistema.removeEventListener('click', aoClicarNoSistema);
     sobre.removeEventListener('click', aoClicarNoSobre);
+    dialogo?.desligar();
   };
 }
 
@@ -629,7 +648,7 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
   grupo.addEventListener('change', aoMudar);
   h.addEventListener(EVENTO, aoTrocar);
   const desligarSessoes = ligarSessoes(raiz, { store, ipc, doc });
-  const desligarSistema = ligarSistemaESobre(raiz, { store, ipc });
+  const desligarSistema = ligarSistemaESobre(raiz, { store, ipc, icone });
   return () => {
     grupo.removeEventListener('change', aoMudar);
     h.removeEventListener(EVENTO, aoTrocar);

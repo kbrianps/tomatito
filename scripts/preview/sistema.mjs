@@ -8,8 +8,8 @@
 //      fechado, com "Versão 0.1.0" (o getVersion() do mock) no cabeçalho;
 //   2. os recursos do get_state no platform/recursos.js (o import do console);
 //   3. o hover no cabeçalho do Sobre leva a descrição e a versão ao
-//      --tt-fg-2-on-ctl; o clique abre, com "Ver avisos" desabilitado e o
-//      aviso de marcas;
+//      --tt-fg-2-on-ctl; o clique abre, com "Ver avisos" (habilitado desde o
+//      M46; o diálogo é do scripts/preview/avisos.mjs) e o aviso de marcas;
 //   4. os switches gravam só a própria chave (clique e Espaço), com o texto
 //      "Ativado"/"Desativado"; recusado, o switch volta; uma gravação de fora
 //      (só o tt://settings) aparece nos switches;
@@ -188,9 +188,9 @@ async function main() {
       ...(rgbParaHex(sobre('hover-sobre').corDaDescricao) === cores.fg2NoControle && rgbParaHex(sobre('hover-sobre').valor.cor) === cores.fg2NoControle ? [] : [`hover: ${rgbParaHex(sobre('hover-sobre').corDaDescricao)}, ${rgbParaHex(sobre('hover-sobre').valor.cor)}`]),
     ]);
     const aberto = sobre('sobre-aberto');
-    relatar(`${tema}: o clique abre o Sobre, com "Ver avisos" desabilitado (M46) e o aviso de marcas`, [
+    relatar(`${tema}: o clique abre o Sobre, com "Ver avisos" habilitado (M46) e o aviso de marcas`, [
       ...(aberto.expandido === 'true' && !aberto.conteudo.hidden && aberto.conteudo.altura > 0 ? [] : [`não abriu: ${JSON.stringify(aberto.conteudo)}`]),
-      ...(aberto.avisos?.desabilitado === true && aberto.avisos.texto === 'Ver avisos' ? [] : [JSON.stringify(aberto.avisos)]),
+      ...(aberto.avisos?.desabilitado === false && aberto.avisos.texto === 'Ver avisos' ? [] : [JSON.stringify(aberto.avisos)]),
       ...(aberto.conteudo.texto.includes('Windows e Segoe são marcas da Microsoft. O Tomatito não é afiliado à Microsoft.') ? [] : ['sem o aviso de marcas']),
       ...(M['sobre-aberto'].comandos.length ? [`gravou ${JSON.stringify(M['sobre-aberto'].comandos)}`] : []),
     ]);

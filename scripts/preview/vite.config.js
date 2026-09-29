@@ -18,7 +18,8 @@ export default {
   ...base,
   root,
   configFile: false,
-  server: { ...base.server, port: 5174, strictPort: false },
+  // M46: TT_PREVIEW_PORT muda a porta (a outra frente usa a 5174 no dev).
+  server: { ...base.server, port: Number(process.env.TT_PREVIEW_PORT) || 5174, strictPort: false },
   // O mock entra pelo transformIndexHtml, que o Vite não varre ao pré-empacotar
   // as dependências. Sem esta lista, a primeira prévia depois de limpar o cache
   // descobre as dependências do mock com a página aberta, o Vite recarrega a

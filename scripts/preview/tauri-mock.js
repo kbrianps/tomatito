@@ -438,6 +438,15 @@ const handlers = {
   // getVersion() é a do Cargo.toml de hoje.
   app_quit: () => (window.__TOMATITO_PREVIEW_COMANDOS__.push('app_quit'), new Promise(() => {})),
   'plugin:app|version': () => '0.1.0',
+  // M46: os arquivos do pacote, servidos pelo Vite da prévia a partir do
+  // repositório (os mesmos que o bundle.resources leva). Com ?avisos=falha,
+  // a leitura é recusada como no Rust sem o arquivo.
+  notices_read: async ({ doc }) => {
+    window.__TOMATITO_PREVIEW_COMANDOS__.push(`notices_read:${doc}`);
+    if (params.get('avisos') === 'falha') throw { code: 'notFound', message: `prévia: ${doc}` };
+    const r = await fetch(doc === 'ofl' ? '/src/assets/OFL-Inter.txt' : '/THIRD_PARTY_NOTICES.md');
+    return r.text();
+  },
   // M26: os números da URL (?hoje=1500&ontem=...&semana=..., em segundos),
   // com a meta e a hora de zerar das configurações. M27: mais os focos que o
   // motor simulado termina (registrarFoco).

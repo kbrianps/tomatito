@@ -300,6 +300,19 @@ export default Object.freeze({
       versao: (v) => `Versão ${v}`,
       avisos: 'Avisos de terceiros',
       verAvisos: 'Ver avisos',
+      // M46: a licença da fonte embutida, ao lado dos avisos, e o diálogo que
+      // mostra os dois arquivos do pacote (views/notices-dialog.js).
+      fonte: 'Licença da fonte Inter',
+      verLicenca: 'Ver licença',
+      dialogo: Object.freeze({
+        titulos: Object.freeze({
+          avisos: 'Avisos de terceiros',
+          ofl: 'Licença da fonte Inter',
+        }),
+        carregando: 'Carregando…',
+        erro: 'Não foi possível abrir o arquivo, que deveria vir junto com o aplicativo.',
+        fechar: 'Fechar',
+      }),
       marcas: 'Interface inspirada no Fluent Design. Windows e Segoe são marcas da Microsoft. O Tomatito não é afiliado à Microsoft.',
     }),
   }),

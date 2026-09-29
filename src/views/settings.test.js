@@ -14,6 +14,7 @@ import {
   OPCOES_DO_SISTEMA,
   PADROES,
   escolhaDe,
+  ligarSistemaESobre,
   marcacao,
   marcacaoDasSessoes,
   marcacaoDoSistema,
@@ -211,7 +212,7 @@ test('Sistema: a opção que não se aplica some (o tempo na bandeja sem o ícon
   assert.equal(seAplica(tempo, undefined), false);
 });
 
-test('Sobre: expansível com o nome, a licença e a versão no cabeçalho; aberto, os avisos (desabilitados até o M46) e o aviso de marcas', () => {
+test('Sobre: expansível com o nome, a licença e a versão no cabeçalho; aberto, os avisos, a licença da fonte (M46) e o aviso de marcas', () => {
   const html = marcacaoDoSobre({ icone, versao: '0.1.0' });
   assert.match(html, /^<section class="tt-config-secao" aria-labelledby="config-sobre-secao"><h2 id="config-sobre-secao" class="tt-t-body-strong">Sobre<\/h2>/);
   assert.deepEqual(cartoes(html), ['sobre']);
@@ -224,7 +225,10 @@ test('Sobre: expansível com o nome, a licença e a versão no cabeçalho; abert
   assert.match(html, /<span id="config-sobre" class="tt-config-titulo">Tomatito<\/span><span id="config-sobre-desc" class="tt-config-descricao tt-t-caption">© 2026 kbrianps · Licença MIT<\/span>/);
   assert.match(html, /<span id="config-sobre-valor" class="tt-expansor-valor">Versão 0\.1\.0<\/span><span class="tt-expansor-chevron">/);
   assert.match(html, /<div id="config-sobre-conteudo" class="tt-expansor-conteudo" role="group" aria-labelledby="config-sobre" hidden>/);
-  assert.match(html, /<span id="config-avisos" class="tt-config-item-rotulo">Avisos de terceiros<\/span><button type="button" data-avisos aria-describedby="config-avisos" disabled>Ver avisos<\/button>/);
+  // M46: os dois botões funcionam, cada um com o seu documento.
+  assert.match(html, /<span id="config-avisos" class="tt-config-item-rotulo">Avisos de terceiros<\/span><button type="button" data-avisos="avisos" aria-describedby="config-avisos">Ver avisos<\/button>/);
+  assert.match(html, /<span id="config-fonte" class="tt-config-item-rotulo">Licença da fonte Inter<\/span><button type="button" data-avisos="ofl" aria-describedby="config-fonte">Ver licença<\/button>/);
+  assert.doesNotMatch(html, /disabled/);
   assert.ok(html.includes('Interface inspirada no Fluent Design. Windows e Segoe são marcas da Microsoft. O Tomatito não é afiliado à Microsoft.'));
   // Antes do getVersion() responder, o lugar da versão fica vazio; aberto quando lembrado.
   assert.match(marcacaoDoSobre({ abertosAgora: new Set(['sobre']) }), /<span id="config-sobre-valor" class="tt-expansor-valor"><\/span>/);
@@ -245,4 +249,36 @@ test('patchDe: as opções do sistema gravam só a própria chave, em booleano',
   assert.deepEqual(patchDe('trayTime', true), { trayTime: true });
   assert.deepEqual(PADROES.closeToTray, true);
   assert.deepEqual(PADROES.trayTime, false);
+});
+
+test('M46: "Ver avisos" e "Ver licença" abrem o diálogo com o documento certo, criado no primeiro clique e desfeito na limpeza', () => {
+  const ouvintes = {};
+  const sobre = { addEventListener: (tipo, f) => (ouvintes[tipo] = f), removeEventListener: (tipo) => delete ouvintes[tipo], querySelector: () => null };
+  const sistema = { querySelectorAll: () => [], querySelector: () => null, addEventListener() {}, removeEventListener() {} };
+  const raiz = {
+    ownerDocument: { marca: 'doc' },
+    querySelector: (s) => (s.includes('config-sobre-secao') ? sobre : sistema),
+  };
+  const chamadas = [];
+  const criados = [];
+  const criarDialogo = (opcoes) => {
+    criados.push(opcoes);
+    return { abrir: (doc, gatilho) => chamadas.push(`abrir:${doc}:${gatilho.nome}`), desligar: () => chamadas.push('desligar') };
+  };
+  const store = { configuracoes: PADROES, assinarConfiguracoes: () => () => {} };
+  const ipc = { versao: () => Promise.resolve('0.1.0') };
+  const recursos = { atuais: () => ({}), assinar: () => () => {} };
+  const limpar = ligarSistemaESobre(raiz, { store, ipc, recursos, criarDialogo });
+  const botao = (doc, nome) => ({ nome, dataset: { avisos: doc } });
+  const clicar = (alvo) => ouvintes.click({ target: { closest: (s) => (s === '[data-avisos]' ? alvo : null) } });
+  assert.equal(criados.length, 0, 'nada criado antes do clique');
+  clicar(botao('avisos', 'ver-avisos'));
+  clicar(botao('ofl', 'ver-licenca'));
+  clicar(null);
+  assert.equal(criados.length, 1, 'um diálogo só');
+  assert.equal(criados[0].doc, raiz.ownerDocument);
+  assert.equal(criados[0].ipc, ipc);
+  limpar();
+  assert.deepEqual(chamadas, ['abrir:avisos:ver-avisos', 'abrir:ofl:ver-licenca', 'desligar']);
+  assert.equal(ouvintes.click, undefined);
 });

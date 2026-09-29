@@ -73,6 +73,6 @@ As versões das dependências são exatas (`.npmrc` com `save-exact`, crates do 
 
 ## Licença
 
-MIT. Veja o arquivo `LICENSE`.
+MIT. Veja o arquivo `LICENSE`. As licenças dos componentes de terceiros estão em `THIRD_PARTY_NOTICES.md` (gerado por `node scripts/gerar-avisos.mjs`, com o `cargo-about` e o `license-checker`), e a da fonte Inter, em `src/assets/OFL-Inter.txt`; os dois vão nos instaladores e aparecem em Configurações > Sobre.
 
 Interface inspirada no Fluent Design. Windows e Segoe são marcas da Microsoft. O Tomatito não é afiliado à Microsoft.

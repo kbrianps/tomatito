@@ -1069,3 +1069,23 @@ O que só você consegue: o seu olho no painel, no dock e no Alt+Tab da sua sess
 4. [ ] No painel de cima, à direita, o ícone da bandeja: o disco com o arco, legível sem precisar chegar perto. Nas Configurações → Sistema, ligue "Tempo na bandeja", inicie uma sessão e veja o tempo ao lado do ícone.
 5. [ ] Na janela, a barra de título mostra a marca (em creme no Lite) à esquerda de "Tomatito"; nas Configurações, o cartão "Sobre" mostra a mesma marca no lugar do "i". Troque o tema para Claro e Escuro e confira as duas de novo.
 6. [ ] Encerre a sessão e feche o app (Ctrl+Q).
+
+## M46. Licenças e avisos
+
+Os avisos de terceiros (`THIRD_PARTY_NOTICES.md`, gerado por `node scripts/gerar-avisos.mjs` com o cargo-about e o license-checker) e a licença da fonte Inter (`OFL-Inter.txt`) vão dentro dos instaladores, e o Sobre os mostra num diálogo, lendo o arquivo que está no pacote. Captura: `docs/capturas/m46-avisos-lite.png`.
+
+O que já foi conferido sem você (29/09/2026):
+- **O `.deb` gerado** (`npx tauri build --bundles deb`) tem `usr/lib/Tomatito/THIRD_PARTY_NOTICES.md` e `usr/lib/Tomatito/OFL-Inter.txt`, iguais aos do repositório.
+- **Roteiro aninhado** `bash scripts/gnome-aninhado/avisos.sh` (o `.deb` extraído, com o binário de debug no lugar do dele): 11 conferências ok; o Sobre mostra os dois arquivos do pacote, inteiros, e sem a pasta do pacote mostra o aviso de erro.
+- **Prévia no Chrome headless** `TT_PREVIEW_PORT=5181 node scripts/preview/avisos.mjs`: 29 conferências ok nos quatro temas (tamanho, cores, teclado, foco, janela estreita e a leitura recusada).
+- `npm test` (com `scripts/avisos.test.mjs`: cada pacote npm e cada crate que entra no app estão nos avisos), `cargo test`, `cargo clippy` no Linux e no alvo do Windows.
+
+O que só você consegue: o seu olho no diálogo do app instalado, e ler se os textos do cabeçalho dos avisos estão do seu gosto.
+
+### Para conferir (uns 3 minutos, mais o build)
+
+1. [ ] `cd ~/dev/tomatito && bash scripts/instalar-uso-diario.sh` (reinstala o de uso diário com o M46; se preferir não reinstalar agora, `npm run dev:app` serve para os passos 2 a 5).
+2. [ ] Abra o Tomatito, vá a Configurações e abra o cartão "Sobre" (embaixo). Aparecem "Avisos de terceiros" com "Ver avisos" e "Licença da fonte Inter" com "Ver licença", os dois clicáveis.
+3. [ ] Clique em "Ver avisos": abre o diálogo "Avisos de terceiros" com o texto começando por "# Avisos de terceiros". Role com a roda do mouse e com as setas, Page Down e End: o texto vai até o fim (os crates Rust), sem rolagem para o lado.
+4. [ ] Aperte Esc: o diálogo fecha e o foco volta ao "Ver avisos". Clique em "Ver licença": abre a licença da Inter ("Copyright 2016 The Inter Project Authors", "SIL OPEN FONT LICENSE Version 1.1"). Clique em "Fechar".
+5. [ ] Troque o tema para Claro e Escuro e abra "Ver avisos" de novo: o texto legível nos dois. Feche o app (Ctrl+Q).
