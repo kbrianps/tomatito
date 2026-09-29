@@ -1018,3 +1018,49 @@ O que só você consegue: clicar no canto do tomate na sua tela, com uma janela 
 4. [ ] Arraste o tomate pelo corpo e pelas folhas do cálice: ele anda junto. Clique em Iniciar e em Pausar no tomate: o tempo começa e para, e a janela não se mexe.
 5. [ ] Traga a `main` de volta (a engrenagem do tomate) e, no cartão "Tomate (Full)" do `#/dev`, clique em "P (240)" e depois em "G (320)". O tomate encolhe e cresce, e o clique no canto continua atravessando nos dois tamanhos.
 6. [ ] Aperte Esc no tomate, feche o app (Ctrl+C no terminal) e rode `node scripts/gnome-aninhado/resumo-regiao.mjs --log /tmp/tt-m54.log`: as linhas "ok" dizem que a região chegou antes do primeiro quadro e de novo depois de cada troca, com 157, 133 e 175 retângulos no M, no P e no G (o cairo reparte em bandas os 146, 125 e 162 que a página manda; a área é a mesma).
+
+## M55. Região no Windows e A/B do `noRedirectionBitmap`
+
+O que já foi conferido sem você:
+- `cargo clippy --target x86_64-pc-windows-msvc`: o código do Windows (`src-tauri/src/window/region_windows.rs`, o `SetWindowRgn` e a borda do DWM) compila e passa no clippy, com as assinaturas do crate `windows` 0.62.
+- `npm test` e `cargo test`: a região vai pela thread principal, só as regiões temporárias são apagadas, a borda sai antes do show, e a variável do A/B só vale no build de debug e nunca na janela opaca.
+- Chrome headless (o Chromium do WebView2): a página manda 146 retângulos a 100% e 219 a 150% (280 px), e, numa troca de escala, usa o tamanho físico que o Rust manda, mesmo antes de o `devicePixelRatio` mudar.
+
+O que só você consegue: tudo o que acontece de fato no Windows (esta máquina não tem Windows). É a ida ao Windows do M55, junto com as pendências 103, 106 e 109.
+
+### Para conferir (uns 30 minutos, no Windows 11; repetir no Windows 10 se tiver um)
+
+Em cada rodada, no PowerShell, na pasta do projeto:
+
+```powershell
+# Lado A (o padrão): com o no_redirection_bitmap
+Remove-Item Env:TOMATITO_AB_NRB -ErrorAction SilentlyContinue; npm run dev:app
+# Lado B: sem o no_redirection_bitmap
+$env:TOMATITO_AB_NRB = "0"; npm run dev:app
+```
+
+No terminal, a linha `tomate pronto` termina com `(A/B: com no_redirection_bitmap)` ou `(A/B: sem no_redirection_bitmap)`: confira que é o lado que você quis.
+
+1. [ ] Escala de 100% (Configurações > Sistema > Tela > Escala). Rode o lado A. No DevTools da `main` (F12), `location.hash = '#/dev'` e "Abrir o tomate" (se aparecer a pergunta do M52, Manter). Olhe o instante em que o tomate aparece: **nenhum clarão** (retângulo branco ou preto piscando) na criação.
+2. [ ] Com uma janela atrás (o Explorador de Arquivos ou o Bloco de Notas), clique nos quatro cantos da caixa do tomate (uns 5 px para dentro), logo acima do cabinho e ao lado do corpo: o clique vai para a janela de trás. Clique no corpo e nas folhas: fica no tomate.
+3. [ ] Olhe o contorno: **sem retângulo** em volta, **sem a borda de 1 px** do Windows 11 e sem cantos arredondados de janela. Os cantos da caixa ficam totalmente transparentes.
+4. [ ] Arraste o tomate pelo corpo e pelo cálice; clique em Iniciar e em Pausar: os botões funcionam, e a janela não se mexe com eles.
+5. [ ] No `#/dev` da `main`, "P (240)" e depois "G (320)": o tomate encolhe e cresce, e o passo 2 continua valendo nos dois tamanhos (a região se refaz).
+6. [ ] Olhe a borda do desenho de perto (a Lupa do Windows, Win + "+"): a borda do tomate não sai cortada nem serrilhada além do antisserrilhado normal. Se sair cortada, anote "folga 2" na tabela (a folga padrão é 1 px; `docs/decisoes.md`, M53, item 2, e M55, item 7).
+7. [ ] Esc no tomate, feche o app e repita os passos 1 a 6 com o lado B.
+8. [ ] Mude a escala para 150% e repita os passos 1 a 7. Com o tomate aberto, mude a escala de 150% para 100% e de volta: o passo 2 continua valendo (a região vem pelo tamanho físico).
+9. [ ] Se tiver um segundo monitor com outra escala, arraste o tomate de um para o outro: o passo 2 continua valendo nos dois.
+10. [ ] Anote o resultado na tabela abaixo e mande (ou cole aqui). Com "falha" no lado A e "ok" no lado B, o padrão passa a ser sem o `no_redirection_bitmap`; com falha de transparência nos dois lados (fundo preto ou branco) no Windows 10 ou numa placa AMD, é o plano B só do Windows (5.9; `docs/decisoes.md`, M55, item 9).
+
+| Sistema | Escala | Lado | Clique atravessa | Sem retângulo nem borda | Sem clarão na criação | Borda do desenho | Observações |
+|---|---|---|---|---|---|---|---|
+| Windows 11 | 100% | A (com) | | | | | |
+| Windows 11 | 100% | B (sem) | | | | | |
+| Windows 11 | 150% | A (com) | | | | | |
+| Windows 11 | 150% | B (sem) | | | | | |
+| Windows 10 | 100% | A (com) | | | | | |
+| Windows 10 | 100% | B (sem) | | | | | |
+| Windows 10 | 150% | A (com) | | | | | |
+| Windows 10 | 150% | B (sem) | | | | | |
+
+Sem Windows 10: anote "sem Windows 10" e preencha só as linhas do 11 (o plano aceita).

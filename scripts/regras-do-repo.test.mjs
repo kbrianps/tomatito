@@ -668,7 +668,8 @@ test('tomate: duas entradas no Vite, janela da 5.3 e comandos async (M50 e M51)'
     '.background_color(fundo)',
     '.visible(false)',
     '.initialization_script(init_script(modo))',
-    'builder.no_redirection_bitmap(!opaca)',
+    // M55: o A/B do no_redirection_bitmap (ligado por padrão, nunca na opaca).
+    'builder.no_redirection_bitmap(sem_redirecionamento(',
   ];
   for (const c of chamadas) assert.ok(tomato.includes(c), `tomato.rs sem ${c}`);
   assert.match(tomato, /let fundo = if opaca \{\s*FUNDO_OPACO\s*\} else \{\s*Color\(0, 0, 0, 0\)\s*\};/);
@@ -798,7 +799,7 @@ test('Full: faixas da região calculadas pela página antes do aviso, e a sobrep
   assert.match(js, /h\.dataset\.platform === 'windows' \? window\.devicePixelRatio \|\| 1 : 1/);
   // M54: o cálculo vem pelo envio (enviarRegiao chama o calcularRegiao).
   assert.match(js, /addEventListener\('resize', \(\) => enviarRegiao\(\)\)/);
-  assert.match(js, /function enviarRegiao\(\) \{[\s\S]*?const r = calcularRegiao\(\);/);
+  assert.match(js, /function enviarRegiao\(fisico\) \{[\s\S]*?const r = calcularRegiao\(fisico\);/);
   const fim = js.slice(js.lastIndexOf('} finally {'));
   assert.ok(fim.indexOf('await enviarRegiao();') > 0 && fim.indexOf('await enviarRegiao();') < fim.indexOf('avisar(false)'), 'antes do tt://tomato-ready');
   // A sobreposição entra só pelo import dinâmico dentro do DEV.
@@ -829,7 +830,7 @@ test('Full: região de entrada no Linux pelo set_tomato_region, antes do show e 
   assert.ok(definir.indexOf('janela.label() != LABEL') < definir.indexOf('faixas_validas(&strips)?'));
   assert.ok(definir.indexOf('FullMode::Opaque') < definir.indexOf('aplicar(janela, strips)'), 'opaca: sem região');
   assert.match(rs, /#\[cfg\(target_os = "linux"\)\]\nfn aplicar\([\s\S]*?region_linux::apply_region/);
-  assert.match(rs, /#\[cfg\(not\(target_os = "linux"\)\)\]\nfn aplicar\(/);
+  assert.match(rs, /#\[cfg\(not\(any\(target_os = "linux", windows\)\)\)\]\nfn aplicar\(/);
   // O modo vem da janela construída (build_tomato), e não das configurações.
   const build = rs.slice(rs.indexOf('pub fn build_tomato'), rs.indexOf('pub const EVENTO_PRONTO'));
   assert.ok(build.indexOf('builder.build()?') < build.indexOf('t.nova_janela(modo)'));
@@ -845,7 +846,7 @@ test('Full: região de entrada no Linux pelo set_tomato_region, antes do show e 
   // A página: o envio antes do aviso (e portanto antes do show), a cada
   // resize e a cada pedido do Rust; nada no modo opaco.
   const js = ler('src/tomato.js');
-  assert.match(js, /ipc\.ouvir\(ipc\.full\.EVENTO_REGIAO, \(\) => enviarRegiao\(\)\)/);
+  assert.match(js, /\.ouvir\(ipc\.full\.EVENTO_REGIAO, \(tamanho\) => enviarRegiao\(/);
   assert.match(js, /h\.dataset\.fullMode === 'opaque' \|\| !r/);
   assert.match(js, /await ipc\.full\.definirRegiao\(r\.faixas\)/);
   // Escondida, o innerWidth é 0: o lado vem do Rust, e a região vai antes do show.
@@ -855,4 +856,45 @@ test('Full: região de entrada no Linux pelo set_tomato_region, antes do show e 
   const ipcJs = ler('src/lib/ipc.js');
   assert.match(ipcJs, /EVENTO_REGIAO: 'tt:\/\/tomato-region'/);
   assert.match(ipcJs, /definirRegiao: \(faixas\) => invoke\('set_tomato_region', \{ strips: faixas \}\)/);
+});
+
+test('Full: região no Windows pelo SetWindowRgn, sem a borda do DWM, e o A/B do no_redirection_bitmap (M55)', () => {
+  // O crate windows na mesma versão do Tauri (0.62), só no Windows (3.6).
+  const cargo = ler('src-tauri/Cargo.toml');
+  const win = cargo.slice(cargo.indexOf(`[target.'cfg(windows)'.dependencies]`)).split(/\n\[/)[0];
+  assert.match(win, /^windows = \{ version = "0\.62", features = \[[^\]]*"Win32_Graphics_Gdi"[^\]]*"Win32_Graphics_Dwm"[^\]]*\] \}$/m);
+  assert.equal(cargo.match(/^windows = /gm).length, 1, 'windows só na seção do Windows');
+  assert.match(ler('src-tauri/src/window/mod.rs'), /#\[cfg\(windows\)\]\npub mod region_windows;/);
+  const rw = ler('src-tauri/src/window/region_windows.rs');
+  // 5.5: o HWND passa como número (não é Send), tudo na thread principal, a
+  // união das faixas e o SetWindowRgn; só as temporárias são apagadas, e a
+  // região final só quando o SetWindowRgn falha.
+  const apply = rw.slice(rw.indexOf('pub fn apply_region'), rw.indexOf('pub fn sem_borda'));
+  assert.match(apply, /let raw = win\.hwnd\(\)\?\.0 as isize;\s*win\.run_on_main_thread\(move \|\| \{/);
+  assert.match(apply, /CombineRgn\(Some\(rgn\), Some\(rgn\), Some\(r\), RGN_OR\)/);
+  assert.match(apply, /let _ = DeleteObject\(r\.into\(\)\);/);
+  assert.match(apply, /if SetWindowRgn\(HWND\(raw as _\), Some\(rgn\), true\) == 0 \{[^}]*DeleteObject\(rgn\.into\(\)\)/);
+  assert.equal(apply.match(/DeleteObject\(rgn/g).length, 1, 'a região entregue ao sistema nunca é apagada');
+  const borda = rw.slice(rw.indexOf('pub fn sem_borda'));
+  assert.match(borda, /let cor: u32 = DWMWA_COLOR_NONE;[\s\S]*DWMWA_BORDER_COLOR,\s*\(&raw const cor\)/);
+  assert.match(borda, /DWMWA_WINDOW_CORNER_PREFERENCE/);
+  assert.match(borda, /DWMWCP_DONOTROUND/);
+  // O comando: o mesmo do Linux, com o aplicar do Windows sob cfg.
+  const rs = ler('src-tauri/src/window/tomato.rs');
+  assert.match(rs, /#\[cfg\(windows\)\]\nfn aplicar\([\s\S]*?region_windows::apply_region/);
+  // A borda sai logo depois do build, antes de qualquer show.
+  const build = rs.slice(rs.indexOf('pub fn build_tomato'), rs.indexOf('pub const VAR_AB_NRB'));
+  assert.ok(build.indexOf('builder.build()?') < build.indexOf('region_windows::sem_borda(&w)'));
+  assert.match(build, /#\[cfg\(windows\)\]\s*if let Err\(e\) = super::region_windows::sem_borda\(&w\)/);
+  // O A/B: a variável só no build de debug, e nunca na opaca.
+  assert.match(rs, /pub const VAR_AB_NRB: &str = "TOMATITO_AB_NRB";/);
+  assert.match(rs, /pub fn sem_redirecionamento\(opaca: bool, var: Option<&OsStr>, debug: bool\) -> bool \{\s*let lado_b = debug && var == Some\(OsStr::new\("0"\)\);\s*!opaca && !lado_b\s*\}/);
+  assert.match(build, /std::env::var_os\(VAR_AB_NRB\)\.as_deref\(\),\s*cfg!\(debug_assertions\),/);
+  // Nunca setIgnoreCursorEvents (5.3): no Windows, vale para a janela inteira.
+  assert.doesNotMatch(rw, /set_ignore_cursor_events/);
+  // A página: px físicos no Windows; no pedido do Rust, o tamanho físico
+  // que ele manda vale mais que o devicePixelRatio (a troca de DPI).
+  const js = ler('src/tomato.js');
+  assert.match(js, /fisico > 0 && lado > 0 && h\.dataset\.platform === 'windows' \? fisico \/ lado : escalaDaRegiao\(\)/);
+  assert.match(js, /enviarRegiao\(Array\.isArray\(tamanho\) \? tamanho\[0\] : 0\)/);
 });

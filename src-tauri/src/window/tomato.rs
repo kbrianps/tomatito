@@ -24,9 +24,13 @@
 //! A cada troca de tamanho, o `WindowEvent::Resized` pede a região de novo
 //! ([`redimensionada`], evento [`EVENTO_REGIAO`]).
 //!
-//! Ficam para depois: a região no Windows (M55) e o menu nativo, os atalhos
-//! e a escolha de P/M/G (M56; até lá, [`trocar_tamanho`] só pelo comando de
-//! debug).
+//! M55: a região no Windows, pelo mesmo comando e pelo mesmo evento
+//! (`region_windows.rs`, `SetWindowRgn` em px físicos), a borda do DWM
+//! desligada e o teste A/B do `no_redirection_bitmap`
+//! ([`sem_redirecionamento`], pela variável [`VAR_AB_NRB`] no build de debug).
+//!
+//! Ficam para depois: o menu nativo, os atalhos e a escolha de P/M/G (M56;
+//! até lá, [`trocar_tamanho`] só pelo comando de debug).
 
 use std::ffi::OsStr;
 use std::sync::{Arc, Mutex};
@@ -148,10 +152,21 @@ pub fn build_tomato(app: &AppHandle, s: &Settings, modo: FullMode) -> tauri::Res
         // M54: o lado da janela, para a região antes do show (5.6). Escondida,
         // a página do WebKitGTK tem `innerWidth` 0 (docs/decisoes.md, M54).
         .initialization_script(init_lado(s.tomato_size));
-    // Teste A/B contra o blur-behind no Windows (M55).
+    // Teste A/B contra o blur-behind no Windows (M55): ligado por padrão;
+    // no build de debug, `TOMATITO_AB_NRB=0` desliga (o lado B).
     #[cfg(windows)]
-    let builder = builder.no_redirection_bitmap(!opaca);
+    let builder = builder.no_redirection_bitmap(sem_redirecionamento(
+        opaca,
+        std::env::var_os(VAR_AB_NRB).as_deref(),
+        cfg!(debug_assertions),
+    ));
     let w = builder.build()?;
+    // M55: sem a borda de 1 px e sem os cantos arredondados do DWM (5.5), com
+    // a janela ainda escondida. Uma falha não impede o tomate.
+    #[cfg(windows)]
+    if let Err(e) = super::region_windows::sem_borda(&w) {
+        eprintln!("[tomatito] borda do DWM não desligada: {e}");
+    }
     // M54: o modo desta `tomato` (a região só vale na transparente) e nenhum
     // tamanho visto ainda.
     if let Some(t) = app.try_state::<Troca>() {
@@ -173,6 +188,21 @@ pub fn build_tomato(app: &AppHandle, s: &Settings, modo: FullMode) -> tauri::Res
         eprintln!("[tomatito] tema nativo da main não reaplicado: {e}");
     }
     Ok(w)
+}
+
+/// A variável do teste A/B do `no_redirection_bitmap` no Windows (M55; 5.3 e
+/// seção 8). Só vale no build de debug (o `npm run dev:app`): `0` desliga o
+/// `no_redirection_bitmap`, e qualquer outro valor (ou nenhum) o deixa ligado.
+pub const VAR_AB_NRB: &str = "TOMATITO_AB_NRB";
+
+/// Se a `tomato` nasce com o `no_redirection_bitmap` (Windows; M55). Na
+/// transparente, sim (o lado A, o padrão), salvo com [`VAR_AB_NRB`] em `0`
+/// num build de debug (o lado B do teste). Na opaca (B3), nunca: ele só
+/// serve à transparência (docs/decisoes.md, M52).
+#[cfg_attr(not(windows), allow(dead_code))]
+pub fn sem_redirecionamento(opaca: bool, var: Option<&OsStr>, debug: bool) -> bool {
+    let lado_b = debug && var == Some(OsStr::new("0"));
+    !opaca && !lado_b
 }
 
 /// Evento da página do tomate para o Rust (3.5): a página está pronta (o
@@ -267,15 +297,28 @@ pub fn ligar(app: &AppHandle) {
         let p: Pronto = serde_json::from_str(ev.payload()).unwrap_or_default();
         if cfg!(debug_assertions) {
             eprintln!(
-                "[tomatito] tomate pronto{}: {}",
+                "[tomatito] tomate pronto{}: {}{}",
                 if p.pintado { " e pintado" } else { "" },
-                chave_de_validacao(&p, &Ambiente::atual())
+                chave_de_validacao(&p, &Ambiente::atual()),
+                lado_do_ab()
             );
         }
         if let Some(t) = h.try_state::<Troca>() {
             t.pronto(p);
         }
     });
+}
+
+/// No Windows, o lado do teste A/B no registro do build de debug (M55): o
+/// roteiro da `docs/verificacao-manual.md` confere por ele qual lado rodou.
+fn lado_do_ab() -> &'static str {
+    if !cfg!(windows) {
+        ""
+    } else if sem_redirecionamento(false, std::env::var_os(VAR_AB_NRB).as_deref(), true) {
+        " (A/B: com no_redirection_bitmap)"
+    } else {
+        " (A/B: sem no_redirection_bitmap)"
+    }
 }
 
 /// O que, além do `tt://tomato-ready`, entra na chave do `fullValidated`
@@ -613,11 +656,11 @@ pub const TAMANHOS: [u32; 3] = [240, 280, 320];
 /// O que o [`definir_regiao`] fez com as faixas.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Regiao {
-    /// Entregues ao compositor (Linux; no Windows, a partir do M55).
-    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    /// Entregues ao compositor (Linux) ou à janela (Windows, M55).
+    #[cfg_attr(not(any(target_os = "linux", windows)), allow(dead_code))]
     Aplicada,
     /// Ignoradas: a `tomato` é opaca (B3; docs/decisoes.md, M52, item 8) ou
-    /// a plataforma ainda não tem região (o Windows é do M55).
+    /// a plataforma não tem região (nem Linux nem Windows).
     Ignorada,
 }
 
@@ -654,7 +697,8 @@ pub fn faixas_validas(strips: &[[i32; 4]]) -> Result<(), String> {
 /// `tomato`, pedida pela própria página. Só a `tomato` pode pedir. No modo
 /// opaco (B3), a janela é quadrada e fica sem região. No Linux, as faixas
 /// vão para o widget (`region_linux.rs`) pela fila da thread principal, a
-/// mesma do `show()`; no Windows, o `SetWindowRgn` é do M55.
+/// mesma do `show()`; no Windows, pelo `SetWindowRgn` (`region_windows.rs`,
+/// M55), em px físicos.
 pub fn definir_regiao(janela: &WebviewWindow, strips: Vec<[i32; 4]>) -> Result<Regiao, String> {
     if janela.label() != LABEL {
         return Err(format!("só a janela {LABEL} tem região"));
@@ -681,8 +725,15 @@ fn aplicar(janela: &WebviewWindow, strips: Vec<[i32; 4]>) -> Result<Regiao, Stri
     Ok(Regiao::Aplicada)
 }
 
-/// Fora do Linux, ainda sem região: o `SetWindowRgn` do Windows é do M55.
-#[cfg(not(target_os = "linux"))]
+/// No Windows (5.5; M55): a região da janela inteira, pela thread principal.
+#[cfg(windows)]
+fn aplicar(janela: &WebviewWindow, strips: Vec<[i32; 4]>) -> Result<Regiao, String> {
+    super::region_windows::apply_region(janela, strips).map_err(|e| e.to_string())?;
+    Ok(Regiao::Aplicada)
+}
+
+/// Fora do Linux e do Windows, sem região.
+#[cfg(not(any(target_os = "linux", windows)))]
 fn aplicar(_janela: &WebviewWindow, _strips: Vec<[i32; 4]>) -> Result<Regiao, String> {
     Ok(Regiao::Ignorada)
 }
@@ -727,8 +778,9 @@ fn redimensionar(t: &WebviewWindow, lado: u32) -> tauri::Result<()> {
     super::region_linux::resize(t, lado as i32)
 }
 
-/// No Windows, o `set_size` vale mesmo com `resizable(false)` (a conferir no
-/// M55, junto com a região).
+/// No Windows, o `set_size` vale mesmo com `resizable(false)` (o tao só tira
+/// a borda de arrastar; a conferir na ida ao Windows do M55). A região vem
+/// depois, pelo `Resized`, como no Linux.
 #[cfg(not(target_os = "linux"))]
 fn redimensionar(t: &WebviewWindow, lado: u32) -> tauri::Result<()> {
     let lado = f64::from(lado);
@@ -772,6 +824,27 @@ pub fn abrir_no_inicio(app: &AppHandle, s: &Settings) -> tauri::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ab_do_no_redirection_bitmap() {
+        let zero = Some(OsStr::new("0"));
+        // O lado A é o padrão, no debug e no release.
+        assert!(sem_redirecionamento(false, None, true));
+        assert!(sem_redirecionamento(false, None, false));
+        // O lado B: só com "0" e só no build de debug.
+        assert!(!sem_redirecionamento(false, zero, true));
+        assert!(sem_redirecionamento(false, zero, false));
+        for v in ["1", "", "00", "false"] {
+            assert!(
+                sem_redirecionamento(false, Some(OsStr::new(v)), true),
+                "{v}"
+            );
+        }
+        // Na opaca (B3), nunca.
+        for (var, debug) in [(None, true), (None, false), (zero, true)] {
+            assert!(!sem_redirecionamento(true, var, debug));
+        }
+    }
 
     #[test]
     fn script_de_inicializacao_do_tomate_e_sempre_full() {

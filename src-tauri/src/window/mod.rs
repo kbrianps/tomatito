@@ -4,6 +4,8 @@
 pub mod main_window;
 #[cfg(target_os = "linux")]
 pub mod region_linux;
+#[cfg(windows)]
+pub mod region_windows;
 pub mod tomato;
 pub mod validacao;
 

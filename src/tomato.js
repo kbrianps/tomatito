@@ -168,9 +168,13 @@ const escalaDaRegiao = () => (h.dataset.platform === 'windows' ? window.devicePi
 const ladoDaJanela = () => window.innerWidth || Number(window.__TT_TOMATO_SIZE__) || 0;
 let regiao = null;
 let sobreposicao = null;
-function calcularRegiao() {
+// M55: no Windows, o pedido do Rust traz o tamanho da janela em px físicos,
+// e ele manda: numa troca de DPI, o pedido pode chegar antes de o WebView2
+// trocar o devicePixelRatio (e sem `resize`, porque os px CSS não mudam). As
+// faixas só dependem do lado físico (regionStrips: n = lado × escala).
+function calcularRegiao(fisico) {
   const lado = ladoDaJanela();
-  const escala = escalaDaRegiao();
+  const escala = fisico > 0 && lado > 0 && h.dataset.platform === 'windows' ? fisico / lado : escalaDaRegiao();
   if (regiao && regiao.lado === lado && regiao.escala === escala) return regiao;
   try {
     const inicio = performance.now();
@@ -189,9 +193,9 @@ function calcularRegiao() {
 // lado 0 (a janela ainda sem tamanho), nada vai, e o `resize` manda depois.
 let enviada = null;
 let enviando = null;
-function enviarRegiao() {
+function enviarRegiao(fisico) {
   enviando = (enviando ?? Promise.resolve()).then(async () => {
-    const r = calcularRegiao();
+    const r = calcularRegiao(fisico);
     if (h.dataset.fullMode === 'opaque' || !r || r === enviada || !r.faixas.length) return;
     enviada = r;
     try {
@@ -206,7 +210,9 @@ function enviarRegiao() {
 window.addEventListener('resize', () => enviarRegiao());
 // O Rust pede de novo quando o tamanho da janela muda (o Resized): cobre
 // também, no Windows, a troca de DPI sem troca de px CSS (5.4).
-ipc.ouvir(ipc.full.EVENTO_REGIAO, () => enviarRegiao()).catch((erro) => console.error('[região]', erro));
+ipc
+  .ouvir(ipc.full.EVENTO_REGIAO, (tamanho) => enviarRegiao(Array.isArray(tamanho) ? tamanho[0] : 0))
+  .catch((erro) => console.error('[região]', erro));
 // Só no dev: a sobreposição que desenha as faixas (lib/regiao-debug.js).
 if (import.meta.env.DEV) {
   import('./lib/regiao-debug.js')
