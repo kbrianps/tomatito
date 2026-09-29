@@ -35,3 +35,10 @@ O `wasm-bindgen-cli` foi instalado com `cargo install wasm-bindgen-cli --version
 
 - O `~/.profile` só vale em sessões novas. Nos terminais já abertos, `export TOMATITO_WASM_TARGET_DIR=/opt/cargo-target/tomatito-web` à mão.
 - O `wasm-bindgen-test-runner` não está no `PATH` de propósito: os scripts da web o procuram em `$TOMATITO_WBG` ou nesse caminho fixo (W02).
+
+## `npm run wasm` (W01a)
+
+- `scripts/web/wasm.mjs` roda `wasm-pack build src-tauri/tomatito-wasm --target web --out-dir ../../src/platform/web/pkg --profile wasm-release --no-pack`, com o `CARGO_TARGET_DIR` tirado de `TOMATITO_WASM_TARGET_DIR`, depois `CARGO_TARGET_DIR`, e por fim `src-tauri/target-wasm`.
+- O wasm-pack reaproveita o `wasm-bindgen` 0.2.129 e o `wasm-opt` que já estavam em `~/.cache/.wasm-pack` (68 MB, do spike de 28/09); nada novo foi baixado para o `/home`.
+- Em 29/09/2026, no W01a: `src/platform/web/pkg/tomatito_wasm_bg.wasm` com **316 828 bytes** (limite do plano: 532 480). É menor que o do spike (485,5 KiB) porque o `lib.rs` mínimo ainda não traz os temporizadores, o cronômetro, o `events.rs` e o `i18n.rs`; o fuso (tzdb do jiff) já está dentro.
+- Conferido à parte no Node (`initSync`, `TZ=America/Sao_Paulo`): `focusStart` em t0 e `restanteMs(t0 + 60 000)` = 1 440 000; `focusPause` sem fase correndo lança "não há fase correndo para pausar"; `fusoDoSistema()` = `America/Sao_Paulo`. O caso fumaça no Chrome é do W01b.

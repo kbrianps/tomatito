@@ -13,7 +13,8 @@
     "shot:webkit": "node scripts/preview/webkit-shot.mjs",
     "test": "node --test",
     "dev:app": "tauri dev --config src-tauri/tauri.dev.conf.json",
-    "build:debug": "tauri build --debug --no-bundle --config src-tauri/tauri.dev.conf.json"
+    "build:debug": "tauri build --debug --no-bundle --config src-tauri/tauri.dev.conf.json",
+    "wasm": "node scripts/web/wasm.mjs"
   },
   "devDependencies": {
     "@fluentui/svg-icons": "1.1.343",

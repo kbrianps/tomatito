@@ -22,3 +22,8 @@ npm-debug.log*
 .DS_Store
 *.sw?
 *.local
+
+# Versão web (PLANO-WEB, 3.9): o pacote gerado pelo `npm run wasm` e o target
+# padrão do wasm quando não há TOMATITO_WASM_TARGET_DIR nem CARGO_TARGET_DIR
+src/platform/web/pkg/
+src-tauri/target-wasm/

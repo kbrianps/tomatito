@@ -9,7 +9,18 @@ edition = "2024"
 rust-version = "1.90"
 
 [workspace]
-members = ["tomatito-core"]
+# tomatito-wasm: a ponte do core para o navegador (versão web, PLANO-WEB 3.3).
+# O app não depende dela; só o `npm run wasm` a compila para wasm32.
+members = ["tomatito-core", "tomatito-wasm"]
+
+# Perfil só do pacote web (`npm run wasm`, wasm-pack --profile wasm-release):
+# não mexe no `release` do app desktop.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
 
 [lib]
 name = "tomatito_lib"
