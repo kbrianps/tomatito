@@ -8,6 +8,9 @@
 //! (janela escondida, suspensão) já sai contada na primeira leitura
 //! (`lacuna_*`).
 
+#[cfg(target_family = "wasm")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
+
 use tomatito_core::{
     Clock, EpochMs, FakeClock, MAX_LAPS, Stopwatch, StopwatchError, StopwatchStatus,
 };

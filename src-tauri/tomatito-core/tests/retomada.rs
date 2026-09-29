@@ -3,6 +3,9 @@
 //! o `state.json` guarda; um núcleo novo, "na abertura", o recebe pelo
 //! `restore` e roda o `advance_to(now)`.
 
+#[cfg(target_family = "wasm")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
+
 use tomatito_core::{
     EpochMs, FakeCountdownEffects, FakeEffects, Focus, FocusSnapshot, MAX_LAPS, Notice, PhaseKind,
     RestoreError, RunRecord, SessionConfig, SessionRecord, Sound, Status, Stopwatch,

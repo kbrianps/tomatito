@@ -8,6 +8,9 @@
 //! - o relógio pulando 40 min fecha a fase: `relogio_pulando_40_min_*`;
 //! - o relógio pulando 2 h numa sessão de 60 min: `relogio_pulando_2_h_*`.
 
+#[cfg(target_family = "wasm")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
+
 use tomatito_core::{
     ChangeCause, Clock, EpochMs, FakeClock, FakeEffects, Focus, FocusError, Notice, Period, Phase,
     PhaseChange, PhaseKind, Plan, PlanError, PlanSettings, SessionConfig, Sound, Status,
@@ -931,6 +934,8 @@ fn erros_tem_texto_para_o_registro() {
 mod acelerado {
     use super::*;
     use tomatito_core::ScaledClock;
+    #[cfg(target_family = "wasm")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
 
     /// Roda uma sessão com o relógio acelerado, andando o relógio de base de
     /// 250 em 250 ms (o laço do app), e devolve os efeitos.

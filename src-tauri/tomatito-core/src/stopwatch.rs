@@ -227,6 +227,8 @@ impl Stopwatch {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(target_family = "wasm")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
 
     const T0: EpochMs = EpochMs(1_790_000_000_000);
 

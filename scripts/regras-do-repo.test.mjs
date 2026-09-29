@@ -3,6 +3,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const ler = (caminho) => readFileSync(new URL(`../${caminho}`, import.meta.url), 'utf8');
 
@@ -1083,4 +1085,48 @@ test('M57: Compatibilidade X11 (B2) lida antes do Builder, com a marca e o rein�
   const ipc = ler('src/lib/ipc.js');
   assert.match(ipc, /situacao: \(\) => invoke\('x11_compat_get'\)/);
   assert.match(ipc, /reiniciar: \(\) => invoke\('app_restart'\)/);
+});
+
+// Versão web (PLANO-WEB, 3.2, regras 3 e 4; marco W02): o `npm test` do
+// desktop não roda nada da web. O `node --test` sem argumentos descobre os
+// arquivos pelo nome, então nenhum script da web pode ter nome de teste, e os
+// testes unitários da camada web não carregam o wasm.
+const arquivosEm = (pasta) => {
+  const url = new URL(`../${pasta}/`, import.meta.url);
+  try {
+    return readdirSync(url, { recursive: true, withFileTypes: true })
+      .filter((d) => d.isFile())
+      .map((d) => `${pasta}/${relative(fileURLToPath(url), join(d.parentPath, d.name)).split(sep).join('/')}`);
+  } catch (e) {
+    if (e.code === 'ENOENT') return [];
+    throw e;
+  }
+};
+
+test('web: nenhum arquivo de scripts/web/ casa com a descoberta do node --test (regra 3)', () => {
+  const descoberta = /(^|\/)test\/|(^|\/)test(-[^/]*)?\.[cm]?[jt]s$|[._-]test\.[cm]?[jt]s$/;
+  // A própria regex, conferida contra os nomes que o Node 22 descobre e os que não.
+  for (const n of ['a/test/x.mjs', 'test-wasm.mjs', 'a/test.js', 'x.test.mjs', 'x-test.cjs', 'x_test.ts']) {
+    assert.match(n, descoberta, n);
+  }
+  for (const n of ['scripts/web/testar-wasm.mjs', 'scripts/web/rodar-testes-wasm.mjs', 'scripts/web/verificar.mjs']) {
+    assert.doesNotMatch(n, descoberta, n);
+  }
+  const web = arquivosEm('scripts/web');
+  assert.ok(web.includes('scripts/web/testar-wasm.mjs'), 'scripts/web/testar-wasm.mjs existe');
+  assert.deepEqual(web.filter((f) => descoberta.test(f)), []);
+  assert.equal(pkg.scripts['test:wasm'], 'node scripts/web/testar-wasm.mjs');
+  assert.equal(pkg.scripts.test, 'node --test');
+});
+
+test('web: nenhum teste de src/platform/web/ importa o pkg/, o motor.js ou o index.js (regra 4)', () => {
+  const testes = arquivosEm('src/platform/web').filter(
+    (f) => f.endsWith('.test.js') && !f.startsWith('src/platform/web/pkg/'),
+  );
+  const especificadores = (texto) =>
+    [...texto.matchAll(/\b(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g)].map((m) => m[1]);
+  const proibido = /(^|\/)pkg(\/|$)|(^|\/)motor\.js$|(^|\/)index\.js$/;
+  for (const f of testes) {
+    assert.deepEqual(especificadores(ler(f)).filter((e) => proibido.test(e)), [], f);
+  }
 });
