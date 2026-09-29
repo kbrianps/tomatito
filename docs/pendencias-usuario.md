@@ -5,7 +5,7 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 ## Abertas
 
 1. **Conferir o M01 na tela** (desde o M01). Uns 2 minutos, com os passos em `docs/verificacao-manual.md`, seção M01. Não bloqueia os próximos marcos: a janela, o switch e a recarga já foram conferidos de forma automática.
-2. **Repositório no GitHub e o CI do M03** (plano 1.2, item 4; desde o M01). Decidir quando criar `kbrianps/tomatito` e se será público ou privado. Nada foi criado: não há remote, push nem tag. O nome estava livre em 26/09/2026. O `ci.yml` já está no commit do M03; falta só o que depende da sua conta. Quando quiser (uns 5 minutos, mais uns 20 de espera na primeira rodada, que compila tudo sem cache):
+2. **Repositório no GitHub e o CI do M03** (plano 1.2, item 4; desde o M01). Decidir quando criar `kbrianps/tomatito` e se será público ou privado. Nada foi criado: não há remote nem push (a tag `v0.1.0` do M45 existe só no git local). O nome estava livre em 26/09/2026. O `ci.yml` já está no commit do M03; falta só o que depende da sua conta. Quando quiser (uns 5 minutos, mais uns 20 de espera na primeira rodada, que compila tudo sem cache):
 
    ```bash
    cd ~/dev/tomatito
@@ -135,7 +135,18 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 91. **Escolhas do M46 fora do plano** (`docs/decisoes.md`, M46): o Sobre mostra os arquivos num diálogo dentro do app (texto puro, monoespaçado), e não abre um editor ou navegador de fora; a segunda linha "Licença da fonte Inter" com "Ver licença"; o cabeçalho do `THIRD_PARTY_NOTICES.md` em pt-BR (a licença do app, os sons e o ícone próprios, a Inter e o aviso de marcas); e os links do código-fonte dos crates sob a MPL-2.0. Os textos estão em `t.configuracoes.sobre` (`src/lib/i18n/pt-BR.js`) e no `montar` do `scripts/gerar-avisos.mjs`.
 92. **Regerar os avisos a cada mudança de dependência** (desde o M46). Depois de mexer no `package.json` ou no `Cargo.toml`/`Cargo.lock`, rode `node scripts/gerar-avisos.mjs` (precisa de rede e do `cargo about`, instalado em `~/.cargo/bin` com `cargo install cargo-about --locked --features cli`) e commite o `THIRD_PARTY_NOTICES.md`. O `npm test` acusa um pacote ou crate novo fora dos avisos. Quando o repositório e o CI existirem (M03), vale um passo no CI com `node scripts/gerar-avisos.mjs --conferir`.
 93. **Avisos no Windows** (desde o M46). No instalador `.msi` e no `.exe` (NSIS), o `THIRD_PARTY_NOTICES.md` e o `OFL-Inter.txt` devem ficar na pasta do app, ao lado do `tomatito.exe`, e o Sobre deve mostrá-los (passos 2 a 5 da seção M46, com a Consolas no texto). A checagem cruzada `cargo clippy --target x86_64-pc-windows-msvc` passa. Entra na ida ao Windows do M48.
-94. **M45 (release) ainda não foi feito** (M46, item 1). Depende do repositório no GitHub (M03; plano 1.2, item 4), que é seu. O M46 foi feito antes, com o `.deb` gerado aqui.
+94. **Rascunho do release `v0.1.0` no GitHub** (desde o M45; antes, "M45 ainda não feito"). O `release.yml` e as opções de bundle estão no commit do M45, e a tag `v0.1.0` existe só no git local, nesse commit. Depende do item 2 (repositório e CI verde). Depois dele (uns 2 minutos, mais uns 25 de espera):
+
+   ```bash
+   cd ~/dev/tomatito
+   git push origin v0.1.0
+   gh run watch        # o workflow "Release", nos dois sistemas
+   gh release view v0.1.0 --json isDraft,assets --jq '.isDraft, .assets[].name'
+   ```
+
+   - **Pronto quando:** o rascunho `Tomatito v0.1.0` tem `Tomatito_0.1.0_amd64.deb`, `Tomatito_0.1.0_amd64.AppImage`, `Tomatito_0.1.0_x64_pt-BR.msi` e `Tomatito_0.1.0_x64-setup.exe` (os nomes do Windows podem variar um pouco). O rascunho só fica público quando você clicar em "Publish release".
+   - Se o job do Windows falhar na língua do instalador (`docs/decisoes.md`, M45, item 4), tire `nsis.languages` e `wix.language` do `src-tauri/tauri.conf.json`, faça um commit, apague a tag (`git tag -d v0.1.0 && git push origin :refs/tags/v0.1.0`), apague o rascunho e crie a tag de novo no commit novo.
+   - Os passos do que conferir nos pacotes estão em `docs/verificacao-manual.md`, seção M45.
 
 <!-- Frente B (Tomatito Full, branch full): numeração a partir do 101, para não colidir com a da frente A; a junção renumera (docs/decisoes.md, M50, item 14). -->
 
@@ -154,6 +165,7 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 113. **Menu, atalhos e "Sempre na frente" do tomate** (desde o M56). Uns 4 minutos no Linux e 5 no Windows, com os passos em `docs/verificacao-manual.md`, seção M56: o menu do botão direito completo, Tamanho › Pequeno/Grande, Espaço, Ctrl+, e a dica do Alt+Espaço uma vez, Minimizar e Fechar (o app fica na bandeja). No Windows (junto com a pendência 112), o "Sempre na frente" do menu, que vem marcado no Windows 11 e desmarcado no 10 (o padrão do `tomatoOnTop` lê a versão do Windows, `docs/decisoes.md`, M56, item 8). O roteiro aninhado `menu-tomate` já fez a parte do Linux no GNOME Shell aninhado (27 conferências).
 114. **Decisões do M56 fora do plano** (`docs/decisoes.md`, M56, itens 2, 5 e 6), para você confirmar ou mudar: a ordem e os nomes do menu ("Tamanho" com Pequeno, Médio e Grande); "Fechar" no tomate segue o "fechar para a bandeja" (ligado: o app fica na bandeja, mesmo sem janela; desligado: o app sai); e a dica do Alt+Espaço aparece nas Configurações só quando elas estão na tela com o Full ativo, uma vez, marcada no `localStorage` (e não numa chave nova do `settings.json`).
 115. **Compatibilidade X11 na sua tela** (desde o M57, marco opcional). Uns 5 minutos, com os passos em `docs/verificacao-manual.md`, seção M57: ligar a opção, "Reiniciar agora", ver se o app pelo Xwayland fica nítido na sua escala, o tomate por cima com "Sempre na frente" no menu, e desligar de novo. O roteiro aninhado `x11` já fez tudo isso no GNOME Shell aninhado com o Xwayland (25 conferências); falta o seu olho, sobretudo o borrado com escala fracionária. Decisões fora do plano, para você confirmar (`docs/decisoes.md`, M57): o botão "Reiniciar agora" (o plano só diz "no próximo início"), a seção "Avançado" no fim das Configurações, e o "lembrar a posição" do tomate no X11 **não** feito (seria uma chave nova no `settings.json`).
+116. **Conferir o M45 na sua sessão e no Windows** (desde o M45). Uns 5 minutos no Linux e 10 no Windows, com os passos em `docs/verificacao-manual.md`, seção M45: o Tomatito de uso diário (já reinstalado em `~/.local` com os pacotes do M45) abre pelo dock com o ícone e o nome certos no Alt+Tab; se quiser, o `.deb` pelo apt (item 33). No Windows, com os arquivos do rascunho (item 94): o `.exe` instala sem pedir administrador (`currentUser`), em português, e baixa o WebView2 se faltar (`downloadBootstrapper`); o `.msi` instala em português. O roteiro aninhado `instalado` já conferiu o AppImage e o `.deb` extraído (9 de 9 nos dois).
 
 ## Resolvidas
 

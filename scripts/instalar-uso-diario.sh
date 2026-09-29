@@ -21,9 +21,21 @@ bin="$HOME/.local/bin"
 apps="$dados/applications"
 icones="$dados/icons/hicolor"
 
+# Um icon-theme.cache antigo na pasta (de outro app) esconde os ícones que não
+# estão nele. O GTK ignora o cache mais velho que a pasta, mas uma cópia ou um
+# programa que refaça o cache sem o Tomatito o torna válido de novo; refazê-lo
+# aqui, com o que há na pasta, é o que o apt faz em /usr/share (M45).
+atualizar_cache_de_icones() {
+  if [[ -f "$icones/icon-theme.cache" ]] && command -v gtk-update-icon-cache >/dev/null; then
+    gtk-update-icon-cache -q -f -t "$icones" || true
+  fi
+  touch "$icones" 2>/dev/null || true
+}
+
 remover() {
   rm -f "$bin/Tomatito.AppImage" "$apps/Tomatito.desktop"
   find "$icones" -path '*/apps/tomatito.png' -delete 2>/dev/null || true
+  atualizar_cache_de_icones
   command -v update-desktop-database >/dev/null && update-desktop-database -q "$apps" || true
   echo "Tomatito removido de ~/.local (a pasta de dados ficou)."
 }
@@ -83,7 +95,7 @@ sed -e "s|^Exec=.*|Exec=\"$bin/Tomatito.AppImage\"|" \
 chmod 644 "$apps/Tomatito.desktop"
 
 command -v update-desktop-database >/dev/null && update-desktop-database -q "$apps" || true
-touch "$icones"
+atualizar_cache_de_icones
 
 echo "Tomatito $versao instalado:"
 echo "  $bin/Tomatito.AppImage"

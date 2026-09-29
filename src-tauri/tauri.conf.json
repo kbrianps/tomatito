@@ -17,6 +17,11 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "category": "Utility",
+    "shortDescription": "Timer de foco para Windows e Linux",
+    "longDescription": "Timer de foco com sessões de foco e intervalo, temporizadores, cronômetro, lista de tarefas e o progresso do dia.",
+    "publisher": "kbrianps",
+    "copyright": "© 2026 kbrianps",
     "resources": {
       "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md",
       "../src/assets/OFL-Inter.txt": "OFL-Inter.txt"
@@ -30,6 +35,30 @@
     ],
     "android": {
       "debugApplicationIdSuffix": ".debug"
+    },
+    "linux": {
+      "deb": {
+        "depends": [
+          "libasound2t64 | libasound2"
+        ]
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": [
+          "PortugueseBR"
+        ]
+      },
+      "wix": {
+        "language": "pt-BR"
+      }
     }
   }
 }

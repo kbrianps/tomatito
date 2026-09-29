@@ -21,6 +21,10 @@ No GNOME, a bandeja depende da extensão AppIndicator (vem ativa no Ubuntu). Sem
 
 Nenhum dado sai do computador: sem rede e sem contas. Configurações e histórico ficam na pasta de dados do app.
 
+## Instalar
+
+Os instaladores ficam nos releases do repositório: `.deb` e AppImage para Linux, `.msi` e `.exe` para Windows. O `.exe` instala só para o seu usuário, sem pedir administrador. Cada tag `v*` gera um rascunho de release pelo `.github/workflows/release.yml`; a versão vem do `src-tauri/Cargo.toml`.
+
 ## Desenvolvimento
 
 Requisitos: Node 22.12 ou mais novo, Rust 1.90 ou mais novo e as dependências do Tauri 2 para o seu sistema (no Linux, WebKitGTK 4.1).

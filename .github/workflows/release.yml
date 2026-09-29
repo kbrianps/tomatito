@@ -1,0 +1,91 @@
+# Release do Tomatito (PLANO.md, M45): uma tag `v*` gera um rascunho de release
+# com o .deb e o AppImage (ubuntu-24.04) e o .msi e o .exe (windows-latest).
+# O rascunho só fica público quando você o publica à mão no GitHub.
+#
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# A versão da tag precisa ser a do src-tauri/Cargo.toml (o passo "Versão" confere).
+# Para gerar os pacotes do Linux sem o GitHub: `npx tauri build --bundles deb appimage`
+# (ou `bash scripts/instalar-uso-diario.sh`, que também instala em ~/.local).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            bundles: deb appimage
+          - os: windows-latest
+            bundles: msi nsis
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+
+    steps:
+      - name: Código
+        uses: actions/checkout@v7
+
+      - name: Versão (a tag e o Cargo.toml)
+        run: |
+          versao="$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' src-tauri/Cargo.toml | head -n1)"
+          echo "tag: ${GITHUB_REF_NAME}; Cargo.toml: ${versao}"
+          [ "${GITHUB_REF_NAME}" = "v${versao}" ] || { echo "::error::a tag ${GITHUB_REF_NAME} não é v${versao}"; exit 1; }
+
+      - name: Pacotes do sistema (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl wget file libssl-dev libxdo-dev \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
+            libasound2-dev patchelf
+
+      - name: Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Rust
+        run: |
+          rustc --version
+          cargo --version
+
+      - name: Cache do Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: 'src-tauri -> target'
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Build e rascunho
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Tomatito ${{ github.ref_name }}
+          releaseBody: Instaladores do Tomatito ${{ github.ref_name }} para Linux (.deb e AppImage) e Windows (.msi e .exe).
+          releaseDraft: true
+          prerelease: false
+          args: --bundles ${{ matrix.bundles }}

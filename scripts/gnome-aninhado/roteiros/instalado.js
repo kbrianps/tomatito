@@ -5,11 +5,18 @@
 //   - a janela "Tomatito" aparece e é desenhada (fundo do Lite, não branco);
 //   - o shell casa a janela com o Tomatito.desktop (o que o dock e o Alt+Tab
 //     mostram), quando o instalado.sh põe o .desktop na rodada;
-//   - fechar a janela pelo shell encerra o app (o dentro.sh confere a saída).
+//   - fechar a janela pelo shell a esconde, e o app fica na bandeja (M36:
+//     "fechar para a bandeja" vem ligado);
+//   - abrir o binário de novo mostra a mesma janela (instância única, M37), e
+//     a segunda abertura sai com código 0;
+//   - Ctrl+Q encerra o app (o dentro.sh confere a saída com código 0).
+// O M45 roda o mesmo roteiro com o binário e o .desktop do .deb.
+import Clutter from 'gi://Clutter';
 import GdkPixbuf from 'gi://GdkPixbuf';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Shell from 'gi://Shell';
+import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import 'resource:///org/gnome/shell/ui/screenshot.js'; // promisifica Shell.Screenshot
 
@@ -19,6 +26,7 @@ const OUT = GLib.getenv('TT_OUT');
 const R = { passos: [], checagens: {} };
 const BG_APP = [0xa5, 0x34, 0x2b]; // --tt-bg-app do Lite
 const CAMADA = [0xaa, 0x39, 0x2f]; // --tt-bg-surface do Lite
+const CARTAO = [0xaf, 0x41, 0x35]; // --tt-bg-card do Lite (o layout do M42 põe um cartão no ponto medido)
 
 const salvar = () => GLib.file_set_contents(`${OUT}/resultado.json`, JSON.stringify(R, null, 2));
 const sleep = (ms) =>
@@ -55,6 +63,7 @@ async function capturar(nome, area) {
 
 async function principal() {
   passo('início');
+  const kb = global.stage.context.get_backend().get_default_seat().create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
   try {
     Main.messageTray.bannerBlocked = true;
   } catch {}
@@ -88,7 +97,7 @@ async function principal() {
   }
   checar(
     'a página embutida é desenhada no Lite (barra em #A5342B, conteúdo sem clarão branco)',
-    perto(barra, BG_APP) && (perto(meio, CAMADA) || perto(meio, BG_APP)) && brancos / total < 0.2,
+    perto(barra, BG_APP) && [CAMADA, CARTAO, BG_APP].some((c) => perto(meio, c)) && brancos / total < 0.2,
     { area, barra: hex(barra), meio: hex(meio), fracao_branca: +(brancos / total).toFixed(3) },
   );
 
@@ -97,13 +106,56 @@ async function principal() {
   R.app = { id, nome: app?.get_name() ?? null, wm_class: W.get_wm_class(), gtk_app_id: W.get_gtk_application_id() };
   if (GLib.getenv('TT_ESPERA_DESKTOP')) {
     checar('o shell casa a janela com o Tomatito.desktop (dock e Alt+Tab)', id === 'Tomatito.desktop' && app.get_name() === 'Tomatito', R.app);
+    // O ícone do .desktop (Icon=tomatito) acha o PNG no tema hicolor da rodada.
+    const icone = app?.app_info?.get_icon()?.to_string() ?? null;
+    const arquivo = icone ? new St.IconTheme().lookup_icon(icone, 48, 0)?.get_filename() ?? null : null;
+    checar('o ícone do .desktop vem do tema hicolor (tomatito.png)', icone === 'tomatito' && /\/hicolor\/.*\/apps\/tomatito\.png$/.test(arquivo ?? ''), { icone, arquivo });
   } else {
     passo(`app no shell: ${JSON.stringify(R.app)}`);
   }
 
+  const visiveis = () => janelas().filter((w) => w.showing_on_its_workspace());
   W.delete(global.get_current_time());
-  const sumiu = await aguardar(() => janelas().length === 0, 5000);
-  checar('fechar pelo shell fecha a janela', sumiu, { janelas: janelas().length });
+  const sumiu = await aguardar(() => visiveis().length === 0, 5000);
+  checar('fechar pelo shell esconde a janela (o app fica na bandeja)', sumiu, { visiveis: visiveis().length });
+  await sleep(1000);
+
+  // A segunda abertura avisa a primeira, que mostra a janela, e sai.
+  const L = new Gio.SubprocessLauncher({ flags: Gio.SubprocessFlags.STDERR_MERGE });
+  L.setenv('WAYLAND_DISPLAY', 'tt-aninhado', true);
+  L.setenv('GDK_BACKEND', 'wayland', true);
+  L.set_stdout_file_path(`${OUT}/app-segunda.log`);
+  const segunda = L.spawnv([GLib.getenv('TOMATITO_BIN')]);
+  const saiu = await new Promise((resolve) => {
+    let feito = false;
+    const fim = (v) => !feito && ((feito = true), resolve(v));
+    segunda.wait_async(null, () => fim(true));
+    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 30000, () => (fim(false), GLib.SOURCE_REMOVE));
+  });
+  const codigo = saiu && segunda.get_if_exited() ? segunda.get_exit_status() : null;
+  if (!saiu) segunda.force_exit();
+  const volta = await aguardar(() => (visiveis().length ? visiveis()[0] : null), 15000);
+  checar('abrir de novo mostra a janela (instância única) e a segunda abertura sai com 0', volta && visiveis().length === 1 && codigo === 0, {
+    saiu,
+    codigo,
+    visiveis: visiveis().length,
+  });
+  if (!volta) return;
+
+  // Ctrl+Q com a janela ativa: o app sai (o dentro.sh confere o código).
+  Main.activateWindow(volta);
+  await sleep(1500);
+  const t = () => GLib.get_monotonic_time();
+  kb.notify_keyval(t(), Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
+  await sleep(40);
+  kb.notify_keyval(t(), Clutter.KEY_q, Clutter.KeyState.PRESSED);
+  await sleep(40);
+  kb.notify_keyval(t(), Clutter.KEY_q, Clutter.KeyState.RELEASED);
+  await sleep(40);
+  kb.notify_keyval(t(), Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
+  passo('teclas Control_L+q');
+  const fechou = await aguardar(() => janelas().length === 0, 8000);
+  checar('Ctrl+Q fecha a janela', fechou, { janelas: janelas().length });
   await sleep(2000);
   passo('fim');
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Resumo do roteiro `instalado` (M21b): as checagens do roteiro, o app_id que
 // o app pediu ao compositor (WAYLAND_DEBUG=client no app.log) e se o app saiu
-// sozinho depois de a janela fechar. Sai com código 1 se algo falhar.
+// com código 0 depois do Ctrl+Q (M45; antes do M36, ao fechar a janela). Sai com código 1 se algo falhar.
 import { existsSync, readFileSync } from 'node:fs';
 
 const pasta = process.argv[2];
@@ -13,7 +13,7 @@ const appIds = [...new Set([...log.matchAll(/xdg_toplevel#\d+\.set_app_id\("([^"
 
 const checagens = Object.fromEntries(Object.entries(r.checagens ?? {}).map(([k, v]) => [k, v.ok]));
 checagens['app_id "tomatito" (casa com o StartupWMClass do .desktop)'] = appIds.length === 1 && appIds[0] === 'tomatito';
-checagens['o app sai sozinho depois de a janela fechar'] = /^saiu 0$/.test(appEstado);
+checagens["o app sai com código 0 depois do Ctrl+Q"] = /^saiu 0$/.test(appEstado);
 
 console.log(`rodada: ${pasta}`);
 if (r.erro) console.log(`ERRO no roteiro: ${r.erro}`);

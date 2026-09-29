@@ -1070,6 +1070,32 @@ O que só você consegue: o seu olho no painel, no dock e no Alt+Tab da sua sess
 5. [ ] Na janela, a barra de título mostra a marca (em creme no Lite) à esquerda de "Tomatito"; nas Configurações, o cartão "Sobre" mostra a mesma marca no lugar do "i". Troque o tema para Claro e Escuro e confira as duas de novo.
 6. [ ] Encerre a sessão e feche o app (Ctrl+Q).
 
+## M45. Release
+
+Os pacotes do Linux (`.deb` e AppImage) saem daqui com `npx tauri build --bundles deb appimage`; os do Windows (`.msi` e `.exe`) e o rascunho do release saem do `.github/workflows/release.yml` quando a tag `v0.1.0` for enviada ao GitHub (`docs/pendencias-usuario.md`, item 94). A tag já existe no git local.
+
+O que já foi conferido sem você (29/09/2026):
+- **O `.deb`**: `Depends` com `libasound2t64 | libasound2`, o `Tomatito.desktop` com `Name=Tomatito`, `Icon=tomatito`, `StartupWMClass=tomatito` e `Categories=Utility;`, os ícones e os avisos; `apt-get -s install` (simulação) resolve as dependências.
+- **Roteiro aninhado** `instalado`, no AppImage de `~/.local` e no `.deb` extraído (`bash scripts/gnome-aninhado/instalado.sh` e `... --deb`): 9 de 9 nos dois. A janela abre e é desenhada, o GNOME Shell a casa com o `Tomatito.desktop` (o que o dock e o Alt+Tab usam) e acha o ícone no tema, fechar a esconde (bandeja), abrir de novo a mostra e o Ctrl+Q encerra o app.
+- `actionlint` nos dois workflows, `npm test`, `cargo test`, `cargo clippy` no Linux e no alvo do Windows.
+
+O que só você consegue: o seu olho no dock e no Alt+Tab da sua sessão, o `.deb` pelo apt (`sudo`) e os instaladores do Windows.
+
+### Para conferir no Linux (uns 5 minutos)
+
+1. [ ] O Tomatito de uso diário já foi reinstalado com o M45. Abra a grade de aplicativos (Super) e procure "Tomatito": aparece com o ícone vermelho do anel creme, na categoria de utilitários se você usa pastas.
+2. [ ] Abra por ali. Na dash (o dock do GNOME), o ícone do Tomatito aparece com o ponto de "aberto" embaixo, e não um ícone genérico de engrenagem.
+3. [ ] Alt+Tab: o Tomatito aparece com o ícone certo e o nome "Tomatito". Feche com Ctrl+Q.
+4. [ ] (Opcional, com `sudo`) Troque para o `.deb`: `bash scripts/instalar-uso-diario.sh --remover && sudo apt install /opt/cargo-target/tomatito/release/bundle/deb/Tomatito_0.1.0_amd64.deb`. Repita os passos 1 a 3. Para voltar ao AppImage: `sudo apt remove tomatito && bash scripts/instalar-uso-diario.sh --sem-build`.
+5. [ ] (Opcional) O AppImage solto: `/opt/cargo-target/tomatito/release/bundle/appimage/Tomatito_0.1.0_amd64.AppImage` abre com dois cliques no Nautilus (ou no terminal) e fecha com Ctrl+Q.
+
+### Para conferir no Windows (uns 10 minutos, com o rascunho do item 94)
+
+1. [ ] Baixe o `Tomatito_0.1.0_x64-setup.exe` do rascunho. Ao abrir, o SmartScreen avisa ("O Windows protegeu o computador", porque não há assinatura: `docs/depois.md`); "Mais informações" › "Executar assim mesmo".
+2. [ ] O instalador está em português e **não** pede administrador (instala em `%LOCALAPPDATA%\Tomatito`). Numa máquina sem o WebView2 (raro no Windows 11), ele o baixa sozinho.
+3. [ ] O Tomatito abre pelo menu Iniciar, com o ícone e o nome certos na barra de tarefas e no Alt+Tab. Na pasta do app, o `THIRD_PARTY_NOTICES.md` e o `OFL-Inter.txt` (pendência 93).
+4. [ ] Desinstale por Configurações › Aplicativos. Repita com o `Tomatito_0.1.0_x64_pt-BR.msi`: o instalador em português (este pede administrador, é o normal do MSI).
+
 ## M46. Licenças e avisos
 
 Os avisos de terceiros (`THIRD_PARTY_NOTICES.md`, gerado por `node scripts/gerar-avisos.mjs` com o cargo-about e o license-checker) e a licença da fonte Inter (`OFL-Inter.txt`) vão dentro dos instaladores, e o Sobre os mostra num diálogo, lendo o arquivo que está no pacote. Captura: `docs/capturas/m46-avisos-lite.png`.

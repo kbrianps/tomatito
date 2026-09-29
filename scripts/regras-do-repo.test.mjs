@@ -108,6 +108,30 @@ test('CI do M03: Linux e Windows, com os seis passos na ordem do plano', () => {
   }
 });
 
+test('M45: release.yml por tag v*, rascunho nos dois sistemas, e as opções de bundle do plano', () => {
+  const rel = ler('.github/workflows/release.yml');
+  assert.match(rel, /^on:\s*\n\s+push:\s*\n\s+tags: \['v\*'\]/m, 'disparado por tag v*');
+  assert.match(rel, /contents: write/, 'o GITHUB_TOKEN cria o release');
+  assert.match(rel, /- os: ubuntu-24\.04\s*\n\s+bundles: deb appimage/);
+  assert.match(rel, /- os: windows-latest\s*\n\s+bundles: msi nsis/);
+  assert.ok(rel.includes('uses: tauri-apps/tauri-action@v1\n'));
+  for (const chave of ['tagName: ${{ github.ref_name }}', 'releaseName: Tomatito', 'releaseDraft: true', 'args: --bundles ${{ matrix.bundles }}']) {
+    assert.ok(rel.includes(chave), `falta "${chave}"`);
+  }
+  assert.ok(rel.includes('"v${versao}"'), 'confere a tag contra a versão do Cargo.toml');
+  assert.doesNotMatch(rel, new RegExp(['pomo', 'doro'].join(''), 'i'));
+
+  const b = tauriConf.bundle;
+  assert.deepEqual(b.linux.deb.depends, ['libasound2t64 | libasound2']);
+  assert.equal(b.linux.appimage.bundleMediaFramework, false);
+  assert.deepEqual(b.windows.webviewInstallMode, { type: 'downloadBootstrapper' });
+  assert.equal(b.windows.nsis.installMode, 'currentUser');
+  assert.deepEqual(b.windows.nsis.languages, ['PortugueseBR']);
+  assert.equal(b.windows.wix.language, 'pt-BR');
+  assert.equal(b.category, 'Utility');
+  assert.equal(b.targets, 'all');
+});
+
 test('manifesto do Windows (Common Controls v6) que o build.rs passa ao linker', () => {
   const manifesto = ler('src-tauri/windows-app-manifest.xml');
   assert.match(manifesto, /name="Microsoft\.Windows\.Common-Controls"\s+version="6\.0\.0\.0"/);
