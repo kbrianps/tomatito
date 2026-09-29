@@ -49,4 +49,7 @@ jiff = "0.2.37"
 tauri-plugin-notification = "=2.4.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
+# Região de entrada da `tomato` no nível do GtkWidget (window/region_linux.rs,
+# M54): a mesma versão que o Tauri usa (3.6), senão o tipo da GtkWindow não bate.
+gtk = "0.18"
 zbus = { version = "5.19", default-features = false, features = ["tokio"] }

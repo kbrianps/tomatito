@@ -263,6 +263,12 @@ const AMOSTRA = `
       <div class="tt-linha">
         <button type="button" data-tomate>Abrir o tomate</button>
       </div>
+      <p class="tt-fg-2">M54: troca o tamanho do tomate aberto (só no build de debug; não grava a preferência). A região de entrada vai de novo a cada troca.</p>
+      <div class="tt-linha">
+        <button type="button" data-tomate-lado="240">P (240)</button>
+        <button type="button" data-tomate-lado="280">M (280)</button>
+        <button type="button" data-tomate-lado="320">G (320)</button>
+      </div>
       <label class="tt-opcao"><fluent-switch data-regiao-debug></fluent-switch>Mostrar as faixas da região no tomate (M53)</label>
     </section>
 
@@ -299,6 +305,12 @@ export function montar(raiz) {
     // M51: entra no Full (5.7).
     if (ev.target.closest?.('[data-tomate]')) {
       full.trocarModo(true).catch((e) => console.error('switch_window_mode', e));
+      return;
+    }
+    // M54: P/M/G no tomate aberto, pelo comando de debug.
+    const lado = ev.target.closest?.('[data-tomate-lado]');
+    if (lado) {
+      full.tamanhoDeDebug(Number(lado.dataset.tomateLado)).catch((e) => console.error('tomato_debug_size', e));
       return;
     }
     const abre = ev.target.closest?.('[data-abre]');

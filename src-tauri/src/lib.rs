@@ -90,6 +90,10 @@ pub fn run() {
             {
                 api.prevent_close();
             }
+            // M54: a `tomato` com outro tamanho pede a região de novo (5.4).
+            if let tauri::WindowEvent::Resized(tamanho) = event {
+                window::tomato::redimensionada(window, *tamanho);
+            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_state,
@@ -120,6 +124,8 @@ pub fn run() {
             commands::show_main,
             commands::full_validation_get,
             commands::full_validation_answer,
+            commands::set_tomato_region,
+            commands::tomato_debug_size,
         ])
         .run(context)
         .expect("error while building tauri application");

@@ -318,3 +318,28 @@ pub async fn full_validation_answer(
 ) -> Result<Value, String> {
     crate::window::validacao::responder(&app, answer).await
 }
+
+/// `set_tomato_region{strips}` (3.5, 5.4 e 5.6; M54): a região de entrada da
+/// `tomato`, em faixas `[x, y, largura, altura]` calculadas pela página. Só a
+/// `tomato` pode pedir. Devolve `"applied"` ou `"ignored"` (modo opaco, ou o
+/// Windows até o M55). Ver `window/tomato.rs`, `definir_regiao`.
+#[tauri::command]
+pub fn set_tomato_region(
+    webview_window: tauri::WebviewWindow,
+    strips: Vec<[i32; 4]>,
+) -> Result<&'static str, String> {
+    crate::window::tomato::definir_regiao(&webview_window, strips).map(|r| r.as_str())
+}
+
+/// `tomato_debug_size{size}` (M54, só no build de debug): troca o lado da
+/// `tomato` para 240, 280 ou 320, sem gravar o `tomatoSize`. Serve para
+/// conferir a região depois da troca de P para G; a escolha de verdade (menu
+/// e preferência) é do M56. Async, como os outros comandos que mexem em
+/// janela.
+#[tauri::command]
+pub async fn tomato_debug_size(app: AppHandle, size: u32) -> Result<(), String> {
+    if !cfg!(debug_assertions) {
+        return Err("tomato_debug_size só existe no build de debug".into());
+    }
+    crate::window::tomato::trocar_tamanho(&app, size)
+}

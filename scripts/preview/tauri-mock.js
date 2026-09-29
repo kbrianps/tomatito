@@ -466,6 +466,9 @@ const handlers = {
   'plugin:window|close': () => (console.info('[prévia] fechar'), null),
   // M50: os comandos do Full só anotam o pedido.
   show_main: ({ route = null } = {}) => (window.__TOMATITO_PREVIEW_COMANDOS__.push(`show_main:${route}`), null),
+  // M54: a região só é anotada (quantos retângulos), sem compositor.
+  set_tomato_region: ({ strips }) => (window.__TOMATITO_PREVIEW_COMANDOS__.push(`set_tomato_region:${strips.length}`), 'applied'),
+  tomato_debug_size: ({ size }) => (window.__TOMATITO_PREVIEW_COMANDOS__.push(`tomato_debug_size:${size}`), null),
   // M51: o switch_window_mode grava o tema como o Rust (full, ou o
   // lastNormalTheme na saída) e emite tt://settings; não há outra janela.
   switch_window_mode: ({ full }) => {

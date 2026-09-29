@@ -128,15 +128,24 @@ export const cronometro = Object.freeze({
  * `full_validation_answer{answer}` (`keep`, `revert`, `opaque` ou
  * `dismiss`); os dois devolvem o retrato da validação com reversão (5.9),
  * que também chega pelo `tt://full-validation` (window/validacao.rs).
+ * M54: `definirRegiao(faixas)` é o `set_tomato_region{strips}` (só a página
+ * do tomate): a região de entrada, em `[x, y, largura, altura]`; devolve
+ * `'applied'` ou `'ignored'`. O Rust pede a região de novo, a cada troca de
+ * tamanho da janela, pelo `tt://tomato-region` (`EVENTO_REGIAO`).
+ * `tamanhoDeDebug(lado)` é o `tomato_debug_size{size}` (só no build de debug;
+ * a escolha de P/M/G de verdade é do M56).
  */
 export const full = Object.freeze({
   EVENTO_PRONTO: 'tt://tomato-ready',
   EVENTO_VALIDACAO: 'tt://full-validation',
+  EVENTO_REGIAO: 'tt://tomato-region',
   trocarModo: (entrar) => invoke('switch_window_mode', { full: entrar }),
   mostrarMain: (rota = null) => invoke('show_main', { route: rota }),
   avisarPronto: (dados) => emit('tt://tomato-ready', dados),
   validacao: () => invoke('full_validation_get'),
   responderValidacao: (resposta) => invoke('full_validation_answer', { answer: resposta }),
+  definirRegiao: (faixas) => invoke('set_tomato_region', { strips: faixas }),
+  tamanhoDeDebug: (lado) => invoke('tomato_debug_size', { size: lado }),
 });
 
 /** Ouve um evento do Rust; `cb` recebe só o conteúdo. Devolve o `unlisten`. */

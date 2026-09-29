@@ -2,6 +2,8 @@
 //! `tauri.conf.json` (`app.windows: []`): todas nascem no `setup`.
 
 pub mod main_window;
+#[cfg(target_os = "linux")]
+pub mod region_linux;
 pub mod tomato;
 pub mod validacao;
 

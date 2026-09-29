@@ -796,12 +796,63 @@ test('Full: faixas da região calculadas pela página antes do aviso, e a sobrep
   assert.match(js, /import \{ regionStrips \} from '\.\/lib\/regiao\.js';/);
   // Linux: px lógicos (escala 1); Windows: px físicos (5.4).
   assert.match(js, /h\.dataset\.platform === 'windows' \? window\.devicePixelRatio \|\| 1 : 1/);
-  assert.match(js, /addEventListener\('resize', \(\) => calcularRegiao\(\)\)/);
+  // M54: o cálculo vem pelo envio (enviarRegiao chama o calcularRegiao).
+  assert.match(js, /addEventListener\('resize', \(\) => enviarRegiao\(\)\)/);
+  assert.match(js, /function enviarRegiao\(\) \{[\s\S]*?const r = calcularRegiao\(\);/);
   const fim = js.slice(js.lastIndexOf('} finally {'));
-  assert.ok(fim.indexOf('calcularRegiao();') > 0 && fim.indexOf('calcularRegiao();') < fim.indexOf('avisar(false)'), 'antes do tt://tomato-ready');
+  assert.ok(fim.indexOf('await enviarRegiao();') > 0 && fim.indexOf('await enviarRegiao();') < fim.indexOf('avisar(false)'), 'antes do tt://tomato-ready');
   // A sobreposição entra só pelo import dinâmico dentro do DEV.
   assert.match(js, /if \(import\.meta\.env\.DEV\) \{\s*import\('\.\/lib\/regiao-debug\.js'\)/);
   assert.equal(js.match(/regiao-debug/g).length, 2, 'só o import do DEV (e o comentário)');
   // Uma fonte única (5.4): a região não é calculada no Rust.
   assert.doesNotMatch(ler('src-tauri/src/window/tomato.rs'), /region_approx|fn strips/);
+});
+
+test('Full: região de entrada no Linux pelo set_tomato_region, antes do show e a cada troca de tamanho (M54)', () => {
+  // Linux (5.6): o gtk da mesma versão do Tauri, só no Linux; a região no
+  // widget (gtk_window), nunca na GdkWindow, e montada na thread principal.
+  const cargo = ler('src-tauri/Cargo.toml');
+  const linux = cargo.slice(cargo.indexOf(`[target.'cfg(target_os = "linux")'.dependencies]`));
+  assert.match(linux.split(/\n\[/)[0], /^gtk = "0\.18"$/m);
+  assert.equal(cargo.match(/^gtk = /gm).length, 1, 'gtk só na seção do Linux');
+  const rl = ler('src-tauri/src/window/region_linux.rs');
+  assert.match(rl, /run_on_main_thread\(move \|\| \{[\s\S]*Region::create\(\)[\s\S]*w\.gtk_window\(\)[\s\S]*input_shape_combine_region\(Some\(&region\)\)/);
+  assert.doesNotMatch(rl, /\.window\(\)/, 'nunca a GdkWindow (5.6, "Proibido")');
+  assert.match(ler('src-tauri/src/window/mod.rs'), /#\[cfg\(target_os = "linux"\)\]\npub mod region_linux;/);
+  // Nunca setIgnoreCursorEvents (5.3): apagaria a região no Linux.
+  for (const arq of ['src-tauri/src/window/tomato.rs', 'src-tauri/src/window/region_linux.rs', 'src-tauri/src/lib.rs', 'src/tomato.js']) {
+    assert.doesNotMatch(ler(arq), /set_ignore_cursor_events|setIgnoreCursorEvents/, arq);
+  }
+  // O comando: só a tomato, faixas validadas, ignorado no modo opaco (B3).
+  const rs = ler('src-tauri/src/window/tomato.rs');
+  const definir = rs.slice(rs.indexOf('pub fn definir_regiao'), rs.indexOf('fn aplicar('));
+  assert.ok(definir.indexOf('janela.label() != LABEL') < definir.indexOf('faixas_validas(&strips)?'));
+  assert.ok(definir.indexOf('FullMode::Opaque') < definir.indexOf('aplicar(janela, strips)'), 'opaca: sem região');
+  assert.match(rs, /#\[cfg\(target_os = "linux"\)\]\nfn aplicar\([\s\S]*?region_linux::apply_region/);
+  assert.match(rs, /#\[cfg\(not\(target_os = "linux"\)\)\]\nfn aplicar\(/);
+  // O modo vem da janela construída (build_tomato), e não das configurações.
+  const build = rs.slice(rs.indexOf('pub fn build_tomato'), rs.indexOf('pub const EVENTO_PRONTO'));
+  assert.ok(build.indexOf('builder.build()?') < build.indexOf('t.nova_janela(modo)'));
+  // A cada troca de tamanho: o Resized da tomato pede a região de novo.
+  const lib = ler('src-tauri/src/lib.rs');
+  assert.match(lib, /if let tauri::WindowEvent::Resized\(tamanho\) = event \{\s*window::tomato::redimensionada\(window, \*tamanho\);/);
+  assert.match(lib, /commands::set_tomato_region,\s*commands::tomato_debug_size,/);
+  assert.match(rs, /pub const EVENTO_REGIAO: &str = "tt:\/\/tomato-region";/);
+  assert.match(rs, /t\.tamanho_mudou\(tamanho\)[\s\S]{0,40}janela\.emit_to\(LABEL, EVENTO_REGIAO/);
+  const cmds = ler('src-tauri/src/commands.rs');
+  assert.match(cmds, /pub fn set_tomato_region\(\s*webview_window: tauri::WebviewWindow,\s*strips: Vec<\[i32; 4\]>,/);
+  assert.match(cmds, /pub async fn tomato_debug_size[\s\S]*?if !cfg!\(debug_assertions\) \{\s*return Err/);
+  // A página: o envio antes do aviso (e portanto antes do show), a cada
+  // resize e a cada pedido do Rust; nada no modo opaco.
+  const js = ler('src/tomato.js');
+  assert.match(js, /ipc\.ouvir\(ipc\.full\.EVENTO_REGIAO, \(\) => enviarRegiao\(\)\)/);
+  assert.match(js, /h\.dataset\.fullMode === 'opaque' \|\| !r/);
+  assert.match(js, /await ipc\.full\.definirRegiao\(r\.faixas\)/);
+  // Escondida, o innerWidth é 0: o lado vem do Rust, e a região vai antes do show.
+  assert.match(js, /const ladoDaJanela = \(\) => window\.innerWidth \|\| Number\(window\.__TT_TOMATO_SIZE__\) \|\| 0;/);
+  assert.match(js, /const lado = ladoDaJanela\(\);/);
+  assert.match(build, /\.initialization_script\(init_lado\(s\.tomato_size\)\)/);
+  const ipcJs = ler('src/lib/ipc.js');
+  assert.match(ipcJs, /EVENTO_REGIAO: 'tt:\/\/tomato-region'/);
+  assert.match(ipcJs, /definirRegiao: \(faixas\) => invoke\('set_tomato_region', \{ strips: faixas \}\)/);
 });

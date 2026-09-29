@@ -18,8 +18,15 @@
 //! vídeo, a validação com reversão (`validacao.rs`): a `main` fica na tela
 //! com a pergunta, em vez de se esconder.
 //!
-//! Ficam para depois: a região (M53 a M55) e o menu nativo e os atalhos
-//! (M56).
+//! M54: a região de entrada no Linux ([`definir_regiao`]). A página calcula
+//! as faixas (5.4, `src/lib/regiao.js`) e as manda pelo `set_tomato_region`
+//! antes do primeiro aviso, então a região chega ao widget antes do `show()`.
+//! A cada troca de tamanho, o `WindowEvent::Resized` pede a região de novo
+//! ([`redimensionada`], evento [`EVENTO_REGIAO`]).
+//!
+//! Ficam para depois: a região no Windows (M55) e o menu nativo, os atalhos
+//! e a escolha de P/M/G (M56; até lá, [`trocar_tamanho`] só pelo comando de
+//! debug).
 
 use std::ffi::OsStr;
 use std::sync::{Arc, Mutex};
@@ -28,7 +35,10 @@ use std::time::{Duration, Instant};
 use serde::Deserialize;
 use serde_json::json;
 use tauri::window::Color;
-use tauri::{AppHandle, Listener, Manager, Theme, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{
+    AppHandle, Emitter, Listener, Manager, PhysicalSize, Theme, WebviewUrl, WebviewWindow,
+    WebviewWindowBuilder,
+};
 use tokio::sync::mpsc;
 
 use super::{main_window, validacao};
@@ -93,6 +103,13 @@ pub fn init_script(modo: FullMode) -> String {
     )
 }
 
+/// Segundo script de inicialização da `tomato` (M54): o lado pedido, em px
+/// lógicos. A página calcula a região com ele enquanto a janela está
+/// escondida e o `innerWidth` ainda é 0; depois, vale o `innerWidth`.
+pub fn init_lado(lado: u32) -> String {
+    format!("window.__TT_TOMATO_SIZE__={lado};")
+}
+
 /// Constrói a `tomato` escondida (5.3), no modo dado por [`full_mode`]. Quem
 /// chama faz o `show()`, depois do `tt://tomato-ready` (M51) e, no Linux,
 /// depois da região (M54).
@@ -127,11 +144,19 @@ pub fn build_tomato(app: &AppHandle, s: &Settings, modo: FullMode) -> tauri::Res
         .theme(Some(Theme::Dark))
         .background_color(fundo)
         .visible(false)
-        .initialization_script(init_script(modo));
+        .initialization_script(init_script(modo))
+        // M54: o lado da janela, para a região antes do show (5.6). Escondida,
+        // a página do WebKitGTK tem `innerWidth` 0 (docs/decisoes.md, M54).
+        .initialization_script(init_lado(s.tomato_size));
     // Teste A/B contra o blur-behind no Windows (M55).
     #[cfg(windows)]
     let builder = builder.no_redirection_bitmap(!opaca);
     let w = builder.build()?;
+    // M54: o modo desta `tomato` (a região só vale na transparente) e nenhum
+    // tamanho visto ainda.
+    if let Some(t) = app.try_state::<Troca>() {
+        t.nova_janela(modo);
+    }
     // No Linux, o tao grava o `color-scheme` do portal no `GtkSettings` do
     // processo a cada janela nova (tao 0.37.1, `window.rs`, "Set initial
     // `preferred_theme`"), o que troca o tema nativo da `main` (M24) quando
@@ -189,9 +214,32 @@ pub struct Pronto {
 pub struct Troca {
     trava: Arc<tokio::sync::Mutex<()>>,
     esperando: Mutex<Option<mpsc::UnboundedSender<Pronto>>>,
+    /// M54: o modo da `tomato` aberta (a região só vale na transparente) e
+    /// o último tamanho visto no `Resized` (o tao manda um a cada
+    /// `configure`, com ou sem troca de tamanho).
+    modo: Mutex<Option<FullMode>>,
+    tamanho: Mutex<Option<PhysicalSize<u32>>>,
 }
 
 impl Troca {
+    fn nova_janela(&self, modo: FullMode) {
+        *self.modo.lock().unwrap_or_else(|e| e.into_inner()) = Some(modo);
+        *self.tamanho.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    }
+
+    fn modo(&self) -> Option<FullMode> {
+        *self.modo.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// Guarda o tamanho e diz se ele mudou desde o último `Resized`. O
+    /// primeiro de cada janela não conta: a página manda a região na partida.
+    fn tamanho_mudou(&self, novo: PhysicalSize<u32>) -> bool {
+        let mut t = self.tamanho.lock().unwrap_or_else(|e| e.into_inner());
+        let mudou = t.is_some_and(|antes| antes != novo);
+        *t = Some(novo);
+        mudou
+    }
+
     /// Os avisos daqui em diante vão para o receptor devolvido; o anterior
     /// fica sem nenhum.
     fn esperar_pronto(&self) -> mpsc::UnboundedReceiver<Pronto> {
@@ -545,6 +593,148 @@ pub(super) async fn esperar_visivel(w: &WebviewWindow, limite: Duration) {
     }
 }
 
+/// Evento do Rust para a página do tomate (M54): o tamanho da janela mudou
+/// (P/M/G ou, no Windows, o DPI), e a região precisa ir de novo (5.4). O
+/// conteúdo é o tamanho novo, em px físicos. Fora da tabela da 3.5
+/// (docs/decisoes.md, M54).
+pub const EVENTO_REGIAO: &str = "tt://tomato-region";
+
+/// O máximo de retângulos aceitos pelo `set_tomato_region`. A página manda
+/// de 125 a 250 (docs/decisoes.md, M53, item 4); o limite só barra um pedido
+/// absurdo.
+pub const MAX_FAIXAS: usize = 1000;
+
+/// O maior lado aceito, em px: o G (320) a 800% de escala, com folga.
+pub const MAX_LADO: i32 = 4096;
+
+/// Os tamanhos do tomate (5.3 e M56): P, M e G.
+pub const TAMANHOS: [u32; 3] = [240, 280, 320];
+
+/// O que o [`definir_regiao`] fez com as faixas.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Regiao {
+    /// Entregues ao compositor (Linux; no Windows, a partir do M55).
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    Aplicada,
+    /// Ignoradas: a `tomato` é opaca (B3; docs/decisoes.md, M52, item 8) ou
+    /// a plataforma ainda não tem região (o Windows é do M55).
+    Ignorada,
+}
+
+impl Regiao {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Regiao::Aplicada => "applied",
+            Regiao::Ignorada => "ignored",
+        }
+    }
+}
+
+/// Faixas aceitáveis: ao menos uma, até [`MAX_FAIXAS`], cada uma com largura
+/// e altura positivas e dentro de `0..=MAX_LADO`.
+pub fn faixas_validas(strips: &[[i32; 4]]) -> Result<(), String> {
+    if strips.is_empty() || strips.len() > MAX_FAIXAS {
+        return Err(format!(
+            "a região precisa ter de 1 a {MAX_FAIXAS} retângulos (veio com {})",
+            strips.len()
+        ));
+    }
+    let dentro =
+        |a: i32, d: i32| a >= 0 && d > 0 && a.checked_add(d).is_some_and(|f| f <= MAX_LADO);
+    match strips
+        .iter()
+        .find(|[x, y, w, h]| !(dentro(*x, *w) && dentro(*y, *h)))
+    {
+        Some(r) => Err(format!("retângulo fora da janela: {r:?}")),
+        None => Ok(()),
+    }
+}
+
+/// `set_tomato_region{strips}` (3.5, 5.4 e 5.6; M54): a região de entrada da
+/// `tomato`, pedida pela própria página. Só a `tomato` pode pedir. No modo
+/// opaco (B3), a janela é quadrada e fica sem região. No Linux, as faixas
+/// vão para o widget (`region_linux.rs`) pela fila da thread principal, a
+/// mesma do `show()`; no Windows, o `SetWindowRgn` é do M55.
+pub fn definir_regiao(janela: &WebviewWindow, strips: Vec<[i32; 4]>) -> Result<Regiao, String> {
+    if janela.label() != LABEL {
+        return Err(format!("só a janela {LABEL} tem região"));
+    }
+    faixas_validas(&strips)?;
+    let modo = janela.try_state::<Troca>().and_then(|t| t.modo());
+    if modo == Some(FullMode::Opaque) {
+        return Ok(Regiao::Ignorada);
+    }
+    if cfg!(debug_assertions) {
+        // Os roteiros aninhados comparam com o que o GTK manda ao compositor.
+        eprintln!(
+            "[tomatito] região do tomate: {} retângulos: {}",
+            strips.len(),
+            serde_json::to_string(&strips).unwrap_or_default()
+        );
+    }
+    aplicar(janela, strips)
+}
+
+#[cfg(target_os = "linux")]
+fn aplicar(janela: &WebviewWindow, strips: Vec<[i32; 4]>) -> Result<Regiao, String> {
+    super::region_linux::apply_region(janela, strips).map_err(|e| e.to_string())?;
+    Ok(Regiao::Aplicada)
+}
+
+/// Fora do Linux, ainda sem região: o `SetWindowRgn` do Windows é do M55.
+#[cfg(not(target_os = "linux"))]
+fn aplicar(_janela: &WebviewWindow, _strips: Vec<[i32; 4]>) -> Result<Regiao, String> {
+    Ok(Regiao::Ignorada)
+}
+
+/// `WindowEvent::Resized` da `tomato` (5.4; M54): com o tamanho mudado de
+/// verdade, pede à página a região de novo ([`EVENTO_REGIAO`]). Cobre a troca
+/// entre P, M e G e, no Windows, a de DPI (o `ScaleFactorChanged` é
+/// redundante). Os `Resized` sem troca (um a cada `configure` no Linux: foco,
+/// arraste) não pedem nada.
+pub fn redimensionada(janela: &tauri::Window, tamanho: PhysicalSize<u32>) {
+    if janela.label() != LABEL {
+        return;
+    }
+    let Some(t) = janela.try_state::<Troca>() else {
+        return;
+    };
+    if t.tamanho_mudou(tamanho)
+        && let Err(e) = janela.emit_to(LABEL, EVENTO_REGIAO, [tamanho.width, tamanho.height])
+    {
+        eprintln!("[tomatito] {EVENTO_REGIAO} não saiu: {e}");
+    }
+}
+
+/// Troca o lado da `tomato` para P, M ou G ([`TAMANHOS`]), em px lógicos. A
+/// região vem depois, pelo `Resized` ([`redimensionada`]) e pelo `resize` da
+/// página. No M54, só pelo comando de debug `tomato_debug_size`; a escolha
+/// na interface, a gravação do `tomatoSize` e o menu são do M56.
+pub fn trocar_tamanho(app: &AppHandle, lado: u32) -> Result<(), String> {
+    if !TAMANHOS.contains(&lado) {
+        return Err(format!("tamanho fora de {TAMANHOS:?}: {lado}"));
+    }
+    let t = app
+        .get_webview_window(LABEL)
+        .ok_or_else(|| format!("sem a janela {LABEL}"))?;
+    redimensionar(&t, lado).map_err(|e| e.to_string())
+}
+
+/// No Linux, pelo GTK: o `set_size` do Tauri não encolhe uma janela que não é
+/// redimensionável (`region_linux.rs`, `resize`).
+#[cfg(target_os = "linux")]
+fn redimensionar(t: &WebviewWindow, lado: u32) -> tauri::Result<()> {
+    super::region_linux::resize(t, lado as i32)
+}
+
+/// No Windows, o `set_size` vale mesmo com `resizable(false)` (a conferir no
+/// M55, junto com a região).
+#[cfg(not(target_os = "linux"))]
+fn redimensionar(t: &WebviewWindow, lado: u32) -> tauri::Result<()> {
+    let lado = f64::from(lado);
+    t.set_size(tauri::LogicalSize::new(lado, lado))
+}
+
 /// Início com `theme = full` (4.7 e 5.7): o `setup` cria só a `tomato`, e a
 /// `main` nasce sob demanda. A janela é criada aqui (no `setup`, pode ser
 /// síncrona; 5.3) e aparece quando a página avisar, como na troca. Na
@@ -720,6 +910,59 @@ mod tests {
         });
         assert!(novo.try_recv().unwrap().pintado);
         assert!(novo.try_recv().is_err());
+    }
+
+    #[test]
+    fn faixas_da_regiao_validas_e_recusadas() {
+        assert!(faixas_validas(&[[0, 0, 280, 1], [10, 1, 5, 3]]).is_ok());
+        assert!(faixas_validas(&[[0, 0, MAX_LADO, MAX_LADO]]).is_ok());
+        assert!(faixas_validas(&[]).is_err(), "vazia");
+        assert!(faixas_validas(&vec![[0, 0, 1, 1]; MAX_FAIXAS]).is_ok());
+        assert!(faixas_validas(&vec![[0, 0, 1, 1]; MAX_FAIXAS + 1]).is_err());
+        for ruim in [
+            [-1, 0, 5, 5],
+            [0, -1, 5, 5],
+            [0, 0, 0, 5],
+            [0, 0, 5, 0],
+            [0, 0, -5, 5],
+            [MAX_LADO, 0, 1, 1],
+            [0, 0, MAX_LADO + 1, 1],
+            [i32::MAX, 0, i32::MAX, 1],
+        ] {
+            assert!(faixas_validas(&[[0, 0, 1, 1], ruim]).is_err(), "{ruim:?}");
+        }
+    }
+
+    #[test]
+    fn so_troca_de_tamanho_de_verdade_pede_a_regiao() {
+        let t = Troca::default();
+        t.nova_janela(FullMode::Transparent);
+        assert_eq!(t.modo(), Some(FullMode::Transparent));
+        let p = PhysicalSize::new(240, 240);
+        let g = PhysicalSize::new(320, 320);
+        // O primeiro `Resized` de cada janela não pede: a página já manda.
+        assert!(!t.tamanho_mudou(p));
+        // Os `configure` do foco e do arraste repetem o tamanho.
+        assert!(!t.tamanho_mudou(p));
+        assert!(t.tamanho_mudou(g));
+        assert!(!t.tamanho_mudou(g));
+        assert!(t.tamanho_mudou(p));
+        // Uma janela nova (e opaca) começa do zero.
+        t.nova_janela(FullMode::Opaque);
+        assert_eq!(t.modo(), Some(FullMode::Opaque));
+        assert!(!t.tamanho_mudou(g));
+    }
+
+    #[test]
+    fn lado_para_a_regiao_antes_do_show() {
+        assert_eq!(init_lado(280), "window.__TT_TOMATO_SIZE__=280;");
+    }
+
+    #[test]
+    fn tamanhos_do_tomate_e_o_texto_da_resposta() {
+        assert_eq!(TAMANHOS, [240, 280, 320]);
+        assert_eq!(Regiao::Aplicada.as_str(), "applied");
+        assert_eq!(Regiao::Ignorada.as_str(), "ignored");
     }
 
     #[cfg(target_os = "linux")]

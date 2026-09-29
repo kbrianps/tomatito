@@ -16,10 +16,13 @@
 // esconde a main (docs/decisoes.md, M51, item 13). "Voltar ao modo
 // normal" e o Esc saem do Full pelo mesmo comando. M53: a página calcula as
 // faixas da região de entrada (lib/regiao.js) antes do primeiro aviso e a
-// cada troca de tamanho; mandá-las ao Rust é do M54 (Linux) e do M55
-// (Windows). O menu nativo do botão direito e os outros atalhos
-// (Espaço e Ctrl+,) são do M56; até lá, o menu de contexto do WebView fica
-// desligado, porque seria uma janela própria, fora do desenho (5.3).
+// cada troca de tamanho. M54: e as manda ao Rust (`set_tomato_region`) antes
+// do primeiro aviso, então no Linux a região chega antes do show() (5.6); de
+// novo a cada `resize` e a cada pedido do Rust (`tt://tomato-region`). O
+// Windows (M55) usa o mesmo caminho. O menu nativo do botão direito e os
+// outros atalhos (Espaço e Ctrl+,) são do M56; até lá, o menu de contexto do
+// WebView fica desligado, porque seria uma janela própria, fora do desenho
+// (5.3).
 import * as ipc from './lib/ipc.js';
 import { criarStore } from './lib/store.js';
 import { ligarAnuncioDeFases } from './lib/a11y.js';
@@ -155,14 +158,18 @@ document.addEventListener('keydown', (e) => {
 // A região de entrada (5.4; M53): as faixas do corpo, do cabinho e do cálice,
 // em px lógicos no Linux (escala 1) e em px físicos no Windows (o
 // devicePixelRatio, para o SetWindowRgn). Recalculada só quando o lado ou a
-// escala mudam. No modo opaco (B3), o M54 não deve aplicá-la
-// (docs/decisoes.md, M52, item 8). Uma falha aqui vai para o console e não
-// segura o aviso tt://tomato-ready: sem região, o tomate continua usável.
+// escala mudam. No modo opaco (B3), a janela é quadrada e fica sem região
+// (docs/decisoes.md, M52, item 8): nada vai ao Rust (e o Rust também ignora).
+// Uma falha aqui vai para o console e não segura o aviso tt://tomato-ready:
+// sem região, o tomate continua usável.
 const escalaDaRegiao = () => (h.dataset.platform === 'windows' ? window.devicePixelRatio || 1 : 1);
+// M54: escondida, a página do WebKitGTK tem `innerWidth` 0; o Rust passa o
+// lado da janela (`__TT_TOMATO_SIZE__`), e a região vai antes do show (5.6).
+const ladoDaJanela = () => window.innerWidth || Number(window.__TT_TOMATO_SIZE__) || 0;
 let regiao = null;
 let sobreposicao = null;
 function calcularRegiao() {
-  const lado = window.innerWidth;
+  const lado = ladoDaJanela();
   const escala = escalaDaRegiao();
   if (regiao && regiao.lado === lado && regiao.escala === escala) return regiao;
   try {
@@ -177,7 +184,29 @@ function calcularRegiao() {
   sobreposicao?.desenhar(regiao);
   return regiao;
 }
-window.addEventListener('resize', () => calcularRegiao());
+// M54: manda a região ao Rust quando ela é outra que a última mandada. Um
+// envio de cada vez; o que chegar no meio espera e manda a mais nova. Com o
+// lado 0 (a janela ainda sem tamanho), nada vai, e o `resize` manda depois.
+let enviada = null;
+let enviando = null;
+function enviarRegiao() {
+  enviando = (enviando ?? Promise.resolve()).then(async () => {
+    const r = calcularRegiao();
+    if (h.dataset.fullMode === 'opaque' || !r || r === enviada || !r.faixas.length) return;
+    enviada = r;
+    try {
+      await ipc.full.definirRegiao(r.faixas);
+    } catch (erro) {
+      enviada = null;
+      console.error('[região]', erro);
+    }
+  });
+  return enviando;
+}
+window.addEventListener('resize', () => enviarRegiao());
+// O Rust pede de novo quando o tamanho da janela muda (o Resized): cobre
+// também, no Windows, a troca de DPI sem troca de px CSS (5.4).
+ipc.ouvir(ipc.full.EVENTO_REGIAO, () => enviarRegiao()).catch((erro) => console.error('[região]', erro));
 // Só no dev: a sobreposição que desenha as faixas (lib/regiao-debug.js).
 if (import.meta.env.DEV) {
   import('./lib/regiao-debug.js')
@@ -228,7 +257,9 @@ try {
   console.error('[store]', erro);
 } finally {
   atualizar();
-  calcularRegiao();
+  // A região antes do aviso: no Linux, ela precisa estar no widget antes do
+  // show() (5.6), e o show() só vem depois do tt://tomato-ready.
+  await enviarRegiao();
   // A janela ainda está escondida, e o requestAnimationFrame não dispara numa
   // janela escondida (docs/decisoes.md, M08): o aviso não espera um quadro, e
   // a classe só sai dois quadros depois de a janela aparecer.

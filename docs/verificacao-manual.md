@@ -997,3 +997,24 @@ O que só você consegue: ver a sobreposição por cima do tomate no app de verd
 1. [ ] Rode `cd ~/dev/tomatito-full && npm run dev:app` (depois da junção, em `~/dev/tomatito`). Na janela, abra o DevTools (botão direito → Inspecionar → Console), digite `location.hash = '#/dev'` e, no cartão "Tomate (Full)", ligue "Mostrar as faixas da região no tomate (M53)".
 2. [ ] Clique em "Abrir o tomate" (se aparecer a pergunta do M52, clique em Manter): por cima do tomate há faixas em dois tons de ciano que cobrem o corpo, o cabinho e as sépalas, passando um pouco da borda, e no canto de cima "146 retângulos · … ms · 280 px", com menos de 20 ms. Nada de ciano sobre a sombra de baixo.
 3. [ ] Aperte Esc, desligue o interruptor e abra o tomate de novo: sem as faixas. Aperte Esc e feche o app (Ctrl+C no terminal).
+
+## M54. Região no Linux
+
+O que já foi conferido sem você:
+- `npm test` e `cargo test`: o `set_tomato_region` só aceita a `tomato` e faixas dentro da janela (de 1 a 1000), ignora o modo opaco, e o `Resized` só pede a região de novo quando o tamanho muda; a região vai no widget, nunca na `GdkWindow`, e a página a manda antes do primeiro aviso (e, portanto, antes do show).
+- `TT_PORT=5174 bash scripts/gnome-aninhado/rodar.sh regiao` no GNOME Shell aninhado (30 conferências): no M (280), no P (240) e no G (320), clicar nos quatro cantos, ao lado do corpo, acima do cabinho, no ombro e na sombra de baixo chega à `main` atrás; clicar no corpo e na sépala fica no tomate; arrastar pelo corpo, pelo cabinho e pelo cálice move a janela; os botões iniciam, pausam e encerram sem mexer nela. No log do `WAYLAND_DEBUG`, a página manda a região antes do show, e o primeiro `wl_surface.set_input_region` do tomate vem depois do show e antes do primeiro quadro; depois de cada troca, sai um novo, com a área da região nova. Capturas da rodada: `docs/capturas/m54-240.png`, `m54-280.png` e `m54-320.png`.
+
+O que só você consegue: clicar no canto do tomate na sua tela, com uma janela de verdade atrás (um terminal ou o Nautilus), e ver o comando do "Pronto quando" na sua sessão.
+
+### Para conferir (uns 4 minutos)
+
+1. [ ] Rode, num terminal (depois da junção, em `~/dev/tomatito` e só com `npm run dev:app`):
+   ```bash
+   cd ~/dev/tomatito-full && WAYLAND_DEBUG=client npm run dev:app -- --config '{"build":{"devUrl":"http://localhost:5174","beforeDevCommand":"npm run dev -- --port 5174 --strictPort"}}' 2>&1 | tee /tmp/tt-m54.log | grep --line-buffered set_input_region
+   ```
+   A saída corre bastante: o GTK manda a região das duas janelas a cada `configure` (foco, arraste). Deixe correndo.
+2. [ ] Na janela, abra o DevTools (botão direito → Inspecionar → Console), digite `location.hash = '#/dev'` e clique em "Abrir o tomate" (se aparecer a pergunta do M52, clique em Manter).
+3. [ ] Ponha o tomate por cima de um terminal ou do Nautilus e clique num canto da caixa do tomate, fora do desenho (uns 5 px para dentro do canto): o clique vai para a janela de trás, que vem para a frente. Clique também logo acima do cabinho e na sombra embaixo do corpo: o mesmo.
+4. [ ] Arraste o tomate pelo corpo e pelas folhas do cálice: ele anda junto. Clique em Iniciar e em Pausar no tomate: o tempo começa e para, e a janela não se mexe.
+5. [ ] Traga a `main` de volta (a engrenagem do tomate) e, no cartão "Tomate (Full)" do `#/dev`, clique em "P (240)" e depois em "G (320)". O tomate encolhe e cresce, e o clique no canto continua atravessando nos dois tamanhos.
+6. [ ] Aperte Esc no tomate, feche o app (Ctrl+C no terminal) e rode `node scripts/gnome-aninhado/resumo-regiao.mjs --log /tmp/tt-m54.log`: as linhas "ok" dizem que a região chegou antes do primeiro quadro e de novo depois de cada troca, com 157, 133 e 175 retângulos no M, no P e no G (o cairo reparte em bandas os 146, 125 e 162 que a página manda; a área é a mesma).
