@@ -41,7 +41,7 @@ export function marcacao({ preparo = PREPARO_PADRAO, icone = semIcone } = {}) {
     (ids) => `<div class="tt-foco-coluna">${ids.map((id) => cartao(id, conteudo[id]?.(), icone)).join('')}</div>`,
   ).join('');
   return (
-    `<div class="tt-pagina"><h1 class="tt-t-title" tabindex="-1">${t.navegacao.foco}</h1>` +
+    `<div class="tt-pagina"><h1 class="tt-t-title tt-so-leitor" tabindex="-1">${t.navegacao.foco}</h1>` +
     `<div class="tt-foco-grade">${colunas}</div></div>`
   );
 }

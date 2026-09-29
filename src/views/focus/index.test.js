@@ -25,7 +25,7 @@ test('ordem do HTML (e do Tab) é a da leitura numa coluna só: sessão, tarefas
 
 test('cada cartão é uma <section> com o título do catálogo em Subtitle, e a tela tem o <h1> focável', () => {
   const html = marcacao();
-  assert.match(html, /^<div class="tt-pagina"><h1 class="tt-t-title" tabindex="-1">Foco<\/h1>/);
+  assert.match(html, /^<div class="tt-pagina"><h1 class="tt-t-title tt-so-leitor" tabindex="-1">Foco<\/h1>/);
   for (const id of ['sessao', 'tarefas', 'progresso']) {
     const classe = { sessao: ' tt-sessao', progresso: ' tt-progresso', tarefas: ' tt-tarefas' }[id] ?? '';
     const conteudo = {

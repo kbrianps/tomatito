@@ -1010,3 +1010,19 @@ O que só você consegue: ver o movimento com os próprios olhos, na sua sessão
 4. [ ] Ctrl+Q. Desligue as animações do GNOME: em Configurações → Acessibilidade → Ver, ligue **"Reduzir animação"** (é o "Animações" desligado), ou num terminal `gsettings set org.gnome.desktop.interface enable-animations false`. Rode `npm run dev:app` de novo.
 5. [ ] Repita os passos 1 a 3: a tela nova só aparece (sem subir), o indicador do painel troca de item sumindo e aparecendo, o diálogo só aparece e some (sem crescer nem encolher), o chevron vira de uma vez, e o switch "Ativado/Desativado" muda sem deslizar. Tudo muito rápido (83 ms).
 6. [ ] Ctrl+Q e **volte as animações**: desligue "Reduzir animação", ou `gsettings set org.gnome.desktop.interface enable-animations true`.
+
+## M42. Revisão de fidelidade
+
+O que já foi conferido sem você:
+- `node scripts/preview/fidelidade.mjs --temas light,dark,lite,suave`: as capturas `docs/capturas/fidelidade-<tela>-<tema>.png`, no tamanho e na densidade das capturas do Relógio, comparadas lado a lado fora do repositório; as diferenças e o destino de cada uma estão em `docs/fidelidade.md`.
+- As conferências de prévia das telas mexidas (Foco, Temporizador, Cronômetro, Configurações, tamanhos e zoom, movimento), no Chrome headless e no WebKitGTK fora da tela, e o `npm test`.
+
+O que só você consegue: julgar a semelhança a olho, com a Segoe UI e no tamanho de janela que você usa (a prévia usa a fonte de reserva).
+
+### Para conferir (uns 4 minutos)
+
+1. [ ] `cd ~/dev/tomatito && npm run dev:app`. Nas telas Foco, Temporizador e Cronômetro não há mais título no topo; o conteúdo começa logo abaixo da barra de título, como no Relógio. Nada fica cortado nem colado na barra.
+2. [ ] Com o teclado, troque de tela (Ctrl+1, Ctrl+2, Ctrl+3): a tela nova aparece no topo, sem pular para o meio. Se tiver o Orca ligado, ele lê o nome da tela ("Foco", "Temporizador", "Cronômetro") na troca.
+3. [ ] Em Configurações, com a janela larga (maximizada), os cartões ficam mais afastados das bordas que antes; estreitando a janela, a margem volta a ser menor, sem rolagem lateral.
+4. [ ] No Cronômetro, o botão de volta tem a bandeira preenchida.
+5. [ ] Abra `docs/capturas/fidelidade-*-escuro.png` e a captura do Relógio correspondente em `~/dev/tomatito-ref/` e confira se as diferenças que você enxerga estão em `docs/fidelidade.md`. Anote o que faltar.

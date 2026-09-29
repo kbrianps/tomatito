@@ -136,7 +136,7 @@ export function marcacao(retrato = null, { icone = semIcone } = {}) {
   const cards = timers.map((tm) => cartao(tm, { icone })).join('');
   const vazia = Boolean(retrato) && timers.length === 0;
   return (
-    `<div class="tt-pagina tt-pagina-temporizador"><h1 class="tt-t-title" tabindex="-1">${t.navegacao.temporizador}</h1>` +
+    `<div class="tt-pagina tt-pagina-temporizador"><h1 class="tt-t-title tt-so-leitor" tabindex="-1">${t.navegacao.temporizador}</h1>` +
     `<div class="tt-temporizadores" data-temporizadores>${cards}</div>` +
     `<p class="tt-temporizadores-vazio" data-vazio${vazia ? '' : ' hidden'}>${T.vazio}</p>` +
     barra({ vazia, icone }) +

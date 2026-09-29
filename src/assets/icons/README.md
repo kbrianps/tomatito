@@ -29,8 +29,8 @@ lista `ICONES` de `scripts/copy-icons.mjs` e rode `node scripts/copy-icons.mjs`.
 - `dismiss_16_regular.svg`
 - `edit_16_regular.svg`
 - `error_circle_16_filled.svg`
-- `flag_16_regular.svg`
-- `flag_24_regular.svg`
+- `flag_16_filled.svg`
+- `flag_24_filled.svg`
 - `hourglass_half_16_regular.svg`
 - `info_20_regular.svg`
 - `more_horizontal_16_regular.svg`

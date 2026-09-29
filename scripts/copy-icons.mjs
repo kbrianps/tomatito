@@ -39,7 +39,8 @@ export const ICONES = Object.freeze([
   { nome: 'pause', estilo: 'filled', tamanhos: [16, 24] },
   { nome: 'stop', estilo: 'filled', tamanhos: [16, 24] },
   // cronômetro, temporizador, tarefas e seletor de minutos
-  { nome: 'flag', estilo: 'regular', tamanhos: [16, 24] },
+  // M42: a bandeira preenchida, como a do botão de volta do Relógio
+  { nome: 'flag', estilo: 'filled', tamanhos: [16, 24] },
   { nome: 'arrow_reset', estilo: 'regular', tamanhos: [20, 24] },
   { nome: 'more_horizontal', estilo: 'regular', tamanhos: [16] },
   { nome: 'edit', estilo: 'regular', tamanhos: [16] },

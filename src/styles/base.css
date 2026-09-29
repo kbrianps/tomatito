@@ -29,3 +29,9 @@ button{ font:inherit; }
    calariam). */
 .tt-anuncio{ position:absolute; width:1px; height:1px; margin:-1px; padding:0; border:0;
   overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+
+/* M42: o título das telas Foco, Temporizador e Cronômetro, que o Relógio não
+   mostra: fora da vista, como a .tt-anuncio, mas continua para o leitor de
+   tela e para o foco na troca de tela (src/router.js). */
+.tt-so-leitor{ position:absolute; width:1px; height:1px; margin:-1px; padding:0; border:0;
+  overflow:hidden; clip-path:inset(50%); white-space:nowrap; }

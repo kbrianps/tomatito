@@ -28,7 +28,8 @@ test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenc
   );
   for (const [i, { nome, estilo }] of ICONES.entries()) {
     // M30: o segundo checkmark_circle é o preenchido da tarefa concluída.
-    const preenchido = ['play', 'pause', 'stop', 'error_circle'].includes(nome) || (nome === 'checkmark_circle' && ICONES.findIndex((x) => x.nome === nome) !== i);
+    // M42: a bandeira da volta, preenchida como a do Relógio.
+    const preenchido = ['play', 'pause', 'stop', 'error_circle', 'flag'].includes(nome) || (nome === 'checkmark_circle' && ICONES.findIndex((x) => x.nome === nome) !== i);
     assert.equal(estilo, preenchido ? 'filled' : 'regular', nome);
   }
   // M30: os desenhos das tarefas, na grade de 20.

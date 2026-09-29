@@ -74,7 +74,7 @@ test('HTML do card: nome escapado, rótulo "Encerrado há" e botões', () => {
 });
 
 test('tela: o título e a grade, vazia sem retrato', () => {
-  assert.match(marcacao(), /<h1 class="tt-t-title" tabindex="-1">Temporizador<\/h1><div class="tt-temporizadores" data-temporizadores><\/div>/);
+  assert.match(marcacao(), /<h1 class="tt-t-title tt-so-leitor" tabindex="-1">Temporizador<\/h1><div class="tt-temporizadores" data-temporizadores><\/div>/);
   // Sem retrato ainda, a lista vazia não aparece (só depois do get_state).
   assert.match(marcacao(), /data-vazio hidden>/);
   const html = marcacao({ seq: 1, at: 0, timers: [tm('idle', 60_000), { ...tm('idle', 180_000, { duracao: 180_000 }), id: 2 }] });

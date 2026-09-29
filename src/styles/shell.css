@@ -182,6 +182,20 @@
    anterior (src/router.js); o foco ali não precisa de anel. */
 .tt-pagina{ padding:28px 32px 40px; }
 .tt-conteudo h1[tabindex="-1"]:focus{ outline:none; }
+/* M42: nas telas sem título visível (Foco, Temporizador e Cronômetro, como no
+   Relógio), o conteúdo começa a 16 px da barra de título, o que põe o topo
+   dos cartões perto do das capturas (43 px da borda da janela na tela Foco e
+   50 px no Temporizador; aqui, 49 px). O Cronômetro guarda a própria margem
+   (o terço de cima da área); docs/fidelidade.md. */
+.tt-pagina:has(> h1.tt-so-leitor){ position:relative; padding-top:var(--tt-gap); }
+.tt-pagina > h1.tt-so-leitor + :is(.tt-foco-grade, .tt-temporizadores){ margin-top:0; }
+/* M42: as Configurações, como as do Relógio (clock-focus-sessions-settings.png),
+   com o título a 16 px da barra de título e, na janela larga (1000 px ou mais
+   de conteúdo, a da captura), 56 px de recuo dos lados em vez de 32. */
+.tt-pagina:has(> h1.tt-t-title-large){ padding-top:var(--tt-gap); }
+@container conteudo (width >= 1000px){
+  .tt-pagina:has(> h1.tt-t-title-large){ padding-inline:56px; }
+}
 
 /* Grade da tela Foco (M10): duas colunas quando a área de conteúdo tem 560 px
    ou mais, e uma abaixo disso (docs/decisoes.md, M10). As colunas são

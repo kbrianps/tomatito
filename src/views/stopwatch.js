@@ -129,7 +129,7 @@ export function marcacao(c = null, { icone = semIcone, decorrido } = {}) {
   const ap = aparencia(c, decorrido);
   const { horas, minutos, segundos, centesimos } = ap.tempo;
   return (
-    `<div class="tt-pagina tt-pagina-cronometro"><h1 class="tt-t-title" tabindex="-1">${t.navegacao.cronometro}</h1>` +
+    `<div class="tt-pagina tt-pagina-cronometro"><h1 class="tt-t-title tt-so-leitor" tabindex="-1">${t.navegacao.cronometro}</h1>` +
     `<div class="tt-cronometro" data-cronometro data-estado="${ap.status}">` +
     `<div class="tt-cronometro-tempo tt-num" role="img" aria-label="${ap.rotulo}" data-tempo>` +
     // Tudo dentro do role="img" é só visual: o leitor de tela lê o rótulo.
