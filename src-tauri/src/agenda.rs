@@ -424,6 +424,58 @@ impl Viva {
     }
 }
 
+/// A entrega da agenda ao plugin Kotlin (5.2, itens 2 e 3; A10a), numa
+/// thread própria: o `agendar` do plugin espera a Kotlin (que roda pelo
+/// contexto do Android), e o `TauriSink` chama com o motor travado. A thread
+/// entrega só a mais nova das agendas que se acumularam enquanto a anterior
+/// era entregue: cada agenda substitui a anterior inteira.
+#[cfg(target_os = "android")]
+pub struct Entrega {
+    tx: Option<std::sync::mpsc::Sender<Vec<Alarme>>>,
+}
+
+#[cfg(target_os = "android")]
+impl Entrega {
+    pub fn iniciar<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Self {
+        use tauri_plugin_tomatito_android::TomatitoAndroidExt;
+        let (tx, rx) = std::sync::mpsc::channel::<Vec<Alarme>>();
+        let thread = std::thread::Builder::new()
+            .name("tomatito-agenda".into())
+            .spawn(move || {
+                while let Ok(mut agenda) = rx.recv() {
+                    while let Ok(mais_nova) = rx.try_recv() {
+                        agenda = mais_nova;
+                    }
+                    match app.tomatito_android().agendar(&agenda) {
+                        Ok(r) => eprintln!(
+                            "[tomatito] agenda entregue: {} exato(s), {} inexato(s)",
+                            r.exatos, r.inexatos
+                        ),
+                        Err(e) => eprintln!("[tomatito] agenda não entregue: {e}"),
+                    }
+                }
+            });
+        match thread {
+            Ok(_) => Self { tx: Some(tx) },
+            Err(e) => {
+                eprintln!("[tomatito] a thread da agenda não subiu: {e}");
+                Self { tx: None }
+            }
+        }
+    }
+
+    /// Não espera: só põe na fila da thread.
+    pub fn enviar(&self, agenda: &[Alarme]) {
+        let enviado = self
+            .tx
+            .as_ref()
+            .is_some_and(|tx| tx.send(agenda.to_vec()).is_ok());
+        if !enviado {
+            eprintln!("[tomatito] agenda perdida: a thread da agenda não está de pé");
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

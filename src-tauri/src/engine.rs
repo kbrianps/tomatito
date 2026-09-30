@@ -100,6 +100,9 @@ pub struct TauriSink {
     /// `state` e `timers`.
     #[cfg(target_os = "android")]
     agenda: std::sync::Mutex<crate::agenda::Viva>,
+    /// A10a: a thread que entrega a agenda ao plugin Kotlin.
+    #[cfg(target_os = "android")]
+    entrega: crate::agenda::Entrega,
 }
 
 impl TauriSink {
@@ -112,6 +115,8 @@ impl TauriSink {
         acordador: Arc<Notify>,
     ) -> Self {
         let notificador = Notificador::new(app.clone());
+        #[cfg(target_os = "android")]
+        let entrega = crate::agenda::Entrega::iniciar(app.clone());
         Self {
             app,
             som,
@@ -122,6 +127,8 @@ impl TauriSink {
             acordador,
             #[cfg(target_os = "android")]
             agenda: std::sync::Mutex::default(),
+            #[cfg(target_os = "android")]
+            entrega,
         }
     }
 
@@ -166,10 +173,10 @@ impl TauriSink {
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         match passo(&mut viva, &fuso) {
             Ok(Some(agenda)) => {
-                // Ponto de integração do A10a: `agendar(agenda)` no plugin
-                // (`tauri_plugin_tomatito_android`), que cancela os alarmes
-                // anteriores, grava a agenda e chama o `setAlarmClock`.
+                // A10a: o plugin cancela os alarmes anteriores, grava a
+                // agenda e chama o `setAlarmClock` (numa thread à parte).
                 eprintln!("[tomatito] agenda: {} aviso(s)", agenda.len());
+                self.entrega.enviar(agenda);
             }
             Ok(None) => {}
             Err(e) => eprintln!("[tomatito] {e}"),

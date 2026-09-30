@@ -180,6 +180,7 @@ Numeração a partir de 201, para não cruzar com as pendências de outras faixa
 206. **Depois do A19:** guardar `~/.config/tomatito/android/upload.jks` e a senha num gerenciador de senhas.
 207. **Play Console, teste fechado com 12 testadores por 14 dias, pedido de produção** (A25, passo a passo em `docs/android/PUBLICAR.md`). Começar a juntar os testadores já. Antes do teste interno: a verificação do aparelho da conta nova no app Play Console, conferir o registro do nome do pacote e, se for instalar pelo `adb`, a depuração USB no celular.
 208. **Login na Cloudflare** (`! npx wrangler login`) para publicar a política de privacidade (A23), se a web ainda não estiver publicada.
+209. **Declaração de alarmes exatos no Play Console** (A10a; no envio, A24/A25). O app declara `USE_EXACT_ALARM` (fim de fase e de temporizador na hora). É uma permissão restrita: no formulário do Console, marcar que o app é de alarme/timer ("The app is an alarm or timer app"). O texto pronto sai no `docs/android/play/formularios.md` (A24).
 
 ## Resolvidas
 

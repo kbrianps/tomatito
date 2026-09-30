@@ -194,4 +194,41 @@ class PurasTest {
             Canais.uriDoSom("io.github.kbrianps.tomatito.debug", "focus_end"),
         )
     }
+    private fun item(id: Int, quando: Long) = Alarme(id, quando, Canais.FIM_FOCO, "Fim do foco")
+
+    @Test
+    fun aTrocaCancelaTudoDaAnteriorEAgendaANovaEmOrdem() {
+        val antiga = listOf(item(1, 60_000), item(2, 120_000), item(100_001, 90_000))
+        val nova = listOf(item(3, 180_000), item(2, 125_000))
+        val t = trocaDeAgenda(antiga, nova, agoraMs = 10_000)
+        assertEquals(listOf(1, 2, 100_001), t.cancelar)
+        assertEquals(listOf(2, 3), t.agendar.map { it.id })
+        assertTrue(t.postarAgora.isEmpty())
+    }
+
+    @Test
+    fun aTrocaPostaOQueVenceuSemOFimReceiverEDescartaOVelho() {
+        // O motor passou do fim da fase 1 antes do alarme: a nova agenda não
+        // tem o item 1, que já venceu e ainda está gravado (não foi postado).
+        val antiga = listOf(item(1, 60_000), item(2, 120_000))
+        val nova = listOf(item(2, 120_000))
+        assertEquals(listOf(1), trocaDeAgenda(antiga, nova, agoraMs = 60_020).postarAgora.map { it.id })
+        // Um item que continua na nova (mesmo id e instante) não sai duas vezes.
+        assertTrue(trocaDeAgenda(antiga, antiga, agoraMs = 60_020).postarAgora.isEmpty())
+        // Pausa antes do fim: nada venceu, nada sai.
+        assertTrue(trocaDeAgenda(antiga, emptyList(), agoraMs = 59_000).postarAgora.isEmpty())
+        // Vencido há mais que a tolerância: não avisa de novo.
+        assertTrue(trocaDeAgenda(listOf(item(1, 60_000)), emptyList(), agoraMs = 60_000 + Agenda.TOLERANCIA_MS + 1).postarAgora.isEmpty())
+    }
+
+    @Test
+    fun oDisparoTiraSoOItemDaAgenda() {
+        val agenda = listOf(item(1, 60_000), item(2, 120_000))
+        val (disparado, resto) = disparoDaAgenda(agenda, 1, 60_000)!!
+        assertEquals(1, disparado.id)
+        assertEquals(listOf(2), resto.map { it.id })
+        // Mesmo id, outro instante (alarme de uma agenda anterior): nada.
+        assertNull(disparoDaAgenda(agenda, 1, 65_000))
+        assertNull(disparoDaAgenda(resto, 1, 60_000))
+    }
 }

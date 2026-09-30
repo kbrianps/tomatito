@@ -1328,9 +1328,12 @@ test('android: plugin tomatito-android, capability só do Android e as permissõ
   // O Tauri entrega `plugin:tomatito-android|abrir_url` ao método em lowerCamelCase (`abrirUrl`).
   const camelo = (c) => c.replace(/_([a-z])/g, (_, l) => l.toUpperCase());
   for (const c of comandos) assert.match(kotlin, new RegExp(`@Command\\n\\s+fun ${camelo(c)}\\(invoke: Invoke\\)`), c);
-  // E nenhum @Command fica sem permissão.
+  // E nenhum @Command fica sem permissão, salvo os que só o Rust chama
+  // (A10a: `agendar`), que ficam fora do build.rs e da ACL (o JS não os alcança).
+  const soDoRust = ['agendar'];
+  for (const c of soDoRust) assert.ok(!comandos.includes(c), `${c} é só do Rust`);
   const daKotlin = [...kotlin.matchAll(/@Command\n\s+fun (\w+)\(/g)].map((m) => m[1]);
-  assert.deepEqual(daKotlin.sort(), comandos.map(camelo).sort());
+  assert.deepEqual(daKotlin.sort(), [...comandos, ...soDoRust].map(camelo).sort());
   // O pacote e a classe que o Rust registra são os da Kotlin.
   const lib = ler(`${plugin}/src/lib.rs`);
   assert.match(lib, /const PACOTE: &str = "io\.github\.kbrianps\.tomatito\.android";/);

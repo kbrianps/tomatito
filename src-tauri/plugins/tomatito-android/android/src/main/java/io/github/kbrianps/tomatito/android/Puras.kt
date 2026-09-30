@@ -181,6 +181,9 @@ data class Alarme(
  * "continuaDepois":{"tipo":"intervalo","nome":"","fimMs":...,"pausado":false,"restanteMs":0}|null}]`.
  */
 object Agenda {
+    /** Até quanto depois do fim um aviso ainda sai ([trocaDeAgenda]). */
+    const val TOLERANCIA_MS = 60_000L
+
     fun paraJson(itens: List<Alarme>): String {
         val lista = org.json.JSONArray()
         for (a in itens) {
@@ -308,4 +311,44 @@ object Canais {
      * outro (e o canal guarda o endereço para sempre).
      */
     fun uriDoSom(pacote: String, som: String): String = "android.resource://$pacote/raw/$som"
+}
+
+/**
+ * A troca de uma agenda pela seguinte (5.2, item 3; A10a), calculada antes
+ * de mexer no `AlarmManager`:
+ * - [cancelar]: os códigos de pedido de todos os alarmes da agenda anterior
+ *   (os `PendingIntent` são recriados com o mesmo código para o `cancel`);
+ * - [postarAgora]: os itens da agenda anterior que já venceram, que o
+ *   `FimReceiver` ainda não postou (ele tira da agenda gravada o que posta) e
+ *   que não estão na nova. É o caso do app aberto: o motor chega ao fim da
+ *   fase no mesmo instante do alarme e, se a agenda nova (sem aquele fim)
+ *   chegar antes do disparo, cancelar sem postar perderia o aviso. Só vale
+ *   até [Agenda.TOLERANCIA_MS] depois do fim: um item mais velho que isso
+ *   (processo morto por horas, aparelho desligado) não avisa de novo; a
+ *   retomada do motor (M40) mostra "Sessão concluída" ao abrir;
+ * - [agendar]: a agenda nova inteira, em ordem.
+ */
+data class Troca(val cancelar: List<Int>, val postarAgora: List<Alarme>, val agendar: List<Alarme>)
+
+fun trocaDeAgenda(antiga: List<Alarme>, nova: List<Alarme>, agoraMs: Long): Troca {
+    val naNova = nova.map { it.id to it.quandoMs }.toSet()
+    val vencidos = antiga.filter {
+        it.quandoMs <= agoraMs && agoraMs - it.quandoMs <= Agenda.TOLERANCIA_MS && (it.id to it.quandoMs) !in naNova
+    }
+    return Troca(
+        cancelar = antiga.map { it.id }.distinct(),
+        postarAgora = vencidos.sortedBy { it.quandoMs },
+        agendar = nova.sortedWith(compareBy({ it.quandoMs }, { it.id })),
+    )
+}
+
+/**
+ * O disparo de um alarme (A10a): o item da agenda gravada com o mesmo `id` e
+ * o mesmo instante (o `FimReceiver` recebe os dois no `Intent`) e a agenda
+ * sem ele. `null` se o item não está lá: já foi postado (pela troca) ou a
+ * agenda mudou e o alarme era de uma anterior; nada a postar.
+ */
+fun disparoDaAgenda(itens: List<Alarme>, id: Int, quandoMs: Long): Pair<Alarme, List<Alarme>>? {
+    val item = itens.firstOrNull { it.id == id && it.quandoMs == quandoMs } ?: return null
+    return item to itens.filterNot { it === item }
 }
