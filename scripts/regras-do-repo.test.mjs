@@ -342,7 +342,8 @@ test('temporizadores: comandos timer_*, tt://timers e o fim com som e notificaç
   }
   assert.match(ler('src-tauri/tomatito-motor/src/events.rs'), /pub const TIMERS: &str = "tt:\/\/timers";/);
   assert.match(ipcJs, /temporizadores: 'tt:\/\/timers'/);
-  const motor = ler('src-tauri/src/engine.rs');
+  // W05: o motor genérico mora no tomatito-motor; o TauriSink, no desktop.
+  const motor = ler('src-tauri/tomatito-motor/src/engine.rs');
   assert.match(motor, /impl<S: Sink> CountdownEffects for TimersOutbox/);
   assert.match(motor, /if !ended\.late \{\s*self\.sink\.sound\(Sound::FocusEnd\);/);
   assert.match(motor, /Timers::with_defaults\(\)/);
@@ -720,14 +721,15 @@ test('M40: state.json carregado ao abrir, antes da bandeja e do laço, e o foco 
     'motor.restaurar(restaurado);',
     'estado.save_all(&motor.state());',
     'bandeja.criar_icone(',
-    'spawn(motor.run())',
+    'spawn(engine::laco(motor.clone(), acordador))',
     'build_main(',
   ].map((t) => [t, lib.indexOf(t)]);
   for (const [t, i] of ordem) assert.ok(i >= 0, t);
   for (let k = 1; k < ordem.length; k++) assert.ok(ordem[k - 1][1] < ordem[k][1], `${ordem[k - 1][0]} antes de ${ordem[k][0]}`);
   const motor = ler('src-tauri/src/engine.rs');
   assert.match(motor, /self\.emit\(events::STATE, focus\);[\s\S]{0,400}self\.estado\.save_focus\(focus\);\s*\}/);
-  assert.match(motor, /pub fn restaurar\(&self, r: Restored\)[\s\S]*focus\.advance_to\(now[\s\S]*timers\.advance_to\(/);
+  // W05: o restaurar subiu ao tomatito-motor com o resto do Engine.
+  assert.match(ler('src-tauri/tomatito-motor/src/engine.rs'), /pub fn restaurar\(&self, r: Restored\)[\s\S]*focus\.advance_to\(now[\s\S]*timers\.advance_to\(/);
   // Nenhum tick grava o arquivo: o laço só emite o tt://tick.
   assert.doesNotMatch(motor.slice(motor.indexOf('fn tick(&self, tick: &TickDto)'), motor.indexOf('fn phase(&self')), /estado/);
 });

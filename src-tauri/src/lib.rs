@@ -92,6 +92,10 @@ pub fn run() {
             // M40: o que estava em andamento quando o app fechou.
             let restaurado = estado.load();
             app.manage(estado.clone());
+            // W05: o `Notify` do laço; o `TauriSink` acorda o laço por ele
+            // (`Sink::acordar`), e o motor, no `tomatito-motor`, não sabe do
+            // tokio.
+            let acordador = Arc::new(tokio::sync::Notify::new());
             let motor = Arc::new(engine::Engine::new(
                 clock,
                 speed,
@@ -103,6 +107,7 @@ pub fn run() {
                     // temporizadores (do cronômetro, M34, e do foco, M40).
                     estado.clone(),
                     bandeja.clone(),
+                    acordador.clone(),
                 ),
             ));
             // M38: F, B e os sons de fim de fase das configurações; cada
@@ -114,7 +119,7 @@ pub fn run() {
             estado.save_all(&motor.state());
             app.manage(motor.clone());
             bandeja.criar_icone(&motor.state().focus);
-            tauri::async_runtime::spawn(motor.run());
+            tauri::async_runtime::spawn(engine::laco(motor.clone(), acordador));
 
             // As janelas nascem aqui, e não no tauri.conf.json (PLANO.md, 4.7).
             // Com `theme = full`, só a `tomato`; a `main` nasce sob demanda
