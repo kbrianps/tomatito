@@ -19,6 +19,14 @@
 //   (nenhum `setInterval` na camada web, regra 5), armado quando algo corre.
 //   Com a aba oculta, a cadeia para; na volta, o `visibilitychange` a religa
 //   (e o store pede um get_state, que fecha o que venceu no meio-tempo).
+// - Retomada (W09): o `tomatito:estado` (estado.js) é gravado inteiro a cada
+//   transição (os efeitos `state`, `timers` e `stopwatch`, os mesmos que
+//   gravam o state.json no desktop), nunca a cada tick. Ao criar o motor, o
+//   `restaurar` do wasm o lê e roda o `Engine::restaurar` (M40): o que
+//   venceu com a aba fechada é fechado ali, com a regra do atraso (mais de
+//   60 s: sem som e um aviso "concluída às …"), e os efeitos vão aos donos
+//   (o período ao IndexedDB) antes do primeiro comando. Depois, uma
+//   gravação completa, como o `save_all` do desktop ao abrir.
 // - Pânico (3.3): o `set_hook` do Rust já escreveu a mensagem no console; o
 //   `RuntimeError` do wasm faz o motor parar (nenhuma chamada nem gravação
 //   depois) e recarregar a página, ou, se o pânico se repetir logo depois da
@@ -26,6 +34,7 @@
 import init, { Motor } from './pkg/tomatito_wasm.js';
 import { emitir } from './barramento.js';
 import * as configuracoes from './configuracoes.js';
+import * as estadoGravado from './estado.js';
 import { MARCA, decidir, mostrarAviso } from './panico.js';
 
 /** Os efeitos que viram eventos, com o nome do desktop. */
@@ -66,6 +75,7 @@ export function iniciar() {
   carregando ??= init().then(() => {
     motor = new Motor();
     motor.configurar(JSON.stringify(configuracoes.ler()));
+    retomar();
     globalThis.document?.addEventListener('visibilitychange', aoMudarVisibilidade);
     return motor;
   });
@@ -134,8 +144,50 @@ function chamar(f) {
     throw erro;
   }
   distribuir(resposta.efeitos);
+  if (resposta.efeitos?.some((e) => GRAVAM.has(e.tipo))) gravarEstado();
   armarTick();
   return resposta.resultado;
+}
+
+// ---------------------------------------------------------------------------
+// Retomada (W09).
+// ---------------------------------------------------------------------------
+
+/** Os efeitos que regravam o `tomatito:estado` (as transições). */
+const GRAVAM = new Set(['state', 'timers', 'stopwatch']);
+
+/** Uma vez, ao criar o motor (depois do `configurar`). */
+function retomar() {
+  const texto = estadoGravado.ler();
+  let carga;
+  try {
+    carga = chamar((m) => m.restaurar(texto));
+  } catch (erro) {
+    if (erro?.code !== 'panicked') console.error('[motor] retomada', erro);
+    return;
+  }
+  for (const aviso of carga.avisos) console.warn(`[motor] ${aviso}`);
+  if (carga.corrompido && texto !== null) estadoGravado.guardarCorrompido(texto);
+  gravarEstado();
+}
+
+/**
+ * Grava as três partes (o `save_all` do desktop), a partir do retrato atual.
+ * Depois de um pânico, nada mais é gravado.
+ */
+function gravarEstado() {
+  if (quebrado || !motor) return;
+  let resposta;
+  try {
+    resposta = motor.gravavel();
+  } catch (erro) {
+    if (erro instanceof WebAssembly.RuntimeError) aoEntrarEmPanico(erro);
+    else console.error('[motor] ao gravar o estado', erro);
+    return;
+  }
+  // O retrato fecha o que venceu; o texto já é o de depois disso.
+  distribuir(resposta.efeitos);
+  estadoGravado.gravar(JSON.stringify(resposta.resultado));
 }
 
 function esvaziarDepoisDoErro() {

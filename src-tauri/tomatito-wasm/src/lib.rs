@@ -19,9 +19,12 @@
 //!   proximoPrazo }`. Um erro é lançado como `{ code, message }`, o mesmo
 //!   objeto que o `invoke` do desktop rejeita.
 
+use std::cell::Cell;
 use std::sync::{Mutex, PoisonError};
 
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::{Map, Value};
 use tomatito_core::{
     Clock, DayRange, EpochMs, Notice, Period, Sound, TimeZone, TimerEnded, TimerId, stats_ranges,
 };
@@ -30,6 +33,9 @@ use tomatito_motor::events::{
     FocusDto, PhaseDto, PhaseEventDto, PhaseKindDto, StateDto, StopwatchDto, TickDto, TimersDto,
 };
 use tomatito_motor::settings::{Applied, Settings, SettingsError, aplicar_patch, apply};
+use tomatito_motor::state_file::{
+    Restored, SCHEMA_VERSION, SavedFocus, SavedStopwatch, SavedTimer, StateFile,
+};
 use tomatito_motor::tasks::{clean_title, visible_since};
 use wasm_bindgen::prelude::*;
 
@@ -412,6 +418,9 @@ fn ler<'de, T: Deserialize<'de>, D: Deserializer<'de>>(nome: &str, args: D) -> R
 #[wasm_bindgen]
 pub struct Motor {
     engine: Engine<WebSink>,
+    /// W09: o `lastSessionId` já guardado (o retrato não o leva, e no ocioso
+    /// ele não pode voltar a 0), como o `StateStore` do desktop o guarda.
+    ultimo_id: Cell<i64>,
 }
 
 /// A parte em Rust puro, testável no nativo com um relógio de teste (as
@@ -422,6 +431,7 @@ impl Motor {
     pub fn com_relogio(relogio: Box<dyn Clock>) -> Self {
         Self {
             engine: Engine::new(relogio, 1.0, WebSink::default()),
+            ultimo_id: Cell::new(0),
         }
     }
 
@@ -511,6 +521,160 @@ impl Motor {
         let correndo = self.engine.tick();
         self.responder(correndo)
     }
+
+    /// W09: a retomada ao abrir a aba, como o `setup` do desktop faz com o
+    /// `state.json` (M40): lê o texto de `tomatito:estado` ([`ler_estado`]),
+    /// guarda o `lastSessionId` e entrega as partes ao
+    /// [`Engine::restaurar`], que roda o `advance_to(agora)` com a regra do
+    /// atraso (mais de 60 s depois do prazo: sem som e um aviso só,
+    /// "Sessão concluída às 14:32"). Os efeitos desse fechamento (o
+    /// período, o aviso, o fim do temporizador) vêm na resposta.
+    pub fn retomar(&self, texto: Option<&str>) -> Resposta<CargaDto> {
+        let Carga {
+            restored,
+            ultimo_id,
+            avisos,
+            corrompido,
+        } = ler_estado(texto);
+        self.ultimo_id.set(ultimo_id);
+        self.engine.restaurar(restored);
+        self.responder(CargaDto { avisos, corrompido })
+    }
+
+    /// W09: o que vai para `tomatito:estado`: as três partes de uma vez, no
+    /// formato do `state.json` (o `save_all` do desktop), a partir do
+    /// retrato atual. A web grava o arquivo inteiro a cada transição.
+    pub fn para_gravar(&self) -> Resposta<StateFile> {
+        let estado = self.engine.state();
+        let focus = SavedFocus::from_dto(&estado.focus, self.ultimo_id.get());
+        self.ultimo_id.set(focus.last_session_id);
+        let arquivo = StateFile {
+            schema_version: SCHEMA_VERSION,
+            saved_at: estado.focus.at,
+            focus: Some(focus),
+            timers: Some(
+                estado
+                    .timers
+                    .timers
+                    .iter()
+                    .map(SavedTimer::from_dto)
+                    .collect(),
+            ),
+            stopwatch: Some((&estado.stopwatch).into()),
+        };
+        self.responder(arquivo)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Retomada (W09): a carga do `state.json` do desktop (`StateStore::load`),
+// sobre o texto de `tomatito:estado` no localStorage.
+// ---------------------------------------------------------------------------
+
+/// O que o texto gravado trouxe.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Carga {
+    pub restored: Restored,
+    /// O `lastSessionId` gravado (0 sem foco).
+    pub ultimo_id: i64,
+    /// O que o desktop escreve no registro, para o JS pôr no console.
+    pub avisos: Vec<String>,
+    /// O texto não abriu como objeto JSON: o JS o guarda à parte (o
+    /// `state.corrompido.json` do desktop).
+    pub corrompido: bool,
+}
+
+/// O `resultado` do `restaurar`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct CargaDto {
+    pub avisos: Vec<String>,
+    pub corrompido: bool,
+}
+
+/// Lê a parte `chave` do objeto; ilegível, anota e devolve `None`.
+fn parte<T: DeserializeOwned>(
+    objeto: &Map<String, Value>,
+    chave: &str,
+    avisos: &mut Vec<String>,
+) -> Option<T> {
+    let v = objeto.get(chave)?;
+    match T::deserialize(v) {
+        Ok(t) => Some(t),
+        Err(e) => {
+            avisos.push(format!(
+                "tomatito:estado: \"{chave}\" ilegível ({e}); fica o padrão"
+            ));
+            None
+        }
+    }
+}
+
+/// A carga do `StateStore::load` do desktop, sem o arquivo: ausente dá o
+/// padrão; um texto que não abre como objeto JSON é marcado `corrompido`;
+/// uma `schemaVersion` desconhecida é ignorada inteira; cada parte vale
+/// sozinha (ilegível, fica o padrão dela, e as outras entram).
+pub fn ler_estado(texto: Option<&str>) -> Carga {
+    let mut carga = Carga::default();
+    let Some(texto) = texto else {
+        return carga;
+    };
+    let objeto = match serde_json::from_str::<Value>(texto) {
+        Ok(Value::Object(m)) => m,
+        outro => {
+            let motivo = match outro {
+                Err(e) => e.to_string(),
+                Ok(_) => "não é um objeto JSON".to_owned(),
+            };
+            carga.avisos.push(format!(
+                "tomatito:estado ilegível ({motivo}); abrindo sem ele, e o original ficou em tomatito:estado.corrompido"
+            ));
+            carga.corrompido = true;
+            return carga;
+        }
+    };
+    let versao = objeto.get("schemaVersion").and_then(Value::as_u64);
+    if versao != Some(u64::from(SCHEMA_VERSION)) {
+        carga.avisos.push(format!(
+            "tomatito:estado na versão {versao:?}, que esta versão não lê; abrindo sem ele"
+        ));
+        return carga;
+    }
+    let avisos = &mut carga.avisos;
+    let focus: Option<SavedFocus> = parte(&objeto, "focus", avisos);
+    let timers: Option<Vec<SavedTimer>> = parte(&objeto, "timers", avisos);
+    let stopwatch: Option<SavedStopwatch> = parte(&objeto, "stopwatch", avisos);
+    let sessao = focus.as_ref().and_then(|f| {
+        let s = f.session.as_ref()?;
+        let r = s.record();
+        if r.is_none() {
+            avisos.push(format!(
+                "tomatito:estado: sessão {} sem o campo do estado; fica ociosa",
+                s.id
+            ));
+        }
+        r
+    });
+    carga.ultimo_id = focus.as_ref().map_or(0, |f| f.last_session_id);
+    carga.restored = Restored {
+        focus: focus.as_ref().map(|f| (f.last_session_id, sessao)),
+        timers: timers.map(|lista| {
+            lista
+                .iter()
+                .filter_map(|t| {
+                    let r = t.record();
+                    if r.is_none() {
+                        avisos.push(format!(
+                            "tomatito:estado: temporizador {} sem o campo do estado; fica de fora",
+                            t.id
+                        ));
+                    }
+                    r
+                })
+                .collect()
+        }),
+        stopwatch: stopwatch.as_ref().map(SavedStopwatch::record),
+    };
+    carga
 }
 
 fn para_js<T: Serialize>(valor: &T) -> Result<JsValue, JsValue> {
@@ -567,6 +731,20 @@ impl Motor {
         })?;
         self.aplicar_configuracoes(&s);
         Ok(())
+    }
+
+    /// W09: `restaurar(texto | null)`, uma vez, logo depois do
+    /// `configurar`: `{ resultado: { avisos, corrompido }, efeitos,
+    /// proximoPrazo }`.
+    pub fn restaurar(&self, texto: Option<String>) -> Result<JsValue, JsValue> {
+        para_js(&self.retomar(texto.as_deref()))
+    }
+
+    /// W09: `{ resultado: <o objeto de tomatito:estado>, efeitos,
+    /// proximoPrazo }`; o JS o grava com `JSON.stringify` (o `serde_json`
+    /// não escreve texto aqui, e o `.wasm` fica menor).
+    pub fn gravavel(&self) -> Result<JsValue, JsValue> {
+        para_js(&self.para_gravar())
     }
 
     /// Se há algo que vence (uma fase ou um temporizador rumo ao zero).
@@ -948,5 +1126,159 @@ mod tests {
     fn fuso_com_nome_iana() {
         let tz = TimeZone::get("America/Sao_Paulo").unwrap();
         assert_eq!(nome_do_fuso(&tz), Some("America/Sao_Paulo"));
+    }
+
+    // -----------------------------------------------------------------------
+    // Retomada (W09).
+    // -----------------------------------------------------------------------
+
+    /// Grava o motor `m` e abre outro, com o relógio em `agora`, a partir do
+    /// texto gravado.
+    fn reabrir(m: &Motor, agora: EpochMs) -> (Motor, FakeClock, Resposta<CargaDto>, Value) {
+        let texto = serde_json::to_string(&m.para_gravar().resultado).unwrap();
+        let v: Value = serde_json::from_str(&texto).unwrap();
+        let relogio = FakeClock::new(agora);
+        let novo = Motor::com_relogio(Box::new(relogio.clone()));
+        let r = novo.retomar(Some(&texto));
+        (novo, relogio, r, v)
+    }
+
+    fn foco(m: &Motor) -> FocusDto {
+        m.retrato().resultado.focus
+    }
+
+    #[test]
+    fn retomada_no_meio_do_foco_mantem_o_prazo() {
+        let (m, relogio) = motor();
+        m.executar("focus_start", json!({ "minutes": 25 })).unwrap();
+        relogio.advance_ms(5 * 60_000);
+        let (novo, _, r, v) = reabrir(&m, EpochMs(T0.0 + 10 * 60_000));
+        assert_eq!(v["schemaVersion"], 1);
+        assert_eq!(v["focus"]["session"]["endsAt"], T0.0 + 25 * 60_000);
+        assert!(r.resultado.avisos.is_empty(), "{:?}", r.resultado.avisos);
+        assert!(!r.resultado.corrompido);
+        assert!(r.efeitos.is_empty(), "nada venceu: {:?}", tipos(&r.efeitos));
+        assert_eq!(r.proximo_prazo, Some(T0.0 + 25 * 60_000));
+        let f = foco(&novo);
+        assert_eq!(f.session.unwrap().remaining_ms, 15 * 60_000);
+        assert!(novo.engine.is_running());
+    }
+
+    #[test]
+    fn retomada_depois_do_fim_com_atraso_grava_o_periodo_sem_som() {
+        let (m, _) = motor();
+        m.executar("focus_start", json!({ "minutes": 25 })).unwrap();
+        // 2 min depois do fim: mais que os 60 s da regra do atraso.
+        let (novo, _, r, _) = reabrir(&m, EpochMs(T0.0 + 27 * 60_000));
+        let t = tipos(&r.efeitos);
+        assert!(t.contains(&"period"), "{t:?}");
+        assert!(!t.contains(&"sound"), "atrasado não toca: {t:?}");
+        let avisos: Vec<_> = r
+            .efeitos
+            .iter()
+            .filter_map(|e| match e {
+                Efeito::Notice(a) => Some(*a),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(avisos.len(), 1, "um aviso só: {avisos:?}");
+        let AvisoDto::Late {
+            ended_at,
+            session_completed,
+            ..
+        } = &avisos[0]
+        else {
+            panic!("o aviso é o do atraso: {avisos:?}");
+        };
+        assert_eq!(*ended_at, T0.0 + 25 * 60_000);
+        assert!(*session_completed);
+        let periodo = r
+            .efeitos
+            .iter()
+            .find_map(|e| match e {
+                Efeito::Period(p) => Some(*p),
+                _ => None,
+            })
+            .unwrap();
+        assert_eq!(periodo.ended_at, T0.0 + 25 * 60_000);
+        assert!(periodo.completed);
+        assert!(!novo.engine.is_running());
+    }
+
+    #[test]
+    fn retomada_de_temporizador_e_cronometro() {
+        let (m, relogio) = motor();
+        let r = m
+            .executar(
+                "timer_create",
+                json!({ "name": "Chá", "durationMs": 300_000 }),
+            )
+            .unwrap();
+        let Resultado::Temporizadores(t) = &r.resultado else {
+            panic!("timer_create devolve os temporizadores");
+        };
+        let id = t.timers.last().unwrap().id;
+        m.executar("timer_start", json!({ "id": id })).unwrap();
+        m.executar("stopwatch_start", json!(null)).unwrap();
+        relogio.advance_ms(10_000);
+        m.executar("stopwatch_lap", json!(null)).unwrap();
+        let (novo, _, r, _) = reabrir(&m, EpochMs(T0.0 + 60_000));
+        assert!(r.resultado.avisos.is_empty(), "{:?}", r.resultado.avisos);
+        let e = novo.retrato().resultado;
+        assert_eq!(e.timers.timers.len(), 5, "os 4 padrão e o novo");
+        let cha = e.timers.timers.iter().find(|x| x.id == id).unwrap();
+        assert_eq!(cha.name, "Chá");
+        assert_eq!(cha.ends_at, Some(T0.0 + 300_000));
+        assert_eq!(e.stopwatch.laps.len(), 1);
+        assert_eq!(
+            serde_json::to_value(&e.stopwatch).unwrap()["status"],
+            "running"
+        );
+        assert_eq!(e.stopwatch.started_at, Some(T0.0));
+    }
+
+    #[test]
+    fn ultimo_id_continua_no_ocioso() {
+        let (m, _) = motor();
+        m.executar("focus_start", json!({ "minutes": 25 })).unwrap();
+        // A web grava a cada transição, como o desktop a cada `tt://state`.
+        m.para_gravar();
+        m.executar("focus_stop", json!(null)).unwrap();
+        let (novo, _, _, v) = reabrir(&m, T0);
+        assert_eq!(v["focus"]["session"], Value::Null);
+        let id = v["focus"]["lastSessionId"].as_i64().unwrap();
+        assert!(id > 0);
+        let v2: Value = serde_json::to_value(novo.para_gravar().resultado).unwrap();
+        assert_eq!(v2["focus"]["lastSessionId"], id, "não volta a 0");
+        let r = novo
+            .executar("focus_start", json!({ "minutes": 25 }))
+            .unwrap();
+        let Resultado::Foco(f) = r.resultado else {
+            panic!("focus_start devolve o foco");
+        };
+        assert!(f.session.unwrap().id > id, "o id não repete");
+    }
+
+    #[test]
+    fn texto_ausente_ilegivel_ou_de_outra_versao() {
+        assert_eq!(ler_estado(None), Carga::default());
+        let c = ler_estado(Some("{nada"));
+        assert!(c.corrompido);
+        assert_eq!(c.restored, Restored::default());
+        assert_eq!(c.avisos.len(), 1);
+        let c = ler_estado(Some("[]"));
+        assert!(c.corrompido);
+        let c = ler_estado(Some(r#"{"schemaVersion":2,"focus":{"lastSessionId":9}}"#));
+        assert!(!c.corrompido);
+        assert_eq!(c.restored, Restored::default());
+        assert_eq!(c.ultimo_id, 0);
+        assert_eq!(c.avisos.len(), 1);
+        // Uma parte ilegível fica no padrão, e as outras entram.
+        let c = ler_estado(Some(
+            r#"{"schemaVersion":1,"timers":"x","stopwatch":{"status":"idle","accumulatedMs":0,"laps":[]}}"#,
+        ));
+        assert_eq!(c.restored.timers, None);
+        assert!(c.restored.stopwatch.is_some(), "{:?}", c.avisos);
+        assert_eq!(c.avisos.len(), 1, "{:?}", c.avisos);
     }
 }
