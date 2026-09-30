@@ -86,3 +86,21 @@ No wasm (W02):
 
 - Uma tentativa anterior deste marco tinha deixado uma rodada parcial com `npm test` em 1: a regra do repositório "caminhos de arquivo nos scripts do Node saem do `fileURLToPath`" pegou o `desktop-sem-celular.mjs`, que foi corrigido antes desta base. As duas rodadas aqui partem do script já corrigido; a regra passa a valer para tudo em `scripts/web/`.
 - A bateria roda o `npm test` do checkout inteiro, então os scripts de `scripts/web/` também passam pelas regras do repositório.
+
+## W06a: o relógio no glue e a conta nova do `test:wasm`
+
+*30/09/2026, depois do `npm run wasm` do W06a (perfil `wasm-release`, `wasm-opt -Oz`).*
+
+- **`.wasm`:** `src/platform/web/pkg/tomatito_wasm_bg.wasm` com **400 275 bytes** (390,9 KiB; limite 532 480). Agora com o motor do desktop (`Engine`, eventos, temporizadores e cronômetro); era 316 828 no W01a.
+- **`grep -c 'Date.now' src/platform/web/pkg/tomatito_wasm.js` = 1.** É o import do `js_sys::Date::now()` do `RelogioJs`:
+
+  ```js
+  __wbg_now_<hash>: function() {
+      const ret = Date.now();
+      return ret;
+  },
+  ```
+
+  O glue resolve `Date.now` pelo global **a cada chamada** (não guarda a função num `const` do módulo). Por isso o relógio de teste do `verificar.mjs`, que troca o `Date.now` depois do carregamento, vale para o motor: o caso `fumaca` (b) confere isso no Chrome, e o teste `o_relogio_le_o_date_now_global_a_cada_uso` (`tomatito-wasm/tests/motor_js.rs`) confere no Node e no Chrome trocando o `Date.now` entre duas chamadas.
+- **`new Date()` sumiu do glue.** O `const ret = new Date();` do spike vinha do `Timestamp::now()` do jiff (feature `js`); o motor lê o tempo só pelo `RelogioJs`, e o `wasm-bindgen` tirou o import que ninguém usa. O único outro import de tempo é o `new Intl.DateTimeFormat(…)` do fuso (`fusoDoSistema`). O relógio de teste continua trocando o construtor sem argumentos, para o JS da página.
+- **Conta do `npm run test:wasm`:** o `testar-wasm.mjs` passa a rodar também o `tomatito-wasm`. Node e Chrome: **101 passam, 3 ignorados** = 87 do `tomatito-core` (a conta acima) + 9 unitários do `tomatito-wasm/src/lib.rs` + 5 do `tomatito-wasm/tests/motor_js.rs` (só no wasm). Os testes do `tomatito-motor` são `#[test]` simples e continuam só no nativo.

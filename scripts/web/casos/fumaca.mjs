@@ -4,9 +4,11 @@
 //   node scripts/web/verificar.mjs fumaca --servidor fumaca
 //
 // (a) o `.wasm` sai em /assets/ com hash no nome e `content-type: application/wasm`;
-// (b) iniciar 25 min em t0 e ler em t0 + 60 000 dá `restanteMs = 1440000`
-//     (e o relógio de teste, avançado 60 s, leva o `Date.now` junto);
-// (c) pausar sem fase correndo lança "não há fase correndo para pausar";
+// (b) iniciar 25 min e avançar o relógio de teste 60 s faz o restante do
+//     motor cair 60 s (o `RelogioJs` lê o `Date.now` trocado; W06a), e o
+//     `new Date()` anda junto;
+// (c) pausar sem fase correndo lança `{ code: 'notRunning', message: "não há
+//     fase correndo para pausar" }`, o erro do desktop;
 // (d) com o Chrome em TZ=America/Sao_Paulo, o fuso vem com o nome IANA, e não UTC;
 // (e) com o perfil `--celular m`, `(pointer: coarse)` e `innerWidth === 390`.
 export const servidor = 'fumaca';
@@ -32,31 +34,38 @@ export default async function fumaca(t) {
     tipo,
   );
 
-  // (b) O t0 e o t0 + 60 000 vão explícitos (o motor nunca lê o relógio); o
-  // relógio de teste avança 60 s entre um e outro.
+  // (b) Desde o W06a, o motor lê o relógio sozinho (`Date.now`, pelo
+  // RelogioJs): o relógio de teste avança 60 s entre o início e a leitura.
   const b1 = await p.avaliar(`(() => {
-    const t0 = Date.now();
     window.motorB = new window.fumaca.Motor();
-    const r = window.motorB.focusStart(t0, 25, false, 25, 5);
-    window.t0 = t0;
-    return { t0, status: r.status, restanteMs: r.restanteMs };
+    const r = window.motorB.comando('focus_start', { minutes: 25 });
+    window.t0 = r.resultado.at;
+    return {
+      t0: r.resultado.at,
+      status: r.resultado.status,
+      restanteMs: r.resultado.session.remainingMs,
+      proximoPrazo: r.proximoPrazo,
+      efeitos: r.efeitos.map((e) => e.tipo),
+    };
   })()`);
   await t.relogio.avancar(60_000);
   const b2 = await p.avaliar(`(() => {
-    const t1 = Date.now();
+    const e = window.motorB.estado().resultado.focus;
     return {
-      restanteEmT0mais60s: window.motorB.restanteMs(window.t0 + 60000),
-      decorrido: t1 - window.t0,
+      restanteMs: e.session.remainingMs,
+      decorrido: e.at - window.t0,
       novoDate: new Date().getTime() - window.t0,
     };
   })()`);
   t.conferir(
-    '(b) iniciar 25 min em t0 e ler em t0 + 60 000 dá restanteMs = 1440000',
+    '(b) iniciar 25 min e avançar o relógio de teste 60 s leva o restante de 1500000 para cerca de 1440000',
     b1.status === 'focus' &&
       b1.restanteMs === 1_500_000 &&
-      b2.restanteEmT0mais60s === 1_440_000 &&
+      b1.proximoPrazo === b1.t0 + 1_500_000 &&
+      b1.efeitos.join() === 'state,phase' &&
       b2.decorrido >= 60_000 &&
       b2.decorrido < 65_000 &&
+      b2.restanteMs === 1_500_000 - b2.decorrido &&
       b2.novoDate >= 60_000 &&
       b2.novoDate < 65_000,
     { ...b1, ...b2 },
@@ -65,15 +74,15 @@ export default async function fumaca(t) {
   // (c)
   const c = await p.avaliar(`(() => {
     try {
-      new window.fumaca.Motor().focusPause(Date.now());
+      new window.fumaca.Motor().comando('focus_pause');
       return { lancou: false };
     } catch (e) {
-      return { lancou: true, mensagem: String(e && e.message) };
+      return { lancou: true, erroDoJs: e instanceof Error, code: e && e.code, mensagem: String(e && e.message) };
     }
   })()`);
   t.conferir(
-    '(c) pausar sem fase correndo lança "não há fase correndo para pausar"',
-    c.lancou && c.mensagem.includes('não há fase correndo para pausar'),
+    "(c) pausar sem fase correndo lança { code: 'notRunning', message: 'não há fase correndo para pausar' }",
+    c.lancou && !c.erroDoJs && c.code === 'notRunning' && c.mensagem === 'não há fase correndo para pausar',
     c,
   );
 

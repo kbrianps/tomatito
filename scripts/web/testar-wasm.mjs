@@ -32,8 +32,10 @@ import { delimiter, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const VERSAO_WBG = '0.2.129';
-// W04a acrescenta o tomatito-motor (os testes que sobem do desktop).
-const PACOTES = ['tomatito-core'];
+// W06a: mais o tomatito-wasm (o Motor com o RelogioJs e o WebSink, pelo
+// lado do Rust e pelo do JS). Os testes do tomatito-motor são `#[test]`
+// simples e continuam só no nativo (`cargo test --workspace`).
+const PACOTES = ['tomatito-core', 'tomatito-wasm'];
 const WIN = process.platform === 'win32';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));

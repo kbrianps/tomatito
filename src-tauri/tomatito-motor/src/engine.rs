@@ -500,6 +500,20 @@ impl<S: Sink> Engine<S> {
         self.lock().active()
     }
 
+    /// W06a: o prazo mais próximo entre o fim da fase que corre e o do
+    /// temporizador que corre rumo ao zero, sem avançar nada. `None` quando
+    /// nada vence (o mesmo caso em que [`Engine::is_running`] é `false`). A
+    /// web arma um despertador só para ele (PLANO-WEB, 3.4); o desktop não o
+    /// usa (o `laco()` roda a 4 Hz enquanto algo corre).
+    pub fn proximo_prazo(&self) -> Option<EpochMs> {
+        let g = self.lock();
+        g.focus
+            .deadline()
+            .into_iter()
+            .chain(g.timers.next_deadline())
+            .min()
+    }
+
     /// `get_state`: fecha o que venceu (o JS chama isto ao abrir e ao voltar
     /// de uma janela escondida, às vezes antes do primeiro tick depois de uma
     /// suspensão) e devolve o retrato.
@@ -862,6 +876,23 @@ mod tests {
         assert!(matches!(&out[1], Out::Phase(p) if p.cause == CauseDto::Started));
         assert_eq!(out.len(), 2);
         assert!(e.is_running());
+    }
+
+    #[test]
+    fn proximo_prazo_e_o_menor_entre_a_fase_e_os_temporizadores() {
+        let (e, clock) = motor();
+        assert_eq!(e.proximo_prazo(), None, "ocioso, sem temporizador");
+        e.start(5, false, None).unwrap();
+        assert_eq!(e.proximo_prazo(), Some(T0.plus_ms(300_000)));
+        // O de 1 min (id 1, dos padrões) vence antes da fase.
+        e.timer_start(1).unwrap();
+        assert_eq!(e.proximo_prazo(), Some(T0.plus_ms(60_000)));
+        // Pausado, o foco sai da conta; passado o zero, o temporizador também.
+        e.pause().unwrap();
+        clock.advance_ms(61_000);
+        e.tick();
+        assert_eq!(e.proximo_prazo(), None);
+        assert!(!e.is_running());
     }
 
     #[test]
