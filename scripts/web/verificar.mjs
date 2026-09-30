@@ -3,7 +3,7 @@
 // verificação"; PLANO-WEB-V1, seção 6; marco W01b). DevTools Protocol sem
 // puppeteer, sobre o scripts/web/chrome.mjs.
 //
-//   node scripts/web/verificar.mjs <caso> [--servidor fumaca|preview] [--celular <perfil>]
+//   node scripts/web/verificar.mjs <caso> [--servidor fumaca|preview|dev] [--celular <perfil>]
 //   node scripts/web/verificar.mjs --todos [--servidor …] [--celular …]
 //
 // - <caso> é scripts/web/casos/<caso>.mjs. Ele exporta a função padrão
@@ -16,7 +16,12 @@
 //   - `fumaca`: build da scripts/web/fumaca/ numa pasta temporária (fora do
 //     repositório, apagada no fim) e `vite preview` dela;
 //   - `preview`: `vite preview --config vite.web.config.js` sobre o dist-web
-//     (o `npm run build:web` vem antes; o vite.web.config.js chega no W03a).
+//     (o `npm run build:web` vem antes; o vite.web.config.js chega no W03a);
+//   - `dev` (W06b): o servidor de desenvolvimento do vite.web.config.js, com
+//     os módulos do src/ servidos um a um. O caso pode então fazer
+//     `await import('/src/lib/ipc.js')` na página e receber o mesmo módulo
+//     que o app usa, sem nenhum gancho de teste dentro do app (o caso foco
+//     chama o ipc assim).
 // - `--celular p|m|g|paisagem|minimo|tablet` liga um perfil de celular na aba
 //   principal (scripts/web/celular.mjs; PLANO-WEB-V1, seção 6).
 // - Reprova qualquer caso cujo console tenha "Refused to"
@@ -83,8 +88,8 @@ function lerArgs(argv) {
     } else if (a.startsWith('--')) throw new Error(`opção desconhecida: ${a}`);
     else opts.casos.push(a);
   }
-  if (opts.servidor && !['fumaca', 'preview'].includes(opts.servidor)) {
-    throw new Error(`--servidor inválido: ${opts.servidor} (use fumaca ou preview)`);
+  if (opts.servidor && !['fumaca', 'preview', 'dev'].includes(opts.servidor)) {
+    throw new Error(`--servidor inválido: ${opts.servidor} (use fumaca, preview ou dev)`);
   }
   if (opts.celular && !celular.PERFIS[opts.celular]) {
     throw new Error(`--celular inválido: ${opts.celular} (use ${Object.keys(celular.PERFIS).join(', ')})`);
@@ -93,7 +98,7 @@ function lerArgs(argv) {
     opts.casos = readdirSync(CASOS).filter((a) => a.endsWith('.mjs')).map((a) => basename(a, '.mjs')).sort();
   }
   if (!opts.casos.length) {
-    throw new Error('uso: node scripts/web/verificar.mjs <caso>|--todos [--servidor fumaca|preview] [--celular <perfil>]');
+    throw new Error('uso: node scripts/web/verificar.mjs <caso>|--todos [--servidor fumaca|preview|dev] [--celular <perfil>]');
   }
   return opts;
 }
@@ -118,16 +123,34 @@ async function semOuvintesDoVite(fn) {
   }
 }
 
+function garantirPkg() {
+  const pkg = join(RAIZ, 'src/platform/web/pkg/tomatito_wasm.js');
+  if (existsSync(pkg)) return;
+  console.error('src/platform/web/pkg/ não existe; rodando o npm run wasm');
+  const r = spawnSync(process.execPath, [join(RAIZ, 'scripts/web/wasm.mjs')], { cwd: RAIZ, stdio: 'inherit' });
+  if (r.status !== 0) throw new Error('o npm run wasm falhou');
+}
+
 async function subirServidor(tipo, limpar) {
   const vite = await import('vite');
   let config;
+  if (tipo === 'dev') {
+    garantirPkg();
+    const servidor = await semOuvintesDoVite(async () => {
+      const s = await vite.createServer({
+        root: RAIZ,
+        configFile: join(RAIZ, 'vite.web.config.js'),
+        logLevel: 'warn',
+        server: { host: 'localhost', port: PORTA, strictPort: true, open: false },
+      });
+      await s.listen();
+      return s;
+    });
+    limpar.push(() => servidor.close());
+    return servidor.resolvedUrls.local[0].replace(/\/$/, '');
+  }
   if (tipo === 'fumaca') {
-    const pkg = join(RAIZ, 'src/platform/web/pkg/tomatito_wasm.js');
-    if (!existsSync(pkg)) {
-      console.error('src/platform/web/pkg/ não existe; rodando o npm run wasm');
-      const r = spawnSync(process.execPath, [join(RAIZ, 'scripts/web/wasm.mjs')], { cwd: RAIZ, stdio: 'inherit' });
-      if (r.status !== 0) throw new Error('o npm run wasm falhou');
-    }
+    garantirPkg();
     const base = (await import(pathToFileURL(join(RAIZ, 'scripts/web/fumaca/vite.config.js')).href)).default;
     const saida = mkdtempSync(join(tmpdir(), 'tomatito-fumaca-'));
     limpar.push(() => rmSync(saida, { recursive: true, force: true }));
@@ -281,6 +304,7 @@ function criarContexto(chrome, origem) {
     let texto;
     if (method === 'Runtime.consoleAPICalled') {
       texto = params.args.map(formatarArg).join(' ');
+      pagina.consoles.push({ tipo: params.type, texto });
       console.error(`[console.${params.type}] ${texto}`);
     } else if (method === 'Log.entryAdded') {
       texto = params.entry.text;
@@ -325,6 +349,9 @@ function criarContexto(chrome, origem) {
       targetId,
       sessionId,
       respostas: [],
+      // Tudo o que a página escreveu no console (inclusive o console.debug),
+      // como { tipo, texto }, para o caso conferir.
+      consoles: [],
       perfil: undefined,
       fechada: false,
       cmd: (method, params = {}) => chrome.cmd(method, params, sessionId),

@@ -21,6 +21,30 @@ const GLOBAIS = `(function(){var w=window;try{var s=JSON.parse(localStorage.getI
 if(s&&s.theme){w.__TT_PREF__=s.theme;w.__TT_LAST__=s.lastNormalTheme;}}catch(e){}
 document.documentElement.dataset.casca='web';})();`;
 
+// W06b: os arquivos que o notices_read da web busca (PLANO-WEB-V1, 3.2), os
+// mesmos do bundle.resources do desktop (M46), ao lado do index.html: no
+// build, copiados para o dist-web; no dev, servidos do lugar deles. No W07a
+// passa para o plugin-web.mjs.
+const DOCUMENTOS = { 'THIRD_PARTY_NOTICES.md': 'THIRD_PARTY_NOTICES.md', 'OFL-Inter.txt': 'src/assets/OFL-Inter.txt' };
+const documentos = {
+  name: 'tomatito-web-documentos',
+  configureServer(servidor) {
+    servidor.middlewares.use((req, res, next) => {
+      const caminho = decodeURIComponent((req.url ?? '').split('?')[0]);
+      const base = servidor.config.base;
+      const nome = caminho.startsWith(base) ? caminho.slice(base.length) : null;
+      if (!nome || !Object.hasOwn(DOCUMENTOS, nome)) return next();
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.end(readFileSync(raiz(DOCUMENTOS[nome])));
+    });
+  },
+  generateBundle() {
+    for (const [nome, origem] of Object.entries(DOCUMENTOS)) {
+      this.emitFile({ type: 'asset', fileName: nome, source: readFileSync(raiz(origem)) });
+    }
+  },
+};
+
 export default {
   ...base,
   base: process.env.TOMATITO_WEB_BASE ?? '/',
@@ -38,6 +62,7 @@ export default {
   },
   plugins: [
     ...(base.plugins ?? []),
+    documentos,
     { name: 'tomatito-web-globais', transformIndexHtml: () => [{ tag: 'script', children: GLOBAIS, injectTo: 'head-prepend' }] },
   ],
 };
