@@ -19,7 +19,8 @@ import androidx.core.content.ContextCompat
  * item vira um alarme que, na hora, acorda o [FimReceiver], mesmo com o
  * processo morto. O `agendar` e o disparo passam pela mesma trava: o
  * `agendar` roda na thread do plugin e o receiver na principal, e os dois
- * leem e regravam a agenda das `SharedPreferences`.
+ * leem e regravam a agenda das `SharedPreferences`. O [BootReceiver] e o
+ * [PermissaoAlarmeReceiver] (A10b) passam por ela também ([reagendar]).
  */
 object AgendaDoSistema {
     const val TAG = "tomatito"
@@ -38,16 +39,52 @@ object AgendaDoSistema {
     private val trava = Any()
 
     /**
-     * Cancela os alarmes da agenda gravada, posta o que venceu sem aviso
-     * ([trocaDeAgenda]), grava a nova e agenda cada item: `setAlarmClock`
-     * com alarme exato permitido, `setAndAllowWhileIdle` sem ele
-     * ([apiDoAlarme]). Devolve quantos itens foram agendados com cada API.
+     * Troca a agenda gravada pela nova do Rust ([trocaDeAgenda]): o que venceu
+     * sem aviso sai agora, e a nova vai inteira para o `AlarmManager`
+     * ([aplicar]). Devolve quantos itens foram agendados com cada API.
      */
     fun agendar(contexto: Context, nova: List<Alarme>): Map<ApiDoAlarme, Int> = synchronized(trava) {
         val ctx = contexto.applicationContext
-        val prefs = preferencias(ctx)
-        val antiga = Agenda.deJson(prefs.getString(CHAVE_AGENDA, null))
+        val antiga = Agenda.deJson(preferencias(ctx).getString(CHAVE_AGENDA, null))
         val troca = trocaDeAgenda(antiga, nova, System.currentTimeMillis())
+        val contagem = aplicar(ctx, troca)
+        // Nada correndo (parado, pausado, fim da sessão): a contínua sai. Até o
+        // A11 (comando `continua`), é o único lugar que a tira fora do disparo.
+        if (troca.agendar.isEmpty() && troca.postarAgora.isEmpty()) continua(ctx, null)
+        Log.i(TAG, "agendar: ${troca.agendar.size} alarme(s) $contagem, ${troca.cancelar.size} cancelado(s)")
+        contagem
+    }
+
+    /**
+     * Reaplica a agenda gravada sem o Rust (5.2, item 5; A10b): depois do boot
+     * ([BootReceiver]) ou da concessão do alarme exato no Android 12/12L
+     * ([PermissaoAlarmeReceiver]). O que ainda não venceu volta ao
+     * `AlarmManager` (exato, se permitido); o vencido sai da agenda sem aviso
+     * ([reagendamento]). A contínua fica como está: no boot o sistema já a
+     * apagou, e ela volta no próximo disparo ou ao abrir o app (A11).
+     */
+    fun reagendar(contexto: Context, motivo: MotivoDoReagendamento): Map<ApiDoAlarme, Int> = synchronized(trava) {
+        val ctx = contexto.applicationContext
+        val gravada = Agenda.deJson(preferencias(ctx).getString(CHAVE_AGENDA, null))
+        val agora = System.currentTimeMillis()
+        val troca = reagendamento(gravada, agora, motivo)
+        val descartados = gravada.size - troca.agendar.size - troca.postarAgora.size
+        val contagem = aplicar(ctx, troca)
+        Log.i(
+            TAG,
+            "reagendar ($motivo): ${troca.agendar.size} alarme(s) $contagem, " +
+                "$descartados vencido(s) descartado(s) sem aviso, ${troca.postarAgora.size} postado(s) agora",
+        )
+        contagem
+    }
+
+    /**
+     * Aplica uma [Troca]: cancela os alarmes da agenda gravada, grava a nova,
+     * posta o que venceu sem aviso e agenda cada item: `setAlarmClock` com
+     * alarme exato permitido, `setAndAllowWhileIdle` sem ele ([apiDoAlarme]).
+     * Devolve quantos itens foram agendados com cada API. Chamar com a trava.
+     */
+    private fun aplicar(ctx: Context, troca: Troca): Map<ApiDoAlarme, Int> {
         val am = ctx.getSystemService(AlarmManager::class.java)
         for (id in troca.cancelar) {
             pedidoDoFim(ctx, id, 0, PendingIntent.FLAG_NO_CREATE)?.let {
@@ -56,9 +93,9 @@ object AgendaDoSistema {
             }
         }
         // Grava antes de agendar: um alarme que dispare já encontra o item.
-        prefs.edit().putString(CHAVE_AGENDA, Agenda.paraJson(troca.agendar)).commit()
+        preferencias(ctx).edit().putString(CHAVE_AGENDA, Agenda.paraJson(troca.agendar)).commit()
         for (a in troca.postarAgora) {
-            Log.i(TAG, "agendar: fim ${a.id} venceu antes do alarme; aviso postado agora")
+            Log.i(TAG, "fim ${a.id} venceu antes do alarme; aviso postado agora")
             postar(ctx, a)
         }
         val contagem = mutableMapOf(ApiDoAlarme.RELOGIO to 0, ApiDoAlarme.OCIOSO to 0)
@@ -66,11 +103,7 @@ object AgendaDoSistema {
             val api = agendarUm(ctx, am, a)
             contagem[api] = contagem.getValue(api) + 1
         }
-        // Nada correndo (parado, pausado, fim da sessão): a contínua sai. Até o
-        // A11 (comando `continua`), é o único lugar que a tira fora do disparo.
-        if (troca.agendar.isEmpty() && troca.postarAgora.isEmpty()) continua(ctx, null)
-        Log.i(TAG, "agendar: ${troca.agendar.size} alarme(s) $contagem, ${troca.cancelar.size} cancelado(s)")
-        contagem
+        return contagem
     }
 
     /**

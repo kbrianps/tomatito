@@ -231,4 +231,34 @@ class PurasTest {
         assertNull(disparoDaAgenda(agenda, 1, 65_000))
         assertNull(disparoDaAgenda(resto, 1, 60_000))
     }
+
+    @Test
+    fun depoisDoBootSoOQueNaoVenceuVoltaEONadaAvisa() {
+        val agenda = listOf(item(2, 120_000), item(1, 60_000), item(3, 180_000))
+        // Ligou aos 60,5 s: o fim 1 venceu há meio segundo e mesmo assim não avisa.
+        val t = reagendamento(agenda, agoraMs = 60_500, motivo = MotivoDoReagendamento.BOOT)
+        assertEquals(listOf(2, 1, 3), t.cancelar)
+        assertTrue(t.postarAgora.isEmpty())
+        assertEquals(listOf(2, 3), t.agendar.map { it.id })
+        // Tudo vencido: agenda vazia; nada gravado: nada a fazer.
+        assertTrue(reagendamento(agenda, 200_000, MotivoDoReagendamento.BOOT).agendar.isEmpty())
+        val vazia = reagendamento(emptyList(), 0, MotivoDoReagendamento.BOOT)
+        assertTrue(vazia.cancelar.isEmpty() && vazia.agendar.isEmpty() && vazia.postarAgora.isEmpty())
+    }
+
+    @Test
+    fun naConcessaoOVencidoRecenteSaiEOVelhoNao() {
+        val agenda = listOf(item(1, 60_000), item(2, 150_000), item(3, 240_000))
+        // O inexato do fim 1 atrasou: a concessão chega aos 61 s e ele sai agora.
+        val t = reagendamento(agenda, agoraMs = 61_000, motivo = MotivoDoReagendamento.PERMISSAO)
+        assertEquals(listOf(1, 2, 3), t.cancelar)
+        assertEquals(listOf(1), t.postarAgora.map { it.id })
+        assertEquals(listOf(2, 3), t.agendar.map { it.id })
+        // Vencido há mais que a tolerância: sai da agenda sem aviso.
+        val velho = reagendamento(agenda, 60_000 + Agenda.TOLERANCIA_MS + 1, MotivoDoReagendamento.PERMISSAO)
+        assertTrue(velho.postarAgora.isEmpty())
+        assertEquals(listOf(2, 3), velho.agendar.map { it.id })
+        // Nada venceu: a mesma agenda, agora exata.
+        assertEquals(listOf(1, 2, 3), reagendamento(agenda, 10_000, MotivoDoReagendamento.PERMISSAO).agendar.map { it.id })
+    }
 }

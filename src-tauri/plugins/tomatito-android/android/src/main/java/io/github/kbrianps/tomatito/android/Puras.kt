@@ -352,3 +352,37 @@ fun disparoDaAgenda(itens: List<Alarme>, id: Int, quandoMs: Long): Pair<Alarme, 
     val item = itens.firstOrNull { it.id == id && it.quandoMs == quandoMs } ?: return null
     return item to itens.filterNot { it === item }
 }
+
+/** Por que a agenda gravada é reaplicada sem o Rust (5.2, item 5; A10b). */
+enum class MotivoDoReagendamento {
+    /** `BOOT_COMPLETED`: o sistema apagou todos os alarmes ao desligar. */
+    BOOT,
+
+    /**
+     * `ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED` (Android 12/12L,
+     * só na concessão): os alarmes inexatos viram exatos.
+     */
+    PERMISSAO,
+}
+
+/**
+ * A agenda gravada reaplicada pelo `BootReceiver` ou pelo
+ * `PermissaoAlarmeReceiver` (5.2, item 5; A10b): cancela os códigos de
+ * pedido de todos os itens gravados e agenda de novo só os que ainda não
+ * venceram ([Agenda.pendentes]); os vencidos saem da agenda **sem aviso**
+ * (a retomada do motor, M40, mostra "Sessão concluída" ao abrir).
+ *
+ * Exceção, só na troca de permissão: um item vencido há menos de
+ * [Agenda.TOLERANCIA_MS] ainda está gravado porque o alarme inexato dele
+ * não disparou (o `FimReceiver` tira o que posta); ele sai agora, como na
+ * [trocaDeAgenda], em vez de sumir calado. Depois do boot, nada vencido
+ * avisa, por mais recente que seja.
+ */
+fun reagendamento(itens: List<Alarme>, agoraMs: Long, motivo: MotivoDoReagendamento): Troca {
+    val pendentes = Agenda.pendentes(itens, agoraMs)
+    return when (motivo) {
+        MotivoDoReagendamento.BOOT ->
+            Troca(cancelar = itens.map { it.id }.distinct(), postarAgora = emptyList(), agendar = pendentes)
+        MotivoDoReagendamento.PERMISSAO -> trocaDeAgenda(itens, pendentes, agoraMs)
+    }
+}
