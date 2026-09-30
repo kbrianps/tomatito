@@ -48,6 +48,7 @@ import { criar as criarDialogoAvisos } from './notices-dialog.js';
 import { ligarDicaSempreNaFrente } from './dica-sempre-na-frente.js';
 import { ligarOpcaoX11 } from './opcao-x11.js';
 import { ligarAvisosWeb } from './avisos-web.js';
+import { ligarAtualizarWeb } from './atualizar-web.js';
 
 const c = t.configuracoes;
 // M56: o `tomato_on_top_available`, carregado só quando a dica precisa (os
@@ -647,7 +648,8 @@ export function ligarSistemaESobre(
  * `porCodigo()` resolve com o `tomato_on_top_available` (M56, a dica), e
  * `compatX11` é o IPC da opção do M57 (opcao-x11.js; sem ele, o do app).
  * `avisosWeb` (W14) carrega a plataforma da seção Avisos (avisos-web.js; sem
- * ele, o `#plataforma`).
+ * ele, o `#plataforma`); a mesma serve ao cartão Atualizar (W16,
+ * atualizar-web.js).
  * Devolve a limpeza (o roteador a chama ao sair da tela).
  */
 export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.document, store = storeDoApp, ipc = ipcDoApp, porCodigo = sempreNaFrente, compatX11, avisosWeb } = {}) {
@@ -683,6 +685,8 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
   const semX11 = ligarOpcaoX11(raiz.querySelector('.tt-pagina'), { icone, ipc: compatX11 });
   // W14: a seção Avisos, só na web (avisos-web.js), depois da Aparência.
   const semAvisos = ligarAvisosWeb(raiz.querySelector('.tt-pagina'), { icone, plataforma: avisosWeb });
+  // W16: o cartão Atualizar, só na web e só com uma versão nova (atualizar-web.js).
+  const semAtualizar = ligarAtualizarWeb(raiz.querySelector('.tt-pagina'), { icone, plataforma: avisosWeb });
   return () => {
     grupo.removeEventListener('change', aoMudar);
     h.removeEventListener(EVENTO, aoTrocar);
@@ -691,5 +695,6 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
     semDica();
     semX11();
     semAvisos();
+    semAtualizar();
   };
 }

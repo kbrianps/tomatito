@@ -36,3 +36,9 @@ export const recursosDaCasca = () => SEM_RECURSOS_DA_CASCA;
  * desktop avisa pelo notify.rs, sem pedido: nada.
  */
 export const avisosDaCasca = null;
+
+/**
+ * W16: a atualização do service worker da web (platform/web/atualizacao.js).
+ * O desktop atualiza pelo instalador: nada.
+ */
+export const atualizacaoDaCasca = null;

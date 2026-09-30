@@ -23,6 +23,9 @@
 //     que o app usa, sem nenhum gancho de teste dentro do app (o caso foco
 //     chama o ipc assim). W07a: com a mesma CSP do build (TOMATITO_WEB_CSP_DEV
 //     no plugin-web.mjs), para os casos do dev também passarem por ela.
+// - W16: `t.servidor.parar()` derruba o servidor de teste (a aba fica
+//   offline) e `t.servidor.subir({ outDir })` o sobe de novo na mesma porta e
+//   origem, servindo outro build (só no `preview`; o caso pwa).
 // - `--celular p|m|g|paisagem|minimo|tablet` liga um perfil de celular na aba
 //   principal (scripts/web/celular.mjs; PLANO-WEB-V1, seção 6).
 // - Reprova qualquer caso cujo console tenha "Refused to"
@@ -133,7 +136,12 @@ function garantirPkg() {
   if (r.status !== 0) throw new Error('o npm run wasm falhou');
 }
 
-async function subirServidor(tipo, limpar) {
+/**
+ * Sobe o servidor de teste na 4273 e devolve a origem. O fechamento vai para
+ * `limpar` e também para `servidorAtual.fechar` (W16: o caso pwa derruba o
+ * servidor no meio e sobe outro build na mesma origem, com `outDir`).
+ */
+async function subirServidor(tipo, limpar, { outDir } = {}) {
   const vite = await import('vite');
   let config;
   if (tipo === 'dev') {
@@ -163,7 +171,9 @@ async function subirServidor(tipo, limpar) {
     const arquivo = join(RAIZ, 'vite.web.config.js');
     if (!existsSync(arquivo)) throw new Error('vite.web.config.js não existe (chega no W03a)');
     if (!existsSync(join(RAIZ, 'dist-web/index.html'))) throw new Error('dist-web/ não existe; rode npm run build:web');
-    config = { root: RAIZ, configFile: arquivo, logLevel: 'warn' };
+    const pasta = outDir ?? join(RAIZ, 'dist-web');
+    if (outDir && !existsSync(join(outDir, 'index.html'))) throw new Error(`${outDir} não tem index.html`);
+    config = { root: RAIZ, configFile: arquivo, logLevel: 'warn', ...(outDir ? { build: { outDir: pasta } } : {}) };
   }
   const servidor = await semOuvintesDoVite(() =>
     vite.preview({
@@ -171,10 +181,20 @@ async function subirServidor(tipo, limpar) {
       preview: { ...config.preview, host: 'localhost', port: PORTA, strictPort: true, open: false },
     }),
   );
-  limpar.push(() => servidor.close());
+  let fechado = false;
+  const fechar = async () => {
+    if (fechado) return;
+    fechado = true;
+    await servidor.close();
+  };
+  limpar.push(fechar);
+  servidorAtual.fechar = fechar;
   const origem = servidor.resolvedUrls.local[0].replace(/\/$/, '');
   return origem;
 }
+
+/** O fechamento do último servidor de preview que subiu (W16). */
+const servidorAtual = { fechar: async () => {} };
 
 // ---------------------------------------------------------------------------
 // Relógio de teste
@@ -470,6 +490,19 @@ async function rodarCaso(nome, opts, limpar) {
        * (W13: `Browser.setPermission` das notificações).
        */
       navegador: (method, params) => chrome.cmd(method, params),
+      /**
+       * W16 (caso pwa): derrubar o servidor de teste (a página fica
+       * "offline") e subir de novo, na mesma porta e origem, servindo
+       * `outDir` (outro build) ou o dist-web. Só no servidor `preview`.
+       */
+      servidor: {
+        parar: () => servidorAtual.fechar(),
+        async subir({ outDir } = {}) {
+          if (tipo !== 'preview') throw new Error('t.servidor.subir só no servidor preview');
+          const nova = await subirServidor(tipo, limpar, { outDir });
+          if (nova !== origem) throw new Error(`o servidor voltou em outra origem: ${nova} (era ${origem})`);
+        },
+      },
       perfis: celular.PERFIS,
       conferir(rotulo, ok, detalhe) {
         itens.push({ rotulo, ok: !!ok, detalhe });

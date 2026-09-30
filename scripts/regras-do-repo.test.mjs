@@ -1268,3 +1268,18 @@ test('web: o pedido de permissão só no permissao.js, e o InfoBar e a seção A
   }
   assert.match(ler('src/platform/tauri.js'), /^export const avisosDaCasca = null;$/m);
 });
+
+test('web: PWA com o manifest e o precache pelo plugin-web.mjs, e o SKIP_WAITING só pela página (W16)', () => {
+  const arquivos = arquivosEm('src').filter((f) => /\.m?js$/.test(f) && !f.endsWith('.test.js') && !f.startsWith('src/platform/web/pkg/'));
+  // O SW novo só assume pela mensagem da página (atualizacao.js), que ele atende.
+  const comMensagem = arquivos.filter((f) => /SKIP_WAITING/.test(semComentarios(ler(f))));
+  assert.deepEqual(comMensagem.sort(), ['src/platform/web/atualizacao.js', 'src/platform/web/sw.js']);
+  // O precache nunca cita o arquivo da página (4.2 do PLANO-WEB-V1).
+  assert.doesNotMatch(ler('src/platform/web/sw.js'), /index\.html/);
+  assert.match(ler('scripts/web/plugin-web.mjs'), /nome === 'index\.html' \? '\.\/' : nome/);
+  // A decisão é pela casca: o desktop não tem atualização pelo SW.
+  assert.match(ler('src/platform/tauri.js'), /^export const atualizacaoDaCasca = null;$/m);
+  assert.match(semComentarios(ler('src/views/atualizar-web.js')), /casca\?\.web/);
+  // O manifest e os ícones só no build web; o index.html do desktop não muda.
+  assert.doesNotMatch(indexHtml, /rel="manifest"|webmanifest/);
+});

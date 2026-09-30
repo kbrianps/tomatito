@@ -21,12 +21,16 @@
 // quando o som do mesmo passo tocou.
 // W14: o pedido de permissão (permissao.js), exposto às telas como
 // `avisosDaCasca` (o InfoBar da Foco e a seção Avisos das Configurações).
+// W16: o PWA. O sw.js guarda o app para funcionar offline; a política de
+// atualização (atualizacao.js) é exposta às telas como `atualizacaoDaCasca`
+// (o cartão Atualizar das Configurações).
 import focusEndUrl from '../../../src-tauri/sounds/focus-end.wav?url';
 import breakEndUrl from '../../../src-tauri/sounds/break-end.wav?url';
 import * as motor from './motor.js';
 import { criarSom } from './som.js';
 import { criarAvisos, registrarServiceWorker, registroAtivo } from './avisos.js';
 import { criarPermissao } from './permissao.js';
+import { criarAtualizacao } from './atualizacao.js';
 import * as configuracoes from './configuracoes.js';
 import * as estatisticas from './estatisticas.js';
 import * as tarefas from './tarefas.js';
@@ -72,8 +76,24 @@ const avisos = criarAvisos({
 });
 motor.aoEfeito('notice', (dados) => avisos.fase(dados, tomarSom()));
 motor.aoEfeito('timerNotice', (dados) => avisos.temporizador(dados, tomarSom()));
+/**
+ * W16: a atualização do service worker (atualizacao.js): aplicada sozinha só
+ * com nada correndo; senão, pelo cartão Atualizar. No desktop, null
+ * (platform/tauri.js).
+ */
+export const atualizacaoDaCasca = criarAtualizacao({
+  servico: globalThis.navigator?.serviceWorker ?? null,
+  correndo: motor.estaCorrendo,
+  recarregar: () => globalThis.location.reload(),
+});
+listen('tt://state', () => atualizacaoDaCasca.revisar());
+listen('tt://timers', () => atualizacaoDaCasca.revisar());
 // Registrado na carga, sem pedir permissão (o pedido é por clique, W14).
-registrarServiceWorker(import.meta.env.BASE_URL);
+// A atualização só é acompanhada com o motor já retomado: antes disso o
+// `correndo` diria "nada" mesmo com uma fase guardada, e a página recarregaria.
+Promise.all([registrarServiceWorker(import.meta.env.BASE_URL), motor.iniciar().catch(() => null)]).then(([reg]) =>
+  atualizacaoDaCasca.acompanhar(reg),
+);
 
 /** Os comandos que deixam algo correndo: o gesto que desperta o som (3.6). */
 const DESPERTAM = new Set(['focus_start', 'focus_resume', 'focus_skip', 'timer_start']);

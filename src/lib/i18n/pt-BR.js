@@ -338,6 +338,15 @@ export default Object.freeze({
         corpo: 'Os avisos estão ativados neste navegador.',
       }),
     }),
+    // W16: o cartão da atualização da versão web (views/atualizar-web.js;
+    // PLANO-WEB, 3.8). Só aparece com uma versão nova já baixada.
+    atualizar: Object.freeze({
+      secao: 'Atualização',
+      titulo: 'Nova versão disponível',
+      pronta: 'Já baixada. Ao atualizar, a página recarrega.',
+      correndo: 'Já baixada. Para atualizar, encerre a sessão e os temporizadores em andamento.',
+      botao: 'Atualizar',
+    }),
     // M57: a opção avançada do plano B2 (views/opcao-x11.js).
     avancado: 'Avançado',
     x11: Object.freeze({

@@ -19,6 +19,17 @@
 // W13: o service worker (src/platform/web/sw.js) na raiz do site, como
 // `sw.js` (escopo = a base): no build, emitido no dist-web sem hash no nome
 // (o endereço dele não pode mudar); no dev, servido do arquivo.
+// W16 (PLANO-WEB, 3.8; PLANO-WEB-V1, 4.2): o PWA.
+//   - Os ícones do manifest (src/platform/web/icones/, gerados do
+//     src-tauri/icons/icon.svg pelo scripts/web/icones.mjs), publicados em
+//     assets/ com hash no nome.
+//   - O `manifest.webmanifest` na raiz da base (sem hash: o endereço dele não
+//     pode mudar), com o <link rel="manifest"> no <head> (dev e build).
+//   - No build, o sw.js com o precache: a lista de tudo o que o bundle
+//     publicou (a página entra como `./`, nunca pelo nome do arquivo; o
+//     próprio sw.js fica de fora), o nome do cache
+//     `tomatito-<versão>-<hash8>` e o TOMATITO_WEB_BUILD. No dev, o sw.js
+//     sai como está (lista vazia, sem interceptar nada).
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -42,7 +53,100 @@ const BOOT_WEB = 'src/platform/web/boot-web.js';
 /** O service worker (W13): a fonte e o nome publicado, na raiz da base. */
 export const SW = Object.freeze({ fonte: 'src/platform/web/sw.js', nome: 'sw.js' });
 
+/** O manifest (W16), na raiz da base. */
+export const MANIFESTO = 'manifest.webmanifest';
+
+/** Os ícones do manifest (W16): a fonte no repositório, o lado e o propósito. */
+export const ICONES = Object.freeze([
+  Object.freeze({ fonte: 'src/platform/web/icones/icone-192.png', lado: 192, proposito: 'any' }),
+  Object.freeze({ fonte: 'src/platform/web/icones/icone-512.png', lado: 512, proposito: 'any' }),
+  Object.freeze({ fonte: 'src/platform/web/icones/icone-maskable-512.png', lado: 512, proposito: 'maskable' }),
+]);
+
 const sha256 = (texto) => createHash('sha256').update(texto).digest('base64');
+const hex8 = (conteudo) => createHash('sha256').update(conteudo).digest('hex').slice(0, 8);
+
+/** A versão do Cargo.toml (a mesma do Sobre; o vite.web.config.js lê igual). */
+export function versaoDoCargo(texto = readFileSync(raiz('src-tauri/Cargo.toml'), 'utf8')) {
+  const versao = /^\[package\][^[]*?^version = "([^"]+)"/m.exec(texto)?.[1];
+  if (!versao) throw new Error('plugin-web: versão não encontrada no src-tauri/Cargo.toml');
+  return versao;
+}
+
+/** O nome publicado de um ícone no build: em assets/, com hash no nome. */
+export function nomeDoIcone(fonte, conteudo) {
+  const nome = fonte.split('/').pop().replace(/\.png$/, '');
+  return `assets/${nome}-${hex8(conteudo)}.png`;
+}
+
+/**
+ * O manifest (3.8 do PLANO-WEB): `id`, `start_url` e `scope` na base, o nome,
+ * a cor do Lite e os ícones (`{ src, lado, proposito }`, com `src` já
+ * relativo à base).
+ */
+export function manifesto({ base, icones }) {
+  return {
+    id: base,
+    name: 'Tomatito',
+    short_name: 'Tomatito',
+    description: 'Timer de foco.',
+    lang: 'pt-BR',
+    dir: 'ltr',
+    start_url: base,
+    scope: base,
+    display: 'standalone',
+    theme_color: COR_INICIAL,
+    background_color: COR_INICIAL,
+    launch_handler: { client_mode: 'focus-existing' },
+    icons: icones.map(({ src, lado, proposito }) => ({
+      src: `${base}${src}`,
+      sizes: `${lado}x${lado}`,
+      type: 'image/png',
+      purpose: proposito,
+    })),
+  };
+}
+
+/**
+ * A lista do precache a partir dos nomes publicados: a página vira `./`, o
+ * sw.js sai (ele não se guarda), e o resto fica, em ordem.
+ */
+export function listaDoPrecache(nomes) {
+  const lista = new Set();
+  for (const nome of nomes) {
+    if (nome === SW.nome || nome.endsWith('.map')) continue;
+    lista.add(nome === 'index.html' ? './' : nome);
+  }
+  return [...lista].sort();
+}
+
+/**
+ * O nome do cache (3.8 do PLANO-WEB, com o item 9 das correções):
+ * `tomatito-<versão>-<hash8>`, com o hash8 dos 8 primeiros hex do sha256 da
+ * lista ordenada, cada entrada com o sha256 do conteúdo (a página e os
+ * documentos não têm hash no nome), mais `\n` e o TOMATITO_WEB_BUILD.
+ */
+export function nomeDoCache({ versao, conteudos, build = '' }) {
+  const linhas = Object.keys(conteudos)
+    .sort()
+    .map((url) => `${url} ${createHash('sha256').update(conteudos[url]).digest('hex')}`);
+  return `tomatito-${versao}-${hex8(`${linhas.join('\n')}\n${build}`)}`;
+}
+
+/** O sw.js do build: troca as três linhas marcadas da fonte. */
+export function swDoBuild(fonte, { precache, cache, build = '' }) {
+  const trocas = [
+    [/^const PRECACHE = \[\]; \/\/ tomatito:precache$/m, `const PRECACHE = ${JSON.stringify(precache)};`],
+    [/^const CACHE = 'tomatito-dev'; \/\/ tomatito:cache$/m, `const CACHE = ${JSON.stringify(cache)};`],
+    [/^const BUILD = ''; \/\/ tomatito:build$/m, `const BUILD = ${JSON.stringify(build)};`],
+  ];
+  let saida = fonte;
+  for (const [marca, linha] of trocas) {
+    if (!marca.test(saida)) throw new Error(`plugin-web: marca do sw.js não encontrada (${marca})`);
+    saida = saida.replace(marca, linha);
+  }
+  return saida;
+}
 
 /** Os scripts inline (sem `src`) de um HTML, com o conteúdo exato. */
 export function scriptsInline(html) {
@@ -67,7 +171,7 @@ export function politica(html) {
 }
 
 /** Põe `tags` logo depois do <meta charset> e troca a viewport. */
-export function montarHead(html, { bootSrc, csp }) {
+export function montarHead(html, { bootSrc, csp, manifestHref = null }) {
   const charset = /<meta charset="UTF-8" \/>\n?/i.exec(html);
   if (!charset) throw new Error('plugin-web: <meta charset> não encontrado no index.html');
   const viewport = /<meta name="viewport" content="[^"]*" \/>/;
@@ -75,6 +179,7 @@ export function montarHead(html, { bootSrc, csp }) {
   const recuo = '    ';
   const tags = [
     `<meta name="theme-color" content="${COR_INICIAL}" />`,
+    ...(manifestHref ? [`<link rel="manifest" href="${manifestHref}" />`] : []),
     `<script src="${bootSrc}"></script>`,
   ];
   const fim = charset.index + charset[0].length;
@@ -98,6 +203,19 @@ export default function pluginWeb({ cspNoDev = false } = {}) {
   const fonte = readFileSync(raiz(BOOT_WEB), 'utf8');
   // No build, com o hash no nome: o arquivo pode ficar em cache para sempre.
   const nomeNoBuild = `assets/boot-web-${createHash('sha256').update(fonte).digest('hex').slice(0, 8)}.js`;
+  const versao = versaoDoCargo();
+  const buildDoTeste = process.env.TOMATITO_WEB_BUILD ?? '';
+  const icones = ICONES.map((i) => {
+    const conteudo = readFileSync(raiz(i.fonte));
+    return { ...i, conteudo, publicado: nomeDoIcone(i.fonte, conteudo) };
+  });
+  // No dev, os ícones saem do lugar deles (o Vite serve o src/).
+  const textoDoManifesto = (noBuild) =>
+    `${JSON.stringify(
+      manifesto({ base, icones: icones.map((i) => ({ src: noBuild ? i.publicado : i.fonte, lado: i.lado, proposito: i.proposito })) }),
+      null,
+      2,
+    )}\n`;
 
   return {
     name: 'tomatito-web',
@@ -115,6 +233,12 @@ export default function pluginWeb({ cspNoDev = false } = {}) {
           res.end(readFileSync(raiz(SW.fonte)));
           return;
         }
+        if (nome === MANIFESTO) {
+          res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-cache');
+          res.end(textoDoManifesto(false));
+          return;
+        }
         if (!nome || !Object.hasOwn(DOCUMENTOS, nome)) return next();
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.end(readFileSync(raiz(DOCUMENTOS[nome])));
@@ -123,16 +247,35 @@ export default function pluginWeb({ cspNoDev = false } = {}) {
     buildStart() {
       if (!build) return;
       this.emitFile({ type: 'asset', fileName: nomeNoBuild, source: fonte });
-      this.emitFile({ type: 'asset', fileName: SW.nome, source: readFileSync(raiz(SW.fonte), 'utf8') });
       for (const [nome, origem] of Object.entries(DOCUMENTOS)) {
         this.emitFile({ type: 'asset', fileName: nome, source: readFileSync(raiz(origem)) });
       }
+      for (const i of icones) this.emitFile({ type: 'asset', fileName: i.publicado, source: i.conteudo });
+      this.emitFile({ type: 'asset', fileName: MANIFESTO, source: textoDoManifesto(true) });
+    },
+    // Depois de tudo (inclusive o index.html do Vite): o sw.js com a lista
+    // do que foi publicado.
+    generateBundle: {
+      order: 'post',
+      handler(_opcoes, bundle) {
+        if (!bundle['index.html']) throw new Error('plugin-web: o index.html não está no bundle do generateBundle');
+        const conteudos = {};
+        for (const [nome, item] of Object.entries(bundle)) {
+          const [url] = listaDoPrecache([nome]);
+          if (!url) continue;
+          conteudos[url] = item.type === 'asset' ? item.source : item.code;
+        }
+        const precache = listaDoPrecache(Object.keys(bundle));
+        const cache = nomeDoCache({ versao, conteudos, build: buildDoTeste });
+        const sw = swDoBuild(readFileSync(raiz(SW.fonte), 'utf8'), { precache, cache, build: buildDoTeste });
+        this.emitFile({ type: 'asset', fileName: SW.nome, source: sw });
+      },
     },
     transformIndexHtml: {
       order: 'post',
       handler(html) {
         const bootSrc = build ? `${base}${nomeNoBuild}` : `${base}${BOOT_WEB}`;
-        return montarHead(html, { bootSrc, csp: build || cspNoDev });
+        return montarHead(html, { bootSrc, csp: build || cspNoDev, manifestHref: `${base}${MANIFESTO}` });
       },
     },
   };

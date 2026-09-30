@@ -84,6 +84,8 @@ export const ICONES = Object.freeze([
   // como o ícone do InfoBar informativo do WinUI
   { nome: 'alert', estilo: 'regular', tamanhos: [20] },
   { nome: 'info', estilo: 'filled', tamanhos: [16] },
+  // W16 (só a web usa): o cartão "Atualizar" das Configurações, na grade de 20
+  { nome: 'arrow_sync', estilo: 'regular', tamanhos: [20] },
 ]);
 
 /** Os arquivos da lista, no formato do pacote: `play_16_filled.svg`. */
