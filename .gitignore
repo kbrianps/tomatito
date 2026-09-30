@@ -27,3 +27,6 @@ npm-debug.log*
 # padrão do wasm quando não há TOMATITO_WASM_TARGET_DIR nem CARGO_TARGET_DIR
 src/platform/web/pkg/
 src-tauri/target-wasm/
+
+# Saída do npm run build:web (PLANO-WEB, 3.9)
+dist-web/

@@ -272,7 +272,9 @@ test('M39: recursos no get_state, montados só no platform/recursos.js, e o Sobr
     }
   }
   // A versão vem do getVersion() (Cargo.toml), e "Sair do Tomatito" é o mesmo app_quit.
-  assert.match(ler('src/lib/ipc.js'), /^export \{ getVersion as versao \} from '@tauri-apps\/api\/app';$/m);
+  // Web (PLANO-WEB, 3.2): pelo `#plataforma`, que no desktop é o platform/tauri.js.
+  assert.match(ler('src/lib/ipc.js'), /^export \{ versao \} from '#plataforma';$/m);
+  assert.match(ler('src/platform/tauri.js'), /^export \{ getVersion as versao \} from '@tauri-apps\/api\/app';$/m);
   const tela = ler('src/views/settings.js');
   assert.match(tela, /ipc\.versao\?\.\(\)/);
   assert.match(tela, /ipc\.sair\(\)/);
@@ -689,7 +691,9 @@ test('M37: single-instance primeiro, window-state restrito, app_quit e os bloque
   assert.match(ler('src-tauri/src/commands.rs'), /pub fn app_quit\(app: AppHandle\) \{\s*crate::window::sair\(&app\);/);
   assert.match(ler('src/lib/ipc.js'), /export const sair = \(\) => invoke\('app_quit'\);/);
   const main = ler('src/main.js');
-  assert.match(main, /^if \(import\.meta\.env\.PROD\) ligarBloqueiosDeProducao\(\);\nelse ligarRecargaDoDev\(\);$/m);
+  // Web (PLANO-WEB, 3.2): os dois só com a casca que os pede (no desktop, sempre).
+  assert.match(main, /^if \(casca\.bloqueiosDeProducao\) \{\n  if \(import\.meta\.env\.PROD\) ligarBloqueiosDeProducao\(\);\n  else ligarRecargaDoDev\(\);\n\}$/m);
+  assert.match(main, /^  if \(casca\.atalhosDaJanela\) ligarAtalhosDaJanela\(/m);
   assert.match(main, /ligarAtalhosDaJanela\(\{ fechar: \(\) => win\.close\(\), sair: ipc\.sair \}\)/);
   // Junção com o Full: a página do tomate liga as mesmas regras (3.8), e o
   // Ctrl+W e o Ctrl+Q.
@@ -1129,4 +1133,67 @@ test('web: nenhum teste de src/platform/web/ importa o pkg/, o motor.js ou o ind
   for (const f of testes) {
     assert.deepEqual(especificadores(ler(f)).filter((e) => proibido.test(e)), [], f);
   }
+});
+
+// Versão web (PLANO-WEB-V1, 3.2; marco W03a): o `#plataforma` separa o Tauri
+// da camada web. Do src/main.js para dentro (o que o index.html carrega), só
+// o src/platform/tauri.js importa @tauri-apps; o tomato.js e o
+// menu-tomate.js (Full, só desktop) ficam fora desse grafo.
+const semComentarios = (texto) => texto.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"\\])\/\/.*$/gm, '$1');
+const importsEstaticos = (texto) =>
+  [...semComentarios(texto).matchAll(/(?:^|[;\s])(?:import|export)\s*(?:[^'";()]*?\bfrom\s*)?['"]([^'"]+)['"]/g)].map((m) => m[1]);
+
+test('web: do src/main.js em diante, só o platform/tauri.js importa @tauri-apps (W03a)', () => {
+  const visitados = new Set();
+  const comTauri = [];
+  const fila = ['src/main.js'];
+  while (fila.length) {
+    const arq = fila.shift();
+    if (visitados.has(arq)) continue;
+    visitados.add(arq);
+    for (const esp of importsEstaticos(ler(arq))) {
+      if (esp.startsWith('@tauri-apps/')) comTauri.push(arq);
+      let alvo = null;
+      if (esp === '#plataforma') alvo = 'src/platform/tauri.js';
+      else if (esp.startsWith('.')) alvo = new URL(esp, new URL(`file:///${arq}`)).pathname.slice(1);
+      if (alvo?.endsWith('.js')) fila.push(alvo);
+    }
+  }
+  // O grafo chegou onde devia (o parser não perdeu imports).
+  for (const f of ['src/lib/ipc.js', 'src/components/title-bar.js', 'src/views/settings.js', 'src/platform/tauri.js', 'src/lib/store.js']) {
+    assert.ok(visitados.has(f), `${f} no grafo do main.js`);
+  }
+  assert.ok(!visitados.has('src/tomato.js') && !visitados.has('src/lib/menu-tomate.js'), 'o Full fica fora do grafo');
+  assert.deepEqual([...new Set(comTauri)], ['src/platform/tauri.js']);
+  // O parser pega as três formas de import.
+  assert.deepEqual(importsEstaticos("import 'a.js';\nimport {\n  b,\n} from './b.js';\nexport { c } from '#c';\n// import 'x.js';"), ['a.js', './b.js', '#c']);
+});
+
+test('web: src/platform/web/ não importa @tauri-apps nem a prévia do desktop (regra 2)', () => {
+  const arquivos = arquivosEm('src/platform/web').filter((f) => /\.[cm]?js$/.test(f) && !f.startsWith('src/platform/web/pkg/'));
+  assert.ok(arquivos.includes('src/platform/web/index.js'));
+  for (const f of arquivos) {
+    const ruins = importsEstaticos(ler(f)).filter((e) => e.startsWith('@tauri-apps/') || /scripts\/preview\//.test(e));
+    assert.deepEqual(ruins, [], f);
+  }
+  // O `#plataforma` escolhe pela condição do build web; sem ela (desktop e node --test), o Tauri.
+  assert.deepEqual(pkg.imports['#plataforma'], { 'tomatito-web': './src/platform/web/index.js', default: './src/platform/tauri.js' });
+});
+
+test('web: a casca das duas plataformas, com as mesmas chaves (PLANO-WEB-V1, 3.2)', async () => {
+  const chaves = ['web', 'barraDeTitulo', 'bloqueiosDeProducao', 'atalhosDaJanela', 'atalhosDeNavegacao', 'sair', 'full', 'formaCelular'];
+  const casca = (arq) => {
+    const m = /export const casca = Object\.freeze\(\{([\s\S]*?)\}\);/.exec(ler(arq));
+    assert.ok(m, `casca em ${arq}`);
+    return Object.fromEntries([...m[1].matchAll(/^\s*(\w+): (true|false),/gm)].map((x) => [x[1], x[2] === 'true']));
+  };
+  const desktop = casca('src/platform/tauri.js');
+  const web = casca('src/platform/web/index.js');
+  assert.deepEqual(Object.keys(desktop), chaves);
+  assert.deepEqual(Object.keys(web), chaves);
+  for (const k of chaves) assert.equal(web[k], k === 'web' || k === 'formaCelular', `web.${k}`);
+  for (const k of chaves) assert.equal(desktop[k], k !== 'web' && k !== 'formaCelular', `desktop.${k}`);
+  const main = ler('src/main.js');
+  assert.match(main, /^  if \(casca\.full\) ligarValidacaoDoFull\(\{ ipc \}\)/m);
+  assert.match(main, /^  if \(casca\.atalhosDeNavegacao\) ligarAtalhosDeNavegacao\(/m);
 });

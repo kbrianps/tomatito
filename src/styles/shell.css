@@ -828,3 +828,11 @@ input.tt-deslizante:focus-visible{ outline:2px solid var(--tt-focus-outer); outl
 .tt-amostra-icone-16 .tt-icone{ width:16px; height:16px; }
 .tt-amostra-icone-20 .tt-icone{ width:20px; height:20px; }
 .tt-amostra-icone-24 .tt-icone{ width:24px; height:24px; }
+
+/* Versão web (PLANO-WEB, 3.2, item 4): a janela é a do navegador. Sem a
+   barra de título própria (a grade fica com uma linha só), a altura da área
+   visível e 8 px em cima, o respiro que mantém o canto da camada de conteúdo.
+   O data-casca="web" só existe no build web. */
+[data-casca="web"] .tt-titlebar{ display:none; }
+[data-casca="web"] .tt-janela{ grid-template-rows:minmax(0,1fr); height:100dvh; }
+[data-casca="web"] .tt-corpo{ padding-top:8px; }
