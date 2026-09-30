@@ -1,3 +1,7 @@
+// A agenda dos avisos de fim (PLANO-ANDROID 5.2, A09): só o Android a usa;
+// no desktop, só os testes a compilam.
+#[cfg(any(test, target_os = "android"))]
+mod agenda;
 mod anuncio;
 mod audio;
 mod avisos;
@@ -139,6 +143,12 @@ pub fn run() {
             // M38: F, B e os sons de fim de fase das configurações; cada
             // `settings_set` os regrava.
             motor.configurar(engine::Preferencias::from(&s));
+            // A09: a agenda do Android com as mesmas preferências e a
+            // velocidade do motor (sempre 1 no Android, `clock_from_env`).
+            #[cfg(target_os = "android")]
+            motor
+                .sink()
+                .configurar_agenda(engine::Preferencias::from(&s), speed);
             // M40: a retomada (`advance_to(now)` com a regra do atraso), antes
             // da bandeja e das janelas; o arquivo passa a ser o do motor.
             motor.restaurar(restaurado);

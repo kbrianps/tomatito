@@ -113,6 +113,9 @@ pub fn gravar_configuracoes(
         // motor nunca lê as configurações com a própria trava.
         if let Some(motor) = app.try_state::<AppEngine>() {
             motor.configurar(Preferencias::from(s));
+            // A09: os sons ligados escolhem o canal de cada aviso agendado.
+            #[cfg(target_os = "android")]
+            motor.sink().preferencias_da_agenda(Preferencias::from(s));
         }
         if let Some(som) = app.try_state::<Arc<Som>>() {
             som.definir_volume(s.volume);
