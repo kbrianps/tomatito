@@ -119,6 +119,9 @@ export function abrirChrome({ env = {}, args = [] } = {}) {
       '--no-first-run',
       '--no-default-browser-check',
       '--hide-scrollbars',
+      // W12: os casos tocam sons de verdade (Web Audio); nada sai na saída
+      // de áudio da sessão de quem roda.
+      '--mute-audio',
       ...args,
       'about:blank',
     ],

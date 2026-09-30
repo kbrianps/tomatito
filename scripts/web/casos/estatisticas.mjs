@@ -28,7 +28,8 @@
 //     EDT de 09/03 cai em "Hoje" e na semana (09/03 é segunda). Com o fuso
 //     fixo em -05:00 (sem horário de verão), os dois cairiam no mesmo dia;
 // (f) o motor provisório saiu: o console não tem "[provisório]" e o
-//     `sound_test` resolve sem tocar ("[sem som] sound_test").
+//     `sound_test` resolve com null (desde o W12 ele toca: o som.js anota o
+//     pedido no `historico`, com a origem 'teste').
 // O item (g) é do Node: `src/platform/web/motor-prototipo.js` não existe e
 // nada no `src/` o cita.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -247,13 +248,15 @@ export default async function estatisticas(t) {
   const { invoke } = await import('/src/platform/web/index.js');
   try { return (await invoke('sound_test', { sound: 'focusEnd' })) ?? 'null'; } catch (e) { return e; }
 })()`);
-  await sleep(200);
+  await sleep(700);
   const provisorios = p.consoles.filter((x) => x.texto.startsWith('[provisório]')).map((x) => x.texto);
-  const semSom = p.consoles.some((x) => x.texto.startsWith('[sem som] sound_test'));
+  const pedido = await p.avaliar(
+    `import('/src/platform/web/som.js').then((m) => m.historico.filter((h) => h.origem === 'teste').at(-1) ?? null)`,
+  );
   t.conferir(
-    '(f) sem "[provisório]" no console, e o sound_test resolve sem tocar',
-    provisorios.length === 0 && somResolveu === 'null' && semSom,
-    { provisorios, somResolveu, semSom },
+    '(f) sem "[provisório]" no console, e o sound_test resolve com null e passa pelo som.js',
+    provisorios.length === 0 && somResolveu === 'null' && pedido?.som === 'focusEnd',
+    { provisorios, somResolveu, pedido },
   );
 
   // (g)

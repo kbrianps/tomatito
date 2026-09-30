@@ -12,15 +12,45 @@
 // arquivo).
 // W08: as estatísticas e as tarefas, pelo estatisticas.js e pelo tarefas.js
 // (o stats.rs e o tasks.rs, com o IndexedDB no lugar do SQLite). O motor
-// provisório saiu; o `sound_test` resolve sem tocar até o som (W12).
+// provisório saiu.
+// W12: o som (som.js), com os WAVs do desktop publicados pelo Vite. O efeito
+// `sound` do motor toca; os comandos que deixam algo correndo despertam o
+// AudioContext (o gesto); cada transição do motor revisa o `suspend()`.
+import focusEndUrl from '../../../src-tauri/sounds/focus-end.wav?url';
+import breakEndUrl from '../../../src-tauri/sounds/break-end.wav?url';
 import * as motor from './motor.js';
+import { criarSom } from './som.js';
 import * as configuracoes from './configuracoes.js';
 import * as estatisticas from './estatisticas.js';
 import * as tarefas from './tarefas.js';
-import { emitir } from './barramento.js';
+import { emitir, listen } from './barramento.js';
 
 // Os períodos que o motor fecha vão para o IndexedDB.
 motor.aoEfeito('period', estatisticas.gravarPeriodo);
+
+const som = criarSom({
+  urls: { focusEnd: focusEndUrl, breakEnd: breakEndUrl },
+  novoContexto: () => new AudioContext(),
+  // Um contexto offline decodifica sem gesto nenhum; o AudioBuffer serve a
+  // qualquer contexto.
+  decodificar: async (url) => {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+    const bytes = await r.arrayBuffer();
+    return new OfflineAudioContext(1, 1, 44_100).decodeAudioData(bytes);
+  },
+  correndo: motor.estaCorrendo,
+  // Lido na hora de tocar: o settings_set já regravou as configurações.
+  volume: () => configuracoes.ler().volume,
+});
+motor.aoEfeito('sound', (sound) => som.tocar(sound, 'motor'));
+listen('tt://state', () => som.revisar());
+listen('tt://timers', () => som.revisar());
+// Os WAVs chegam na carga, sem esperar o primeiro fim de fase.
+som.carregar();
+
+/** Os comandos que deixam algo correndo: o gesto que desperta o som (3.6). */
+const DESPERTAM = new Set(['focus_start', 'focus_resume', 'focus_skip', 'timer_start']);
 
 export { emit, listen } from './barramento.js';
 export { janelaAtual } from './janela.js';
@@ -99,15 +129,15 @@ const LOCAIS = Object.freeze({
   task_add: tarefas.adicionar,
   task_complete: tarefas.concluir,
   task_delete: tarefas.apagar,
-  // Até o som (W12): resolve sem tocar.
-  sound_test: async ({ sound } = {}) => {
-    console.debug('[sem som] sound_test', sound ?? 'ambos');
-    return null;
-  },
+  // Toca mesmo com o som desligado nas configurações, como no desktop.
+  sound_test: async ({ sound } = {}) => som.testar(sound),
 });
 
 export async function invoke(cmd, args = {}) {
   if (Object.hasOwn(LOCAIS, cmd)) return LOCAIS[cmd](args);
+  // Ainda dentro do gesto (antes de qualquer await): cria ou retoma o
+  // AudioContext.
+  if (DESPERTAM.has(cmd)) som.despertar();
   if (SEM_SUPORTE.includes(cmd)) throw naoDisponivel();
   // O resto é do motor (o espelho do generate_handler!); um nome que ele não
   // atende rejeita com `unknownCommand`.

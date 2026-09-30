@@ -9,8 +9,9 @@
 // - Cada resposta do wasm traz os efeitos desde a chamada anterior, em ordem.
 //   Os que têm evento no desktop (`state`, `tick`, `phase`, `timers`,
 //   `stopwatch`) vão ao barramento com o mesmo nome (`tt://<tipo>`). Os que o
-//   desktop faz no Rust (`sound`, `notice`, `timerNotice`) ficam
-//   anotados em `semDono`, sem tocar nada: o som é do W12 e o aviso do W13.
+//   desktop faz no Rust vão ao dono registrado pelo index.js (`aoEfeito`):
+//   o `sound` ao som.js (W12). Os que ainda não têm dono (`notice`,
+//   `timerNotice`, até o W13) ficam anotados em `semDono`.
 //   O `period` (W08) vai ao estatisticas.js, que o grava no IndexedDB
 //   (`aoEfeito`, registrado pelo index.js).
 // - As preferências (F, B e os sons) vêm das configurações (configuracoes.js)
@@ -119,6 +120,21 @@ export function iniciar() {
     return motor;
   });
   return carregando;
+}
+
+/**
+ * Se há algo que vence (uma fase ou um temporizador rumo ao zero): o
+ * "parado" do som (3.6) é o contrário disso. Sem motor, ou parado por
+ * pânico, `false`.
+ */
+export function estaCorrendo() {
+  if (quebrado || !motor) return false;
+  try {
+    return motor.estaCorrendo();
+  } catch (erro) {
+    if (erro instanceof WebAssembly.RuntimeError) aoEntrarEmPanico(erro);
+    return false;
+  }
 }
 
 /** Se o motor parou por pânico (nenhuma chamada nem gravação depois). */

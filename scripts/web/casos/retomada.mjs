@@ -6,8 +6,9 @@
 //
 // Roda no servidor de desenvolvimento (`--servidor dev`), como o `foco`: a
 // página importa o /src/platform/web/index.js (o `#plataforma` do app, com o
-// `invoke`) e o /src/platform/web/motor.js, os mesmos módulos do app (o `semDono` guarda o `sound` e o `notice`, que ainda não
-// têm dono na web: o som é do W12 e o aviso do W13).
+// `invoke`) e o /src/platform/web/motor.js, os mesmos módulos do app (o
+// `semDono` guarda o `notice`, que ainda não tem dono na web até o W13; o
+// `sound` vai ao som.js desde o W12, que anota cada pedido no `historico`).
 //
 // (a) recarregar no meio de um foco de 25 min (7 min andados) mantém o tempo
 //     restante, com diferença de até 1 s, e a tela volta ao andamento; o
@@ -182,7 +183,9 @@ export default async function retomada(t) {
     avisos.length === 1 && aviso?.kind === 'late' && aviso.sessionCompleted === true && aviso.endedAt === prazo,
     avisos,
   );
-  const sons = semDono.filter((e) => e.tipo === 'sound');
+  // W12: o `sound` tem dono (som.js), que anota cada pedido no `historico`.
+  const pedidosDeSom = await p.avaliar(`import('/src/platform/web/som.js').then((m) => m.historico)`);
+  const sons = [...semDono.filter((e) => e.tipo === 'sound'), ...pedidosDeSom];
   t.conferir('(c) nenhum efeito sound', sons.length === 0, sons);
   const estado = await p.avaliar(`JSON.parse(localStorage.getItem('tomatito:estado'))`);
   t.conferir(
@@ -196,9 +199,11 @@ export default async function retomada(t) {
   await telaPronta(p);
   const deNovo = await p.avaliar(PERIODOS);
   const semDono2 = await p.avaliar(`import('/src/platform/web/motor.js').then((m) => m.semDono)`);
+  const pedidosDeSom2 = await p.avaliar(`import('/src/platform/web/som.js').then((m) => m.historico)`);
   t.conferir(
     '(c) recarregar de novo não grava o período outra vez nem repete o aviso',
-    deNovo.length === periodos.length && !semDono2.some((e) => e.tipo === 'notice' || e.tipo === 'sound'),
-    { periodos: deNovo.length, semDono: semDono2 },
+    deNovo.length === periodos.length && !semDono2.some((e) => e.tipo === 'notice' || e.tipo === 'sound') &&
+      pedidosDeSom2.length === 0,
+    { periodos: deNovo.length, semDono: semDono2, pedidosDeSom: pedidosDeSom2 },
   );
 }
