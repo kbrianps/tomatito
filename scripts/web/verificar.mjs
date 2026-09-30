@@ -21,7 +21,8 @@
 //     os módulos do src/ servidos um a um. O caso pode então fazer
 //     `await import('/src/lib/ipc.js')` na página e receber o mesmo módulo
 //     que o app usa, sem nenhum gancho de teste dentro do app (o caso foco
-//     chama o ipc assim).
+//     chama o ipc assim). W07a: com a mesma CSP do build (TOMATITO_WEB_CSP_DEV
+//     no plugin-web.mjs), para os casos do dev também passarem por ela.
 // - `--celular p|m|g|paisagem|minimo|tablet` liga um perfil de celular na aba
 //   principal (scripts/web/celular.mjs; PLANO-WEB-V1, seção 6).
 // - Reprova qualquer caso cujo console tenha "Refused to"
@@ -136,6 +137,7 @@ async function subirServidor(tipo, limpar) {
   let config;
   if (tipo === 'dev') {
     garantirPkg();
+    process.env.TOMATITO_WEB_CSP_DEV = '1';
     const servidor = await semOuvintesDoVite(async () => {
       const s = await vite.createServer({
         root: RAIZ,

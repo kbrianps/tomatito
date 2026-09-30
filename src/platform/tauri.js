@@ -23,3 +23,10 @@ export const casca = Object.freeze({
   full: true, // o modo Full (M50–M57)
   formaCelular: false, // nunca o layout de celular
 });
+
+/**
+ * O que só a web oferece (PLANO-WEB-V1, 3.2): no desktop, nada. A web devolve
+ * as mesmas chaves (platform/web/index.js).
+ */
+export const SEM_RECURSOS_DA_CASCA = Object.freeze({ notificacoes: false, instalavel: false });
+export const recursosDaCasca = () => SEM_RECURSOS_DA_CASCA;

@@ -6,20 +6,22 @@
 // W06b: o foco, os temporizadores e o cronômetro são do motor em wasm
 // (motor.js). O `get_state` junta o retrato do motor com as configurações e
 // os recursos. Os comandos do desktop sem equivalente no navegador respondem
-// aqui (PLANO-WEB-V1, 3.2, "Comandos na web"). PROVISÓRIO: configurações,
-// estatísticas, tarefas e o teste de som ainda vêm do motor-prototipo.js (o
-// mock da prévia), com um `console.debug('[provisório] …')` a cada uso, até
-// o W07a (configurações), o W08 (estatísticas e tarefas) e o W12 (som).
+// aqui (PLANO-WEB-V1, 3.2, "Comandos na web").
+// W07a: as configurações (settings_get e settings_set) também, pelo
+// configuracoes.js (o settings.rs do motor, com o localStorage no lugar do
+// arquivo). PROVISÓRIO: estatísticas, tarefas e o teste de som ainda vêm do
+// motor-prototipo.js (o mock da prévia), com um `console.debug('[provisório]
+// …')` a cada uso, até o W08 (estatísticas e tarefas) e o W12 (som).
 import * as motor from './motor.js';
 import { handlers as prototipo } from './motor-prototipo.js';
+import * as configuracoes from './configuracoes.js';
+import { emitir } from './barramento.js';
 
 export { emit, listen } from './barramento.js';
 export { janelaAtual } from './janela.js';
 
 /** Os comandos que ainda passam pelo motor provisório. */
 export const PROVISORIOS = Object.freeze([
-  'settings_get',
-  'settings_set',
   'stats_get',
   'task_list',
   'task_add',
@@ -65,14 +67,31 @@ async function lerDocumento({ doc } = {}) {
   return r.text();
 }
 
+/**
+ * `settings_set{patch}`, como o comando do desktop (commands.rs,
+ * gravar_configuracoes): aplica e grava; as preferências do motor e o
+ * `tt://settings` acompanham. O volume do som entra com o som.js (W12).
+ */
+async function gravarConfiguracoes({ patch } = {}) {
+  await motor.iniciar();
+  const s = configuracoes.gravar(patch);
+  await motor.configurar(s);
+  emitir('tt://settings', structuredClone(s));
+  return s;
+}
+
 /** Os comandos atendidos aqui mesmo, sem o motor. */
 const LOCAIS = Object.freeze({
   get_state: async () => ({
     ...(await motor.estado()),
-    // PROVISÓRIO até o W07a: as configurações do motor provisório.
-    settings: structuredClone(await prototipo.settings_get()),
+    settings: configuracoes.ler(),
     recursos: RECURSOS,
   }),
+  settings_get: async () => {
+    await motor.iniciar();
+    return configuracoes.ler();
+  },
+  settings_set: gravarConfiguracoes,
   notices_read: lerDocumento,
   // No navegador, a região aria-live basta (o desktop fala com o ATK, M43).
   a11y_announce: async () => null,
@@ -109,3 +128,22 @@ export const casca = Object.freeze({
   full: false, // o Full na web fica para depois
   formaCelular: true, // pode usar o layout de celular (quem liga é o boot-web.js, W07a)
 });
+
+// O que só o navegador oferece (PLANO-WEB-V1, 3.2): fora do `recursos` do
+// get_state (o platform/recursos.js é o do desktop e não muda). No desktop,
+// SEM_RECURSOS_DA_CASCA (platform/tauri.js), com as mesmas chaves.
+let recebeuConvite = false;
+globalThis.addEventListener?.('beforeinstallprompt', () => {
+  recebeuConvite = true;
+});
+
+/**
+ * `{ notificacoes, instalavel }`: avisos pelo service worker e o convite de
+ * instalação do navegador (o `beforeinstallprompt`) já recebido.
+ */
+export function recursosDaCasca() {
+  return Object.freeze({
+    notificacoes: 'Notification' in globalThis && 'serviceWorker' in (globalThis.navigator ?? {}),
+    instalavel: recebeuConvite,
+  });
+}

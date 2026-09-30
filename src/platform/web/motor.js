@@ -12,6 +12,8 @@
 //   desktop faz no Rust (`sound`, `notice`, `period`, `timerNotice`) ficam
 //   anotados em `semDono`, sem tocar nada: o som é do W12, o aviso do W13 e
 //   o período do W08.
+// - As preferências (F, B e os sons) vêm das configurações (configuracoes.js)
+//   ao criar o motor e a cada `settings_set` (`configurar`; W07a).
 // - Tick de 1 Hz só com a aba visível, por um `setTimeout` único encadeado
 //   (nenhum `setInterval` na camada web, regra 5), armado quando algo corre.
 //   Com a aba oculta, a cadeia para; na volta, o `visibilitychange` a religa
@@ -22,6 +24,7 @@
 //   recarga, mostrar o aviso (panico.js).
 import init, { Motor } from './pkg/tomatito_wasm.js';
 import { emitir } from './barramento.js';
+import * as configuracoes from './configuracoes.js';
 import { MARCA, decidir, mostrarAviso } from './panico.js';
 
 /** Os efeitos que viram eventos, com o nome do desktop. */
@@ -53,10 +56,15 @@ let proximoTick = null;
 
 const visivel = () => globalThis.document?.visibilityState !== 'hidden';
 
-/** Carrega o wasm e cria o motor, uma vez. Resolve com o motor. */
+/**
+ * Carrega o wasm e cria o motor, uma vez, já com as preferências das
+ * configurações salvas (F e B, sons; W07a), antes do primeiro comando.
+ * Resolve com o motor.
+ */
 export function iniciar() {
   carregando ??= init().then(() => {
     motor = new Motor();
+    motor.configurar(JSON.stringify(configuracoes.ler()));
     globalThis.document?.addEventListener('visibilitychange', aoMudarVisibilidade);
     return motor;
   });
@@ -127,6 +135,24 @@ export async function comando(nome, args) {
 export async function estado() {
   await iniciar();
   return chamar((m) => m.estado());
+}
+
+/**
+ * As configurações novas viram as preferências do motor (o `configurar` do
+ * `settings_set` do desktop, M38).
+ */
+export async function configurar(settings) {
+  await iniciar();
+  if (quebrado) throw ERRO_PARADO();
+  try {
+    motor.configurar(JSON.stringify(settings));
+  } catch (erro) {
+    if (erro instanceof WebAssembly.RuntimeError) {
+      aoEntrarEmPanico(erro);
+      throw ERRO_PARADO();
+    }
+    throw erro;
+  }
 }
 
 // ---------------------------------------------------------------------------

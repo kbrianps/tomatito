@@ -23,10 +23,11 @@ use std::sync::{Mutex, PoisonError};
 
 use serde::{Deserialize, Deserializer, Serialize};
 use tomatito_core::{Clock, EpochMs, Notice, Period, Sound, TimeZone, TimerEnded, TimerId};
-use tomatito_motor::engine::{CommandError, Engine, Sink};
+use tomatito_motor::engine::{CommandError, Engine, Preferencias, Sink};
 use tomatito_motor::events::{
     FocusDto, PhaseDto, PhaseEventDto, PhaseKindDto, StateDto, StopwatchDto, TickDto, TimersDto,
 };
+use tomatito_motor::settings::{Applied, Settings, SettingsError, aplicar_patch, apply};
 use wasm_bindgen::prelude::*;
 
 // ---------------------------------------------------------------------------
@@ -493,6 +494,13 @@ impl Motor {
         self.responder(s)
     }
 
+    /// As preferências do motor a partir das configurações (F e B da próxima
+    /// sessão e os sons de fim de fase), como o `settings_set` do desktop faz
+    /// a cada gravação (M38).
+    pub fn aplicar_configuracoes(&self, s: &Settings) {
+        self.engine.configurar(Preferencias::from(s));
+    }
+
     /// Um passo do relógio: fecha o que venceu e, com uma fase correndo,
     /// emite o `tick` se o segundo mostrado mudou. O `resultado` diz se
     /// ainda há algo correndo.
@@ -547,10 +555,67 @@ impl Motor {
         para_js(&self.passo())
     }
 
+    /// `configurar(json)`: as configurações (o JSON de um `settings_get`)
+    /// viram as preferências do motor. Lança `{ code, message }` se o JSON
+    /// não for umas configurações.
+    pub fn configurar(&self, json: &str) -> Result<(), JsValue> {
+        let s: Settings = serde_json::from_str(json).map_err(|e| {
+            para_js(&Erro::web(CodigoWeb::InvalidArgs, e.to_string())).unwrap_or_else(|e| e)
+        })?;
+        self.aplicar_configuracoes(&s);
+        Ok(())
+    }
+
     /// Se há algo que vence (uma fase ou um temporizador rumo ao zero).
     #[wasm_bindgen(js_name = estaCorrendo)]
     pub fn esta_correndo(&self) -> bool {
         self.engine.is_running()
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Configurações (W07a): o `settings.rs` do motor, sem o arquivo. A web guarda
+// o JSON no localStorage (`tomatito:config`); a leitura e o patch passam por
+// aqui, com as mesmas regras e os mesmos erros do desktop.
+// ---------------------------------------------------------------------------
+
+/// A leitura do `settings.json` do desktop (`load_from`), sobre um texto:
+/// ausente, ilegível ou que não é objeto dá os padrões; um objeto passa
+/// chave por chave pelo `apply` (as inválidas ficam no padrão, as
+/// desconhecidas são ignoradas) e depois pelas regras de tema.
+pub fn normalizar(texto: Option<&str>) -> Settings {
+    let objeto = match texto.map(serde_json::from_str::<serde_json::Value>) {
+        Some(Ok(serde_json::Value::Object(m))) => m,
+        _ => return Settings::default(),
+    };
+    let Applied { mut settings, .. } = apply(&Settings::default(), &objeto);
+    settings.normalize();
+    settings
+}
+
+/// O `settings_set` sem a gravação: o patch (texto JSON) sobre as
+/// configurações `base` (texto JSON, já normalizado). Um JSON ilegível no
+/// patch é recusado como um patch que não é objeto (`invalidPatch`).
+pub fn patch(base: Option<&str>, patch: &str) -> Result<Settings, SettingsError> {
+    let base = normalizar(base);
+    let valor = serde_json::from_str::<serde_json::Value>(patch).unwrap_or(serde_json::Value::Null);
+    aplicar_patch(&base, &valor)
+}
+
+/// `normalizarConfig(texto | null)`: as configurações normalizadas, como o
+/// `settings_get` as devolve.
+#[wasm_bindgen(js_name = normalizarConfig)]
+pub fn normalizar_config(texto: Option<String>) -> Result<JsValue, JsValue> {
+    para_js(&normalizar(texto.as_deref()))
+}
+
+/// `aplicarPatch(base | null, patch)`: as configurações novas, ou lança o
+/// `{ code, message }` do `SettingsError` do desktop.
+#[wasm_bindgen(js_name = aplicarPatch)]
+pub fn aplicar_patch_js(base: Option<String>, patch_json: &str) -> Result<JsValue, JsValue> {
+    match patch(base.as_deref(), patch_json) {
+        Ok(s) => para_js(&s),
+        Err(e) => Err(para_js(&e)?),
     }
 }
 
@@ -725,6 +790,70 @@ mod tests {
                 assert_ne!(code, CodigoWeb::UnknownCommand, "{c}");
             }
         }
+    }
+
+    #[test]
+    fn configuracoes_normalizadas_como_no_desktop() {
+        // Nada, lixo ou um valor que não é objeto: os padrões.
+        for texto in [None, Some("{"), Some("[1]"), Some("null")] {
+            assert_eq!(normalizar(texto), Settings::default(), "{texto:?}");
+        }
+        // Chave inválida fica no padrão; desconhecida é ignorada; o tema fixo
+        // leva o resolvedTheme e o lastNormalTheme junto.
+        let s = normalizar(Some(
+            r#"{"theme":"dark","volume":300,"tema":"x","focusMinutes":50}"#,
+        ));
+        assert_eq!(s.focus_minutes, 50);
+        assert_eq!(s.volume, Settings::default().volume);
+        let v = serde_json::to_value(&s).unwrap();
+        assert_eq!(
+            (&v["theme"], &v["resolvedTheme"], &v["lastNormalTheme"]),
+            (&json!("dark"), &json!("dark"), &json!("dark"))
+        );
+    }
+
+    #[test]
+    fn patch_recusado_com_o_code_do_desktop() {
+        // Os casos do teste de recusa do settings.rs do desktop.
+        let casos = [
+            (json!(["theme", "dark"]), "invalidPatch"),
+            (json!({ "theme": "dark", "tema": "dark" }), "unknownKey"),
+            (json!({ "schemaVersion": 2 }), "unknownKey"),
+            (json!({ "theme": "dark", "volume": 101 }), "invalidValue"),
+            (
+                json!({ "dailyGoalMinutes": 60, "resetHour": 24 }),
+                "invalidValue",
+            ),
+            (json!({ "focusMinutes": 25.5 }), "invalidValue"),
+        ];
+        for (p, code) in casos {
+            let e = patch(None, &p.to_string()).unwrap_err();
+            assert_eq!(serde_json::to_value(&e).unwrap()["code"], code, "{p}");
+        }
+        assert_eq!(
+            serde_json::to_value(patch(None, "{").unwrap_err()).unwrap()["code"],
+            "invalidPatch"
+        );
+        let s = patch(Some(r#"{"theme":"suave"}"#), r#"{"breakMinutes":10}"#).unwrap();
+        assert_eq!((s.break_minutes, s.theme.as_str()), (10, "suave"));
+    }
+
+    #[test]
+    fn configurar_muda_o_intervalo_da_proxima_sessao() {
+        let (m, relogio) = motor();
+        let s = patch(None, r#"{"breakMinutes":10}"#).unwrap();
+        m.aplicar_configuracoes(&s);
+        m.executar("focus_start", json!({ "minutes": 60 })).unwrap();
+        relogio.advance_min(25);
+        let v: Value = serde_json::to_value(m.passo()).unwrap();
+        let aviso = v["efeitos"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|e| e["tipo"] == "notice")
+            .unwrap()
+            .clone();
+        assert_eq!(aviso["dados"]["breakS"], 600, "{aviso}");
     }
 
     #[test]

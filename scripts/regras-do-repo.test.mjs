@@ -1202,3 +1202,42 @@ test('web: a casca das duas plataformas, com as mesmas chaves (PLANO-WEB-V1, 3.2
   assert.match(main, /^  if \(casca\.full\) ligarValidacaoDoFull\(\{ ipc \}\)/m);
   assert.match(main, /^  if \(casca\.atalhosDeNavegacao\) ligarAtalhosDeNavegacao\(/m);
 });
+
+test('web: todo literal de localStorage.getItem/setItem começa com tomatito: (regra 6, W07a)', () => {
+  const arquivos = arquivosEm('src').filter((f) => /\.m?js$/.test(f) && !f.startsWith('src/platform/web/pkg/'));
+  const literais = [];
+  for (const f of arquivos) {
+    for (const m of semComentarios(ler(f)).matchAll(/localStorage\s*\.\s*(?:getItem|setItem)\s*\(\s*(['"`])([^'"`]*)\1/g)) {
+      literais.push({ arquivo: f, chave: m[2] });
+    }
+  }
+  // A regra só vale se houver o que conferir: as configurações da web.
+  assert.ok(literais.some((l) => l.arquivo === 'src/platform/web/configuracoes.js' && l.chave === 'tomatito:config'));
+  assert.ok(literais.some((l) => l.arquivo === 'src/platform/web/boot-web.js' && l.chave === 'tomatito:config'));
+  assert.deepEqual(literais.filter((l) => !l.chave.startsWith('tomatito:')), []);
+});
+
+test('web: recursosDaCasca nas duas plataformas, com as mesmas chaves, e o recursos.js intocado (PLANO-WEB-V1, 3.2; W07a)', async () => {
+  const tauri = ler('src/platform/tauri.js');
+  const m = /export const SEM_RECURSOS_DA_CASCA = Object\.freeze\(\{ ([^}]*) \}\);/.exec(tauri);
+  assert.ok(m, 'SEM_RECURSOS_DA_CASCA no platform/tauri.js');
+  const desktop = Object.fromEntries(m[1].split(', ').map((par) => par.split(': ')));
+  assert.deepEqual(desktop, { notificacoes: 'false', instalavel: 'false' });
+  assert.match(tauri, /^export const recursosDaCasca = \(\) => SEM_RECURSOS_DA_CASCA;$/m);
+  const web = ler('src/platform/web/index.js');
+  const corpo = /export function recursosDaCasca\(\) \{\n  return Object\.freeze\(\{\n([\s\S]*?)\n  \}\);\n\}/.exec(web);
+  assert.ok(corpo, 'recursosDaCasca no platform/web/index.js');
+  assert.deepEqual([...corpo[1].matchAll(/^    (\w+):/gm)].map((x) => x[1]), Object.keys(desktop));
+  // O recursos.js (M39) continua com os três do Rust.
+  assert.match(ler('src/platform/recursos.js'), /export const SEM_RECURSOS = Object\.freeze\(\{ bandeja: false, sempreNaFrente: false, regiaoDeEntrada: false \}\);/);
+});
+
+test('web: boot, viewport e CSP pelo plugin-web.mjs, só no vite.web.config.js (W07a)', () => {
+  const web = ler('vite.web.config.js');
+  assert.match(web, /^import pluginWeb from '\.\/scripts\/web\/plugin-web\.mjs';$/m);
+  assert.match(web, /pluginWeb\(\{ cspNoDev: process\.env\.TOMATITO_WEB_CSP_DEV === '1' \}\)/);
+  assert.doesNotMatch(ler('vite.config.js'), /plugin-web/);
+  // O index.html do desktop não muda: a viewport e o boot da web só entram no build web.
+  assert.match(indexHtml, /<meta name="viewport" content="width=device-width, initial-scale=1\.0" \/>/);
+  assert.doesNotMatch(indexHtml, /boot-web|theme-color|data-forma/);
+});
