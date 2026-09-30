@@ -17,7 +17,7 @@
 //
 // O Chrome vem de $TOMATITO_CHROME, depois $CHROME, e por fim google-chrome.
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -104,6 +104,11 @@ async function removeProfile(dir) {
 export function abrirChrome({ env = {}, args = [] } = {}) {
   sweepStaleProfiles();
   const perfil = mkdtempSync(join(tmpdir(), PREFIXO_DO_PERFIL));
+  // O Chrome cria pastas próprias no TMPDIR (o socket de instância única e as
+  // baixas do atualizador, /tmp/com.google.Chrome.*) e no headless não as apaga.
+  // Com o TMPDIR dentro do perfil, elas somem junto com ele.
+  const tmpDoChrome = join(perfil, 'tmp');
+  mkdirSync(tmpDoChrome);
   const bin = process.env.TOMATITO_CHROME ?? process.env.CHROME ?? 'google-chrome';
   const proc = spawn(
     bin,
@@ -118,7 +123,7 @@ export function abrirChrome({ env = {}, args = [] } = {}) {
       'about:blank',
     ],
     // fd 3: comandos para o Chrome; fd 4: respostas e eventos (--remote-debugging-pipe).
-    { stdio: ['ignore', 'ignore', 'pipe', 'pipe', 'pipe'], env: { ...process.env, ...env } },
+    { stdio: ['ignore', 'ignore', 'pipe', 'pipe', 'pipe'], env: { ...process.env, TMPDIR: tmpDoChrome, ...env } },
   );
   const saiu = new Promise((res) => proc.once('exit', res));
   const vivo = () => proc.exitCode === null && proc.signalCode === null;
