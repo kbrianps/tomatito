@@ -15,10 +15,30 @@
 //   (`aoEfeito`, registrado pelo index.js).
 // - As preferências (F, B e os sons) vêm das configurações (configuracoes.js)
 //   ao criar o motor e a cada `settings_set` (`configurar`; W07a).
-// - Tick de 1 Hz só com a aba visível, por um `setTimeout` único encadeado
-//   (nenhum `setInterval` na camada web, regra 5), armado quando algo corre.
-//   Com a aba oculta, a cadeia para; na volta, o `visibilitychange` a religa
-//   (e o store pede um get_state, que fecha o que venceu no meio-tempo).
+// - Relógio (PLANO-WEB-V1, W11): três temporizadores, todos `setTimeout`
+//   (nenhum `setInterval` na camada web, regra 5), sem Worker:
+//   - prazo: um `setTimeout` único até o próximo prazo (`proximoPrazo` do
+//     prazo.js: fim da fase ou zero de um temporizador), com a aba visível
+//     ou oculta. É rearmado só a partir do efeito do motor e do
+//     `visibilitychange`, nunca de dentro de outro `setTimeout`: depois de
+//     cada chamada ao wasm, o rearme vai por uma mensagem de um
+//     MessageChannel (`pedirRearme`), uma tarefa que não é de timer e zera o
+//     nível de aninhamento. Assim o prazo nunca entra numa cadeia de 5 ou
+//     mais `setTimeout` aninhados, que o Chrome limita a 1 por minuto com a
+//     aba oculta há mais de 5 min (intensive throttling); um `setTimeout`
+//     fora de cadeia é conferido 1 vez por segundo;
+//   - tick visível: o `setTimeout` encadeado de 1 Hz, só com a aba visível
+//     e algo correndo. Com a aba oculta, a cadeia para; na volta, o
+//     `visibilitychange` a religa com um passo já (e o store pede um
+//     get_state, que fecha o que venceu no meio-tempo);
+//   - virada de minuto com a aba oculta: um `setTimeout` até a próxima
+//     mudança dos minutos da sessão (`proximaViradaDeMinuto`, + 50 ms), que
+//     dá um passo no motor (o `tt://tick` leva o restante novo) e se rearma
+//     pelo mesmo caminho do prazo. A cada minuto novo de uma fase sai uma
+//     vez (deduplicado por `fase.id` e minuto) o `tt-web://virada`, que o
+//     título da aba (W17) escuta. Essa cadeia pode cair no limite de 1 por
+//     minuto, e isso basta para um título em minutos; o prazo não depende
+//     dela.
 // - Retomada (W09): o `tomatito:estado` (estado.js) é gravado inteiro a cada
 //   transição (os efeitos `state`, `timers` e `stopwatch`, os mesmos que
 //   gravam o state.json no desktop), nunca a cada tick. Ao criar o motor, o
@@ -36,6 +56,7 @@ import { emitir } from './barramento.js';
 import * as configuracoes from './configuracoes.js';
 import * as estadoGravado from './estado.js';
 import { MARCA, decidir, mostrarAviso } from './panico.js';
+import { criarDeduplicador, idDaFase, minutosNoTitulo, proximaViradaDeMinuto, proximoPrazo } from './prazo.js';
 
 /** Os efeitos que viram eventos, com o nome do desktop. */
 export const EVENTOS = Object.freeze({
@@ -48,6 +69,19 @@ export const EVENTOS = Object.freeze({
 
 /** O intervalo do tick com a aba visível (o TICK_EVERY do motor). */
 export const TICK_MS = 1000;
+
+/** A virada de minuto com a aba oculta (W11), para o título da aba (W17). */
+export const EVENTO_VIRADA = 'tt-web://virada';
+
+/** A folga depois da virada de minuto (o `setTimeout` não dispara antes do atraso pedido). */
+export const FOLGA_DA_VIRADA_MS = 50;
+
+/**
+ * A folga depois do prazo. O `setTimeout` mede o atraso num relógio
+ * monotônico e o motor lê o `Date.now`; alguns ms de diferença fariam o passo
+ * chegar antes do prazo e só fechar a fase no rearme seguinte.
+ */
+export const FOLGA_DO_PRAZO_MS = 15;
 
 /** Quantos efeitos sem dono ficam anotados (os mais recentes). */
 const LIMITE_SEM_DONO = 50;
@@ -63,6 +97,11 @@ let motor = null;
 let carregando = null;
 let quebrado = false;
 let proximoTick = null;
+let temporizadorDoPrazo = null;
+let temporizadorDaVirada = null;
+let rearmePendente = false;
+let canal = null;
+const viradas = criarDeduplicador();
 
 const visivel = () => globalThis.document?.visibilityState !== 'hidden';
 
@@ -146,6 +185,7 @@ function chamar(f) {
   distribuir(resposta.efeitos);
   if (resposta.efeitos?.some((e) => GRAVAM.has(e.tipo))) gravarEstado();
   armarTick();
+  pedirRearme();
   return resposta.resultado;
 }
 
@@ -194,6 +234,7 @@ function esvaziarDepoisDoErro() {
   try {
     distribuir(motor.tick().efeitos);
     armarTick();
+    pedirRearme();
   } catch (erro) {
     if (erro instanceof WebAssembly.RuntimeError) aoEntrarEmPanico(erro);
     else console.error('[motor] ao esvaziar a fila depois de um erro', erro);
@@ -262,10 +303,104 @@ function aoMudarVisibilidade() {
   if (!visivel()) {
     clearTimeout(proximoTick);
     proximoTick = null;
+    // O prazo armado por um tick visível vinha de dentro da cadeia de 1 Hz;
+    // rearmado aqui, fora de qualquer timer, e com a virada de minuto junto.
+    rearmar();
     return;
   }
+  clearTimeout(temporizadorDaVirada);
+  temporizadorDaVirada = null;
   // Na volta, um passo já: fecha o que venceu e acerta a contagem.
   aoTick();
+}
+
+// ---------------------------------------------------------------------------
+// Prazo único e virada de minuto (W11).
+// ---------------------------------------------------------------------------
+
+/**
+ * Pede um rearme do prazo (e da virada) numa tarefa própria: a mensagem de
+ * um MessageChannel, que não é de timer e zera o nível de aninhamento dos
+ * `setTimeout` (o `chamar` roda dentro do tick, do prazo e da virada).
+ * Vários pedidos antes da mensagem chegar viram um só.
+ */
+function pedirRearme() {
+  if (rearmePendente || quebrado || !motor) return;
+  rearmePendente = true;
+  if (!canal) {
+    canal = new MessageChannel();
+    canal.port1.onmessage = () => {
+      rearmePendente = false;
+      rearmar();
+    };
+  }
+  canal.port2.postMessage(null);
+}
+
+/**
+ * Lê o retrato (o `estado` do wasm fecha o que venceu, e os efeitos vão aos
+ * donos como numa chamada comum, mas sem pedir outro rearme) e arma o prazo
+ * e, com a aba oculta, a virada de minuto. Chamado só pela mensagem do
+ * `pedirRearme` e pelo `visibilitychange`.
+ */
+function rearmar() {
+  if (quebrado || !motor) return;
+  let resposta;
+  try {
+    resposta = motor.estado();
+  } catch (erro) {
+    if (erro instanceof WebAssembly.RuntimeError) aoEntrarEmPanico(erro);
+    else console.error('[motor] ao rearmar o prazo', erro);
+    return;
+  }
+  distribuir(resposta.efeitos);
+  if (resposta.efeitos?.some((e) => GRAVAM.has(e.tipo))) gravarEstado();
+  armarTick();
+  const retrato = resposta.resultado;
+  const agora = Date.now();
+  const prazo = proximoPrazo(retrato);
+  // O prazo.js e o Engine::proximo_prazo têm de concordar.
+  if (prazo !== (resposta.proximoPrazo ?? null)) {
+    console.warn('[motor] prazo diverge do motor', { prazoJs: prazo, motor: resposta.proximoPrazo });
+  }
+  clearTimeout(temporizadorDoPrazo);
+  temporizadorDoPrazo = null;
+  if (prazo !== null) {
+    temporizadorDoPrazo = setTimeout(aoPrazo, Math.max(0, prazo - agora) + FOLGA_DO_PRAZO_MS);
+  }
+  clearTimeout(temporizadorDaVirada);
+  temporizadorDaVirada = null;
+  if (visivel()) return;
+  const minutos = minutosNoTitulo(retrato, agora);
+  if (minutos !== null && viradas.primeira(`${idDaFase(retrato)}:${minutos}`)) {
+    emitir(EVENTO_VIRADA, { fase: idDaFase(retrato), minutos, at: agora });
+  }
+  const virada = proximaViradaDeMinuto(retrato, agora);
+  if (virada !== null) {
+    temporizadorDaVirada = setTimeout(aoVirar, Math.max(0, virada - agora) + FOLGA_DA_VIRADA_MS);
+  }
+}
+
+function aoPrazo() {
+  temporizadorDoPrazo = null;
+  if (quebrado) return;
+  try {
+    // Fecha o que venceu; o chamar pede o rearme para o prazo seguinte.
+    chamar((m) => m.tick());
+  } catch (erro) {
+    if (erro?.code !== 'panicked') console.error('[motor] prazo', erro);
+  }
+}
+
+function aoVirar() {
+  temporizadorDaVirada = null;
+  if (quebrado || visivel()) return;
+  try {
+    // O passo leva o restante novo (tt://tick); o rearme emite a virada.
+    chamar((m) => m.tick());
+  } catch (erro) {
+    if (erro?.code !== 'panicked') console.error('[motor] virada de minuto', erro);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -283,8 +418,8 @@ function lerMarca() {
 function aoEntrarEmPanico(erro) {
   if (quebrado) return;
   quebrado = true;
-  clearTimeout(proximoTick);
-  proximoTick = null;
+  for (const t of [proximoTick, temporizadorDoPrazo, temporizadorDaVirada]) clearTimeout(t);
+  proximoTick = temporizadorDoPrazo = temporizadorDaVirada = null;
   console.error('[motor] o wasm parou (pânico)', erro);
   const agora = Date.now();
   if (decidir(lerMarca(), agora) === 'recarregar') {

@@ -453,6 +453,12 @@ async function rodarCaso(nome, opts, limpar) {
         },
       },
       novaAba: (o) => ctx.novaAba(o),
+      /**
+       * Traz `p` para a frente com `Target.activateTarget` (no nível do
+       * navegador): as outras abas ficam ocultas, com o `visibilitychange`
+       * real (W11).
+       */
+      ativarAba: (p) => chrome.cmd('Target.activateTarget', { targetId: p.targetId }),
       perfis: celular.PERFIS,
       conferir(rotulo, ok, detalhe) {
         itens.push({ rotulo, ok: !!ok, detalhe });

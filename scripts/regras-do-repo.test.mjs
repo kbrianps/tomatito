@@ -1140,6 +1140,19 @@ test('web: nenhum teste de src/platform/web/ importa o pkg/, o motor.js ou o ind
   }
 });
 
+test('web: nenhum setInterval em src/platform/web/ (regra 5; PLANO-WEB-V1, W11, sem Worker)', () => {
+  const arquivos = arquivosEm('src/platform/web').filter((f) => /\.[cm]?js$/.test(f) && !f.startsWith('src/platform/web/pkg/'));
+  assert.ok(arquivos.includes('src/platform/web/motor.js'));
+  assert.ok(arquivos.includes('src/platform/web/prazo.js'));
+  const semComentarios = (texto) => texto.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  for (const f of arquivos) assert.doesNotMatch(semComentarios(ler(f)), /\bsetInterval\b/, f);
+  // O W11 da v1 não tem Worker: o relógio é todo por setTimeout na página.
+  assert.deepEqual(arquivos.filter((f) => /worker/i.test(f)), []);
+  const motor = semComentarios(ler('src/platform/web/motor.js'));
+  assert.match(motor, /from '\.\/prazo\.js'/);
+  assert.match(motor, /new MessageChannel\(\)/, 'o rearme do prazo sai de uma mensagem, fora da cadeia de timers');
+});
+
 // Versão web (PLANO-WEB-V1, 3.2; marco W03a): o `#plataforma` separa o Tauri
 // da camada web. Do src/main.js para dentro (o que o index.html carrega), só
 // o src/platform/tauri.js importa @tauri-apps; o tomato.js e o
