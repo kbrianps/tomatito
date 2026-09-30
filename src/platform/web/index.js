@@ -24,6 +24,8 @@
 // W16: o PWA. O sw.js guarda o app para funcionar offline; a política de
 // atualização (atualizacao.js) é exposta às telas como `atualizacaoDaCasca`
 // (o cartão Atualizar das Configurações).
+// W17: o título da aba (aba.js), com o tempo da sessão como na bandeja do
+// desktop, desligável pela chave `tomatito:web.tempoNaAba`.
 import focusEndUrl from '../../../src-tauri/sounds/focus-end.wav?url';
 import breakEndUrl from '../../../src-tauri/sounds/break-end.wav?url';
 import * as motor from './motor.js';
@@ -35,6 +37,7 @@ import * as configuracoes from './configuracoes.js';
 import * as estatisticas from './estatisticas.js';
 import * as tarefas from './tarefas.js';
 import { emitir, listen } from './barramento.js';
+import './aba.js';
 
 // Os períodos que o motor fecha vão para o IndexedDB.
 motor.aoEfeito('period', estatisticas.gravarPeriodo);

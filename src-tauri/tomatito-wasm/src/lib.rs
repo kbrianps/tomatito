@@ -974,6 +974,32 @@ pub fn visivel_desde(agora: f64, hora_de_zerar: u8) -> f64 {
     visible_since(EpochMs(agora as i64), &TimeZone::system(), hora_de_zerar).0 as f64
 }
 
+// ---------------------------------------------------------------------------
+// Título da aba (W17): o tempo na bandeja do desktop, sem função nova no
+// i18n.rs. O JS lê a fase do retrato e os minutos (arredondados para cima,
+// como o `tray::vista`); o texto é o do `i18n::tray_time`.
+// ---------------------------------------------------------------------------
+
+/// A fase no fio (`"focus"`, `"break"`, `"paused"`) como a da bandeja.
+pub fn fase_da_bandeja(fase: &str) -> Option<i18n::TrayPhase> {
+    match fase {
+        "focus" => Some(i18n::TrayPhase::Focus),
+        "break" => Some(i18n::TrayPhase::Break),
+        "paused" => Some(i18n::TrayPhase::Paused),
+        _ => None,
+    }
+}
+
+/// `tempoNaAba(fase, minutos)`: "24 min", "Intervalo · 4 min" ou
+/// "Pausado · 24 min" (o `i18n::tray_time`), ou `null` com uma fase que a
+/// bandeja não mostra. Os minutos já vêm arredondados pelo JS.
+#[wasm_bindgen(js_name = tempoNaAba)]
+pub fn tempo_na_aba(fase: &str, minutos: f64) -> Option<String> {
+    let fase = fase_da_bandeja(fase)?;
+    // `as` satura: negativo e NaN viram 0.
+    Some(i18n::tray_time(fase, minutos as u64))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1471,5 +1497,20 @@ mod tests {
         assert_eq!(c.restored.timers, None);
         assert!(c.restored.stopwatch.is_some(), "{:?}", c.avisos);
         assert_eq!(c.avisos.len(), 1, "{:?}", c.avisos);
+    }
+
+    #[test]
+    fn tempo_na_aba_e_o_da_bandeja() {
+        assert_eq!(tempo_na_aba("focus", 25.0).as_deref(), Some("25 min"));
+        assert_eq!(
+            tempo_na_aba("break", 4.0).as_deref(),
+            Some("Intervalo · 4 min")
+        );
+        assert_eq!(
+            tempo_na_aba("paused", 24.0).as_deref(),
+            Some("Pausado · 24 min")
+        );
+        assert_eq!(tempo_na_aba("idle", 3.0), None);
+        assert_eq!(tempo_na_aba("focus", -1.0).as_deref(), Some("0 min"));
     }
 }
