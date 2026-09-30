@@ -50,7 +50,7 @@ export const ORIGENS = Object.freeze({
 /** Pacotes de desenvolvimento que entram no app mesmo assim (os ícones copiados). */
 const DEV_NO_APP = Object.freeze(['@fluentui/svg-icons']);
 /** Os crates do próprio Tomatito, fora dos avisos. */
-const CRATES_PROPRIOS = new Set(['tomatito', 'tomatito-core']);
+const CRATES_PROPRIOS = new Set(['tomatito', 'tomatito-core', 'tomatito-motor']);
 
 const semCR = (s) => s.replace(/\r\n?/g, '\n').replace(/\s+$/, '');
 

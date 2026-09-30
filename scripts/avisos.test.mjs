@@ -51,7 +51,7 @@ test('avisos: cada crate que entra no binário (Linux e Windows) está nos aviso
   const usados = [...avisos.matchAll(/^Usado por: (.+)$/gm)].flatMap((m) => m[1].split(', '));
   assert.ok(usados.length > 200);
   for (const c of usados) assert.ok(noLock.has(c), `${c} no Cargo.lock`);
-  assert.ok(!usados.some((c) => /^tomatito(-core)? /.test(c)), 'sem os crates do próprio app');
+  assert.ok(!usados.some((c) => /^tomatito(-core|-motor)? /.test(c)), 'sem os crates do próprio app');
   const arvore = execFileSync(
     'cargo',
     ['tree', '--offline', '--locked', '-e', 'normal,no-proc-macro', '--target', 'x86_64-unknown-linux-gnu',
@@ -59,7 +59,7 @@ test('avisos: cada crate que entra no binário (Linux e Windows) está nos aviso
     { cwd: new URL('../src-tauri/', import.meta.url), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
   );
   const noBinario = new Set(
-    arvore.split('\n').filter(Boolean).map((l) => l.replace(/ \(.*$/, '').replace(/ v(\S+)$/, ' $1')).filter((c) => !/^tomatito(-core)? /.test(c)),
+    arvore.split('\n').filter(Boolean).map((l) => l.replace(/ \(.*$/, '').replace(/ v(\S+)$/, ' $1')).filter((c) => !/^tomatito(-core|-motor)? /.test(c)),
   );
   assert.ok(noBinario.size > 200);
   const faltam = [...noBinario].filter((c) => !usados.includes(c));

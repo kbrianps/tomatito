@@ -4209,6 +4209,7 @@ dependencies = [
  "tauri-plugin-window-state",
  "tokio",
  "tomatito-core",
+ "tomatito-motor",
  "windows",
  "zbus",
 ]
@@ -4219,6 +4220,15 @@ version = "0.1.0"
 dependencies = [
  "jiff",
  "wasm-bindgen-test",
+]
+
+[[package]]
+name = "tomatito-motor"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tomatito-core",
 ]
 
 [[package]]

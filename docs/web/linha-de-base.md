@@ -19,7 +19,7 @@ Comparar uma rodada nova (`<atual>`) com esta base:
 B=docs/web/linha-de-base
 diff $B/build.txt <atual>/build.txt                    # vazio
 export LC_ALL=C   # com o locale pt_BR, o comm reclama da ordem do sort (visto no W03b)
-comm -23 <(sort $B/testes-cargo.txt) <(sort <atual>/testes-cargo.txt)  # vazio (nomes podem crescer, nenhum some); diff vazio no W04a, W04b e W05
+comm -23 <(sort $B/testes-cargo.txt) <(sort <atual>/testes-cargo.txt)  # vazio (nomes podem crescer, nenhum some); no W04a, W04b e W05, diff vazio contra a lista do marco anterior (a base já tem 5 nomes a menos, dos W01a a W03a)
 comm -23 <(sort $B/testes-node.txt) <(sort <atual>/testes-node.txt)    # vazio
 diff $B/arvore-desktop.txt <atual>/arvore-desktop.txt  # vazio; do W04a em diante, só a linha tomatito-motor
 python3 scripts/web/comparar-capturas.py $B <atual>    # saída 0

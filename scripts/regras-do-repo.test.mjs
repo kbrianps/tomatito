@@ -223,7 +223,7 @@ test('configurações no Rust: settings_get, settings_set e tt://settings, sem o
   assert.equal(lib.match(/generate_context!\(\)/g)?.length, 1);
   // M37: o Builder já nasce com o single-instance (o primeiro plugin, 3.4).
   assert.match(lib, /usar_x11_se_pedido\(&context\.config\(\)\.identifier\);\s*(?:\/\/.*\n\s*)*let builder =\s*tauri::Builder::default\(\)/);
-  assert.match(ler('src-tauri/src/events.rs'), /pub const SETTINGS: &str = "tt:\/\/settings";/);
+  assert.match(ler('src-tauri/tomatito-motor/src/events.rs'), /pub const SETTINGS: &str = "tt:\/\/settings";/);
   const ipcJs = ler('src/lib/ipc.js');
   assert.match(ipcJs, /configuracoes: 'tt:\/\/settings'/);
   assert.match(ipcJs, /invoke\('settings_set', \{ patch \}\)/);
@@ -243,7 +243,7 @@ test('bandeja: tray-icon e image-png, ícone depois do motor e CloseRequested s�
   const codigo = tray.split('#[cfg(test)]')[0].split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
   assert.doesNotMatch(codigo, /"(Iniciar|Pausar|Retomar) foco"|"Mostrar Tomatito"/);
   assert.match(tray, /run_on_main_thread\(move \|\|/, 'a bandeja posta na thread principal, sem esperar');
-  const i18n = ler('src-tauri/src/i18n.rs');
+  const i18n = ler('src-tauri/tomatito-motor/src/i18n.rs');
   for (const txt of ['Iniciar foco', 'Pausar foco', 'Mostrar Tomatito', 'Sair']) assert.ok(i18n.includes(`"${txt}"`), txt);
   // "Mostrar Tomatito" segue a 3.4: show, unminimize e set_focus na main.
   assert.match(ler('src-tauri/src/window/mod.rs'), /w\.show\(\);\s*let _ = w\.unminimize\(\);\s*let _ = w\.set_focus\(\);/);
@@ -340,7 +340,7 @@ test('temporizadores: comandos timer_*, tt://timers e o fim com som e notificaç
     assert.match(comandos, new RegExp(`pub fn ${c}\\(`));
     assert.match(ipcJs, new RegExp(`invoke\\('${c}'`), `${c} no ipc.js`);
   }
-  assert.match(ler('src-tauri/src/events.rs'), /pub const TIMERS: &str = "tt:\/\/timers";/);
+  assert.match(ler('src-tauri/tomatito-motor/src/events.rs'), /pub const TIMERS: &str = "tt:\/\/timers";/);
   assert.match(ipcJs, /temporizadores: 'tt:\/\/timers'/);
   const motor = ler('src-tauri/src/engine.rs');
   assert.match(motor, /impl<S: Sink> CountdownEffects for TimersOutbox/);
@@ -387,7 +387,7 @@ test('cronômetro: comandos stopwatch_*, tt://stopwatch, state.json e a tela', (
     assert.match(ipcJs, new RegExp(`invoke\\('${c}'\\)`), `${c} no ipc.js`);
   }
   assert.match(ler('src-tauri/tomatito-core/src/lib.rs'), /^pub mod stopwatch;$/m);
-  assert.match(ler('src-tauri/src/events.rs'), /pub const STOPWATCH: &str = "tt:\/\/stopwatch";/);
+  assert.match(ler('src-tauri/tomatito-motor/src/events.rs'), /pub const STOPWATCH: &str = "tt:\/\/stopwatch";/);
   assert.match(ipcJs, /cronometro: 'tt:\/\/stopwatch'/);
   assert.match(ler('src-tauri/src/engine.rs'), /self\.emit\(events::STOPWATCH, stopwatch\);\s*(\/\/[^\n]*\n\s*)*self\.estado\.save_stopwatch\(stopwatch\);/);
   const shell = ler('src/styles/shell.css');

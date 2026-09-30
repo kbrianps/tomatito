@@ -1,0 +1,20 @@
+[package]
+name = "tomatito-motor"
+version = "0.1.0"
+description = "Motor do Tomatito compartilhado pelo desktop e pela web (eventos e textos), sem Tauri"
+authors = ["kbrianps"]
+license = "MIT"
+edition = "2024"
+rust-version = "1.90"
+publish = false
+
+# PLANO-WEB, 3.3: o que o desktop e o tomatito-wasm usam igual. Só o
+# tomatito-core e o serde: nada de tauri, tokio, rusqlite ou rodio, para
+# compilar também em wasm32-unknown-unknown.
+[dependencies]
+tomatito-core = { path = "../tomatito-core" }
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+# Os testes dos retratos (events.rs) comparam o JSON, como faziam no desktop.
+serde_json = "1.0"

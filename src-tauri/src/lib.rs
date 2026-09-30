@@ -4,8 +4,6 @@ mod avisos;
 mod commands;
 mod compat_x11;
 mod engine;
-mod events;
-mod i18n;
 mod notify;
 mod persist;
 mod recursos;
@@ -15,6 +13,9 @@ mod stats;
 mod tasks;
 mod tray;
 mod window;
+
+// Vieram para o tomatito-motor (PLANO-WEB, 3.3, W04a), sem mudar o conteúdo.
+pub use tomatito_motor::{events, i18n};
 
 use std::sync::Arc;
 
