@@ -336,6 +336,10 @@ function criarContexto(chrome, origem) {
     } else if (method === 'Runtime.bindingCalled' && params.name === BINDING_CSP) {
       console.error(`[securitypolicyviolation] ${params.payload}`);
       problemas.recusas.push(`securitypolicyviolation ${params.payload}`);
+    } else if (method === 'BackgroundService.backgroundServiceEventReceived') {
+      // W13: o registro do DevTools dos serviços em segundo plano (o caso
+      // avisos liga o das notificações: "Notification displayed"/"closed").
+      pagina.segundoPlano.push(params.backgroundServiceEvent);
     } else if (method === 'Network.responseReceived') {
       const r = params.response;
       pagina.respostas.push({ url: r.url, status: r.status, mimeType: r.mimeType, headers: r.headers, tipo: params.type });
@@ -369,6 +373,8 @@ function criarContexto(chrome, origem) {
       // Tudo o que a página escreveu no console (inclusive o console.debug),
       // como { tipo, texto }, para o caso conferir.
       consoles: [],
+      // Os eventos do `BackgroundService` (W13), na ordem em que chegaram.
+      segundoPlano: [],
       perfil: undefined,
       fechada: false,
       cmd: (method, params = {}) => chrome.cmd(method, params, sessionId),

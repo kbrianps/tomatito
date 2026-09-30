@@ -23,6 +23,21 @@
 //     nem escreve erro no console, e fica anotado no `historico` do
 //     avisos.js.
 //
+// Como ler os avisos sem apagá-los (correção da verificação do W13): o
+// `getNotifications` do Chrome, a cada chamada, confere os avisos gravados
+// com os que a central de notificações mostra, e apaga do registro os que
+// ela ainda não mostra (a sincronização do Chromium; inferida do que se viu
+// abaixo). Entre o `showNotification` resolver (o aviso já
+// gravado) e a central o mostrar há uma janela curta, que cresce com a
+// máquina ocupada; um `getNotifications` nessa janela apaga o aviso recém-
+// -mostrado, e ele não volta mais na lista, embora siga na tela (visto no
+// registro do DevTools: "Notification displayed" sem nenhum "closed"). O app
+// nunca chama o `getNotifications`, então isto só atinge o teste. Por isso o
+// caso não sonda o `getNotifications` enquanto espera: liga o registro das
+// notificações do DevTools (`BackgroundService`, service 'notifications'),
+// espera o "Notification displayed" da tag, dá `ASSENTAR_MS` para a central
+// o mostrar e só então lê o `getNotifications`, uma vez.
+//
 // Roda no servidor de desenvolvimento (o plugin-web.mjs serve o sw.js do
 // arquivo): a página importa o /src/lib/ipc.js para parar a sessão e mexer
 // nos temporizadores, e o /src/platform/web/avisos.js para o histórico.
@@ -36,6 +51,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const T0 = 1_790_011_800_000;
 /** O primeiro foco de 60 min dura 1650 s; começando aqui, ele acaba perto das 14:30:10. */
 const INICIO = T0 - 1_650_000 + 10_000;
+
+/** Depois do "Notification displayed", quanto esperar antes do `getNotifications`. */
+const ASSENTAR_MS = 1000;
+/** Quanto esperar pelo "Notification displayed". */
+const ESPERA_DO_AVISO_MS = 15_000;
 
 async function esperar(p, expr, ms = 8000) {
   const fim = Date.now() + ms;
@@ -63,12 +83,36 @@ const avisos = (tag) => `(async () => {
   const lista = await reg.getNotifications(${tag ? `{ tag: ${JSON.stringify(tag)} }` : ''});
   return lista.map((n) => ({ title: n.title, body: n.body, silent: n.silent, tag: n.tag, timestamp: n.timestamp }));
 })()`;
-const quantos = (tag) => `${avisos(tag)}.then((l) => l.length)`;
 const fecharTodos = `(async () => {
   const reg = await navigator.serviceWorker.ready;
   for (const n of await reg.getNotifications()) n.close();
   return (await reg.getNotifications()).length;
 })()`;
+
+/** Quantos "Notification displayed" o DevTools registrou para a tag. */
+const exibidos = (p, tag) =>
+  p.segundoPlano.filter(
+    (e) => e.service === 'notifications' && e.eventName === 'Notification displayed' && e.instanceId === tag,
+  ).length;
+
+/**
+ * Espera o DevTools registrar mais um aviso na tag (além dos `antes`), dá
+ * `ASSENTAR_MS` e só então lê o `getNotifications` da tag, uma única vez
+ * (veja o cabeçalho). Devolve `{ exibido, lista }`.
+ */
+async function lerAvisoNovo(p, tag, antes) {
+  const fim = Date.now() + ESPERA_DO_AVISO_MS;
+  let exibido = true;
+  while (exibidos(p, tag) <= antes) {
+    if (Date.now() > fim) {
+      exibido = false;
+      break;
+    }
+    await sleep(50);
+  }
+  if (exibido) await sleep(ASSENTAR_MS);
+  return { exibido, lista: await p.avaliar(avisos(tag)) };
+}
 
 const hhmm = (p, instante) =>
   p.avaliar(`new Date(${instante}).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false })`);
@@ -131,6 +175,9 @@ export default async function casoAvisos(t) {
     setting: 'granted',
     origin: t.origem,
   });
+  // O registro do DevTools das notificações (veja o cabeçalho).
+  await p.cmd('BackgroundService.startObserving', { service: 'notifications' });
+  await p.cmd('BackgroundService.setRecording', { shouldRecord: true, service: 'notifications' });
   await t.relogio.posicionar(INICIO);
   await p.recarregar();
   if (!(await esperar(p, visivel(INICIAR)))) throw new Error('a tela Foco não apareceu');
@@ -152,16 +199,16 @@ export default async function casoAvisos(t) {
   if (!(await esperar(p, EM_ANDAMENTO, 4000))) throw new Error('a sessão não começou');
   await esperar(p, `import('/src/platform/web/som.js').then((m) => m.historico.length === 0)`, 1000);
   const foco = await faltaParaOPrazo(p);
+  const antesDoFoco = exibidos(p, 'tomatito:fase');
   await t.relogio.avancar(foco.falta + 200);
-  const chegou = await esperar(p, `${quantos('tomatito:fase')}.then((n) => n === 1)`, 8000);
-  const b = await p.avaliar(avisos('tomatito:fase'));
+  const { exibido: chegou, lista: b } = await lerAvisoNovo(p, 'tomatito:fase', antesDoFoco);
   t.conferir(
     '(b) o fim do foco: 1 aviso na tag tomatito:fase, com o título e o corpo do teste do i18n.rs',
     chegou && b.length === 1 &&
       b[0].title === 'Período de foco concluído' &&
       b[0].body === 'Intervalo de 5 min. Próximo foco às 14:35.' &&
       b[0].timestamp === foco.endsAt,
-    { avisos: b, prazo: foco.endsAt },
+    { avisos: b, prazo: foco.endsAt, exibido: chegou, historico: await p.avaliar(`${HISTORICO}.then((h) => h.map(({ dados, ...r }) => r))`) },
   );
   const sons = await p.avaliar(`import('/src/platform/web/som.js').then((m) => m.historico)`);
   t.conferir(
@@ -172,28 +219,28 @@ export default async function casoAvisos(t) {
 
   // (d)
   const intervalo = await faltaParaOPrazo(p);
+  const antesDoIntervalo = exibidos(p, 'tomatito:fase');
   await t.relogio.avancar(intervalo.falta + 30_000);
   const hora = await hhmm(p, intervalo.endsAt);
   const titulo = `Intervalo concluído às ${hora}`;
-  const trocou = await esperar(p, `${avisos('tomatito:fase')}.then((l) => l.length === 1 && l[0].title === ${JSON.stringify(titulo)})`, 6000);
-  const d = await p.avaliar(avisos('tomatito:fase'));
+  const { exibido: trocou, lista: d } = await lerAvisoNovo(p, 'tomatito:fase', antesDoIntervalo);
   t.conferir(
     `(d) 30 s além do prazo, com a aba visível: "${titulo}"`,
-    trocou && hora === '14:35' && d[0].body === 'Período de foco 2 de 2, 27 min.' &&
+    trocou && d.length === 1 && d[0].title === titulo && hora === '14:35' && d[0].body === 'Período de foco 2 de 2, 27 min.' &&
       (await p.avaliar('document.visibilityState')) === 'visible',
     { avisos: d, prazo: intervalo.endsAt },
   );
   await ipc(p, `return await ipc.foco.parar();`);
 
   // (e)
+  const antesDoTemporizador = exibidos(p, 'tomatito:temporizador');
   const id = await temporizadorDeUmMinuto(t);
-  const deu = await esperar(p, `${quantos('tomatito:temporizador')}.then((n) => n === 1)`, 6000);
-  const e = await p.avaliar(avisos('tomatito:temporizador'));
+  const { exibido: deu, lista: e } = await lerAvisoNovo(p, 'tomatito:temporizador', antesDoTemporizador);
   await ipc(p, `return await ipc.temporizadores.redefinir(${id});`);
   t.conferir(
     '(e) o fim do temporizador de 1 min: "Temporizador encerrado", "1 min"',
     deu && e.length === 1 && e[0].title === 'Temporizador encerrado' && e[0].body === '1 min',
-    e,
+    { avisos: e, exibido: deu },
   );
 
   // (f)
@@ -205,6 +252,7 @@ export default async function casoAvisos(t) {
   const restantes = await p.avaliar(fecharTodos);
   const errosAntes = p.consoles.filter((c) => c.tipo === 'error').length;
   const antes = (await p.avaliar(HISTORICO)).length;
+  const exibidosAntes = p.segundoPlano.filter((ev) => ev.eventName === 'Notification displayed').length;
   const id2 = await temporizadorDeUmMinuto(t);
   const anotou = await esperar(
     p,
@@ -214,14 +262,15 @@ export default async function casoAvisos(t) {
   await sleep(500);
   const ultimo = (await p.avaliar(HISTORICO)).at(-1);
   const depois = await p.avaliar(avisos());
+  const exibidosDepois = p.segundoPlano.filter((ev) => ev.eventName === 'Notification displayed').length;
   const errosDepois = p.consoles.filter((c) => c.tipo === 'error');
   await ipc(p, `return await ipc.temporizadores.redefinir(${id2});`);
   t.conferir(
     '(f) com denied: nenhum aviso, nenhum erro no console, e o motivo no histórico',
-    restantes === 0 && anotou && depois.length === 0 &&
+    restantes === 0 && anotou && depois.length === 0 && exibidosDepois === exibidosAntes &&
       ultimo.mostrado === false && ultimo.motivo === 'permissão: denied' &&
       (await p.avaliar('Notification.permission')) === 'denied' &&
       errosDepois.length === errosAntes,
-    { ultimo, avisos: depois, erros: errosDepois.slice(errosAntes) },
+    { ultimo, avisos: depois, exibidos: exibidosDepois - exibidosAntes, erros: errosDepois.slice(errosAntes) },
   );
 }
