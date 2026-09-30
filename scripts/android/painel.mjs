@@ -54,8 +54,11 @@ const extra = (bloco, chave) => {
 
 /**
  * As notificações ativas do pacote no `dumpsys notification --noredact`:
- * `{ tag, id, canal, flags, icone, quando, titulo, texto, cronometro,
- * contagemRegressiva, importancia }`. `icone` é o id do recurso (`0x7f...`).
+ * `{ tag, id, chave, canal, flags, icone, quando, titulo, texto, cronometro,
+ * contagemRegressiva, importancia, postadoMs, atualizadoMs, som }`. `icone` é
+ * o id do recurso (`0x7f...`); `postadoMs` é o `mCreationTimeMs` do registro
+ * (relógio de parede, o `postTime` da primeira postagem), `atualizadoMs` o
+ * `mUpdateTimeMs` e `som` o `mSound` (o do canal, A12).
  */
 export function notificacoesDoPacote(dump, pacote) {
   const partes = dump.split(/\n(?=\s+NotificationRecord\()/);
@@ -70,6 +73,7 @@ export function notificacoesDoPacote(dump, pacote) {
     lista.push({
       tag: cab[3] === 'null' ? null : cab[3],
       id: Number(cab[2]),
+      chave: cab[5],
       importancia: Number(cab[4]),
       canal: cab[6],
       flags: cab[7].split('|'),
@@ -79,6 +83,9 @@ export function notificacoesDoPacote(dump, pacote) {
       texto: extra(corpo, 'android.text') ?? null,
       cronometro: extra(corpo, 'android.showChronometer') ?? false,
       contagemRegressiva: extra(corpo, 'android.chronometerCountDown') ?? false,
+      postadoMs: Number(/^\s+mCreationTimeMs=(\d+)/m.exec(bloco)?.[1] ?? NaN),
+      atualizadoMs: Number(/^\s+mUpdateTimeMs=(\d+)/m.exec(bloco)?.[1] ?? NaN),
+      som: /^\s+mSound=\s*(\S+)/m.exec(bloco)?.[1] ?? null,
     });
   }
   return lista;
@@ -97,6 +104,20 @@ const desescapar = (s) =>
 export function agendaGravada(xml) {
   const m = /<string name="agenda">([^]*?)<\/string>/.exec(xml ?? '');
   return m ? JSON.parse(desescapar(m[1])) : null;
+}
+
+/**
+ * Os efeitos de som do `dumpsys notification`: `mSoundNotificationKey` (a
+ * chave do último aviso que tocou, ou `null`), `mZenMode` e
+ * `mDisableNotificationEffects` (A02: o `audiblyAlerted` não aparece no dump).
+ */
+export function efeitosDeSom(dump) {
+  const chave = /^\s+mSoundNotificationKey=(\S+)/m.exec(dump)?.[1] ?? null;
+  return {
+    somDoUltimo: chave === 'null' ? null : chave,
+    zen: /^\s+mZenMode=(\S+)/m.exec(dump)?.[1] ?? null,
+    efeitosDesligados: /^\s+mDisableNotificationEffects=(\S+)/m.exec(dump)?.[1] === 'true',
+  };
 }
 
 /** O `mState` do `dumpsys deviceidle` (ACTIVE, IDLE, ...). */
