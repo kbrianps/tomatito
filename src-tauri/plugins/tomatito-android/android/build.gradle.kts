@@ -1,4 +1,5 @@
 import com.android.build.api.dsl.LibraryExtension
+import com.android.build.api.variant.LibraryAndroidComponentsExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 // Plugin tomatito-android (PLANO-ANDROID 4.2). Gerado pelo `tauri plugin new`
@@ -41,4 +42,40 @@ dependencies {
     // a agenda (Puras.kt) usa o de verdade nos testes.
     testImplementation("org.json:json:20250517")
     implementation(project(":tauri-android"))
+}
+
+// Os sons de fim (5.5, A08): a fonte única são os WAV do desktop em
+// src-tauri/sounds/; esta tarefa os copia para um res/raw gerado (dentro da
+// saída do módulo, fora do /home), trocando `-` por `_`, que recurso Android
+// não aceita (`focus-end.wav` → `raw/focus_end`). Nada é copiado para o
+// src/main/res versionado.
+abstract class CopiarSons : DefaultTask() {
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.NAME_ONLY)
+    abstract val sons: ConfigurableFileCollection
+
+    @get:OutputDirectory
+    abstract val saida: DirectoryProperty
+
+    @TaskAction
+    fun copiar() {
+        val raw = saida.get().dir("raw").asFile
+        raw.deleteRecursively()
+        raw.mkdirs()
+        val wavs = sons.files.filter { it.name.endsWith(".wav") }
+        check(wavs.isNotEmpty()) { "nenhum WAV em src-tauri/sounds" }
+        for (wav in wavs) {
+            wav.copyTo(raw.resolve(wav.name.replace('-', '_')), overwrite = true)
+        }
+    }
+}
+
+val copiarSons = tasks.register<CopiarSons>("copiarSons") {
+    sons.from(fileTree(file("../../../sounds")) { include("*.wav") })
+}
+
+configure<LibraryAndroidComponentsExtension> {
+    onVariants { variante ->
+        variante.sources.res?.addGeneratedSourceDirectory(copiarSons, CopiarSons::saida)
+    }
 }

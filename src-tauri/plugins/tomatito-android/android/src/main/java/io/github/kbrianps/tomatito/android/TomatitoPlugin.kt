@@ -13,6 +13,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.view.View
+import android.webkit.WebView
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -48,13 +49,19 @@ class AbrirUrlArgs {
 /**
  * O plugin `tomatito-android` (PLANO-ANDROID 4.2). A07a: `permissoes` e
  * `cores`; A07b: `pedir_notificacoes`, `abrir_config_avisos`, `tocar` e
- * `abrir_url`; os outros comandos entram nos marcos de cada um. O JS chama
+ * `abrir_url`; A08: os canais de notificação, criados no `load`; os outros
+ * comandos entram nos marcos de cada um. O JS chama
  * pelo nome em snake_case, e o Tauri entrega ao método em lowerCamelCase.
  */
 @TauriPlugin(
     permissions = [Permission(strings = [Manifest.permission.POST_NOTIFICATIONS], alias = TomatitoPlugin.AVISOS)],
 )
 class TomatitoPlugin(private val activity: Activity) : Plugin(activity) {
+
+    /** Os canais existem desde a primeira abertura (5.5, A08), antes de qualquer aviso. */
+    override fun load(webView: WebView) {
+        criarCanais(activity.applicationContext)
+    }
 
     /** `{ notificacoes: granted|denied|prompt, alarmeExato, sdk }`. */
     @Command
@@ -108,24 +115,23 @@ class TomatitoPlugin(private val activity: Activity) : Plugin(activity) {
     }
 
     /**
-     * O "Testar" das Configurações (5.5): toca o som de `res/raw` com
+     * O "Testar" das Configurações (5.5): toca o som de `res/raw` (os WAV do
+     * `src-tauri/sounds/`, copiados pelo Gradle, A08) com
      * `USAGE_NOTIFICATION_EVENT`, no volume de notificação do sistema. Só é
      * chamado com a Activity visível (no Android 17, o áudio de um app sem
-     * Activity visível é silenciado). Os WAV entram em `res/raw` no A08; até
-     * lá, o comando recusa com "sem o recurso".
+     * Activity visível é silenciado). O Rust chama pelo `sound_test`.
      */
     @Command
     fun tocar(invoke: Invoke) {
         val args = invoke.parseArgs(TocarArgs::class.java)
         val recurso = recursoDoSom(args.som)
-        if (recurso == null) {
-            invoke.reject("som desconhecido: ${args.som}")
-            return
-        }
-        val id = activity.resources.getIdentifier(recurso, "raw", activity.packageName)
-        if (id == 0) {
-            invoke.reject("sem o recurso raw/$recurso")
-            return
+        val id = when (recurso) {
+            "focus_end" -> R.raw.focus_end
+            "break_end" -> R.raw.break_end
+            else -> {
+                invoke.reject("som desconhecido: ${args.som}")
+                return
+            }
         }
         val atributos = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)

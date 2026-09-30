@@ -43,6 +43,12 @@ pub struct Cores<'a> {
     pub claro: bool,
 }
 
+/// Os argumentos do `tocar`: `focusEnd` ou `breakEnd` (os nomes do `sound_test`).
+#[derive(Debug, Clone, Serialize)]
+pub struct Tocar<'a> {
+    pub som: &'a str,
+}
+
 /// O plugin Kotlin registrado, para o Rust do app.
 pub struct TomatitoAndroid<R: Runtime>(PluginHandle<R>);
 
@@ -54,6 +60,14 @@ impl<R: Runtime> TomatitoAndroid<R> {
     pub fn cores(&self, cores: Cores<'_>) -> Result<(), PluginInvokeError> {
         self.0
             .run_mobile_plugin::<serde::de::IgnoredAny>("cores", cores)
+            .map(|_| ())
+    }
+
+    /// O "Testar" (A08): toca o som de `res/raw` com a Activity visível. Volta
+    /// quando o som começa, sem esperar ele acabar.
+    pub fn tocar(&self, som: &str) -> Result<(), PluginInvokeError> {
+        self.0
+            .run_mobile_plugin::<serde::de::IgnoredAny>("tocar", Tocar { som })
             .map(|_| ())
     }
 }

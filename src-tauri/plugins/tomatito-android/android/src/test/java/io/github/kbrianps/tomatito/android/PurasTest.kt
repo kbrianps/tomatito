@@ -168,4 +168,30 @@ class PurasTest {
         assertNull(corOpaca("#gggggg"))
         assertNull(corOpaca(null))
     }
+
+    @Test
+    fun osCincoCanaisDoA08() {
+        // 5.5: ids, importância e som de cada canal (imutáveis depois de criados).
+        val porId = Canais.todos.associateBy { it.id }
+        assertEquals(5, porId.size)
+        assertEquals(Canal(Canais.FIM_FOCO, "Fim do foco", porId.getValue("fim-foco").descricao, true, "focus_end"), porId["fim-foco"])
+        assertEquals("break_end", porId.getValue("fim-intervalo").som)
+        assertEquals("focus_end", porId.getValue("fim-temporizador").som)
+        assertNull(porId.getValue("fim-sem-som").som)
+        assertNull(porId.getValue("sessao").som)
+        assertEquals(listOf(true, true, true, true, false), Canais.todos.map { it.alta })
+        // Os sons dos canais são os mesmos do "Testar".
+        assertEquals(setOf("focus_end", "break_end"), Canais.todos.mapNotNull { it.som }.toSet())
+        assertEquals(setOf(recursoDoSom("focusEnd"), recursoDoSom("breakEnd")), Canais.todos.mapNotNull { it.som }.toSet())
+        // Nenhum nome ou descrição com "Pomodoro".
+        assertFalse(Canais.todos.any { "pomodoro" in (it.nome + it.descricao).lowercase() })
+    }
+
+    @Test
+    fun oSomDoCanalVaiPeloNomeDoRecurso() {
+        assertEquals(
+            "android.resource://io.github.kbrianps.tomatito.debug/raw/focus_end",
+            Canais.uriDoSom("io.github.kbrianps.tomatito.debug", "focus_end"),
+        )
+    }
 }

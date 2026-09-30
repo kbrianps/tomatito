@@ -83,6 +83,8 @@ pub fn clock_from_env() -> (Box<dyn Clock>, f64) {
 /// e as notificações.
 pub struct TauriSink {
     app: tauri::AppHandle,
+    /// No Android, o motor não pede som (`sound`, abaixo).
+    #[cfg_attr(mobile, allow(dead_code))]
     som: Arc<Som>,
     notificador: Notificador,
     stats: Arc<Stats>,
@@ -144,7 +146,12 @@ impl Sink for TauriSink {
     fn sound(&self, sound: Sound) {
         // Só manda o pedido: o motor está travado aqui, e a thread de som é
         // que espera o som acabar, com o volume que ela guarda.
+        #[cfg(desktop)]
         self.som.tocar(sound);
+        // No Android, o som de fim é o do canal do aviso (PLANO-ANDROID 5.2,
+        // item 6, e 5.5): tocar aqui também o repetiria com o app aberto.
+        #[cfg(mobile)]
+        let _ = sound;
     }
     fn notice(&self, notice: Notice) {
         // Também sem esperar: o plugin entrega numa tarefa à parte.

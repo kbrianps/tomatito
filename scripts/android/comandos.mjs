@@ -16,8 +16,8 @@
 //     tela de avisos do app (APP_NOTIFICATION_SETTINGS);
 //  4. pedir_notificacoes mostra o pedido do sistema; com "Permitir" tocado,
 //     resolve com `notificacoes: 'granted'`, e o `permissoes` concorda;
-//  5. tocar recusa um som desconhecido e, sem os WAV em res/raw (A08),
-//     recusa com "sem o recurso".
+//  5. tocar recusa um som desconhecido e toca `focusEnd` (os WAV em res/raw
+//     são do A08; o som tocado é conferido pelo canais.mjs).
 // Imprime um JSON com cada conferência e sai 1 se alguma falhou.
 import { conectar } from './cdp.mjs';
 import { abrir, esperarPid, PACOTE_DEBUG } from './instalar.mjs';
@@ -126,8 +126,7 @@ async function principal() {
     const t1 = await recusa(cdp, plugin('tocar'), { som: 'nenhum' });
     conferir('tocar recusa som desconhecido', t1?.includes('som desconhecido'), t1);
     const t2 = await recusa(cdp, plugin('tocar'), { som: 'focusEnd' });
-    const temRaw = t2 === null;
-    conferir('tocar focusEnd: toca (com res/raw) ou recusa "sem o recurso" (antes do A08)', temRaw || t2?.includes('sem o recurso raw/focus_end'), t2);
+    conferir('tocar focusEnd resolve', t2 === null, t2);
     conferir('o mesmo pid do começo ao fim', (await esperarPid(adb, pacote)) === pid, pid);
   } finally {
     await cdp.fechar();

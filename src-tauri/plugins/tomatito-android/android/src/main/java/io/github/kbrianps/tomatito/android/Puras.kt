@@ -257,3 +257,55 @@ object Agenda {
     private fun texto(o: org.json.JSONObject, chave: String): String? =
         if (!o.has(chave) || o.isNull(chave)) null else o.optString(chave)
 }
+
+/**
+ * Um canal de notificação (5.5). Os canais são imutáveis depois de criados
+ * (o usuário é dono do som e da importância): mudar o som de um deles é criar
+ * outro, com outro `id`.
+ */
+data class Canal(
+    val id: String,
+    /** O nome que o usuário vê nas configurações de avisos do sistema. */
+    val nome: String,
+    val descricao: String,
+    /** Importância alta (aviso com som e heads-up) ou baixa (sem som, sem pop-up). */
+    val alta: Boolean,
+    /** O recurso de `res/raw` do som, ou `null` para um canal mudo. */
+    val som: String?,
+)
+
+/** Os canais do Tomatito, criados no `load` do plugin e antes de cada aviso. */
+object Canais {
+    const val FIM_FOCO = "fim-foco"
+    const val FIM_INTERVALO = "fim-intervalo"
+    const val FIM_TEMPORIZADOR = "fim-temporizador"
+    const val FIM_SEM_SOM = "fim-sem-som"
+    const val SESSAO = "sessao"
+
+    val todos: List<Canal> = listOf(
+        Canal(FIM_FOCO, "Fim do foco", "Avisa quando um bloco de foco termina.", alta = true, som = "focus_end"),
+        Canal(FIM_INTERVALO, "Fim do intervalo", "Avisa quando um intervalo termina.", alta = true, som = "break_end"),
+        Canal(
+            FIM_TEMPORIZADOR,
+            "Fim do temporizador",
+            "Avisa quando um temporizador termina.",
+            alta = true,
+            som = "focus_end",
+        ),
+        Canal(
+            FIM_SEM_SOM,
+            "Fim sem som",
+            "Avisos de fim quando o som daquele tipo está desligado no Tomatito.",
+            alta = true,
+            som = null,
+        ),
+        Canal(SESSAO, "Sessão em andamento", "O tempo da fase atual, sem som.", alta = false, som = null),
+    )
+
+    /**
+     * O endereço do som de um canal: `android.resource://<pacote>/raw/<nome>`,
+     * pelo nome e não pelo número do recurso, que pode mudar de um build para
+     * outro (e o canal guarda o endereço para sempre).
+     */
+    fun uriDoSom(pacote: String, som: String): String = "android.resource://$pacote/raw/$som"
+}

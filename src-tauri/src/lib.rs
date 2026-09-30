@@ -105,7 +105,13 @@ pub fn run() {
             let (clock, speed) = engine::clock_from_env();
             // A thread de som sobe junto: o motor e o `sound_test` usam a mesma,
             // com o volume das configurações (M38).
+            #[cfg(desktop)]
             let som = Arc::new(audio::Som::iniciar(s.volume));
+            // No Android (A08), a thread só atende o "Testar", pelo plugin.
+            #[cfg(target_os = "android")]
+            let som = Arc::new(audio::Som::com_saida(audio::pelo_plugin(
+                app.handle().clone(),
+            )));
             app.manage(som.clone());
             // M37: o "Sair" também grava o `state.json` (`window::sair`).
             let estado = Arc::new(state_file::StateStore::new(&dados));
