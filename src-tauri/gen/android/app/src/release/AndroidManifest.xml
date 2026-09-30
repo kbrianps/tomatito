@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Release sem INTERNET (PLANO-ANDROID 5.4): o app não fala com a rede. A
+     permissão fica só no debug, para o servidor do Vite do `tauri android dev`.
+     A confirmar no A18 (sonda do ERR_CACHE_MISS). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+</manifest>

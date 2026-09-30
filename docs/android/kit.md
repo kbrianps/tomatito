@@ -112,3 +112,11 @@ Três armadilhas achadas na validação, que valem para o A08 e o A12:
 3. **Notification cooldown do Android 15+:** com o padrão do sistema, um aviso do mesmo app ~30 s depois de outro que tocou saiu **mudo** (sem player nenhum); com `settings put system notification_cooldown_enabled 0`, o mesmo aviso tocou. O `emulador.mjs subir` desliga o cooldown, porque as receitas da seção 6 dão fins a cada 60 s. **No aparelho do usuário o cooldown vem ligado**; com fases de vários minutos ele não deve pesar, mas o A12 deve fazer uma rodada com o cooldown do sistema (`settings delete system notification_cooldown_enabled`) e registrar o que acontece com fins a 60 s. Outra: postar e, na mesma hora, reinstalar o app cancela o aviso (o `PACKAGE_REPLACED` de uma instalação incremental chega segundos depois de o `adb install` voltar); nos roteiros, esperar o fim da instalação antes de abrir o app.
 
 Se um dia o som deixar de aparecer, o plano B do A02 continua valendo: "o canal tem som, a notificação foi postada nesse canal e o DND está desligado (`mZenMode=0`)".
+
+## Primeiro build do Gradle (A04, 30/09/2026)
+
+- `npx tauri android init --ci --skip-targets-install` e `npx tauri android build --debug --apk --target x86_64`: 4 min 33 s no primeiro build (Gradle 9.6.1 baixado para o `$GRADLE_USER_HOME`, AGP 9.3.1, Kotlin 2.2.10, Java 25.0.4); o segundo, sem mudança no Rust, bem menos.
+- **Pacotes que o build baixou sozinho:** `platforms;android-36` (146 MB) e `build-tools;36.0.0` (147 MB), pedidos pelo módulo `:tauri-android` da crate `tauri` 2.12.0 (`compileSdk = 36`) e pelo padrão do AGP. O `:app` usou o `platforms;android-37.0` já instalado. `sdkmanager --list_installed` agora tem esses dois a mais.
+- **`$GRADLE_USER_HOME/gradle.properties`** (fora do repositório): `kotlin.project.persistent.dir=/opt/cargo-target/android/saidas/kotlin`.
+- **Disco no `/`:** `$GRADLE_USER_HOME` 1,2 GB; `$TT_GRADLE_SAIDAS` 647 MB (`android`, `app`, `buildSrc`, `tauri-android`); o APK de depuração x86_64 tem 165 MB (o `.so` de debug com símbolos). No `/home`: nada novo além do `gen/android` versionado e do `.gradle` do projeto (3,6 MB, ignorado); `~/.gradle`, `~/.m2` e `~/.android` com o mesmo tamanho de antes.
+

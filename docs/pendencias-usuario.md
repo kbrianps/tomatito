@@ -173,7 +173,7 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 Numeração a partir de 201, para não cruzar com as pendências de outras faixas.
 
 201. **(Opcional) Criar `/opt/android`** (desde o A00; o A01 seguiu sem ela). Uma linha: `sudo install -d -o kbrianps -g kbrianps /opt/android`. Sem ela, o kit foi para `/opt/cargo-target/android` (A01, sem sudo; `docs/android/kit.md`). Nada bloqueia: o kit funciona onde está. Se criar a pasta depois, mover é um `mv` no mesmo disco e trocar o `TT_ANDROID` do `~/.config/tomatito/android.env`, mas os AVDs (A02) guardam caminhos absolutos e teriam de ser recriados (`bash scripts/android/criar-avds.sh --recriar`, uns 5 minutos com as primeiras partidas).
-202. **Identificador do app** (desde o A00; **bloqueia o A04**). Padrão, já no `tauri.conf.json`: `io.github.kbrianps.tomatito` (debug: `io.github.kbrianps.tomatito.debug`). Alternativa: `com.kbrianps.tomatito`, só no `tauri.android.conf.json`. É permanente na Play. Sem resposta, segue o padrão.
+202. **Identificador do app.** No A04 (30/09/2026) seguiu o padrão, por omissão: `io.github.kbrianps.tomatito` (debug: `io.github.kbrianps.tomatito.debug`). Ainda dá para trocar até o primeiro envio à Play (A19), só no `tauri.android.conf.json` (alternativa: `com.kbrianps.tomatito`); depois do envio é permanente. Sem resposta, fica o padrão.
 203. **Nome na loja** (≤ 30 caracteres; antes do primeiro envio, A19). Proposta: "Tomatito: timer de foco".
 204. **E-mail de contato público da ficha** (antes do primeiro envio). O da conta ou outro.
 205. **(Opcional) `sudo usermod -aG kvm kbrianps`** (vale depois de sair e entrar na sessão). Hoje o `/dev/kvm` vem de uma ACL do logind que só existe com a sessão gráfica ativa; sem ela, o emulador perde o KVM.

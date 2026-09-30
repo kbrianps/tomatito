@@ -1284,3 +1284,24 @@ test('web: PWA com o manifest e o precache pelo plugin-web.mjs, e o SKIP_WAITING
   // O manifest e os ícones só no build web; o index.html do desktop não muda.
   assert.doesNotMatch(indexHtml, /rel="manifest"|webmanifest/);
 });
+
+test('android: manifesto, saídas do Gradle fora do /home e identificador (A04)', () => {
+  const gen = 'src-tauri/gen/android';
+  const manifesto = ler(`${gen}/app/src/main/AndroidManifest.xml`);
+  // Sem Android TV, sem cópia de segurança, só retrato (PLANO-ANDROID 1.1 e 5.4).
+  assert.doesNotMatch(manifesto, /leanback|LEANBACK_LAUNCHER/i);
+  assert.match(manifesto, /<application\s[^>]*android:allowBackup="false"/);
+  assert.match(manifesto, /android:screenOrientation="portrait"/);
+  // O release tira a INTERNET que o main declara para o `android dev`.
+  assert.match(ler(`${gen}/app/src/release/AndroidManifest.xml`),
+    /<uses-permission android:name="android\.permission\.INTERNET" tools:node="remove" \/>/);
+  // Todos os módulos (e o buildSrc) constroem em $TT_GRADLE_SAIDAS (7.1).
+  assert.match(ler(`${gen}/build.gradle.kts`), /allprojects \{\n    layout\.buildDirectory = file\("\$saidas\/\$\{project\.name\}"\)/);
+  assert.match(ler(`${gen}/buildSrc/build.gradle.kts`), /layout\.buildDirectory = file\("\$saidas\/buildSrc"\)/);
+  // O identificador do desktop não muda (ele define o app_data_dir); o Android usa o mesmo (1.1, 1.2.2).
+  assert.equal(tauriConf.identifier, 'io.github.kbrianps.tomatito');
+  assert.match(ler(`${gen}/app/build.gradle.kts`), /applicationId = "io\.github\.kbrianps\.tomatito"/);
+  const android = JSON.parse(ler('src-tauri/tauri.android.conf.json'));
+  assert.equal(android.bundle.android.minSdkVersion, 24);
+  assert.equal(android.identifier, undefined);
+});
