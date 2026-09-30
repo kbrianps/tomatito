@@ -22,12 +22,15 @@
 use std::sync::{Mutex, PoisonError};
 
 use serde::{Deserialize, Deserializer, Serialize};
-use tomatito_core::{Clock, EpochMs, Notice, Period, Sound, TimeZone, TimerEnded, TimerId};
+use tomatito_core::{
+    Clock, DayRange, EpochMs, Notice, Period, Sound, TimeZone, TimerEnded, TimerId, stats_ranges,
+};
 use tomatito_motor::engine::{CommandError, Engine, Preferencias, Sink};
 use tomatito_motor::events::{
     FocusDto, PhaseDto, PhaseEventDto, PhaseKindDto, StateDto, StopwatchDto, TickDto, TimersDto,
 };
 use tomatito_motor::settings::{Applied, Settings, SettingsError, aplicar_patch, apply};
+use tomatito_motor::tasks::{clean_title, visible_since};
 use wasm_bindgen::prelude::*;
 
 // ---------------------------------------------------------------------------
@@ -636,6 +639,72 @@ pub fn fuso_do_sistema() -> String {
         .to_owned()
 }
 
+// ---------------------------------------------------------------------------
+// Estatísticas e tarefas (W08): as regras de dia do desktop, sem o SQLite. A
+// web guarda os períodos e as tarefas no IndexedDB (armazenamento.js) e pede
+// aqui só o que depende do fuso e das regras do motor.
+// ---------------------------------------------------------------------------
+
+/// Um intervalo `[start, end)` em ms UTC.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct FaixaDto {
+    pub start: i64,
+    pub end: i64,
+}
+
+impl From<DayRange> for FaixaDto {
+    fn from(r: DayRange) -> Self {
+        Self {
+            start: r.start.0,
+            end: r.end.0,
+        }
+    }
+}
+
+/// Ontem, hoje e esta semana: as faixas que o `Stats::summary` do desktop
+/// soma (`stats_ranges`, com a hora de zerar e o horário de verão).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct FaixasDto {
+    pub yesterday: FaixaDto,
+    pub today: FaixaDto,
+    pub week: FaixaDto,
+}
+
+/// As faixas vistas de `agora` no fuso `tz`, ou `None` com um instante fora
+/// da faixa do jiff (o desktop soma 0 nesse caso).
+pub fn faixas_em(agora: EpochMs, tz: &TimeZone, hora_de_zerar: u8) -> Option<FaixasDto> {
+    stats_ranges(agora, tz, hora_de_zerar).map(|r| FaixasDto {
+        yesterday: r.yesterday.into(),
+        today: r.today.into(),
+        week: r.week.into(),
+    })
+}
+
+/// `faixas(agora, horaDeZerar)`: `{ yesterday, today, week }`, cada uma
+/// `{ start, end }` em ms, no fuso do navegador; ou `null`.
+#[wasm_bindgen(js_name = faixas)]
+pub fn faixas_js(agora: f64, hora_de_zerar: u8) -> Result<JsValue, JsValue> {
+    para_js(&faixas_em(
+        EpochMs(agora as i64),
+        &TimeZone::system(),
+        hora_de_zerar,
+    ))
+}
+
+/// `limparTitulo(titulo)`: o título como o `task_add` do desktop o grava, ou
+/// lança o `{ code, message }` do `TaskError` (`emptyTitle`, `titleTooLong`).
+#[wasm_bindgen(js_name = limparTitulo)]
+pub fn limpar_titulo(titulo: &str) -> Result<String, JsValue> {
+    clean_title(titulo).map_err(|e| para_js(&e).unwrap_or_else(|e| e))
+}
+
+/// `visivelDesde(agora, horaDeZerar)`: a última virada do dia (ms), no fuso
+/// do navegador; as tarefas concluídas antes dela saem da lista.
+#[wasm_bindgen(js_name = visivelDesde)]
+pub fn visivel_desde(agora: f64, hora_de_zerar: u8) -> f64 {
+    visible_since(EpochMs(agora as i64), &TimeZone::system(), hora_de_zerar).0 as f64
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -854,6 +923,25 @@ mod tests {
             .unwrap()
             .clone();
         assert_eq!(aviso["dados"]["breakS"], 600, "{aviso}");
+    }
+
+    #[test]
+    fn faixas_com_horario_de_verao() {
+        // O dia de 08/03/2026 em Nova York tem 23 h (days.rs, teste
+        // horario_de_verao); visto da segunda 09/03 às 00:30 EDT, ele é o
+        // "ontem", e a semana começa na virada dessa segunda.
+        let ny = TimeZone::get("America/New_York").unwrap();
+        let seg_0h30 = EpochMs(1_773_030_600_000); // 2026-03-09T04:30:00Z
+        let f = faixas_em(seg_0h30, &ny, 0).unwrap();
+        assert_eq!(f.yesterday.end - f.yesterday.start, 23 * 3_600_000);
+        assert_eq!(f.today.start, 1_773_028_800_000); // 2026-03-09T04:00:00Z
+        assert_eq!(f.yesterday.end, f.today.start);
+        assert_eq!(f.week.start, f.today.start);
+        assert_eq!(
+            serde_json::to_value(f).unwrap()["today"],
+            json!({ "start": 1_773_028_800_000_i64, "end": 1_773_115_200_000_i64 })
+        );
+        assert_eq!(faixas_em(EpochMs(i64::MAX), &TimeZone::UTC, 0), None);
     }
 
     #[test]

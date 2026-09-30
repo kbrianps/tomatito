@@ -7,7 +7,7 @@
 use js_sys::{Function, Object, Reflect};
 use serde::Serialize;
 use serde_json::{Value, json};
-use tomatito_wasm::Motor;
+use tomatito_wasm::{Motor, faixas_js, limpar_titulo, visivel_desde};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_test::wasm_bindgen_test as test;
 
@@ -197,4 +197,24 @@ fn temporizador_e_cronometro_com_args_em_camel_case() {
         .comando("stopwatch_start", JsValue::UNDEFINED)
         .unwrap_err();
     assert_eq!(valor(e)["code"], "alreadyRunning");
+}
+
+#[test]
+fn estatisticas_e_tarefas_pelo_lado_do_js() {
+    // W08: o título limpo e o erro com o code do desktop (tasks.rs, teste
+    // titulo_vazio_ou_longo_e_recusado).
+    assert_eq!(
+        limpar_titulo("  Revisar\nas notas\t ").unwrap(),
+        "Revisar as notas"
+    );
+    let e = limpar_titulo("   ").unwrap_err();
+    assert_eq!(valor(e)["code"], "emptyTitle");
+    let e = limpar_titulo(&"á".repeat(256)).unwrap_err();
+    assert_eq!(valor(e)["code"], "titleTooLong");
+    // As faixas encostam, e a virada de hoje é o começo de "hoje".
+    let f = valor(faixas_js(T0, 4).unwrap());
+    assert_eq!(f["yesterday"]["end"], f["today"]["start"]);
+    assert!(f["week"]["start"].as_f64() <= f["today"]["start"].as_f64());
+    assert_eq!(f["today"]["start"].as_f64().unwrap(), visivel_desde(T0, 4));
+    assert!(visivel_desde(T0, 4) <= T0);
 }

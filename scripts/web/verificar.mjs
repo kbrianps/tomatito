@@ -41,7 +41,8 @@
 // acumulado volta ao Node por um binding e é reinjetado em cada documento
 // novo, então sobrevive a recarregar e a reabrir; "avançar com a aba fechada"
 // é `t.relogio.avancarComAbaFechada(ms)`, que soma ao deslocamento antes de
-// reabrir. Regra: `__ttAvancar` nunca roda com a aba oculta (a página lança
+// reabrir, e `t.relogio.posicionar(instante)` leva todas as abas a um
+// instante fixo (W08), seguido de uma recarga. Regra: `__ttAvancar` nunca roda com a aba oculta (a página lança
 // erro, e o `t.relogio.avancar` confere antes). O `performance.now()` e os
 // Workers ficam com o relógio real.
 //
@@ -270,6 +271,20 @@ function criarRelogio() {
       }
       return relogio.deslocamento;
     },
+    /**
+     * Põe o relógio de teste em `instante` (ms de época), para trás ou para
+     * a frente, em todas as abas (W08: um dia fixo, longe da virada, ou uma
+     * data com horário de verão). Só com o motor sem nada correndo, e a aba
+     * recarrega depois (o motor em memória nasce de novo no instante novo).
+     */
+    async posicionar(instante) {
+      fila = fila.then(async () => {
+        relogio.deslocamento = Math.round(Number(instante) - Date.now());
+        await relogio.reinjetar(null);
+      });
+      await fila;
+      return relogio.deslocamento;
+    },
     /** Soma `ms` ao deslocamento sem nenhuma aba correndo (antes de reabrir). */
     async avancarComAbaFechada(ms) {
       fila = fila.then(async () => {
@@ -432,6 +447,7 @@ async function rodarCaso(nome, opts, limpar) {
       relogio: {
         avancar: (ms, p = pagina) => ctx.relogio.avancar(ms, p),
         avancarComAbaFechada: (ms) => ctx.relogio.avancarComAbaFechada(ms),
+        posicionar: (instante) => ctx.relogio.posicionar(instante),
         get deslocamento() {
           return ctx.relogio.deslocamento;
         },

@@ -9,9 +9,10 @@
 // - Cada resposta do wasm traz os efeitos desde a chamada anterior, em ordem.
 //   Os que têm evento no desktop (`state`, `tick`, `phase`, `timers`,
 //   `stopwatch`) vão ao barramento com o mesmo nome (`tt://<tipo>`). Os que o
-//   desktop faz no Rust (`sound`, `notice`, `period`, `timerNotice`) ficam
-//   anotados em `semDono`, sem tocar nada: o som é do W12, o aviso do W13 e
-//   o período do W08.
+//   desktop faz no Rust (`sound`, `notice`, `timerNotice`) ficam
+//   anotados em `semDono`, sem tocar nada: o som é do W12 e o aviso do W13.
+//   O `period` (W08) vai ao estatisticas.js, que o grava no IndexedDB
+//   (`aoEfeito`, registrado pelo index.js).
 // - As preferências (F, B e os sons) vêm das configurações (configuracoes.js)
 //   ao criar o motor e a cada `settings_set` (`configurar`; W07a).
 // - Tick de 1 Hz só com a aba visível, por um `setTimeout` único encadeado
@@ -76,9 +77,31 @@ export const parado = () => quebrado;
 
 const ERRO_PARADO = () => ({ code: 'panicked', message: 'o motor parou depois de um erro interno' });
 
-/** Leva os efeitos ao barramento (ou à lista `semDono`), na ordem. */
+// Quem executa os efeitos que não viram evento (W08: o `period`, pelo
+// estatisticas.js), registrado pelo index.js; assim o motor.js não importa
+// quem o importa.
+const donos = new Map();
+
+/**
+ * `f(dados)` passa a receber o efeito `tipo` (um dono por tipo), na ordem em
+ * que ele sai, antes dos eventos que vêm depois dele na mesma resposta.
+ */
+export function aoEfeito(tipo, f) {
+  donos.set(tipo, f);
+}
+
+/** Leva os efeitos ao dono, ao barramento ou à lista `semDono`, na ordem. */
 function distribuir(efeitos) {
   for (const { tipo, dados } of efeitos ?? []) {
+    const dono = donos.get(tipo);
+    if (dono) {
+      try {
+        dono(dados);
+      } catch (erro) {
+        console.error(`[motor] efeito ${tipo}`, erro);
+      }
+      continue;
+    }
     const evento = EVENTOS[tipo];
     if (evento) {
       emitir(evento, dados);

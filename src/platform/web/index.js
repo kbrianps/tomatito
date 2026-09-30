@@ -9,26 +9,21 @@
 // aqui (PLANO-WEB-V1, 3.2, "Comandos na web").
 // W07a: as configurações (settings_get e settings_set) também, pelo
 // configuracoes.js (o settings.rs do motor, com o localStorage no lugar do
-// arquivo). PROVISÓRIO: estatísticas, tarefas e o teste de som ainda vêm do
-// motor-prototipo.js (o mock da prévia), com um `console.debug('[provisório]
-// …')` a cada uso, até o W08 (estatísticas e tarefas) e o W12 (som).
+// arquivo).
+// W08: as estatísticas e as tarefas, pelo estatisticas.js e pelo tarefas.js
+// (o stats.rs e o tasks.rs, com o IndexedDB no lugar do SQLite). O motor
+// provisório saiu; o `sound_test` resolve sem tocar até o som (W12).
 import * as motor from './motor.js';
-import { handlers as prototipo } from './motor-prototipo.js';
 import * as configuracoes from './configuracoes.js';
+import * as estatisticas from './estatisticas.js';
+import * as tarefas from './tarefas.js';
 import { emitir } from './barramento.js';
+
+// Os períodos que o motor fecha vão para o IndexedDB.
+motor.aoEfeito('period', estatisticas.gravarPeriodo);
 
 export { emit, listen } from './barramento.js';
 export { janelaAtual } from './janela.js';
-
-/** Os comandos que ainda passam pelo motor provisório. */
-export const PROVISORIOS = Object.freeze([
-  'stats_get',
-  'task_list',
-  'task_add',
-  'task_complete',
-  'task_delete',
-  'sound_test',
-]);
 
 /** Comandos do desktop que não existem no navegador (o Full, reiniciar e sair). */
 export const SEM_SUPORTE = Object.freeze([
@@ -99,15 +94,21 @@ const LOCAIS = Object.freeze({
   tomato_on_top_available: async () => false,
   // O retrato inerte da validação do Full (window/validacao.rs, Fase::Nenhuma).
   full_validation_get: async () => ({ seq: 0, state: 'none' }),
+  stats_get: () => estatisticas.obter(),
+  task_list: () => tarefas.listar(),
+  task_add: tarefas.adicionar,
+  task_complete: tarefas.concluir,
+  task_delete: tarefas.apagar,
+  // Até o som (W12): resolve sem tocar.
+  sound_test: async ({ sound } = {}) => {
+    console.debug('[sem som] sound_test', sound ?? 'ambos');
+    return null;
+  },
 });
 
 export async function invoke(cmd, args = {}) {
   if (Object.hasOwn(LOCAIS, cmd)) return LOCAIS[cmd](args);
   if (SEM_SUPORTE.includes(cmd)) throw naoDisponivel();
-  if (PROVISORIOS.includes(cmd)) {
-    console.debug(`[provisório] ${cmd}`);
-    return structuredClone(await prototipo[cmd](args));
-  }
   // O resto é do motor (o espelho do generate_handler!); um nome que ele não
   // atende rejeita com `unknownCommand`.
   return motor.comando(cmd, args);
