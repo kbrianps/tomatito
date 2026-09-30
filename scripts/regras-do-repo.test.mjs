@@ -1319,16 +1319,23 @@ test('android: plugin tomatito-android, capability só do Android e as permissõ
   assert.deepEqual(cap.windows, ['main']);
   assert.deepEqual(cap.permissions, ['tomatito-android:default']);
   // Cada comando do build.rs tem a permissão no default, e a Kotlin tem o @Command de mesmo nome.
-  const comandos = JSON.parse(/const COMMANDS: &\[&str\] = &(\[[^\]]*\]);/.exec(ler(`${plugin}/build.rs`))[1]);
+  // As listas podem ter vírgula no fim (o rustfmt põe), que o JSON não aceita.
+  const lista = (texto) => JSON.parse(texto.replace(/,\s*\]$/, ']'));
+  const comandos = lista(/const COMMANDS: &\[&str\] = &(\[[^\]]*\]);/.exec(ler(`${plugin}/build.rs`))[1]);
   const padrao = /permissions = (\[[^\]]*\])/.exec(ler(`${plugin}/permissions/default.toml`))[1];
-  assert.deepEqual(JSON.parse(padrao), comandos.map((c) => `allow-${c.replaceAll('_', '-')}`));
+  assert.deepEqual(lista(padrao), comandos.map((c) => `allow-${c.replaceAll('_', '-')}`));
   const kotlin = ler(`${plugin}/android/src/main/java/io/github/kbrianps/tomatito/android/TomatitoPlugin.kt`);
-  for (const c of comandos) assert.match(kotlin, new RegExp(`@Command\\n\\s+fun ${c}\\(invoke: Invoke\\)`), c);
+  // O Tauri entrega `plugin:tomatito-android|abrir_url` ao método em lowerCamelCase (`abrirUrl`).
+  const camelo = (c) => c.replace(/_([a-z])/g, (_, l) => l.toUpperCase());
+  for (const c of comandos) assert.match(kotlin, new RegExp(`@Command\\n\\s+fun ${camelo(c)}\\(invoke: Invoke\\)`), c);
+  // E nenhum @Command fica sem permissão.
+  const daKotlin = [...kotlin.matchAll(/@Command\n\s+fun (\w+)\(/g)].map((m) => m[1]);
+  assert.deepEqual(daKotlin.sort(), comandos.map(camelo).sort());
   // O pacote e a classe que o Rust registra são os da Kotlin.
   const lib = ler(`${plugin}/src/lib.rs`);
   assert.match(lib, /const PACOTE: &str = "io\.github\.kbrianps\.tomatito\.android";/);
   assert.match(lib, /const CLASSE: &str = "TomatitoPlugin";/);
   assert.match(kotlin, /^package io\.github\.kbrianps\.tomatito\.android$/m);
-  assert.match(kotlin, /@TauriPlugin\nclass TomatitoPlugin\(/);
+  assert.match(kotlin, /@TauriPlugin(\([^]*?\))?\nclass TomatitoPlugin\(/);
   assert.match(ler(`${plugin}/android/build.gradle.kts`), /namespace = "io\.github\.kbrianps\.tomatito\.android"/);
 });

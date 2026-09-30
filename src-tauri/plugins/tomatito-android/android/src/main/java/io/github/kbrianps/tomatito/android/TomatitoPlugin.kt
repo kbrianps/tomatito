@@ -3,9 +3,15 @@ package io.github.kbrianps.tomatito.android
 import android.Manifest
 import android.app.Activity
 import android.app.AlarmManager
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.view.View
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
@@ -13,6 +19,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
+import app.tauri.annotation.Permission
+import app.tauri.annotation.PermissionCallback
 import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.JSObject
@@ -26,16 +34,144 @@ class CoresArgs {
     var claro: Boolean = false
 }
 
+@InvokeArg
+class TocarArgs {
+    /** `focusEnd` ou `breakEnd`, os nomes do `sound_test`. */
+    var som: String? = null
+}
+
+@InvokeArg
+class AbrirUrlArgs {
+    var url: String? = null
+}
+
 /**
- * O plugin `tomatito-android` (PLANO-ANDROID 4.2). A01–A07a: `permissoes` e
- * `cores`; os outros comandos entram nos marcos de cada um.
+ * O plugin `tomatito-android` (PLANO-ANDROID 4.2). A07a: `permissoes` e
+ * `cores`; A07b: `pedir_notificacoes`, `abrir_config_avisos`, `tocar` e
+ * `abrir_url`; os outros comandos entram nos marcos de cada um. O JS chama
+ * pelo nome em snake_case, e o Tauri entrega ao método em lowerCamelCase.
  */
-@TauriPlugin
+@TauriPlugin(
+    permissions = [Permission(strings = [Manifest.permission.POST_NOTIFICATIONS], alias = TomatitoPlugin.AVISOS)],
+)
 class TomatitoPlugin(private val activity: Activity) : Plugin(activity) {
 
     /** `{ notificacoes: granted|denied|prompt, alarmeExato, sdk }`. */
     @Command
     fun permissoes(invoke: Invoke) {
+        invoke.resolve(estadoDasPermissoes())
+    }
+
+    /**
+     * Mostra o pedido de `POST_NOTIFICATIONS` do sistema (Android 13+) quando
+     * ele ainda aparece (`prompt`) e resolve com o estado depois da resposta,
+     * o mesmo objeto do `permissoes`. Nos outros casos (já permitido,
+     * recusado de vez, Android 12 ou antes) só devolve o estado. Chamado no
+     * primeiro "Iniciar" ou pelo cartão Avisos, nunca ao abrir (5.4).
+     */
+    @Command
+    fun pedirNotificacoes(invoke: Invoke) {
+        val estado = estadoDasPermissoes()
+        if (!mostraPedidoDeNotificacoes(Build.VERSION.SDK_INT, estado.getString("notificacoes"))) {
+            invoke.resolve(estado)
+            return
+        }
+        preferencias().edit().putBoolean(JA_PEDIU_NOTIFICACOES, true).apply()
+        requestPermissionForAlias(AVISOS, invoke, "depoisDoPedido")
+    }
+
+    @PermissionCallback
+    private fun depoisDoPedido(invoke: Invoke) {
+        invoke.resolve(estadoDasPermissoes())
+    }
+
+    /**
+     * Abre a tela de avisos do app nas configurações do sistema (ou, no
+     * Android 12/12L com os avisos permitidos e sem alarme exato, a do
+     * alarme exato; `telaDeAvisos`). Resolve com o nome da tela aberta.
+     */
+    @Command
+    fun abrirConfigAvisos(invoke: Invoke) {
+        val sdk = Build.VERSION.SDK_INT
+        val estado = estadoDasPermissoes()
+        val tela = telaDeAvisos(sdk, estado.getString("notificacoes"), estado.getBoolean("alarmeExato"))
+        val pacote = activity.packageName
+        val intent = when (tela) {
+            TelaDeAvisos.AVISOS_DO_APP ->
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, pacote)
+            TelaDeAvisos.ALARME_EXATO ->
+                Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$pacote"))
+            TelaDeAvisos.DETALHES_DO_APP ->
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$pacote"))
+        }
+        abrir(invoke, intent, JSObject().apply { put("tela", tela.name) })
+    }
+
+    /**
+     * O "Testar" das Configurações (5.5): toca o som de `res/raw` com
+     * `USAGE_NOTIFICATION_EVENT`, no volume de notificação do sistema. Só é
+     * chamado com a Activity visível (no Android 17, o áudio de um app sem
+     * Activity visível é silenciado). Os WAV entram em `res/raw` no A08; até
+     * lá, o comando recusa com "sem o recurso".
+     */
+    @Command
+    fun tocar(invoke: Invoke) {
+        val args = invoke.parseArgs(TocarArgs::class.java)
+        val recurso = recursoDoSom(args.som)
+        if (recurso == null) {
+            invoke.reject("som desconhecido: ${args.som}")
+            return
+        }
+        val id = activity.resources.getIdentifier(recurso, "raw", activity.packageName)
+        if (id == 0) {
+            invoke.reject("sem o recurso raw/$recurso")
+            return
+        }
+        val atributos = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+        val player = MediaPlayer.create(activity, id, atributos, 0)
+        if (player == null) {
+            invoke.reject("o som raw/$recurso não abriu")
+            return
+        }
+        player.setOnCompletionListener { it.release() }
+        player.start()
+        invoke.resolve()
+    }
+
+    /**
+     * Abre um link `http(s)` no navegador (`Intent.ACTION_VIEW`), fora do
+     * app: a WebView do app nunca navega para fora. Recusa o que não é
+     * `http(s)` com host e o aparelho sem navegador.
+     */
+    @Command
+    fun abrirUrl(invoke: Invoke) {
+        val args = invoke.parseArgs(AbrirUrlArgs::class.java)
+        val url = args.url
+        if (url == null || !urlExterna(url)) {
+            invoke.reject("url recusada: $url")
+            return
+        }
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE)
+        abrir(invoke, intent, null)
+    }
+
+    // Abre uma Activity de outro app (configurações, navegador) numa tarefa
+    // nova, sem esperar resultado.
+    private fun abrir(invoke: Invoke, intent: Intent, resposta: JSObject?) {
+        activity.runOnUiThread {
+            try {
+                activity.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                if (resposta == null) invoke.resolve() else invoke.resolve(resposta)
+            } catch (e: ActivityNotFoundException) {
+                invoke.reject("nada abre ${intent.action}")
+            }
+        }
+    }
+
+    private fun estadoDasPermissoes(): JSObject {
         val sdk = Build.VERSION.SDK_INT
         val concedida = sdk < 33 ||
             ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) ==
@@ -52,13 +188,11 @@ class TomatitoPlugin(private val activity: Activity) : Plugin(activity) {
         val exato = alarmeExato(sdk) {
             (activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
         }
-        invoke.resolve(
-            JSObject().apply {
-                put("notificacoes", notificacoes)
-                put("alarmeExato", exato)
-                put("sdk", sdk)
-            },
-        )
+        return JSObject().apply {
+            put("notificacoes", notificacoes)
+            put("alarmeExato", exato)
+            put("sdk", sdk)
+        }
     }
 
     /**
@@ -115,5 +249,7 @@ class TomatitoPlugin(private val activity: Activity) : Plugin(activity) {
         const val PREFERENCIAS = "tomatito-android"
         /** Gravada pelo `pedir_notificacoes` (A07b): distingue "nunca pedido" de "recusado de vez". */
         const val JA_PEDIU_NOTIFICACOES = "notificacoes_pedidas"
+        /** O apelido de `POST_NOTIFICATIONS` no `@TauriPlugin`. */
+        const val AVISOS = "avisos"
     }
 }

@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-abrir-url"
+description = "Enables the abrir_url command without any pre-configured scope."
+commands.allow = ["abrir_url"]
+
+[[permission]]
+identifier = "deny-abrir-url"
+description = "Denies the abrir_url command without any pre-configured scope."
+commands.deny = ["abrir_url"]

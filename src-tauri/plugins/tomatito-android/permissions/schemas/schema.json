@@ -295,6 +295,30 @@
       "type": "string",
       "oneOf": [
         {
+          "description": "Enables the abrir_config_avisos command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-abrir-config-avisos",
+          "markdownDescription": "Enables the abrir_config_avisos command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the abrir_config_avisos command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-abrir-config-avisos",
+          "markdownDescription": "Denies the abrir_config_avisos command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the abrir_url command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-abrir-url",
+          "markdownDescription": "Enables the abrir_url command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the abrir_url command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-abrir-url",
+          "markdownDescription": "Denies the abrir_url command without any pre-configured scope."
+        },
+        {
           "description": "Enables the cores command without any pre-configured scope.",
           "type": "string",
           "const": "allow-cores",
@@ -305,6 +329,18 @@
           "type": "string",
           "const": "deny-cores",
           "markdownDescription": "Denies the cores command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the pedir_notificacoes command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-pedir-notificacoes",
+          "markdownDescription": "Enables the pedir_notificacoes command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the pedir_notificacoes command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-pedir-notificacoes",
+          "markdownDescription": "Denies the pedir_notificacoes command without any pre-configured scope."
         },
         {
           "description": "Enables the permissoes command without any pre-configured scope.",
@@ -319,10 +355,22 @@
           "markdownDescription": "Denies the permissoes command without any pre-configured scope."
         },
         {
-          "description": "O que a janela main do Tomatito usa no Android (capabilities/android.json).\n#### This default permission set includes:\n\n- `allow-permissoes`\n- `allow-cores`",
+          "description": "Enables the tocar command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-tocar",
+          "markdownDescription": "Enables the tocar command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the tocar command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-tocar",
+          "markdownDescription": "Denies the tocar command without any pre-configured scope."
+        },
+        {
+          "description": "O que a janela main do Tomatito usa no Android (capabilities/android.json).\n#### This default permission set includes:\n\n- `allow-permissoes`\n- `allow-cores`\n- `allow-pedir-notificacoes`\n- `allow-abrir-config-avisos`\n- `allow-tocar`\n- `allow-abrir-url`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "O que a janela main do Tomatito usa no Android (capabilities/android.json).\n#### This default permission set includes:\n\n- `allow-permissoes`\n- `allow-cores`"
+          "markdownDescription": "O que a janela main do Tomatito usa no Android (capabilities/android.json).\n#### This default permission set includes:\n\n- `allow-permissoes`\n- `allow-cores`\n- `allow-pedir-notificacoes`\n- `allow-abrir-config-avisos`\n- `allow-tocar`\n- `allow-abrir-url`"
         }
       ]
     }

@@ -1,8 +1,16 @@
 // Os comandos que o JS chama direto na Kotlin (`plugin:tomatito-android|...`).
-// Cada um ganha a permissão `allow-<comando>`; o `default` lista as do app
+// Cada um ganha a permissão `allow-<comando>` (com `-` no lugar de `_`);
+// na Kotlin, o método tem o nome em lowerCamelCase (`abrir_url` → `abrirUrl`); o `default` lista as do app
 // (permissions/default.toml). Os próximos entram aqui no marco de cada um
-// (PLANO-ANDROID 4.2: A07b, A10a, A11, A16b).
-const COMMANDS: &[&str] = &["permissoes", "cores"];
+// (PLANO-ANDROID 4.2: A10a, A11, A16b).
+const COMMANDS: &[&str] = &[
+    "permissoes",
+    "cores",
+    "pedir_notificacoes",
+    "abrir_config_avisos",
+    "tocar",
+    "abrir_url",
+];
 
 fn main() {
     tauri_plugin::Builder::new(COMMANDS)

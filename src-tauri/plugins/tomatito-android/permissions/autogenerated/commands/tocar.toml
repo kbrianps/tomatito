@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-tocar"
+description = "Enables the tocar command without any pre-configured scope."
+commands.allow = ["tocar"]
+
+[[permission]]
+identifier = "deny-tocar"
+description = "Denies the tocar command without any pre-configured scope."
+commands.deny = ["tocar"]
