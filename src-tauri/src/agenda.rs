@@ -329,17 +329,40 @@ pub fn montar(
     Ok(agenda)
 }
 
+/// A contínua de agora (5.3; A11): a fase da sessão que corre; senão a
+/// sessão pausada ("Pausado · faltam …", sem cronômetro); senão o
+/// temporizador correndo que vence primeiro; senão nada (a contínua sai). A
+/// mesma regra da [`Alarme::continua_depois`], lida no começo da fase atual
+/// em vez de logo depois de um fim.
+pub fn continua_atual(focus: &FocusDto, timers: &TimersDto) -> Option<Continua> {
+    let janelas = fases_restantes(focus).map(|(_, j)| j).unwrap_or_default();
+    let correndo = temporizadores_correndo(timers);
+    let t = janelas.first().map_or(i64::MIN, |j| j.inicio);
+    continua_em(t, focus, &janelas, &correndo)
+}
+
+/// O que vai ao plugin a cada mudança (o `agendar` da Kotlin): a agenda
+/// inteira e a contínua de agora, juntas, para a Kotlin trocar as duas sob a
+/// mesma trava (A11). Chaves em camelCase: `{ agenda: [...], continua: {...} | null }`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Pacote {
+    pub agenda: Vec<Alarme>,
+    pub continua: Option<Continua>,
+}
+
 /// A agenda viva do `TauriSink` (5.2, item 2): o último retrato do foco e o
-/// dos temporizadores, as preferências e a última agenda montada. Cada
-/// atualização remonta a agenda e devolve `Some` só se ela mudou (a
-/// comparação é a da lista inteira, no lugar do hash do plano).
+/// dos temporizadores, as preferências e o último [`Pacote`] montado. Cada
+/// atualização remonta a agenda e a contínua e devolve `Some` só se uma das
+/// duas mudou (a comparação é a do pacote inteiro, no lugar do hash do
+/// plano). A contínua sozinha também conta: parar uma sessão pausada não
+/// muda a agenda (vazia antes e depois), mas tira a contínua.
 #[derive(Debug, Default)]
 pub struct Viva {
     focus: Option<FocusDto>,
     timers: Option<TimersDto>,
     prefs: Preferencias,
     speed: Option<f64>,
-    ultima: Option<Vec<Alarme>>,
+    ultima: Option<Pacote>,
 }
 
 impl Viva {
@@ -347,8 +370,8 @@ impl Viva {
         self.speed.unwrap_or(1.0)
     }
 
-    /// Remonta a agenda; `Ok(None)` se nada mudou desde a última.
-    fn remontar(&mut self, fuso: &TimeZone) -> Result<Option<&[Alarme]>, AgendaRecusada> {
+    /// Remonta a agenda e a contínua; `Ok(None)` se nada mudou desde o último pacote.
+    fn remontar(&mut self, fuso: &TimeZone) -> Result<Option<&Pacote>, AgendaRecusada> {
         let vazio_f;
         let focus = match &self.focus {
             Some(f) => f,
@@ -374,11 +397,14 @@ impl Viva {
                 &vazio_t
             }
         };
-        let nova = montar(focus, timers, &self.prefs, fuso, self.speed())?;
-        if self.ultima.as_ref() == Some(&nova) {
+        let novo = Pacote {
+            agenda: montar(focus, timers, &self.prefs, fuso, self.speed())?,
+            continua: continua_atual(focus, timers),
+        };
+        if self.ultima.as_ref() == Some(&novo) {
             return Ok(None);
         }
-        Ok(Some(self.ultima.insert(nova).as_slice()))
+        Ok(Some(self.ultima.insert(novo)))
     }
 
     /// As preferências (setup e cada `settings_set`) e a velocidade do motor.
@@ -387,7 +413,7 @@ impl Viva {
         prefs: Preferencias,
         speed: f64,
         fuso: &TimeZone,
-    ) -> Result<Option<&[Alarme]>, AgendaRecusada> {
+    ) -> Result<Option<&Pacote>, AgendaRecusada> {
         self.prefs = prefs;
         self.speed = Some(speed);
         self.remontar(fuso)
@@ -398,7 +424,7 @@ impl Viva {
         &mut self,
         prefs: Preferencias,
         fuso: &TimeZone,
-    ) -> Result<Option<&[Alarme]>, AgendaRecusada> {
+    ) -> Result<Option<&Pacote>, AgendaRecusada> {
         self.prefs = prefs;
         self.remontar(fuso)
     }
@@ -408,7 +434,7 @@ impl Viva {
         &mut self,
         focus: &FocusDto,
         fuso: &TimeZone,
-    ) -> Result<Option<&[Alarme]>, AgendaRecusada> {
+    ) -> Result<Option<&Pacote>, AgendaRecusada> {
         self.focus = Some(focus.clone());
         self.remontar(fuso)
     }
@@ -418,35 +444,36 @@ impl Viva {
         &mut self,
         timers: &TimersDto,
         fuso: &TimeZone,
-    ) -> Result<Option<&[Alarme]>, AgendaRecusada> {
+    ) -> Result<Option<&Pacote>, AgendaRecusada> {
         self.timers = Some(timers.clone());
         self.remontar(fuso)
     }
 }
 
-/// A entrega da agenda ao plugin Kotlin (5.2, itens 2 e 3; A10a), numa
+/// A entrega da agenda e da contínua ao plugin Kotlin (5.2, itens 2 e 3;
+/// 5.3; A10a, A11), numa
 /// thread própria: o `agendar` do plugin espera a Kotlin (que roda pelo
 /// contexto do Android), e o `TauriSink` chama com o motor travado. A thread
-/// entrega só a mais nova das agendas que se acumularam enquanto a anterior
-/// era entregue: cada agenda substitui a anterior inteira.
+/// entrega só o mais novo dos pacotes que se acumularam enquanto o anterior
+/// era entregue: cada pacote substitui o anterior inteiro.
 #[cfg(target_os = "android")]
 pub struct Entrega {
-    tx: Option<std::sync::mpsc::Sender<Vec<Alarme>>>,
+    tx: Option<std::sync::mpsc::Sender<Pacote>>,
 }
 
 #[cfg(target_os = "android")]
 impl Entrega {
     pub fn iniciar<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Self {
         use tauri_plugin_tomatito_android::TomatitoAndroidExt;
-        let (tx, rx) = std::sync::mpsc::channel::<Vec<Alarme>>();
+        let (tx, rx) = std::sync::mpsc::channel::<Pacote>();
         let thread = std::thread::Builder::new()
             .name("tomatito-agenda".into())
             .spawn(move || {
-                while let Ok(mut agenda) = rx.recv() {
-                    while let Ok(mais_nova) = rx.try_recv() {
-                        agenda = mais_nova;
+                while let Ok(mut pacote) = rx.recv() {
+                    while let Ok(mais_novo) = rx.try_recv() {
+                        pacote = mais_novo;
                     }
-                    match app.tomatito_android().agendar(&agenda) {
+                    match app.tomatito_android().agendar(&pacote) {
                         Ok(r) => eprintln!(
                             "[tomatito] agenda entregue: {} exato(s), {} inexato(s)",
                             r.exatos, r.inexatos
@@ -465,11 +492,11 @@ impl Entrega {
     }
 
     /// Não espera: só põe na fila da thread.
-    pub fn enviar(&self, agenda: &[Alarme]) {
+    pub fn enviar(&self, pacote: &Pacote) {
         let enviado = self
             .tx
             .as_ref()
-            .is_some_and(|tx| tx.send(agenda.to_vec()).is_ok());
+            .is_some_and(|tx| tx.send(pacote.clone()).is_ok());
         if !enviado {
             eprintln!("[tomatito] agenda perdida: a thread da agenda não está de pé");
         }
@@ -508,6 +535,8 @@ mod tests {
         viva: Mutex<Viva>,
         /// Todas as agendas montadas, na ordem.
         agendas: Mutex<Vec<Vec<Alarme>>>,
+        /// A contínua do último pacote.
+        continua: Mutex<Option<Continua>>,
         emitidos: Mutex<Vec<Emitido>>,
         som: Mutex<Option<Sound>>,
     }
@@ -520,14 +549,19 @@ mod tests {
                 clock,
                 viva: Mutex::new(viva),
                 agendas: Mutex::new(vec![Vec::new()]),
+                continua: Mutex::new(None),
                 emitidos: Mutex::new(Vec::new()),
                 som: Mutex::new(None),
             }
         }
-        fn guardar(&self, nova: Option<&[Alarme]>) {
-            if let Some(a) = nova {
-                self.agendas.lock().unwrap().push(a.to_vec());
+        fn guardar(&self, novo: Option<&Pacote>) {
+            if let Some(p) = novo {
+                self.agendas.lock().unwrap().push(p.agenda.clone());
+                *self.continua.lock().unwrap() = p.continua.clone();
             }
+        }
+        fn continua(&self) -> Option<Continua> {
+            self.continua.lock().unwrap().clone()
         }
         fn ultima(&self) -> Vec<Alarme> {
             self.agendas.lock().unwrap().last().unwrap().clone()
@@ -950,12 +984,15 @@ mod tests {
         let s = e.state();
         assert_eq!(
             v.foco(&s.focus, &sp()).unwrap(),
-            Some(&[][..]),
+            Some(&Pacote {
+                agenda: Vec::new(),
+                continua: None
+            }),
             "a primeira sempre vai"
         );
         assert_eq!(v.temporizadores(&s.timers, &sp()).unwrap(), None);
         let f = e.start(5, false, None).unwrap();
-        assert_eq!(v.foco(&f, &sp()).unwrap().map(<[_]>::len), Some(1));
+        assert_eq!(v.foco(&f, &sp()).unwrap().map(|p| p.agenda.len()), Some(1));
         assert_eq!(v.foco(&f, &sp()).unwrap(), None, "o mesmo retrato");
         clock.advance_ms(1_000);
         let mut f2 = e.state().focus;
@@ -968,11 +1005,120 @@ mod tests {
         // Desligar o som do fim de foco troca o canal: manda de novo.
         let sem_som = prefs(25, 5, false, true);
         let nova = v.preferencias(sem_som, &sp()).unwrap().unwrap();
-        assert_eq!(nova[0].canal, canal::FIM_SEM_SOM);
+        assert_eq!(nova.agenda[0].canal, canal::FIM_SEM_SOM);
         let t = e.timer_start(1).unwrap();
         assert_eq!(
-            v.temporizadores(&t, &sp()).unwrap().map(<[_]>::len),
+            v.temporizadores(&t, &sp()).unwrap().map(|p| p.agenda.len()),
             Some(2)
+        );
+        // A11: parar uma sessão pausada não muda a agenda (vazia antes e
+        // depois, sem temporizador), mas tira a contínua: manda de novo.
+        let t = e.timer_reset(1).unwrap();
+        v.temporizadores(&t, &sp()).unwrap();
+        let p = e.pause().unwrap();
+        let pausado = v.foco(&p, &sp()).unwrap().unwrap();
+        assert!(pausado.agenda.is_empty());
+        assert!(pausado.continua.as_ref().is_some_and(|c| c.pausado));
+        let parado = e.stop().unwrap();
+        assert_eq!(
+            v.foco(&parado, &sp()).unwrap(),
+            Some(&Pacote {
+                agenda: Vec::new(),
+                continua: None
+            })
+        );
+    }
+
+    /// A contínua de agora (5.3; A11): a fase correndo, com o prazo dela;
+    /// pausada, sem prazo e com o que falta; parada, nada; sem sessão, o
+    /// temporizador que vence primeiro; cronômetro, nada.
+    #[test]
+    fn continua_de_agora_em_cada_estado() {
+        let (e, clock) = motor(prefs(1, 1, true, true));
+        assert_eq!(e.sink().continua(), None, "nada correndo");
+        let f = e.start(3, false, None).unwrap();
+        let fim = f.session.as_ref().unwrap().ends_at.unwrap();
+        let foco = Continua {
+            tipo: "foco",
+            nome: String::new(),
+            fim_ms: fim,
+            pausado: false,
+            restante_ms: 0,
+        };
+        assert_eq!(e.sink().continua(), Some(foco));
+        assert_eq!(fim, T0.0 + 60_000);
+        let agenda_no_inicio = e.sink().ultima();
+
+        // A troca de fase: o intervalo, até o fim dele.
+        andar_ate(&e, &clock, Some(EpochMs(fim)));
+        let c = e.sink().continua().unwrap();
+        assert_eq!(
+            (c.tipo, c.fim_ms, c.pausado),
+            ("intervalo", fim + 60_000, false)
+        );
+        // É a mesma que o primeiro aviso deixou (o `FimReceiver` com o processo morto).
+        assert_eq!(agenda_no_inicio[0].continua_depois, Some(c.clone()));
+
+        // Pausada 20 s depois: sem prazo, com os 40 s que faltam.
+        clock.advance_ms(20_000);
+        e.pause().unwrap();
+        assert_eq!(
+            e.sink().continua(),
+            Some(Continua {
+                tipo: "intervalo",
+                nome: String::new(),
+                fim_ms: 0,
+                pausado: true,
+                restante_ms: 40_000,
+            })
+        );
+        // Retomada 5 s depois: o prazo andou 5 s.
+        clock.advance_ms(5_000);
+        e.resume().unwrap();
+        let c = e.sink().continua().unwrap();
+        assert_eq!((c.tipo, c.fim_ms), ("intervalo", fim + 65_000));
+        e.stop().unwrap();
+        assert_eq!(e.sink().continua(), None, "parada, some");
+
+        // Sem sessão: o temporizador que vence primeiro.
+        e.timer_start(2).unwrap(); // 3 min
+        e.timer_start(1).unwrap(); // 1 min
+        let c = e.sink().continua().unwrap();
+        assert_eq!((c.tipo, c.fim_ms), ("temporizador", clock.now().0 + 60_000));
+        // Com uma sessão, ela tem precedência sobre os temporizadores.
+        e.start(5, false, None).unwrap();
+        assert_eq!(e.sink().continua().unwrap().tipo, "foco");
+        e.stop().unwrap();
+        e.timer_reset(1).unwrap();
+        e.timer_reset(2).unwrap();
+        assert_eq!(e.sink().continua(), None);
+        // O cronômetro não tem contínua (nem aviso de fim).
+        e.stopwatch_start().unwrap();
+        assert_eq!(e.sink().continua(), None);
+    }
+
+    /// O pacote no fio é o que a Kotlin lê no `agendar` (A11).
+    #[test]
+    fn pacote_no_formato_da_kotlin() {
+        let (e, _) = motor(Preferencias::default());
+        e.start(5, false, None).unwrap();
+        let mut v = Viva::default();
+        v.configurar(Preferencias::default(), 1.0, &sp()).unwrap();
+        let p = v.foco(&e.state().focus, &sp()).unwrap().unwrap().clone();
+        let json = serde_json::to_value(&p).unwrap();
+        assert_eq!(json["agenda"].as_array().map(Vec::len), Some(1));
+        assert_eq!(
+            json["continua"],
+            serde_json::json!({
+                "tipo": "foco", "nome": "", "fimMs": T0.0 + 300_000,
+                "pausado": false, "restanteMs": 0
+            })
+        );
+        e.stop().unwrap();
+        let p = v.foco(&e.state().focus, &sp()).unwrap().unwrap();
+        assert_eq!(
+            serde_json::to_value(p).unwrap(),
+            serde_json::json!({ "agenda": [], "continua": null })
         );
     }
 

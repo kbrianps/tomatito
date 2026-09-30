@@ -151,8 +151,8 @@ impl TauriSink {
         self.agenda(|v, fuso| v.preferencias(prefs, fuso));
     }
 
-    /// A09 (PLANO-ANDROID 5.2, item 2): remonta a agenda e, se ela mudou,
-    /// a entrega. Chamado em cada `state` e cada `timers`: o `tt://phase`
+    /// A09 (PLANO-ANDROID 5.2, item 2): remonta a agenda (e, desde o A11, a
+    /// contínua de agora) e, se o pacote mudou, o entrega. Chamado em cada `state` e cada `timers`: o `tt://phase`
     /// sempre vem logo depois de um `state`, então não precisa remontar. Chamado com o motor travado, como o resto do sink: a
     /// montagem é pura e curta (uma sessão tem no máximo 239 fases).
     #[cfg(target_os = "android")]
@@ -162,7 +162,7 @@ impl TauriSink {
             &'a mut crate::agenda::Viva,
             &tomatito_core::TimeZone,
         ) -> Result<
-            Option<&'a [crate::agenda::Alarme]>,
+            Option<&'a crate::agenda::Pacote>,
             crate::agenda::AgendaRecusada,
         >,
     ) {
@@ -172,11 +172,16 @@ impl TauriSink {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         match passo(&mut viva, &fuso) {
-            Ok(Some(agenda)) => {
+            Ok(Some(pacote)) => {
                 // A10a: o plugin cancela os alarmes anteriores, grava a
-                // agenda e chama o `setAlarmClock` (numa thread à parte).
-                eprintln!("[tomatito] agenda: {} aviso(s)", agenda.len());
-                self.entrega.enviar(agenda);
+                // agenda e chama o `setAlarmClock` (numa thread à parte);
+                // A11: e mostra, troca ou tira a contínua.
+                eprintln!(
+                    "[tomatito] agenda: {} aviso(s), contínua: {}",
+                    pacote.agenda.len(),
+                    pacote.continua.as_ref().map_or("nenhuma", |c| c.tipo)
+                );
+                self.entrega.enviar(pacote);
             }
             Ok(None) => {}
             Err(e) => eprintln!("[tomatito] {e}"),

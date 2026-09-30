@@ -50,7 +50,7 @@ class AbrirUrlArgs {
  * O plugin `tomatito-android` (PLANO-ANDROID 4.2). A07a: `permissoes` e
  * `cores`; A07b: `pedir_notificacoes`, `abrir_config_avisos`, `tocar` e
  * `abrir_url`; A08: os canais de notificação, criados no `load`; A10a:
- * `agendar` (só do Rust); os outros
+ * `agendar` (só do Rust), que desde o A11 também leva a contínua; os outros
  * comandos entram nos marcos de cada um. O JS chama
  * pelo nome em snake_case, e o Tauri entrega ao método em lowerCamelCase.
  */
@@ -65,21 +65,22 @@ class TomatitoPlugin(private val activity: Activity) : Plugin(activity) {
     }
 
     /**
-     * A agenda dos avisos de fim (5.2, item 3; A10a), mandada pelo Rust a cada
-     * mudança: `{ agenda: [Alarme...] }`, no formato do [Agenda.deJson].
-     * Cancela os alarmes anteriores, grava a agenda e agenda cada item
-     * ([AgendaDoSistema.agendar]). Só o Rust chama: o comando não está no
-     * `build.rs` nem na ACL, e o JS recebe "not allowed".
+     * A agenda dos avisos de fim (5.2, item 3; A10a) e a notificação contínua
+     * (5.3; A11), mandadas pelo Rust a cada mudança:
+     * `{ agenda: [Alarme...], continua: Continua | null }` ([Agenda.pacoteDeJson]).
+     * Cancela os alarmes anteriores, grava a agenda, agenda cada item e
+     * mostra, troca ou tira a contínua ([AgendaDoSistema.agendar]). Só o Rust
+     * chama: o comando não está no `build.rs` nem na ACL, e o JS recebe "not
+     * allowed".
      */
     @Command
     fun agendar(invoke: Invoke) {
-        val lista = invoke.getArgs().optJSONArray("agenda")
-        if (lista == null) {
+        val pacote = Agenda.pacoteDeJson(invoke.getArgs().toString())
+        if (pacote == null) {
             invoke.reject("agenda ausente")
             return
         }
-        val itens = Agenda.deJson(lista.toString())
-        val contagem = AgendaDoSistema.agendar(activity, itens)
+        val contagem = AgendaDoSistema.agendar(activity, pacote.agenda, pacote.continua)
         invoke.resolve(
             JSObject().apply {
                 put("exatos", contagem.getValue(ApiDoAlarme.RELOGIO))

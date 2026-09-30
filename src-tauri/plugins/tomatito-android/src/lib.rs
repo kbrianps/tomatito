@@ -6,7 +6,8 @@
 //! passa pela ACL (`permissions/`, `capabilities/android.json`) e, como o
 //! Rust não tem um comando com esse nome, o Tauri o entrega ao plugin
 //! registrado aqui. O Rust do app usa o mesmo plugin pelo
-//! [`TomatitoAndroidExt`] (o `tocar`, A08, e o `agendar`, A10a).
+//! [`TomatitoAndroidExt`] (o `tocar`, A08, e o `agendar`, A10a, com a
+//! contínua desde o A11).
 //!
 //! Fora do Android, o crate compila vazio: ele só entra no desktop porque é
 //! dependência por caminho dentro do workspace (`cargo test --workspace`).
@@ -49,13 +50,6 @@ pub struct Tocar<'a> {
     pub som: &'a str,
 }
 
-/// Os argumentos do `agendar` (A10a): a agenda inteira, no formato do
-/// `Agenda.deJson` da Kotlin (o `Alarme` do app, serializado em camelCase).
-#[derive(Debug, Clone, Serialize)]
-pub struct Agendar<'a, T: Serialize> {
-    pub agenda: &'a T,
-}
-
 /// A resposta do `agendar`: quantos itens foram com `setAlarmClock` e
 /// quantos com `setAndAllowWhileIdle` (sem alarme exato).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -86,13 +80,16 @@ impl<R: Runtime> TomatitoAndroid<R> {
             .map(|_| ())
     }
 
-    /// A agenda dos avisos de fim (PLANO-ANDROID 5.2, item 3): a Kotlin
-    /// cancela os alarmes anteriores, grava a agenda e agenda cada item. Só o
-    /// Rust chama (o comando fica fora da ACL). Espera a Kotlin terminar:
-    /// chamar de uma thread própria, nunca da principal nem com o motor
-    /// travado.
-    pub fn agendar<T: Serialize>(&self, agenda: &T) -> Result<Agendados, PluginInvokeError> {
-        self.0.run_mobile_plugin("agendar", Agendar { agenda })
+    /// A agenda dos avisos de fim (PLANO-ANDROID 5.2, item 3) e a
+    /// notificação contínua (5.3): `pacote` serializa como
+    /// `{ agenda: [Alarme...], continua: Continua | null }`, no formato do
+    /// `Agenda.deJson` da Kotlin (o `agenda::Pacote` do app). A Kotlin cancela
+    /// os alarmes anteriores, grava a agenda, agenda cada item e mostra,
+    /// troca ou tira a contínua, tudo sob a mesma trava. Só o Rust chama (o
+    /// comando fica fora da ACL). Espera a Kotlin terminar: chamar de uma
+    /// thread própria, nunca da principal nem com o motor travado.
+    pub fn agendar<T: Serialize>(&self, pacote: &T) -> Result<Agendados, PluginInvokeError> {
+        self.0.run_mobile_plugin("agendar", pacote)
     }
 }
 

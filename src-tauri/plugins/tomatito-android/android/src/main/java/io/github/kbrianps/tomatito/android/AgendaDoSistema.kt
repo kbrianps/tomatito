@@ -41,19 +41,24 @@ object AgendaDoSistema {
     /**
      * Troca a agenda gravada pela nova do Rust ([trocaDeAgenda]): o que venceu
      * sem aviso sai agora, e a nova vai inteira para o `AlarmManager`
-     * ([aplicar]). Devolve quantos itens foram agendados com cada API.
+     * ([aplicar]). Depois, a contínua passa a ser a de agora, do Rust (A11):
+     * ela vale mais que a `continuaDepois` de um item postado agora, que é
+     * do passado. Devolve quantos itens foram agendados com cada API.
      */
-    fun agendar(contexto: Context, nova: List<Alarme>): Map<ApiDoAlarme, Int> = synchronized(trava) {
-        val ctx = contexto.applicationContext
-        val antiga = Agenda.deJson(preferencias(ctx).getString(CHAVE_AGENDA, null))
-        val troca = trocaDeAgenda(antiga, nova, System.currentTimeMillis())
-        val contagem = aplicar(ctx, troca)
-        // Nada correndo (parado, pausado, fim da sessão): a contínua sai. Até o
-        // A11 (comando `continua`), é o único lugar que a tira fora do disparo.
-        if (troca.agendar.isEmpty() && troca.postarAgora.isEmpty()) continua(ctx, null)
-        Log.i(TAG, "agendar: ${troca.agendar.size} alarme(s) $contagem, ${troca.cancelar.size} cancelado(s)")
-        contagem
-    }
+    fun agendar(contexto: Context, nova: List<Alarme>, continuaAgora: Continua?): Map<ApiDoAlarme, Int> =
+        synchronized(trava) {
+            val ctx = contexto.applicationContext
+            val antiga = Agenda.deJson(preferencias(ctx).getString(CHAVE_AGENDA, null))
+            val troca = trocaDeAgenda(antiga, nova, System.currentTimeMillis())
+            val contagem = aplicar(ctx, troca)
+            continua(ctx, continuaAgora)
+            Log.i(
+                TAG,
+                "agendar: ${troca.agendar.size} alarme(s) $contagem, ${troca.cancelar.size} cancelado(s), " +
+                    "contínua: ${continuaAgora?.let { if (it.pausado) "${it.tipo} pausada" else it.tipo } ?: "nenhuma"}",
+            )
+            contagem
+        }
 
     /**
      * Reaplica a agenda gravada sem o Rust (5.2, item 5; A10b): depois do boot
@@ -61,7 +66,8 @@ object AgendaDoSistema {
      * ([PermissaoAlarmeReceiver]). O que ainda não venceu volta ao
      * `AlarmManager` (exato, se permitido); o vencido sai da agenda sem aviso
      * ([reagendamento]). A contínua fica como está: no boot o sistema já a
-     * apagou, e ela volta no próximo disparo ou ao abrir o app (A11).
+     * apagou, e ela volta no próximo disparo ou ao abrir o app (o `agendar`
+     * do Rust manda a de agora, A11).
      */
     fun reagendar(contexto: Context, motivo: MotivoDoReagendamento): Map<ApiDoAlarme, Int> = synchronized(trava) {
         val ctx = contexto.applicationContext
@@ -195,9 +201,11 @@ object AgendaDoSistema {
 
     /**
      * A notificação contínua (5.3): canal `sessao`, sem som, com a contagem
-     * desenhada pelo sistema até `fimMs`; pausada, sem cronômetro. `null`
-     * tira. A10a só a troca no disparo; mostrá-la desde o início da fase é
-     * do A11.
+     * desenhada pelo sistema até `fimMs` (`setUsesChronometer` com
+     * `setChronometerCountDown`: nada roda no app); pausada, sem cronômetro e
+     * "Pausado · faltam N min". `null` tira. Chamada pelo `agendar` (a de
+     * agora, a cada mudança do motor, A11) e pelo disparo (a `continuaDepois`
+     * do item, com o processo possivelmente morto, A10a).
      */
     fun continua(contexto: Context, c: Continua?) {
         val ctx = contexto.applicationContext

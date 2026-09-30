@@ -174,6 +174,9 @@ data class Alarme(
     val continuaDepois: Continua? = null,
 )
 
+/** O que o Rust manda no `agendar` (A11): a agenda inteira e a contínua de agora. */
+data class Pacote(val agenda: List<Alarme>, val continua: Continua?)
+
 /**
  * A agenda gravada nas `SharedPreferences` (JSON, com as chaves em camelCase,
  * as mesmas do `serde(rename_all = "camelCase")` do Rust, A09):
@@ -213,6 +216,22 @@ object Agenda {
             return emptyList()
         }
         return (0 until lista.length()).mapNotNull { i -> lista.optJSONObject(i)?.let(::alarmeDeJson) }
+    }
+
+    /**
+     * O pacote do `agendar` (A11): `{"agenda":[...],"continua":{...}|null}`,
+     * com a agenda no formato do [deJson] e a contínua de agora (5.3). Sem
+     * `agenda` (ou quebrado), `null`: o comando recusa. `continua` ausente,
+     * `null` ou sem `tipo` é "sem contínua" (ela sai).
+     */
+    fun pacoteDeJson(texto: String?): Pacote? {
+        val o = try {
+            org.json.JSONObject(texto ?: return null)
+        } catch (e: org.json.JSONException) {
+            return null
+        }
+        val lista = o.optJSONArray("agenda") ?: return null
+        return Pacote(deJson(lista.toString()), o.optJSONObject("continua")?.let(::continuaDeJson))
     }
 
     /** O que ainda vale reagendar depois do boot (5.2, item 5): o que vence depois de `agoraMs`, em ordem. */

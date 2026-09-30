@@ -261,4 +261,28 @@ class PurasTest {
         // Nada venceu: a mesma agenda, agora exata.
         assertEquals(listOf(1, 2, 3), reagendamento(agenda, 10_000, MotivoDoReagendamento.PERMISSAO).agendar.map { it.id })
     }
+
+    @Test
+    fun oPacoteDoAgendarTrazAAgendaEAContinuaDeAgora() {
+        // O `agenda::Pacote` do Rust (A11), com a contínua da fase correndo.
+        val p = Agenda.pacoteDeJson(
+            """{"agenda":[{"id":1,"quandoMs":$as1735,"canal":"fim-foco","titulo":"T","corpo":null,"continuaDepois":null}],
+            "continua":{"tipo":"foco","nome":"","fimMs":$as1735,"pausado":false,"restanteMs":0}}""",
+        )!!
+        assertEquals(listOf(1), p.agenda.map { it.id })
+        assertEquals(Continua("foco", fimMs = as1735), p.continua)
+        // Parado: agenda vazia e contínua null (ela sai); pausado: sem prazo.
+        assertEquals(Pacote(emptyList(), null), Agenda.pacoteDeJson("""{"agenda":[],"continua":null}"""))
+        assertEquals(
+            Pacote(emptyList(), Continua("intervalo", pausado = true, restanteMs = 40_000)),
+            Agenda.pacoteDeJson("""{"agenda":[],"continua":{"tipo":"intervalo","nome":"","fimMs":0,"pausado":true,"restanteMs":40000}}"""),
+        )
+        // Sem a chave `continua`, ou sem `tipo`: sem contínua.
+        assertNull(Agenda.pacoteDeJson("""{"agenda":[]}""")!!.continua)
+        assertNull(Agenda.pacoteDeJson("""{"agenda":[],"continua":{"nome":"x"}}""")!!.continua)
+        // Sem agenda, ou quebrado: o comando recusa.
+        assertNull(Agenda.pacoteDeJson("""{"continua":null}"""))
+        assertNull(Agenda.pacoteDeJson("não é json"))
+        assertNull(Agenda.pacoteDeJson(null))
+    }
 }
