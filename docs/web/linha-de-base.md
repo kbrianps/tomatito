@@ -18,8 +18,9 @@ Comparar uma rodada nova (`<atual>`) com esta base:
 ```bash
 B=docs/web/linha-de-base
 diff $B/build.txt <atual>/build.txt                    # vazio
-comm -23 $B/testes-cargo.txt <atual>/testes-cargo.txt  # vazio (nomes podem crescer, nenhum some); diff vazio no W04a, W04b e W05
-comm -23 $B/testes-node.txt <atual>/testes-node.txt    # vazio
+export LC_ALL=C   # com o locale pt_BR, o comm reclama da ordem do sort (visto no W03b)
+comm -23 <(sort $B/testes-cargo.txt) <(sort <atual>/testes-cargo.txt)  # vazio (nomes podem crescer, nenhum some); diff vazio no W04a, W04b e W05
+comm -23 <(sort $B/testes-node.txt) <(sort <atual>/testes-node.txt)    # vazio
 diff $B/arvore-desktop.txt <atual>/arvore-desktop.txt  # vazio; do W04a em diante, só a linha tomatito-motor
 python3 scripts/web/comparar-capturas.py $B <atual>    # saída 0
 diff $B/app-real.txt <atual>/app-real.txt              # vazio (com --app)
