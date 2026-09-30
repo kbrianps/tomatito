@@ -1,0 +1,85 @@
+//! Plugin `tomatito-android` (PLANO-ANDROID 4.2): a parte do Tomatito que só
+//! existe no Android, em Kotlin (`android/`), com o pacote
+//! `io.github.kbrianps.tomatito.android`.
+//!
+//! O JS chama os comandos direto na Kotlin: `invoke('plugin:tomatito-android|cores', ...)`
+//! passa pela ACL (`permissions/`, `capabilities/android.json`) e, como o
+//! Rust não tem um comando com esse nome, o Tauri o entrega ao plugin
+//! registrado aqui. O Rust do app usa o mesmo plugin pelo
+//! [`TomatitoAndroidExt`] (a agenda, a partir do A10a).
+//!
+//! Fora do Android, o crate compila vazio: ele só entra no desktop porque é
+//! dependência por caminho dentro do workspace (`cargo test --workspace`).
+#![cfg(target_os = "android")]
+
+use serde::{Deserialize, Serialize};
+use tauri::{
+    Manager, Runtime,
+    plugin::{Builder, PluginApi, PluginHandle, TauriPlugin, mobile::PluginInvokeError},
+};
+
+/// O nome do plugin, o prefixo dos comandos (`plugin:tomatito-android|...`).
+pub const NOME: &str = "tomatito-android";
+const PACOTE: &str = "io.github.kbrianps.tomatito.android";
+const CLASSE: &str = "TomatitoPlugin";
+
+/// O estado das permissões de aviso (resposta do `permissoes`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Permissoes {
+    /// `granted`, `denied` ou `prompt` (o de um pedido que ainda pode ser feito).
+    pub notificacoes: String,
+    /// O `AlarmManager` aceita alarmes exatos (sempre, antes do Android 12).
+    pub alarme_exato: bool,
+    /// O `Build.VERSION.SDK_INT` do aparelho.
+    pub sdk: u32,
+}
+
+/// Os argumentos do `cores`: o fundo atrás das barras do sistema, em
+/// `#rrggbb`, e se os ícones delas devem ser escuros (tema claro).
+#[derive(Debug, Clone, Serialize)]
+pub struct Cores<'a> {
+    pub fundo: &'a str,
+    pub claro: bool,
+}
+
+/// O plugin Kotlin registrado, para o Rust do app.
+pub struct TomatitoAndroid<R: Runtime>(PluginHandle<R>);
+
+impl<R: Runtime> TomatitoAndroid<R> {
+    pub fn permissoes(&self) -> Result<Permissoes, PluginInvokeError> {
+        self.0.run_mobile_plugin("permissoes", ())
+    }
+
+    pub fn cores(&self, cores: Cores<'_>) -> Result<(), PluginInvokeError> {
+        self.0
+            .run_mobile_plugin::<serde::de::IgnoredAny>("cores", cores)
+            .map(|_| ())
+    }
+}
+
+/// Acesso ao plugin a partir do `App`, do `AppHandle` ou de uma janela.
+pub trait TomatitoAndroidExt<R: Runtime> {
+    fn tomatito_android(&self) -> &TomatitoAndroid<R>;
+}
+
+impl<R: Runtime, T: Manager<R>> TomatitoAndroidExt<R> for T {
+    fn tomatito_android(&self) -> &TomatitoAndroid<R> {
+        self.state::<TomatitoAndroid<R>>().inner()
+    }
+}
+
+fn registrar<R: Runtime>(api: PluginApi<R, ()>) -> Result<TomatitoAndroid<R>, PluginInvokeError> {
+    api.register_android_plugin(PACOTE, CLASSE)
+        .map(TomatitoAndroid)
+}
+
+/// O plugin, para o `tauri::Builder::plugin` do app (só no Android).
+pub fn init<R: Runtime>() -> TauriPlugin<R> {
+    Builder::new(NOME)
+        .setup(|app, api| {
+            app.manage(registrar(api)?);
+            Ok(())
+        })
+        .build()
+}

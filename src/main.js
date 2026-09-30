@@ -30,7 +30,7 @@ import * as ipc from './lib/ipc.js';
 import { ligarAnuncioDeFases } from './lib/a11y.js';
 import { entrarPagina } from './lib/movimento.js';
 import { ligarLarguras } from './lib/larguras.js';
-import { aplicarTema, ligarSistema, ligarTema, temaDeBase } from './lib/theme.js';
+import { aplicarTema, ligarCoresDasBarras, ligarSistema, ligarTema, temaDeBase, temaDoSistemaAgora } from './lib/theme.js';
 import * as foco from './views/focus/index.js';
 import * as temporizador from './views/timers.js';
 import * as cronometro from './views/stopwatch.js';
@@ -82,6 +82,9 @@ try {
   // M24: o Rust é o dono das configurações, e a main reflete cada gravação
   // (tt://settings) nos atributos de tema do <html> (4.6).
   ligarTema({ ipc, h }).catch((erro) => console.error('[tema]', erro));
+  // A07a (PLANO-ANDROID 4.2): no Android, a cor atrás das barras do sistema
+  // e a dos ícones delas acompanham o tema (nas outras plataformas, nada).
+  ligarCoresDasBarras({ h, cores: ipc.android.cores });
   // M52: a validação com reversão do Full (5.9): a pergunta de 10 s e a
   // oferta do modo opaco, num diálogo por cima de qualquer tela.
   // Na web não há Full (casca.full).
@@ -151,7 +154,7 @@ try {
 
   await montarBarraDeTitulo(document.querySelector('.tt-titlebar'), win);
   if (temaDeBase(h) === 'system') {
-    const t = await win.theme();
+    const t = await temaDoSistemaAgora(win, h, () => midia.matches);
     if (t) h.dataset.theme = t;
   }
 } finally {

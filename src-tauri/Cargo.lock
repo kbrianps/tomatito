@@ -3918,6 +3918,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tauri-plugin-tomatito-android"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "tauri",
+ "tauri-plugin",
+]
+
+[[package]]
 name = "tauri-plugin-window-state"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4206,6 +4215,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-notification",
  "tauri-plugin-single-instance",
+ "tauri-plugin-tomatito-android",
  "tauri-plugin-window-state",
  "tokio",
  "tomatito-core",

@@ -1,0 +1,5 @@
+"$schema" = "schemas/schema.json"
+
+[default]
+description = "O que a janela main do Tomatito usa no Android (capabilities/android.json)."
+permissions = ["allow-permissoes", "allow-cores"]

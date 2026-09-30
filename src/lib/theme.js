@@ -15,6 +15,24 @@
 // `theme()`, depois, no Linux, `setTheme(t)`. As guardas (a) e (b), com o
 // `onThemeChanged`, estão em `ligarSistema` (M25).
 
+/**
+ * A07a (PLANO-ANDROID 5.7): no Android, o `theme()` da janela devolve sempre
+ * `light` (o Tauri não lê o modo noturno) e o `setTheme` não faz nada; quem
+ * acompanha o sistema é o `prefers-color-scheme` da WebView (targetSdk ≥ 33,
+ * tema DayNight). O tema do sistema vem da mídia, como no Linux, e não há
+ * tema nativo a reaplicar (guarda (b)).
+ */
+const android = (h) => h?.dataset?.platform === 'android';
+
+/**
+ * O tema do sistema agora, para o boot no modo Sistema: o `theme()` da
+ * janela ou, no Android (e se a janela não souber), a mídia.
+ */
+export async function temaDoSistemaAgora(win, h, escuroPelaMidia = () => false) {
+  if (android(h)) return escuroPelaMidia() ? 'dark' : 'light';
+  return (await win.theme()) ?? (escuroPelaMidia() ? 'dark' : 'light');
+}
+
 /** O tema nativo (menus e diálogos do sistema) de cada tema resolvido, pelo color-scheme. */
 export const NATIVO = Object.freeze({ lite: 'dark', suave: 'light', light: 'light', dark: 'dark' });
 
@@ -49,6 +67,7 @@ export function trocarAtributos(h, pref, tema, { quadro = globalThis.requestAnim
  * fixa o lido, porque o `setTheme(null)` do tao grava `prefer-dark = false`.
  */
 export async function temaDoSistema(win, { plataforma, escuroPelaMidia = () => false } = {}) {
+  if (plataforma === 'android') return escuroPelaMidia() ? 'dark' : 'light'; // A07a
   await win.setTheme(null);
   const t = (await win.theme()) ?? (escuroPelaMidia() ? 'dark' : 'light');
   if (plataforma === 'linux') await win.setTheme(t);
@@ -134,6 +153,48 @@ export function ligarTema({ ipc, h, quadro } = {}) {
 }
 
 /**
+ * As cores das barras do sistema no Android (A07a; PLANO-ANDROID 4.2 e 5.7):
+ * o `--tt-bg-app` do tema resolvido, em `#rrggbb`, e se o tema é claro (os
+ * ícones das barras ficam escuros). `null` se o fundo não for uma cor opaca
+ * em hexadecimal (o `transparent` do tomate).
+ */
+export function coresDasBarras(h, estilo = globalThis.getComputedStyle) {
+  const bruto = estilo(h).getPropertyValue('--tt-bg-app').trim().toLowerCase();
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/.exec(bruto);
+  if (!m) return null;
+  const hex = m[1].length === 3 ? [...m[1]].map((c) => c + c).join('') : m[1];
+  return { fundo: `#${hex}`, claro: NATIVO[h.dataset.theme] === 'light' };
+}
+
+/**
+ * No Android, a cada troca de tema (o evento `tt-tema`, que toda troca pela
+ * interface, pelo `tt://settings` ou pelo modo Sistema dispara) e uma vez já
+ * na chamada: manda ao plugin (`cores(fundo, claro)`) as cores do tema, só
+ * quando mudam. É o que o `applyTheme` da 4.6 faz com o `setTheme` nativo no
+ * desktop. Fora do Android, não faz nada: como a guarda do Linux acima, é um
+ * ajuste nativo da plataforma, não uma escolha da tela (a casca do Android,
+ * A05, pode passar a decidir). Devolve o `desligar`.
+ */
+export function ligarCoresDasBarras({ h, cores, estilo = globalThis.getComputedStyle, log = globalThis.console } = {}) {
+  if (h.dataset.platform !== 'android') return () => {};
+  let ultima = null;
+  const enviar = () => {
+    const c = coresDasBarras(h, estilo);
+    if (!c) return;
+    const chave = `${c.fundo}/${c.claro}`;
+    if (chave === ultima) return;
+    ultima = chave;
+    Promise.resolve(cores(c.fundo, c.claro)).catch((erro) => {
+      ultima = null; // a próxima troca tenta de novo
+      log.error?.('[tema] cores das barras', erro);
+    });
+  };
+  h.addEventListener(EVENTO, enviar);
+  enviar();
+  return () => h.removeEventListener(EVENTO, enviar);
+}
+
+/**
  * O tema de base que a main mostra: a escolha salva ou, no Full, o
  * `lastNormalTheme` (4.6). Pode ser `system`.
  */
@@ -192,7 +253,7 @@ export function ligarSistema({
   // O tema nativo agora. No Linux, o do WebKit (que segue o prefer-dark do
   // GTK); o `theme()` do tao só devolve o que foi fixado por último.
   async function lerNativo() {
-    if (linux()) return daMidia();
+    if (linux() || android(h)) return daMidia();
     return (await win.theme()) ?? daMidia();
   }
 
@@ -212,6 +273,7 @@ export function ligarSistema({
       }
       return 'trocou';
     }
+    if (android(h)) return 'igual'; // sem tema nativo a reaplicar (A07a)
     const esperado = NATIVO[base] ?? NATIVO[h.dataset.theme];
     if (!esperado || atual === esperado) return 'igual';
     const t = relogio.agora();

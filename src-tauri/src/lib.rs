@@ -58,6 +58,10 @@ pub fn run() {
     // sistema garante uma instância só, e a janela ocupa a tela.
     #[cfg(mobile)]
     let builder = tauri::Builder::default();
+    // O plugin próprio (A07a, PLANO-ANDROID 4.2): permissões de aviso, cor
+    // das barras do sistema e, nos próximos marcos, alarmes e notificações.
+    #[cfg(target_os = "android")]
+    let builder = builder.plugin(tauri_plugin_tomatito_android::init());
     // O de notificação só existe no Windows; no Linux, o `notify.rs` fala
     // direto com o D-Bus (docs/decisoes.md, M21).
     #[cfg(windows)]

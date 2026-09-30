@@ -190,5 +190,17 @@ export const compatX11 = Object.freeze({
   reiniciar: () => invoke('app_restart'),
 });
 
+/**
+ * A07a (PLANO-ANDROID 4.2): o plugin `tomatito-android`, que só existe no
+ * Android (a Kotlin responde direto, sem comando no Rust do app).
+ * `permissoes()` resolve com `{ notificacoes: 'granted'|'denied'|'prompt',
+ * alarmeExato, sdk }`; `cores(fundo, claro)` pinta atrás das barras do
+ * sistema (`fundo` em `#rrggbb`) e escolhe ícones escuros (`claro`) ou claros.
+ */
+export const android = Object.freeze({
+  permissoes: () => invoke('plugin:tomatito-android|permissoes'),
+  cores: (fundo, claro) => invoke('plugin:tomatito-android|cores', { fundo, claro }),
+});
+
 /** Ouve um evento do Rust; `cb` recebe só o conteúdo. Devolve o `unlisten`. */
 export const ouvir = (evento, cb) => listen(evento, (e) => cb(e.payload));

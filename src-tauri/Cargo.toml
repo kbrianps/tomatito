@@ -58,6 +58,11 @@ rodio = { version = "0.22.2", default-features = false, features = ["playback", 
 tauri-plugin-single-instance = "=2.4.5"
 tauri-plugin-window-state = "=2.4.1"
 
+# O plugin próprio do Android (PLANO-ANDROID 4.2, A07a): Kotlin para avisos,
+# alarmes e barras do sistema. No desktop ele nem entra.
+[target.'cfg(target_os = "android")'.dependencies]
+tauri-plugin-tomatito-android = { path = "plugins/tomatito-android" }
+
 [dev-dependencies]
 # Testes do laço com o tempo do tokio parado (start_paused).
 tokio = { version = "1.53", features = ["rt", "macros", "test-util"] }
