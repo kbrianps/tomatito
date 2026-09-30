@@ -47,6 +47,7 @@ import { marcaDoApp } from '../components/app-mark.js';
 import { criar as criarDialogoAvisos } from './notices-dialog.js';
 import { ligarDicaSempreNaFrente } from './dica-sempre-na-frente.js';
 import { ligarOpcaoX11 } from './opcao-x11.js';
+import { ligarAvisosWeb } from './avisos-web.js';
 
 const c = t.configuracoes;
 // M56: o `tomato_on_top_available`, carregado só quando a dica precisa (os
@@ -645,9 +646,11 @@ export function ligarSistemaESobre(
  * `store` e `ipc` (M38) são os do app; os testes passam falsos.
  * `porCodigo()` resolve com o `tomato_on_top_available` (M56, a dica), e
  * `compatX11` é o IPC da opção do M57 (opcao-x11.js; sem ele, o do app).
+ * `avisosWeb` (W14) carrega a plataforma da seção Avisos (avisos-web.js; sem
+ * ele, o `#plataforma`).
  * Devolve a limpeza (o roteador a chama ao sair da tela).
  */
-export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.document, store = storeDoApp, ipc = ipcDoApp, porCodigo = sempreNaFrente, compatX11 } = {}) {
+export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.document, store = storeDoApp, ipc = ipcDoApp, porCodigo = sempreNaFrente, compatX11, avisosWeb } = {}) {
   const h = doc.documentElement;
   raiz.innerHTML = marcacao({
     pref: h.dataset.themePref,
@@ -678,6 +681,8 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
   const semDica = ligarDicaSempreNaFrente(raiz.querySelector('.tt-config-secao'), { doc, porCodigo, evento: EVENTO });
   // M57: a Compatibilidade X11 (opcao-x11.js), na seção Avançado, antes do Sobre.
   const semX11 = ligarOpcaoX11(raiz.querySelector('.tt-pagina'), { icone, ipc: compatX11 });
+  // W14: a seção Avisos, só na web (avisos-web.js), depois da Aparência.
+  const semAvisos = ligarAvisosWeb(raiz.querySelector('.tt-pagina'), { icone, plataforma: avisosWeb });
   return () => {
     grupo.removeEventListener('change', aoMudar);
     h.removeEventListener(EVENTO, aoTrocar);
@@ -685,5 +690,6 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
     desligarSistema();
     semDica();
     semX11();
+    semAvisos();
   };
 }

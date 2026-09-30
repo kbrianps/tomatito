@@ -5,12 +5,14 @@
 // card-session.js). M27: o de progresso (card-progress.js), que no M28 ganha
 // o lápis e o diálogo da meta (goal-dialog.js). M30: o de tarefas
 // (card-tasks.js), com o ícone no título; a tarefa escolhida nele vai no
-// "Iniciar sessão de foco" do cartão de sessão.
+// "Iniciar sessão de foco" do cartão de sessão. W14: na web, o InfoBar do
+// pedido de avisos no cartão de sessão (pedido-de-avisos.js).
 import t from '../../lib/i18n/pt-BR.js';
 import { PREPARO_PADRAO, store as storeDoApp } from '../../lib/store.js';
 import * as sessao from './card-session.js';
 import * as progresso from './card-progress.js';
 import * as tarefas from './card-tasks.js';
+import * as pedidoDeAvisos from './pedido-de-avisos.js';
 
 // Colunas da grade, com os cartões na ordem de leitura (e do Tab).
 export const COLUNAS = Object.freeze([Object.freeze(['sessao', 'tarefas']), Object.freeze(['progresso'])]);
@@ -58,6 +60,7 @@ export function montar(raiz, { store = storeDoApp, icone = semIcone, ipc } = {})
     sessao.ligar(raiz.querySelector('[data-cartao="sessao"]'), store, { icone, tarefa: tarefas.escolhida }),
     tarefas.ligar(raiz.querySelector('[data-cartao="tarefas"]'), store, ipc ? { ipc, icone } : { icone }),
     progresso.ligar(raiz.querySelector('[data-cartao="progresso"]'), store, ipc ? { ipc, icone } : { icone }),
+    pedidoDeAvisos.ligar(raiz.querySelector('[data-cartao="sessao"]'), { icone }),
   ];
   return () => limpar.forEach((f) => f());
 }

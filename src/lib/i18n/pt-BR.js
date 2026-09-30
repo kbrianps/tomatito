@@ -315,6 +315,29 @@ export default Object.freeze({
       }),
       marcas: 'Interface inspirada no Fluent Design. Windows e Segoe são marcas da Microsoft. O Tomatito não é afiliado à Microsoft.',
     }),
+    // W14: a seção Avisos da versão web (views/avisos-web.js; PLANO-WEB, 4 e
+    // 5; PLANO-WEB-V1, 7), com os quatro estados da permissão e o rodapé.
+    avisos: Object.freeze({
+      secao: 'Avisos',
+      titulo: 'Notificações',
+      estados: Object.freeze({
+        default: 'Mostrar um aviso quando o foco ou o intervalo terminar.',
+        granted: 'Ativadas neste navegador.',
+        denied: 'Bloqueadas neste navegador. Para ativar, abra as permissões do site (o ícone à esquerda do endereço).',
+        'sem-suporte': 'Neste navegador não há notificações.',
+      }),
+      permitir: 'Permitir avisos',
+      testar: 'Testar aviso',
+      iphone: 'No iPhone e no iPad, os avisos só funcionam com o Tomatito na Tela de Início.',
+      abaAberta: 'No navegador, o aviso depende de a aba continuar aberta.',
+      celular:
+        'No celular, com a tela apagada ou outro app aberto, o navegador pode segurar o aviso até você voltar ao Tomatito. A contagem não atrasa.',
+      // O aviso do "Testar aviso".
+      teste: Object.freeze({
+        titulo: 'Tomatito',
+        corpo: 'Os avisos estão ativados neste navegador.',
+      }),
+    }),
     // M57: a opção avançada do plano B2 (views/opcao-x11.js).
     avancado: 'Avançado',
     x11: Object.freeze({
@@ -325,6 +348,17 @@ export default Object.freeze({
       reiniciar: 'Reiniciar agora',
       semXwayland: 'Esta sessão não tem Xwayland, e a opção fica sem efeito.',
     }),
+  }),
+  // W14: o InfoBar da versão web, no cartão de sessão, depois do primeiro
+  // "Iniciar sessão de foco" com a permissão ainda não pedida
+  // (views/focus/pedido-de-avisos.js; PLANO-WEB, 4).
+  pedidoDeAvisos: Object.freeze({
+    titulo: 'Aviso no fim de cada período?',
+    texto: 'O navegador pode mostrar uma notificação quando o foco ou o intervalo terminar.',
+    permitir: 'Permitir avisos',
+    agoraNao: 'Agora não',
+    bloqueados: 'Avisos bloqueados neste navegador. Dá para mudar nas permissões do site.',
+    fechar: 'Fechar',
   }),
   // Unidades por extenso, por categoria do Intl.PluralRules('pt-BR')
   // (format.js): o aria-valuetext do seletor de minutos ("25 minutos").

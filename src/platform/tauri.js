@@ -30,3 +30,9 @@ export const casca = Object.freeze({
  */
 export const SEM_RECURSOS_DA_CASCA = Object.freeze({ notificacoes: false, instalavel: false });
 export const recursosDaCasca = () => SEM_RECURSOS_DA_CASCA;
+
+/**
+ * W14: a permissão dos avisos do navegador (platform/web/permissao.js). O
+ * desktop avisa pelo notify.rs, sem pedido: nada.
+ */
+export const avisosDaCasca = null;

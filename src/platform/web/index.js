@@ -19,11 +19,14 @@
 // W13: os avisos (avisos.js), pelo service worker da raiz (sw.js). Os
 // efeitos `notice` e `timerNotice` do motor viram notificações, `silent`
 // quando o som do mesmo passo tocou.
+// W14: o pedido de permissão (permissao.js), exposto às telas como
+// `avisosDaCasca` (o InfoBar da Foco e a seção Avisos das Configurações).
 import focusEndUrl from '../../../src-tauri/sounds/focus-end.wav?url';
 import breakEndUrl from '../../../src-tauri/sounds/break-end.wav?url';
 import * as motor from './motor.js';
 import { criarSom } from './som.js';
 import { criarAvisos, registrarServiceWorker, registroAtivo } from './avisos.js';
+import { criarPermissao } from './permissao.js';
 import * as configuracoes from './configuracoes.js';
 import * as estatisticas from './estatisticas.js';
 import * as tarefas from './tarefas.js';
@@ -201,3 +204,14 @@ export function recursosDaCasca() {
     instalavel: recebeuConvite,
   });
 }
+
+/**
+ * W14: a permissão dos avisos (permissao.js), para o InfoBar da Foco e a
+ * seção Avisos das Configurações. No desktop, null (platform/tauri.js).
+ */
+export const avisosDaCasca = criarPermissao({
+  notificacao: () => globalThis.Notification,
+  armazenamento: () => globalThis.localStorage ?? null,
+  permissoes: () => globalThis.navigator?.permissions ?? null,
+  registro: () => registroAtivo(),
+});

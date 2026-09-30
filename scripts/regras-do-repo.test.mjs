@@ -1254,3 +1254,17 @@ test('web: boot, viewport e CSP pelo plugin-web.mjs, só no vite.web.config.js (
   assert.match(indexHtml, /<meta name="viewport" content="width=device-width, initial-scale=1\.0" \/>/);
   assert.doesNotMatch(indexHtml, /boot-web|theme-color|data-forma/);
 });
+
+test('web: o pedido de permissão só no permissao.js, e o InfoBar e a seção Avisos pelo recursosDaCasca (W14)', () => {
+  const arquivos = arquivosEm('src').filter((f) => /\.m?js$/.test(f) && !f.endsWith('.test.js') && !f.startsWith('src/platform/web/pkg/'));
+  const comPedido = arquivos.filter((f) => /requestPermission/.test(semComentarios(ler(f))));
+  assert.deepEqual(comPedido, ['src/platform/web/permissao.js']);
+  assert.match(ler('src/platform/web/permissao.js'), /getItem\('tomatito:web\.avisoDispensado'\)/);
+  // A decisão é pela casca (recursosDaCasca), nunca pelo recursos.js do desktop.
+  for (const f of ['src/views/avisos-web.js', 'src/views/focus/pedido-de-avisos.js']) {
+    const texto = semComentarios(ler(f));
+    assert.match(texto, /recursosDaCasca/, f);
+    assert.doesNotMatch(texto, /platform\/recursos\.js/, f);
+  }
+  assert.match(ler('src/platform/tauri.js'), /^export const avisosDaCasca = null;$/m);
+});
