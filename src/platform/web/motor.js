@@ -10,8 +10,8 @@
 //   Os que têm evento no desktop (`state`, `tick`, `phase`, `timers`,
 //   `stopwatch`) vão ao barramento com o mesmo nome (`tt://<tipo>`). Os que o
 //   desktop faz no Rust vão ao dono registrado pelo index.js (`aoEfeito`):
-//   o `sound` ao som.js (W12). Os que ainda não têm dono (`notice`,
-//   `timerNotice`, até o W13) ficam anotados em `semDono`.
+//   o `sound` ao som.js (W12), o `notice` e o `timerNotice` ao avisos.js
+//   (W13). Um que ainda não tenha dono fica anotado em `semDono`.
 //   O `period` (W08) vai ao estatisticas.js, que o grava no IndexedDB
 //   (`aoEfeito`, registrado pelo index.js).
 // - As preferências (F, B e os sons) vêm das configurações (configuracoes.js)

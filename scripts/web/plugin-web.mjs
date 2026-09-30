@@ -16,6 +16,9 @@
 // Os documentos do notices_read (THIRD_PARTY_NOTICES.md e OFL-Inter.txt) ao
 // lado do index.html: no build, copiados para o dist-web; no dev, servidos do
 // lugar deles.
+// W13: o service worker (src/platform/web/sw.js) na raiz do site, como
+// `sw.js` (escopo = a base): no build, emitido no dist-web sem hash no nome
+// (o endereço dele não pode mudar); no dev, servido do arquivo.
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -35,6 +38,9 @@ export const DOCUMENTOS = Object.freeze({
 });
 
 const BOOT_WEB = 'src/platform/web/boot-web.js';
+
+/** O service worker (W13): a fonte e o nome publicado, na raiz da base. */
+export const SW = Object.freeze({ fonte: 'src/platform/web/sw.js', nome: 'sw.js' });
 
 const sha256 = (texto) => createHash('sha256').update(texto).digest('base64');
 
@@ -103,6 +109,12 @@ export default function pluginWeb({ cspNoDev = false } = {}) {
       servidor.middlewares.use((req, res, next) => {
         const caminho = decodeURIComponent((req.url ?? '').split('?')[0]);
         const nome = caminho.startsWith(base) ? caminho.slice(base.length) : null;
+        if (nome === SW.nome) {
+          res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-cache');
+          res.end(readFileSync(raiz(SW.fonte)));
+          return;
+        }
         if (!nome || !Object.hasOwn(DOCUMENTOS, nome)) return next();
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.end(readFileSync(raiz(DOCUMENTOS[nome])));
@@ -111,6 +123,7 @@ export default function pluginWeb({ cspNoDev = false } = {}) {
     buildStart() {
       if (!build) return;
       this.emitFile({ type: 'asset', fileName: nomeNoBuild, source: fonte });
+      this.emitFile({ type: 'asset', fileName: SW.nome, source: readFileSync(raiz(SW.fonte), 'utf8') });
       for (const [nome, origem] of Object.entries(DOCUMENTOS)) {
         this.emitFile({ type: 'asset', fileName: nome, source: readFileSync(raiz(origem)) });
       }

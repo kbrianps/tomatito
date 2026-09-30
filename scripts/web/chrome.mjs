@@ -122,6 +122,11 @@ export function abrirChrome({ env = {}, args = [] } = {}) {
       // W12: os casos tocam sons de verdade (Web Audio); nada sai na saída
       // de áudio da sessão de quem roda.
       '--mute-audio',
+      // W13: os avisos ficam na central de notificações interna do Chrome.
+      // Sem isto, no Linux, o Chrome manda cada aviso ao servidor de
+      // notificações da sessão (D-Bus, o GNOME de quem roda), e o aviso
+      // aparece na tela de verdade (e some quando o servidor o fecha).
+      '--disable-features=NativeNotifications,SystemNotifications',
       ...args,
       'about:blank',
     ],

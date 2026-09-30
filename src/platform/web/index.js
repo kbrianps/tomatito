@@ -16,10 +16,14 @@
 // W12: o som (som.js), com os WAVs do desktop publicados pelo Vite. O efeito
 // `sound` do motor toca; os comandos que deixam algo correndo despertam o
 // AudioContext (o gesto); cada transição do motor revisa o `suspend()`.
+// W13: os avisos (avisos.js), pelo service worker da raiz (sw.js). Os
+// efeitos `notice` e `timerNotice` do motor viram notificações, `silent`
+// quando o som do mesmo passo tocou.
 import focusEndUrl from '../../../src-tauri/sounds/focus-end.wav?url';
 import breakEndUrl from '../../../src-tauri/sounds/break-end.wav?url';
 import * as motor from './motor.js';
 import { criarSom } from './som.js';
+import { criarAvisos, registrarServiceWorker, registroAtivo } from './avisos.js';
 import * as configuracoes from './configuracoes.js';
 import * as estatisticas from './estatisticas.js';
 import * as tarefas from './tarefas.js';
@@ -43,11 +47,30 @@ const som = criarSom({
   // Lido na hora de tocar: o settings_set já regravou as configurações.
   volume: () => configuracoes.ler().volume,
 });
-motor.aoEfeito('sound', (sound) => som.tocar(sound, 'motor'));
+// O pedido de som do passo fica guardado até o aviso que vem logo depois
+// dele (o núcleo emite o `sound` antes do `notice` e do `timerNotice`).
+let somDoPasso = null;
+motor.aoEfeito('sound', (sound) => {
+  somDoPasso = som.tocar(sound, 'motor');
+});
+const tomarSom = () => {
+  const s = somDoPasso;
+  somDoPasso = null;
+  return s;
+};
 listen('tt://state', () => som.revisar());
 listen('tt://timers', () => som.revisar());
 // Os WAVs chegam na carga, sem esperar o primeiro fim de fase.
 som.carregar();
+
+const avisos = criarAvisos({
+  permissao: () => globalThis.Notification?.permission ?? 'sem suporte',
+  registro: () => registroAtivo(),
+});
+motor.aoEfeito('notice', (dados) => avisos.fase(dados, tomarSom()));
+motor.aoEfeito('timerNotice', (dados) => avisos.temporizador(dados, tomarSom()));
+// Registrado na carga, sem pedir permissão (o pedido é por clique, W14).
+registrarServiceWorker(import.meta.env.BASE_URL);
 
 /** Os comandos que deixam algo correndo: o gesto que desperta o som (3.6). */
 const DESPERTAM = new Set(['focus_start', 'focus_resume', 'focus_skip', 'timer_start']);

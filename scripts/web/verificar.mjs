@@ -459,6 +459,11 @@ async function rodarCaso(nome, opts, limpar) {
        * real (W11).
        */
       ativarAba: (p) => chrome.cmd('Target.activateTarget', { targetId: p.targetId }),
+      /**
+       * Um comando do DevTools no nível do navegador, fora de qualquer aba
+       * (W13: `Browser.setPermission` das notificações).
+       */
+      navegador: (method, params) => chrome.cmd(method, params),
       perfis: celular.PERFIS,
       conferir(rotulo, ok, detalhe) {
         itens.push({ rotulo, ok: !!ok, detalhe });

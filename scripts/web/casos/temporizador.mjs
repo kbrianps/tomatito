@@ -114,8 +114,9 @@ export default async function temporizador(t) {
   // O tempo do card, em segundos passados do zero (o "-00:00:ss").
   const passados = /^-00:00:(\d\d)$/.exec(c.tempo)?.[1];
   const fins = await p.avaliar(`(async () => {
-    const { semDono } = await import('/src/platform/web/motor.js');
-    return semDono.filter((e) => e.tipo === 'timerNotice').map((e) => e.dados);
+    // W13: o timerNotice tem dono (avisos.js), que anota cada aviso.
+    const { historico } = await import('/src/platform/web/avisos.js');
+    return historico.filter((e) => e.tipo === 'timerNotice').map((e) => e.dados);
   })()`);
   const outros = (await p.avaliar(CARDS)).filter((x) => x.id !== um.id);
   t.conferir(

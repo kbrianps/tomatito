@@ -32,6 +32,7 @@ use tomatito_motor::engine::{CommandError, Engine, Preferencias, Sink};
 use tomatito_motor::events::{
     FocusDto, PhaseDto, PhaseEventDto, PhaseKindDto, StateDto, StopwatchDto, TickDto, TimersDto,
 };
+use tomatito_motor::i18n::{self, NoticeText};
 use tomatito_motor::settings::{Applied, Settings, SettingsError, aplicar_patch, apply};
 use tomatito_motor::state_file::{
     Restored, SCHEMA_VERSION, SavedFocus, SavedStopwatch, SavedTimer, StateFile,
@@ -92,8 +93,8 @@ impl From<Sound> for SomDto {
     }
 }
 
-/// `Notice` no fio: os dados do aviso, sem o texto (o texto sai do
-/// `i18n.rs`, no W13). Instantes em ms de época.
+/// `Notice` no fio: os dados do aviso. Instantes em ms de época. O texto
+/// vai ao lado, no [`AvisoWebDto`] (W13).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
@@ -166,6 +167,59 @@ impl From<Notice> for AvisoDto {
     }
 }
 
+/// Um texto de notificação pronto (o `NoticeText` do `i18n.rs`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct TextoDto {
+    pub title: String,
+    pub body: Option<String>,
+}
+
+impl From<NoticeText> for TextoDto {
+    fn from(t: NoticeText) -> Self {
+        Self {
+            title: t.title,
+            body: t.body,
+        }
+    }
+}
+
+/// O efeito `notice` (W13): os dados do aviso (os mesmos campos do
+/// [`AvisoDto`], com o `kind`), o `prazo` da fase que acabou e os textos do
+/// `i18n.rs`, no fuso do navegador. O `textoComAtraso` (o
+/// [`i18n::notice_com_atraso`], com "às HH:MM") é o que o avisos.js mostra
+/// quando o aviso sai de 10 a 60 s depois do prazo; o atrasado (mais de
+/// 60 s) já vem com a hora no `texto` e não tem o outro.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AvisoWebDto {
+    #[serde(flatten)]
+    pub aviso: AvisoDto,
+    pub prazo: Option<i64>,
+    pub texto: TextoDto,
+    pub texto_com_atraso: Option<TextoDto>,
+}
+
+impl AvisoWebDto {
+    /// `prazo`: o fim da última fase fechada (o `endedAt` do último período
+    /// concluído do mesmo passo, que o núcleo grava antes do aviso).
+    pub fn novo(notice: Notice, prazo: Option<EpochMs>, tz: &TimeZone) -> Self {
+        let prazo = match notice {
+            Notice::Late { ended_at, .. } => Some(ended_at),
+            _ => prazo,
+        };
+        let texto_com_atraso = match (notice, prazo) {
+            (Notice::Late { .. }, _) | (_, None) => None,
+            (_, Some(p)) => Some(i18n::notice_com_atraso(&notice, p, tz).into()),
+        };
+        Self {
+            aviso: notice.into(),
+            prazo: prazo.map(|p| p.0),
+            texto: i18n::notice(&notice, tz).into(),
+            texto_com_atraso,
+        }
+    }
+}
+
 /// Uma linha de `periods` (a mesma do SQLite do desktop), para o IndexedDB
 /// (W08).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -198,7 +252,11 @@ impl From<&Period> for PeriodoDto {
     }
 }
 
-/// O fim de um temporizador, para o aviso (W13).
+/// O fim de um temporizador, para o aviso (W13), com os textos do
+/// `i18n.rs` no fuso do navegador. O `textoComAtraso` ("Temporizador
+/// encerrado às 14:32") é o do fim atrasado, para o avisos.js usar quando o
+/// aviso sai de 10 a 60 s depois do `endedAt`; o atrasado já o tem no
+/// `texto`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FimDoTemporizadorDto {
@@ -207,16 +265,27 @@ pub struct FimDoTemporizadorDto {
     pub duration_ms: u64,
     pub ended_at: i64,
     pub late: bool,
+    pub texto: TextoDto,
+    pub texto_com_atraso: Option<TextoDto>,
 }
 
-impl From<&TimerEnded> for FimDoTemporizadorDto {
-    fn from(e: &TimerEnded) -> Self {
+impl FimDoTemporizadorDto {
+    pub fn novo(e: &TimerEnded, tz: &TimeZone) -> Self {
+        let texto_com_atraso = (!e.late).then(|| {
+            let atrasado = TimerEnded {
+                late: true,
+                ..e.clone()
+            };
+            i18n::timer_ended(&atrasado, tz).into()
+        });
         Self {
             id: e.id,
             name: e.name.clone(),
             duration_ms: e.duration_ms,
             ended_at: e.ended_at.0,
             late: e.late,
+            texto: i18n::timer_ended(e, tz).into(),
+            texto_com_atraso,
         }
     }
 }
@@ -233,7 +302,7 @@ pub enum Efeito {
     Tick(TickDto),
     Phase(PhaseEventDto),
     Sound(SomDto),
-    Notice(AvisoDto),
+    Notice(AvisoWebDto),
     Period(PeriodoDto),
     Timers(TimersDto),
     TimerNotice(FimDoTemporizadorDto),
@@ -244,6 +313,10 @@ pub enum Efeito {
 #[derive(Debug, Default)]
 pub struct WebSink {
     fila: Mutex<Vec<Efeito>>,
+    /// O fim do último período concluído, até o aviso que vem depois dele
+    /// no mesmo passo (o `advance_to` do núcleo grava os períodos antes do
+    /// aviso): o prazo que o aviso não traz.
+    ultimo_prazo: Mutex<Option<EpochMs>>,
 }
 
 impl WebSink {
@@ -274,16 +347,34 @@ impl Sink for WebSink {
         self.por(Efeito::Sound(sound.into()));
     }
     fn notice(&self, notice: Notice) {
-        self.por(Efeito::Notice(notice.into()));
+        let prazo = self
+            .ultimo_prazo
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take();
+        self.por(Efeito::Notice(AvisoWebDto::novo(
+            notice,
+            prazo,
+            &TimeZone::system(),
+        )));
     }
     fn period(&self, period: &Period) {
+        if period.completed {
+            *self
+                .ultimo_prazo
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner) = Some(period.ended_at);
+        }
         self.por(Efeito::Period(period.into()));
     }
     fn timers(&self, timers: &TimersDto) {
         self.por(Efeito::Timers(timers.clone()));
     }
     fn timer_notice(&self, ended: &TimerEnded) {
-        self.por(Efeito::TimerNotice(ended.into()));
+        self.por(Efeito::TimerNotice(FimDoTemporizadorDto::novo(
+            ended,
+            &TimeZone::system(),
+        )));
     }
     fn stopwatch(&self, stopwatch: &StopwatchDto) {
         self.por(Efeito::Stopwatch(stopwatch.clone()));
@@ -1103,6 +1194,106 @@ mod tests {
         assert_eq!(aviso["dados"]["breakS"], 600, "{aviso}");
     }
 
+    fn efeito<'a>(efeitos: &'a [Value], tipo: &str) -> &'a Value {
+        &efeitos
+            .iter()
+            .find(|e| e["tipo"] == tipo)
+            .unwrap_or_else(|| panic!("sem {tipo}: {efeitos:?}"))["dados"]
+    }
+
+    fn texto(t: NoticeText) -> Value {
+        json!({ "title": t.title, "body": t.body })
+    }
+
+    /// W13: o aviso leva os dados, o prazo e os textos do `i18n.rs` (no fuso
+    /// do sistema, o mesmo que o wasm usa no navegador).
+    #[test]
+    fn aviso_de_fase_com_prazo_e_textos() {
+        let (m, relogio) = motor();
+        let tz = TimeZone::system();
+        m.executar("focus_start", json!({ "minutes": 60 })).unwrap();
+        let prazo = T0.plus_ms(1_650_000);
+        // 20 s depois do prazo: ainda o aviso normal (o atrasado é de 60 s).
+        relogio.advance_ms(1_650_000 + 20_000);
+        let v: Value = serde_json::to_value(m.passo()).unwrap();
+        let efeitos = v["efeitos"].as_array().unwrap();
+        let aviso = efeito(efeitos, "notice");
+        let notice = Notice::FocusEnded {
+            n: 1,
+            blocks: 2,
+            break_s: 300,
+            next_focus_at: prazo.plus_ms(300_000),
+        };
+        assert_eq!(aviso["kind"], "focusEnded", "{aviso}");
+        assert_eq!(aviso["breakS"], 300, "{aviso}");
+        assert_eq!(aviso["prazo"], prazo.0, "{aviso}");
+        assert_eq!(aviso["texto"], texto(i18n::notice(&notice, &tz)));
+        assert_eq!(
+            aviso["textoComAtraso"],
+            texto(i18n::notice_com_atraso(&notice, prazo, &tz))
+        );
+        assert_eq!(efeito(efeitos, "period")["endedAt"], prazo.0);
+
+        // O atrasado já traz a hora no texto, e o prazo é o fim dele.
+        let (m, relogio) = motor();
+        m.executar("focus_start", json!({ "minutes": 25 })).unwrap();
+        relogio.advance_ms(27 * 60_000);
+        let v: Value = serde_json::to_value(m.passo()).unwrap();
+        let aviso = efeito(v["efeitos"].as_array().unwrap(), "notice");
+        assert_eq!(aviso["kind"], "late", "{aviso}");
+        assert_eq!(aviso["prazo"], T0.0 + 25 * 60_000);
+        assert_eq!(aviso["textoComAtraso"], Value::Null);
+        assert!(
+            aviso["texto"]["title"]
+                .as_str()
+                .unwrap()
+                .starts_with("Sessão concluída às "),
+            "{aviso}"
+        );
+    }
+
+    #[test]
+    fn aviso_de_temporizador_com_textos() {
+        let (m, relogio) = motor();
+        let tz = TimeZone::system();
+        let r = m
+            .executar(
+                "timer_create",
+                json!({ "name": "Chá", "durationMs": 240_000 }),
+            )
+            .unwrap();
+        let Resultado::Temporizadores(t) = &r.resultado else {
+            panic!("timer_create devolve os temporizadores");
+        };
+        let id = t.timers.last().unwrap().id;
+        m.executar("timer_start", json!({ "id": id })).unwrap();
+        relogio.advance_ms(240_000);
+        let v: Value = serde_json::to_value(m.passo()).unwrap();
+        let fim = efeito(v["efeitos"].as_array().unwrap(), "timerNotice");
+        let ended = TimerEnded {
+            id,
+            name: "Chá".into(),
+            duration_ms: 240_000,
+            ended_at: T0.plus_ms(240_000),
+            late: false,
+        };
+        assert_eq!(
+            fim["texto"],
+            json!({ "title": "Temporizador encerrado", "body": "Chá · 4 min" })
+        );
+        assert_eq!(
+            fim["textoComAtraso"],
+            texto(i18n::timer_ended(
+                &TimerEnded {
+                    late: true,
+                    ..ended.clone()
+                },
+                &tz
+            ))
+        );
+        assert_eq!(fim["endedAt"], ended.ended_at.0);
+    }
+
     #[test]
     fn faixas_com_horario_de_verao() {
         // O dia de 08/03/2026 em Nova York tem 23 h (days.rs, teste
@@ -1177,7 +1368,7 @@ mod tests {
             .efeitos
             .iter()
             .filter_map(|e| match e {
-                Efeito::Notice(a) => Some(*a),
+                Efeito::Notice(a) => Some(a.aviso),
                 _ => None,
             })
             .collect();

@@ -7,8 +7,8 @@
 // Roda no servidor de desenvolvimento (`--servidor dev`), como o `foco`: a
 // página importa o /src/platform/web/index.js (o `#plataforma` do app, com o
 // `invoke`) e o /src/platform/web/motor.js, os mesmos módulos do app (o
-// `semDono` guarda o `notice`, que ainda não tem dono na web até o W13; o
-// `sound` vai ao som.js desde o W12, que anota cada pedido no `historico`).
+// `notice` vai ao avisos.js desde o W13 e o `sound` ao som.js desde o W12;
+// os dois anotam cada pedido no `historico` deles).
 //
 // (a) recarregar no meio de um foco de 25 min (7 min andados) mantém o tempo
 //     restante, com diferença de até 1 s, e a tela volta ao andamento; o
@@ -21,8 +21,8 @@
 //     fim no prazo, completo), o progresso da tela diz "Concluído: 25
 //     minutos", sai um aviso só, o do atraso (`late`, `sessionCompleted`,
 //     com o `endedAt` no prazo, ou seja "Sessão concluída às HH:MM" com a
-//     hora do prazo; o texto é do i18n do motor e aparece como notificação
-//     no W13), e nenhum efeito `sound`; a sessão fica concluída (o
+//     hora do prazo; o texto é do i18n do motor e sai como notificação
+//     com a permissão dada, W13), e nenhum efeito `sound`; a sessão fica concluída (o
 //     `completed` do núcleo, com `completedAt` no prazo), com a tela no
 //     preparo, e é isso que fica gravado; recarregar de novo não grava o
 //     período outra vez nem repete o aviso.
@@ -173,7 +173,11 @@ export default async function retomada(t) {
     { status: c.status, concluido: await p.avaliar(`document.querySelector('[data-concluido]')?.textContent.trim()`) },
   );
   const semDono = await p.avaliar(`import('/src/platform/web/motor.js').then((m) => m.semDono)`);
-  const avisos = semDono.filter((e) => e.tipo === 'notice').map((e) => e.dados);
+  // W13: o notice tem dono (avisos.js), que anota cada aviso no historico.
+  const historicoDeAvisos = await p.avaliar(`import('/src/platform/web/avisos.js').then((m) => m.historico)`);
+  const avisos = [...semDono.filter((e) => e.tipo === 'notice'), ...historicoDeAvisos.filter((e) => e.tipo === 'notice')].map(
+    (e) => e.dados,
+  );
   const hhmm = await p.avaliar(
     `new Date(${prazo}).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false })`,
   );
@@ -200,10 +204,11 @@ export default async function retomada(t) {
   const deNovo = await p.avaliar(PERIODOS);
   const semDono2 = await p.avaliar(`import('/src/platform/web/motor.js').then((m) => m.semDono)`);
   const pedidosDeSom2 = await p.avaliar(`import('/src/platform/web/som.js').then((m) => m.historico)`);
+  const avisos2 = await p.avaliar(`import('/src/platform/web/avisos.js').then((m) => m.historico)`);
   t.conferir(
     '(c) recarregar de novo não grava o período outra vez nem repete o aviso',
     deNovo.length === periodos.length && !semDono2.some((e) => e.tipo === 'notice' || e.tipo === 'sound') &&
-      pedidosDeSom2.length === 0,
-    { periodos: deNovo.length, semDono: semDono2, pedidosDeSom: pedidosDeSom2 },
+      pedidosDeSom2.length === 0 && avisos2.length === 0,
+    { periodos: deNovo.length, semDono: semDono2, pedidosDeSom: pedidosDeSom2, avisos: avisos2 },
   );
 }
