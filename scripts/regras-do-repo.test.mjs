@@ -358,7 +358,8 @@ test('temporizadores: comandos timer_*, tt://timers e o fim com som e notificaç
 test('temporizadores: barra, diálogo e state.json gravado pelo persist.rs a cada transição', () => {
   const estado = ler('src-tauri/src/state_file.rs');
   assert.match(estado, /pub const FILE: &str = "state\.json";/);
-  assert.match(estado, /pub const SCHEMA_VERSION: u32 = 1;/);
+  // W04b: a versão do formato mora no motor; o arquivo e a gravação, no desktop.
+  assert.match(ler('src-tauri/tomatito-motor/src/state_file.rs'), /pub const SCHEMA_VERSION: u32 = 1;/);
   assert.match(estado, /crate::persist::write_json_atomic\(/, 'gravação atômica');
   assert.match(ler('src-tauri/src/lib.rs'), /^mod state_file;$/m);
   assert.match(ler('src-tauri/src/lib.rs'), /state_file::StateStore::new\(&dados\)/);
@@ -1057,7 +1058,9 @@ test('Full: menu nativo completo, tamanho e sempre na frente pelo settings_set, 
   assert.match(lib, /window::tomato::fechada_pelo_usuario\(window\);/);
   assert.match(lib, /tauri::RunEvent::ExitRequested \{\s*code: None, api, \.\.\s*\} = &evento\s*&& window::manter_na_bandeja\(app\)/);
   // 3.3: false no Windows 10.
-  assert.match(ler('src-tauri/src/settings.rs'), /tomato_on_top: tomato_on_top_padrao\(\),/);
+  // W04b: o padrão mora no motor, e o desktop passa a versão do Windows antes de ler as configurações.
+  assert.match(ler('src-tauri/tomatito-motor/src/settings.rs'), /tomato_on_top: tomato_on_top_padrao\(\),/);
+  assert.match(ler('src-tauri/src/lib.rs'), /#\[cfg\(windows\)\]\s*settings::definir_tomato_on_top_padrao\(\s*window::region_windows::versao\(\)/);
   // A dica do Wayland, com o texto do catálogo, ligada nas Configurações.
   assert.match(ler('src/lib/i18n/pt-BR.js'), /'No GNOME, use Alt\+Espaço → Sempre na frente das outras janelas para manter o tomate por cima'/);
   assert.match(ler('src/views/settings.js'), /ligarDicaSempreNaFrente\(raiz\.querySelector\('\.tt-config-secao'\)/);

@@ -46,7 +46,8 @@ const BREAK_END: &[u8] = include_bytes!("../sounds/break-end.wav");
 pub const SEGURAR: Duration = Duration::from_millis(1500);
 
 /// O padrão do `volume` das configurações (3.3: "a confirmar"), de 0 a 100.
-pub const VOLUME_PADRAO: u8 = 80;
+/// Mora no motor desde o W04b, ao lado das outras configurações.
+pub use tomatito_motor::settings::VOLUME_PADRAO;
 
 /// Os bytes do WAV de cada som.
 pub fn wav(sound: Sound) -> &'static [u8] {

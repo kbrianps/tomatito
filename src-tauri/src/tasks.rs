@@ -16,16 +16,18 @@
 //! As funções recebem o "agora" e a hora de zerar de fora: os testes usam
 //! instantes fixos, e o `commands.rs` passa o relógio do motor e as
 //! configurações.
+//!
+//! O título limpo, a virada do dia e o erro (`TaskError`) ficam no motor
+//! (`tomatito_motor::tasks`, PLANO-WEB 3.3), que a versão web também usa;
+//! este módulo os reexporta e guarda o SQL.
 
 use rusqlite::{OptionalExtension, Row, params};
 use serde::Serialize;
-use tomatito_core::{EpochMs, TimeZone, day_range, logical_date};
+use tomatito_core::{EpochMs, TimeZone};
+
+pub use tomatito_motor::tasks::*;
 
 use crate::stats::Stats;
-
-/// Tamanho máximo do título, em caracteres (o do Microsoft To Do, de onde
-/// vêm as tarefas do Relógio).
-pub const MAX_TITLE_CHARS: usize = 255;
 
 /// Uma tarefa, como o JS a lê (camelCase). Horários em ms UTC.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -49,85 +51,11 @@ impl TaskDto {
     }
 }
 
-/// Erro de um comando `task_*`, no mesmo formato do `CommandError` do motor:
-/// `{ code, message }`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct TaskError {
-    pub code: TaskErrorCode,
-    pub message: String,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum TaskErrorCode {
-    /// Título vazio (ou só espaços).
-    EmptyTitle,
-    /// Título com mais de [`MAX_TITLE_CHARS`] caracteres.
-    TitleTooLong,
-    /// Não existe tarefa com esse id.
-    NotFound,
-    /// O banco recusou a leitura ou a gravação.
-    Storage,
-}
-
-impl TaskError {
-    fn new(code: TaskErrorCode, message: impl Into<String>) -> Self {
-        Self {
-            code,
-            message: message.into(),
-        }
-    }
-
-    fn not_found(id: i64) -> Self {
-        Self::new(TaskErrorCode::NotFound, format!("não existe a tarefa {id}"))
-    }
-}
-
-impl From<rusqlite::Error> for TaskError {
-    fn from(e: rusqlite::Error) -> Self {
-        eprintln!("[tomatito] tarefas: {e}");
-        Self::new(TaskErrorCode::Storage, e.to_string())
-    }
-}
-
-impl std::fmt::Display for TaskError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-
-/// O título como é gravado: controles viram espaço, sem espaços nas pontas.
-pub fn clean_title(title: &str) -> Result<String, TaskError> {
-    let limpo: String = title
-        .chars()
-        .map(|c| if c.is_control() { ' ' } else { c })
-        .collect();
-    let limpo = limpo.trim();
-    if limpo.is_empty() {
-        return Err(TaskError::new(
-            TaskErrorCode::EmptyTitle,
-            "o título da tarefa está vazio",
-        ));
-    }
-    let n = limpo.chars().count();
-    if n > MAX_TITLE_CHARS {
-        return Err(TaskError::new(
-            TaskErrorCode::TitleTooLong,
-            format!("o título tem {n} caracteres; o máximo é {MAX_TITLE_CHARS}"),
-        ));
-    }
-    Ok(limpo.to_owned())
-}
-
-/// A última virada do dia antes de `now` (a hora de zerar, no fuso `tz`): as
-/// concluídas antes dela saem da lista. Com uma data fora da faixa do `jiff`
-/// (não acontece com um relógio de verdade), vale 24 h antes de `now`.
-pub fn visible_since(now: EpochMs, tz: &TimeZone, reset_hour: u8) -> EpochMs {
-    logical_date(now, tz, reset_hour)
-        .and_then(|d| day_range(d, tz, reset_hour))
-        .map_or(EpochMs(now.0.saturating_sub(24 * 60 * 60 * 1000)), |r| {
-            r.start
-        })
+/// O erro do banco como erro de tarefa (`storage`). É função, e não um
+/// `From<rusqlite::Error>`, porque o `TaskError` é do motor (E0117).
+fn armazenamento(e: rusqlite::Error) -> TaskError {
+    eprintln!("[tomatito] tarefas: {e}");
+    TaskError::new(TaskErrorCode::Storage, e.to_string())
 }
 
 const COLUNAS: &str = "id, title, created_at, done_at";
@@ -140,7 +68,8 @@ impl Stats {
                 [id],
                 TaskDto::from_row,
             )
-            .optional()?
+            .optional()
+            .map_err(armazenamento)?
             .ok_or_else(|| TaskError::not_found(id))
     }
 
@@ -154,14 +83,18 @@ impl Stats {
     ) -> Result<Vec<TaskDto>, TaskError> {
         let desde = visible_since(now, tz, reset_hour);
         let conn = self.lock();
-        let mut st = conn.prepare_cached(&format!(
-            "SELECT {COLUNAS} FROM tasks
+        let mut st = conn
+            .prepare_cached(&format!(
+                "SELECT {COLUNAS} FROM tasks
              WHERE done_at IS NULL OR done_at >= ?1
              ORDER BY id"
-        ))?;
+            ))
+            .map_err(armazenamento)?;
         let lista = st
-            .query_map([desde.0], TaskDto::from_row)?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
+            .query_map([desde.0], TaskDto::from_row)
+            .map_err(armazenamento)?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(armazenamento)?;
         Ok(lista)
     }
 
@@ -173,7 +106,8 @@ impl Stats {
             conn.execute(
                 "INSERT INTO tasks (title, created_at, done_at) VALUES (?1, ?2, NULL)",
                 params![title, now.0],
-            )?;
+            )
+            .map_err(armazenamento)?;
             conn.last_insert_rowid()
         };
         self.task(id)
@@ -184,13 +118,16 @@ impl Stats {
     /// volta a pendente.
     pub fn task_complete(&self, id: i64, done: bool, now: EpochMs) -> Result<TaskDto, TaskError> {
         let mudou = if done {
-            self.lock().execute(
-                "UPDATE tasks SET done_at = COALESCE(done_at, ?2) WHERE id = ?1",
-                params![id, now.0],
-            )?
+            self.lock()
+                .execute(
+                    "UPDATE tasks SET done_at = COALESCE(done_at, ?2) WHERE id = ?1",
+                    params![id, now.0],
+                )
+                .map_err(armazenamento)?
         } else {
             self.lock()
-                .execute("UPDATE tasks SET done_at = NULL WHERE id = ?1", [id])?
+                .execute("UPDATE tasks SET done_at = NULL WHERE id = ?1", [id])
+                .map_err(armazenamento)?
         };
         if mudou == 0 {
             return Err(TaskError::not_found(id));
@@ -203,7 +140,8 @@ impl Stats {
     pub fn task_delete(&self, id: i64) -> Result<(), TaskError> {
         let n = self
             .lock()
-            .execute("DELETE FROM tasks WHERE id = ?1", [id])?;
+            .execute("DELETE FROM tasks WHERE id = ?1", [id])
+            .map_err(armazenamento)?;
         if n == 0 {
             return Err(TaskError::not_found(id));
         }
@@ -370,13 +308,6 @@ mod tests {
         assert!(titulos(&st, at(DIA + 4 * H), 4).is_empty());
         // Com a virada à meia-noite, a das 02:00 já é de hoje na segunda.
         assert_eq!(titulos(&st, at(10 * H), 0).len(), 2);
-    }
-
-    #[test]
-    fn visible_since_e_a_virada_de_hoje() {
-        assert_eq!(visible_since(at(10 * H), &sp(), 0), at(0));
-        assert_eq!(visible_since(at(10 * H), &sp(), 4), at(4 * H));
-        assert_eq!(visible_since(at(3 * H), &sp(), 4), at(4 * H - DIA));
     }
 
     #[test]

@@ -25,6 +25,15 @@ use tauri::Manager;
 pub fn run() {
     // Um `generate_context!` só: ele embute a página no binário.
     let context = tauri::generate_context!();
+    // 3.3 (M56): no Windows 10, o `tomatoOnTop` nasce desligado (#15947). O
+    // padrão mora no motor (W04b), que não pergunta a versão ao sistema; ela
+    // vai para lá antes de qualquer leitura das configurações. Sem a versão,
+    // vale o do Windows 11.
+    #[cfg(windows)]
+    settings::definir_tomato_on_top_padrao(
+        window::region_windows::versao()
+            .is_none_or(|(maior, build)| settings::windows_11_ou_mais(maior, build)),
+    );
     // B2 (5.9): a `linuxX11` é lida antes do `Builder`, porque o GDK escolhe
     // o backend quando o GTK inicia (3.3).
     #[cfg(target_os = "linux")]

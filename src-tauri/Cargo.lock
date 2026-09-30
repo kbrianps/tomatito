@@ -4226,6 +4226,7 @@ dependencies = [
 name = "tomatito-motor"
 version = "0.1.0"
 dependencies = [
+ "jiff",
  "serde",
  "serde_json",
  "tomatito-core",
