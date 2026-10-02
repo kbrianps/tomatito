@@ -1483,3 +1483,10 @@ Feitos sem agentes paralelos nem revisor por etapa, a pedido do usuário (econom
 3. **`contain: layout style` nos três controles do Fluent** (no toque): o `contain: content` de fábrica cortava o `::after`, e o toque ao lado do interruptor caía no botão do expansor. Quem achou foi o teste de toque real do caso `celular-alvos` (`elementFromPoint` a 21 px do centro), que a medida do CSS sozinha não pega.
 4. **Deslizante do volume com 48 px de altura no toque** (um `<input>` não tem `::after`).
 5. **Painel lateral no tablet: itens de 44 px** (faixa de 48 com a margem), para as áreas não se sobreporem.
+
+## W33–W34 (web): Foco, Temporizador e Cronômetro no celular (02/10/2026)
+
+1. **"Parar" é o item "Encerrar sessão" do menu "Mais opções"** (o desenho do desktop); o caso `celular-foco` toca no menu e no item.
+2. **Cronômetro em pé: a página não rola; quem rola é a lista de voltas.** O número e os botões ficam parados. Só com altura ≥ 500 px; com o celular deitado a página rola inteira.
+3. **Rótulos da barra inferior a 11 px abaixo de 350 px de largura**, para "Temporizador" e "Configurações" caberem a 320 px sem reticências.
+4. O diálogo do temporizador já tinha `max-width: calc(100vw − 32px)`; não precisou de regra nova.

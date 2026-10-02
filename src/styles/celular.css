@@ -109,3 +109,26 @@ html[data-casca="web"]{ touch-action:manipulation; }
    foco" caber acima da barra sem rolar. */
 [data-forma="celular"] .tt-card.tt-sessao{ min-height:0; padding:36px 16px 20px; }
 [data-forma="celular"] .tt-card.tt-tarefas{ min-height:0; }
+
+/* ---------------------------------------------------------------------------
+   W34, 5.4: Temporizador e Cronômetro. */
+
+/* Barra inferior em telas de 320 a 350 px: "Temporizador" e "Configurações"
+   cabem inteiros. */
+@media (width < 350px){
+  [data-forma="celular"] .tt-barra-inferior .tt-nav-rotulo{ font-size:11px; letter-spacing:-.2px; }
+}
+
+/* Cronômetro em pé: o número e os botões ficam parados e quem rola é a lista
+   de voltas, por dentro. A página ocupa a altura que sobra acima da barra. Com
+   o celular deitado (altura < 500) não há altura para isso, e a página rola
+   inteira, como no desktop. */
+@media (height >= 500px){
+  [data-forma="celular"] .tt-rolagem:has(> .tt-pagina-cronometro){ display:flex; flex-direction:column; overflow:hidden; }
+  [data-forma="celular"] .tt-pagina-cronometro{ flex:1; min-height:0; display:flex; flex-direction:column; padding-bottom:0; }
+  [data-forma="celular"] .tt-pagina-cronometro .tt-cronometro{ flex:1; min-height:0; margin-top:clamp(16px, 6vh, 64px); }
+  [data-forma="celular"] .tt-pagina-cronometro .tt-cronometro-botoes{ margin-top:24px; }
+  [data-forma="celular"] .tt-pagina-cronometro .tt-voltas{
+    flex:1; min-height:0; margin:24px 0 0; overflow-y:auto; overscroll-behavior:contain;
+  }
+}
