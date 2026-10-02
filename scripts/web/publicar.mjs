@@ -1,13 +1,13 @@
-// Publica a versão web no Cloudflare Pages (PLANO-WEB-V1, 4.1; marcos W40b e
-// W41).
+// Publica a versão web na Cloudflare (PLANO-WEB-V1, 4.1; marcos W40b e W41),
+// em https://tomatito.kbrianps.workers.dev.
 //
 //   node scripts/web/publicar.mjs
 //
 // 1. `npm run build:web` (gera o dist-web, com o _headers e a privacidade).
 // 2. Confere o login (`wrangler whoami`). Sem login, explica como entrar e sai
 //    com o código 3, sem publicar nada.
-// 3. Cria o projeto `tomatito` no Pages, se ainda não existir, e publica o
-//    dist-web no ramo de produção.
+// 3. `wrangler deploy`, com o wrangler.jsonc (Workers com arquivos estáticos;
+//    o _headers do dist-web vale do mesmo jeito).
 //
 // O wrangler fica fora do repositório e do /home (W40b):
 //   npm install --cache /opt/cargo-target/npm-cache \
@@ -19,7 +19,6 @@ import { fileURLToPath } from 'node:url';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const WRANGLER = process.env.TOMATITO_WRANGLER ?? '/opt/cargo-target/ferramentas/wrangler/node_modules/.bin/wrangler';
-const PROJETO = process.env.TOMATITO_PAGES_PROJETO ?? 'tomatito';
 
 if (!existsSync(WRANGLER)) {
   console.error(`Falta o wrangler em ${WRANGLER} (veja o cabeçalho deste arquivo).`);
@@ -34,13 +33,7 @@ if (wrangler(['whoami']).status !== 0) {
   process.exit(3);
 }
 
-const projetos = wrangler(['pages', 'project', 'list']);
-if (!new RegExp(`\\b${PROJETO}\\b`).test(projetos.stdout ?? '')) {
-  const criar = wrangler(['pages', 'project', 'create', PROJETO, '--production-branch', 'main'], { stdio: 'inherit' });
-  if (criar.status !== 0) process.exit(criar.status ?? 1);
-}
-const publicar = wrangler(
-  ['pages', 'deploy', 'dist-web', '--project-name', PROJETO, '--branch', 'main', '--commit-dirty=true'],
-  { stdio: 'inherit' },
-);
+// Na conta, o Pages já é parte do Workers (02/10/2026): o deploy é o de
+// Workers com arquivos estáticos, pelo wrangler.jsonc da raiz.
+const publicar = wrangler(['deploy'], { stdio: 'inherit' });
 process.exit(publicar.status ?? 1);

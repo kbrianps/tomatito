@@ -1,0 +1,14 @@
+// Publicação da versão web no Cloudflare Workers (arquivos estáticos).
+// Em 02/10/2026 a conta já não aceitava `wrangler pages deploy` ("Delegating to
+// the latest version of Cloudflare Pages, now part of Cloudflare Workers"),
+// então o deploy é `wrangler deploy` com esta configuração. O _headers do
+// dist-web vale do mesmo jeito. Ver docs/web/publicar.md.
+{
+  "name": "tomatito",
+  "compatibility_date": "2026-09-26",
+  "assets": {
+    "directory": "./dist-web",
+    // O app é uma página só: caminho desconhecido devolve o index.html.
+    "not_found_handling": "single-page-application"
+  }
+}

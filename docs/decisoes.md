@@ -1499,3 +1499,7 @@ Feitos sem agentes paralelos nem revisor por etapa, a pedido do usuário (econom
 4. **W40a: o teste dos cabeçalhos chama `scripts/web/testar-cabecalhos.mjs`** (`npm run test:cabecalhos`), e não `headers.test.js`: a regra 3 do `regras-do-repo` proíbe em `scripts/web/` nomes que o `node --test` do desktop descobriria.
 5. **W40b enxuto:** em vez do `--servidor pages` no `verificar.mjs` e do caso `pwa-publicado`, a conferência é pelo emulador local (`wrangler pages dev dist-web`) com `curl` (registrada em `docs/web/publicar.md`) e, depois do deploy, pelas mesmas chamadas no endereço real (W41). Os casos `pwa` e `casca` passam no `--servidor preview`.
 6. A documentação do Pages recomenda Workers Static Assets para projetos novos (developers.cloudflare.com/pages/, 25/08/2026); ficamos no Pages por decisão do usuário, com troca documentada na 4.1 do PLANO-WEB-V1.
+
+## W41 (web): publicada (02/10/2026)
+
+**Workers em vez de Pages.** O `wrangler pages deploy` da conta delegou para o Workers e falhou sem publicar ("Missing entry-point to Worker script or to assets directory"). O deploy é `wrangler deploy` com o `wrangler.jsonc` da raiz (arquivos estáticos do `dist-web`, SPA). Endereço: https://tomatito.kbrianps.workers.dev. As conferências do W41 (curl e celular emulado) estão em `docs/web/publicar.md`.

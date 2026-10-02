@@ -1,4 +1,4 @@
-# Publicar a versão web (Cloudflare Pages)
+# Publicar a versão web (Cloudflare)
 
 ## Uma vez: o login
 
@@ -14,9 +14,9 @@ Abre o navegador; entre na conta da Cloudflare (ou crie uma, é grátis) e cliqu
 node scripts/web/publicar.mjs
 ```
 
-O script faz o build (`npm run build:web`), cria o projeto `tomatito` no Pages se ele ainda não existir e envia a pasta `dist-web`. No fim, o Wrangler imprime o endereço (algo como `https://tomatito.pages.dev`; se o nome já estiver tomado, a Cloudflare acrescenta um sufixo). Sem login, o script avisa e sai com o código 3, sem publicar nada.
+O script faz o build (`npm run build:web`) e roda `wrangler deploy`, que envia a pasta `dist-web` conforme o `wrangler.jsonc` da raiz (Workers com arquivos estáticos). Sem login, ele avisa e sai com o código 3, sem publicar nada.
 
-**Endereço publicado:** (preencher depois do primeiro deploy, W41)
+**Endereço publicado:** https://tomatito.kbrianps.workers.dev (primeiro deploy em 02/10/2026, conta kbrianps).
 
 ## O que vai junto
 
@@ -39,4 +39,6 @@ Só no navegador de cada pessoa (configurações, estatísticas e tarefas). Troc
 
 ## Pages ou Workers
 
-A documentação do Pages recomenda Workers Static Assets para projetos novos (developers.cloudflare.com/pages/, 25/08/2026). Ficamos no Pages: o `_headers` e o deploy por pasta são os mesmos, e a troca é só deste script e do nome do comando.
+O plano era o Pages, mas em 02/10/2026 a conta respondeu ao `wrangler pages deploy` com "Delegating to the latest version of Cloudflare Pages, now part of Cloudflare Workers" e não publicou nada. O deploy passou a ser `wrangler deploy` com o `wrangler.jsonc` (`assets.directory = ./dist-web`, `not_found_handling = single-page-application`). O `_headers` continua valendo.
+
+Conferido no ar no mesmo dia: `/` 200 com `no-cache` e a CSP; o `.wasm` como `application/wasm` com cache `immutable`; `/sw.js` com `no-cache`; `/privacidade`, o manifest e um caminho qualquer 200; num celular emulado (perfil m), layout de celular, service worker registrado e uma sessão de foco iniciada por toque.
