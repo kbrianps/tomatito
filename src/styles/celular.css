@@ -132,3 +132,14 @@ html[data-casca="web"]{ touch-action:manipulation; }
     flex:1; min-height:0; margin:24px 0 0; overflow-y:auto; overscroll-behavior:contain;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   W36, 5.4: Configurações. As linhas já quebram no estreito (as consultas de
+   contêiner do desktop). Aqui: as prévias dos temas em 2 colunas e o recuo
+   das linhas de dentro dos expansores em 16 px dos dois lados. */
+[data-forma="celular"] fluent-radio-group.tt-temas{
+  grid-template-columns:repeat(2, minmax(0, 1fr)); padding:16px;
+}
+[data-forma="celular"] .tt-config-item{ padding-left:16px; padding-right:16px; }
+/* O arraste no deslizante é do deslizante, e não rolagem da página. */
+[data-casca="web"] input.tt-deslizante{ touch-action:pan-y; }
