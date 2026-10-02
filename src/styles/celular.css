@@ -18,3 +18,56 @@ html[data-casca="web"]{ touch-action:manipulation; }
 /* 5.4: recuo lateral de 16 px em todas as telas. */
 [data-forma="celular"] .tt-pagina{ --tt-recuo-pagina:16px; }
 [data-forma="celular"] .tt-pagina:has(> h1.tt-t-title-large){ padding-inline:16px; }
+
+/* ---------------------------------------------------------------------------
+   W31, 5.2: a barra de navegação inferior (components/nav-view.js com
+   orientacao 'inline'; só a casca web a cria, em main.js). Fora do layout de
+   celular ela não existe. */
+.tt-barra-inferior{ display:none; }
+
+[data-forma="celular"] .tt-nav{ display:none; }
+/* Sem o painel, a camada de conteúdo encosta nos dois lados. */
+[data-forma="celular"] .tt-conteudo{ border-left:0; border-top-left-radius:0; }
+
+/* 64 px + a área segura de baixo, presa ao fim do viewport. Fundo do cartão e
+   borda de 1 px em cima. */
+[data-forma="celular"] .tt-barra-inferior{
+  display:block; position:fixed; z-index:20; left:0; right:0; bottom:0;
+  height:calc(64px + env(safe-area-inset-bottom));
+  padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background:var(--tt-bg-card); border-top:1px solid var(--tt-border);
+}
+[data-forma="celular"] .tt-barra-inferior .tt-nav-lista{ flex-direction:row; height:100%; }
+[data-forma="celular"] .tt-barra-inferior li{ flex:1 1 0; min-width:0; display:flex; }
+/* Cada item ocupa a coluna inteira e os 64 px (menos a borda): ícone de 24 px
+   sobre o rótulo em Caption. O atual em --tt-fg-1; os outros em --tt-fg-2. */
+[data-forma="celular"] .tt-barra-inferior .tt-nav-item{
+  flex:1; min-width:0; height:auto; margin:0; padding:10px 2px 6px;
+  flex-direction:column; justify-content:center; gap:4px;
+  border-radius:0; color:var(--tt-fg-2);
+}
+[data-forma="celular"] .tt-barra-inferior .tt-nav-item[aria-current="page"]{ color:var(--tt-fg-1); background:none; }
+[data-forma="celular"] .tt-barra-inferior .tt-nav-item:active{ background:var(--tt-subtle-press); }
+[data-forma="celular"] .tt-barra-inferior .tt-nav-item .tt-icone{ width:24px; height:24px; }
+/* O rótulo sempre à vista (o painel compacto do desktop o tira da tela abaixo
+   de 860 px; aqui não). */
+[data-forma="celular"] .tt-barra-inferior .tt-nav-rotulo{
+  position:static; width:auto; height:auto; max-width:100%; clip-path:none;
+  font:var(--tt-type-caption);
+}
+/* O indicador do painel, deitado: 16 × 3 px, centrado, sobre o ícone. */
+[data-forma="celular"] .tt-barra-inferior .tt-nav-indicador{
+  left:calc(50% - 8px); top:3px; width:16px; height:3px;
+}
+/* Sem hover no toque: o fundo de hover ficaria preso depois do toque. */
+@media (hover:none){
+  [data-forma="celular"] .tt-barra-inferior .tt-nav-item:hover{ background:none; }
+  [data-forma="celular"] .tt-barra-inferior .tt-nav-item:active{ background:var(--tt-subtle-press); }
+}
+
+/* A área que rola termina acima da barra, e não "puxa para recarregar" no
+   meio de uma sessão. */
+[data-forma="celular"] .tt-rolagem{
+  padding-bottom:calc(64px + env(safe-area-inset-bottom) + 16px);
+  overscroll-behavior:contain;
+}

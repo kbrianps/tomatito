@@ -112,6 +112,15 @@ try {
     icone,
     navegar: (rota) => roteador.navegar(rota),
   });
+  // W31 (web): a barra inferior do layout de celular (PLANO-WEB-V1, 5.2). Só a
+  // casca web a cria; quem a mostra é o celular.css, sob [data-forma="celular"].
+  let barra = null;
+  if (casca.formaCelular) {
+    const el = document.createElement('nav');
+    el.className = 'tt-barra-inferior';
+    document.querySelector('.tt-janela').append(el);
+    barra = montarNavegacao(el, { icone, navegar: (rota) => roteador.navegar(rota), orientacao: 'inline' });
+  }
   const roteador = iniciarRoteador({
     raiz: document.querySelector('.tt-rolagem'),
     telas: { foco, temporizador, cronometro, configuracoes, dev },
@@ -120,6 +129,7 @@ try {
     // abre já pintada, 4.7).
     aoMudar: (rota, anterior) => {
       nav.selecionar(rota, { animar: anterior !== null });
+      barra?.selecionar(rota, { animar: anterior !== null });
       if (anterior !== null) entrarPagina(document.querySelector('.tt-rolagem'));
     },
   });
