@@ -101,3 +101,11 @@ html[data-casca="web"]{ touch-action:manipulation; }
 @media (hover:none){
   [data-casca="web"] .tt-nav-dica{ display:none; }
 }
+
+/* ---------------------------------------------------------------------------
+   W33, 5.4: tela Foco. Uma coluna (a grade do M10 já cai para uma coluna
+   nesta largura); os cartões ficam da altura do conteúdo, sem os mínimos do
+   desktop (422 px da sessão e 240 px das tarefas), para "Iniciar sessão de
+   foco" caber acima da barra sem rolar. */
+[data-forma="celular"] .tt-card.tt-sessao{ min-height:0; padding:36px 16px 20px; }
+[data-forma="celular"] .tt-card.tt-tarefas{ min-height:0; }
