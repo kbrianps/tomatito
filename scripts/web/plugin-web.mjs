@@ -31,7 +31,7 @@
 //     `tomatito-<versão>-<hash8>` e o TOMATITO_WEB_BUILD. No dev, o sw.js
 //     sai como está (lista vazia, sem interceptar nada).
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const raiz = (arquivo) => fileURLToPath(new URL(`../../${arquivo}`, import.meta.url));
@@ -107,14 +107,56 @@ export function manifesto({ base, icones }) {
   };
 }
 
+/** W40a: páginas estáticas publicadas ao lado do app (a de privacidade). */
+export const PUBLICO = 'src/platform/web/publico';
+
+/** Os arquivos de `publico/`, pelo nome. */
+export function arquivosPublicos(pasta = raiz(PUBLICO)) {
+  return existsSync(pasta) ? readdirSync(pasta).sort() : [];
+}
+
+/** O arquivo de cabeçalhos do Cloudflare Pages (W40a). */
+export const CABECALHOS = '_headers';
+
+/**
+ * O `_headers` (PLANO-WEB-V1, 4.2), com a mesma política da <meta> mais o que
+ * só o cabeçalho aceita (frame-ancestors, base-uri, form-action). Sem regras de
+ * Content-Type: o Pages já serve o .wasm certo, e um cabeçalho repetido viria
+ * "application/wasm, application/wasm", que quebra o instantiateStreaming.
+ */
+export function textoDosCabecalhos(html) {
+  const csp = `${politica(html)}; frame-ancestors 'none'; base-uri 'self'; form-action 'none'`;
+  return [
+    '/*',
+    '  X-Content-Type-Options: nosniff',
+    '  Referrer-Policy: no-referrer',
+    '  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()',
+    `  Content-Security-Policy: ${csp}`,
+    '',
+    '/assets/*',
+    '  Cache-Control: public, max-age=31536000, immutable',
+    '',
+    '/sw.js',
+    '  Cache-Control: no-cache',
+    '',
+    '/manifest.webmanifest',
+    '  Cache-Control: no-cache',
+    '',
+    '/',
+    '  Cache-Control: no-cache',
+    '',
+  ].join('\n');
+}
+
 /**
  * A lista do precache a partir dos nomes publicados: a página vira `./`, o
- * sw.js sai (ele não se guarda), e o resto fica, em ordem.
+ * sw.js sai (ele não se guarda), o `_headers` e as páginas de `publico/` saem
+ * (vão sempre à rede, W40a), e o resto fica, em ordem.
  */
-export function listaDoPrecache(nomes) {
+export function listaDoPrecache(nomes, fora = arquivosPublicos()) {
   const lista = new Set();
   for (const nome of nomes) {
-    if (nome === SW.nome || nome.endsWith('.map')) continue;
+    if (nome === SW.nome || nome === CABECALHOS || nome.endsWith('.map') || fora.includes(nome)) continue;
     lista.add(nome === 'index.html' ? './' : nome);
   }
   return [...lista].sort();
@@ -252,6 +294,10 @@ export default function pluginWeb({ cspNoDev = false } = {}) {
       }
       for (const i of icones) this.emitFile({ type: 'asset', fileName: i.publicado, source: i.conteudo });
       this.emitFile({ type: 'asset', fileName: MANIFESTO, source: textoDoManifesto(true) });
+      // W40a: as páginas estáticas (privacidade), como estão.
+      for (const nome of arquivosPublicos()) {
+        this.emitFile({ type: 'asset', fileName: nome, source: readFileSync(raiz(`${PUBLICO}/${nome}`)) });
+      }
     },
     // Depois de tudo (inclusive o index.html do Vite): o sw.js com a lista
     // do que foi publicado.
@@ -269,6 +315,9 @@ export default function pluginWeb({ cspNoDev = false } = {}) {
         const cache = nomeDoCache({ versao, conteudos, build: buildDoTeste });
         const sw = swDoBuild(readFileSync(raiz(SW.fonte), 'utf8'), { precache, cache, build: buildDoTeste });
         this.emitFile({ type: 'asset', fileName: SW.nome, source: sw });
+        // W40a: os cabeçalhos do Pages, com o hash do boot do index.html final.
+        const pagina = bundle['index.html'];
+        this.emitFile({ type: 'asset', fileName: CABECALHOS, source: textoDosCabecalhos(String(pagina.source ?? pagina.code)) });
       },
     },
     transformIndexHtml: {

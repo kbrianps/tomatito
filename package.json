@@ -20,7 +20,8 @@
     "dev:web": "vite --config vite.web.config.js",
     "prebuild:web": "node scripts/build-theme-css.mjs && node scripts/web/wasm.mjs",
     "build:web": "vite build --config vite.web.config.js",
-    "serve:web": "vite preview --config vite.web.config.js"
+    "serve:web": "vite preview --config vite.web.config.js",
+    "test:cabecalhos": "node --test scripts/web/testar-cabecalhos.mjs"
   },
   "devDependencies": {
     "@fluentui/svg-icons": "1.1.343",
