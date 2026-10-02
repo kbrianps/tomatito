@@ -30,6 +30,9 @@ const CLASSE: &str = "TomatitoPlugin";
 pub struct Permissoes {
     /// `granted`, `denied` ou `prompt` (o de um pedido que ainda pode ser feito).
     pub notificacoes: String,
+    /// O pedido do sistema já saiu uma vez (A13: a faixa da tela Foco).
+    #[serde(default)]
+    pub ja_pediu: bool,
     /// O `AlarmManager` aceita alarmes exatos (sempre, antes do Android 12).
     pub alarme_exato: bool,
     /// O `Build.VERSION.SDK_INT` do aparelho.

@@ -37,6 +37,7 @@ import * as cronometro from './views/stopwatch.js';
 import * as configuracoes from './views/settings.js';
 import * as dev from './views/dev-catalog.js';
 import { ligar as ligarValidacaoDoFull } from './views/validacao-full.js';
+import { ligarAvisosDoAndroid } from './views/avisos-android.js';
 // Os tokens do Fluent vêm do fluent-tokens.gen.css, um bloco por data-theme
 // (PLANO.md, 4.5): sem setTheme() em runtime desde o M11.
 
@@ -111,6 +112,9 @@ try {
   // tela, para o número dela já sair do tamanho certo.
   document.querySelector('.tt-rolagem').dataset.largura = '--tt-larg-rolagem';
   ligarLarguras();
+  // A13 (PLANO-ANDROID 4.3): no Android, o cartão "Avisos", a faixa da tela
+  // Foco e o pedido no primeiro "Iniciar" (nas outras plataformas, null).
+  const avisosDoAndroid = ligarAvisosDoAndroid({ api: ipc.android, store, icone });
   const nav = montarNavegacao(document.querySelector('.tt-nav'), {
     icone,
     navegar: (rota) => roteador.navegar(rota),
@@ -133,6 +137,7 @@ try {
     aoMudar: (rota, anterior) => {
       nav.selecionar(rota, { animar: anterior !== null });
       barra?.selecionar(rota, { animar: anterior !== null });
+      avisosDoAndroid?.aoMudar(rota, document.querySelector('.tt-rolagem'));
       if (anterior !== null) entrarPagina(document.querySelector('.tt-rolagem'));
     },
   });

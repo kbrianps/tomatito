@@ -89,7 +89,7 @@ class TomatitoPlugin(private val activity: Activity) : Plugin(activity) {
         )
     }
 
-    /** `{ notificacoes: granted|denied|prompt, alarmeExato, sdk }`. */
+    /** `{ notificacoes: granted|denied|prompt, jaPediu, alarmeExato, sdk }`. */
     @Command
     fun permissoes(invoke: Invoke) {
         invoke.resolve(estadoDasPermissoes())
@@ -210,11 +210,12 @@ class TomatitoPlugin(private val activity: Activity) : Plugin(activity) {
             PackageManager.PERMISSION_GRANTED
         val podeExplicar = sdk >= 33 &&
             ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.POST_NOTIFICATIONS)
+        val jaPediu = preferencias().getBoolean(JA_PEDIU_NOTIFICACOES, false)
         val notificacoes = Notificacoes.estado(
             sdk = sdk,
             concedida = concedida,
             habilitadas = NotificationManagerCompat.from(activity).areNotificationsEnabled(),
-            jaPediu = preferencias().getBoolean(JA_PEDIU_NOTIFICACOES, false),
+            jaPediu = jaPediu,
             podeExplicar = podeExplicar,
         )
         val exato = alarmeExato(sdk) {
@@ -222,6 +223,9 @@ class TomatitoPlugin(private val activity: Activity) : Plugin(activity) {
         }
         return JSObject().apply {
             put("notificacoes", notificacoes)
+            // A13: se o pedido do sistema já saiu uma vez (a tela só pede
+            // sozinha no primeiro "Iniciar" e mostra a faixa depois dele).
+            put("jaPediu", jaPediu)
             put("alarmeExato", exato)
             put("sdk", sdk)
         }

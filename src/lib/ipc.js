@@ -194,7 +194,8 @@ export const compatX11 = Object.freeze({
  * A07a/A07b (PLANO-ANDROID 4.2): o plugin `tomatito-android`, que só existe
  * no Android (a Kotlin responde direto, sem comando no Rust do app).
  * `permissoes()` resolve com `{ notificacoes: 'granted'|'denied'|'prompt',
- * alarmeExato, sdk }`; `cores(fundo, claro)` pinta atrás das barras do
+ * jaPediu, alarmeExato, sdk }` (`jaPediu`: o pedido do sistema já saiu uma
+ * vez, A13); `cores(fundo, claro)` pinta atrás das barras do
  * sistema (`fundo` em `#rrggbb`) e escolhe ícones escuros (`claro`) ou claros;
  * `pedirNotificacoes()` mostra o pedido do sistema, se ele ainda aparece, e
  * resolve com o mesmo objeto do `permissoes()`; `abrirConfigAvisos()` abre a
