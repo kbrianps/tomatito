@@ -1475,3 +1475,11 @@ Feitos sem agentes paralelos nem revisor por etapa, a pedido do usuário (econom
 1. **`celular.css` entra depois do `controls.css`** (o plano diz "depois do `shell.css`"): assim ele também sobrepõe os controles. O `regras-do-repo.test.mjs` ganhou a folha no fim da ordem.
 2. **Ícone do item atual da barra: o regular, a 24 px, e não o preenchido.** O plano pede o ícone preenchido; isso exigiria quatro ícones novos. O item atual se distingue pelo indicador de 16 × 3 px e pelo texto em `--tt-fg-1`. Fica no `docs/depois.md`.
 3. **A barra é um segundo `<nav>`** (`.tt-barra-inferior`), criado só pela casca web em `main.js`; o painel lateral continua no DOM, com `display:none` no celular. Os dois recebem o `selecionar` do roteador.
+
+## W32 (web): toque (02/10/2026)
+
+1. **A dica não abre por toque, também no desktop com tela de toque.** O `components/dica.js` é compartilhado e passou a ignorar o `pointerover` com `pointerType === 'touch'` (PLANO-WEB-V1, 5.3). É intencional: por mouse e teclado nada muda.
+2. **Área de 48 × 48 por `::after`**, numa regra só para `button`, `a.tt-nav-item`, `fluent-checkbox`, `fluent-switch` e `fluent-radio`, sob `[data-casca="web"]` e `(pointer: coarse)`. Nenhuma exceção foi precisa.
+3. **`contain: layout style` nos três controles do Fluent** (no toque): o `contain: content` de fábrica cortava o `::after`, e o toque ao lado do interruptor caía no botão do expansor. Quem achou foi o teste de toque real do caso `celular-alvos` (`elementFromPoint` a 21 px do centro), que a medida do CSS sozinha não pega.
+4. **Deslizante do volume com 48 px de altura no toque** (um `<input>` não tem `::after`).
+5. **Painel lateral no tablet: itens de 44 px** (faixa de 48 com a margem), para as áreas não se sobreporem.

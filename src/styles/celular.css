@@ -71,3 +71,33 @@ html[data-casca="web"]{ touch-action:manipulation; }
   padding-bottom:calc(64px + env(safe-area-inset-bottom) + 16px);
   overscroll-behavior:contain;
 }
+
+/* ---------------------------------------------------------------------------
+   W32, 5.3: toque. Vale para a casca web inteira com ponteiro grosso (o
+   celular e também o tablet, que mantém o painel lateral). Todo alvo tem ao
+   menos 48 × 48 px de área: o desenho não muda; a área extra vem de um ::after
+   transparente, centrado no controle. O desktop (Tauri) não tem data-casca. */
+@media (pointer:coarse){
+  :where([data-casca="web"]) :where(button, a.tt-nav-item, fluent-checkbox, fluent-switch, fluent-radio){
+    position:relative;
+  }
+  [data-casca="web"] :is(button, a.tt-nav-item, fluent-checkbox, fluent-switch, fluent-radio)::after{
+    content:""; position:absolute; top:50%; left:50%;
+    width:max(100%, 48px); height:max(100%, 48px);
+    translate:-50% -50%;
+  }
+  /* Os controles do Fluent vêm com contain:content, que cortaria o ::after
+     (pintura e toque) na caixa do controle. */
+  [data-casca="web"] :is(fluent-checkbox, fluent-switch, fluent-radio){ contain:layout style; }
+  /* O deslizante do volume não aceita ::after (é um <input>): a faixa inteira
+     passa a ter 48 px de altura; o trilho e o polegar continuam os mesmos. */
+  [data-casca="web"] input.tt-deslizante{ height:48px; }
+  /* Painel lateral (tablet): itens de 44 + 4 de margem, um por faixa de 48. */
+  [data-casca="web"]:not([data-forma="celular"]) .tt-nav-item{ height:44px; }
+  [data-casca="web"]:not([data-forma="celular"]) .tt-nav-indicador{ top:14px; }
+}
+/* Sem hover, sem dica: nem a do painel compacto, nem a dos botões de ícone
+   (components/dica.js ignora o toque). */
+@media (hover:none){
+  [data-casca="web"] .tt-nav-dica{ display:none; }
+}
