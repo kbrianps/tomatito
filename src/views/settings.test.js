@@ -14,6 +14,7 @@ import {
   OPCOES_DO_SISTEMA,
   PADROES,
   escolhaDe,
+  escolhasDa,
   ligarSistemaESobre,
   marcacao,
   marcacaoDasSessoes,
@@ -287,5 +288,57 @@ test('M46: "Ver avisos" e "Ver licença" abrem o diálogo com o documento certo,
   assert.equal(criados[0].ipc, ipc);
   limpar();
   assert.deepEqual(chamadas, ['abrir:avisos:ver-avisos', 'abrir:ofl:ver-licenca', 'desligar']);
+  assert.equal(ouvintes.click, undefined);
+});
+
+// W18: a casca da web (platform/web/index.js), sem importar a plataforma web.
+const CASCA_WEB = Object.freeze({ web: true, sair: false, full: false });
+
+test('W18: na web, a Aparência tem 5 opções (4 temas e o Sistema), sem o Full', () => {
+  const html = marcacao({ casca: CASCA_WEB });
+  assert.deepEqual(opcoes(html), ['lite', 'suave', 'light', 'dark', 'system']);
+  assert.deepEqual(escolhasDa(CASCA_WEB), ['lite', 'suave', 'light', 'dark', 'system']);
+  assert.doesNotMatch(html, /Full/);
+  // Uma preferência 'full' (vinda do desktop) não marca nada.
+  assert.equal(escolhaDe('full', escolhasDa(CASCA_WEB)), null);
+  assert.doesNotMatch(marcacao({ casca: CASCA_WEB, pref: 'full' }), /data-marcado/);
+  // O padrão é a casca da plataforma: no Node, a do desktop, com as 6.
+  assert.deepEqual(opcoes(marcacao()), ['lite', 'suave', 'light', 'dark', 'full', 'system']);
+});
+
+test('W18: na web, sem a seção Sistema; o Sobre diz "Tomatito para a web", com as duas linhas da seção 7', () => {
+  const html = marcacao({ casca: CASCA_WEB, recursos: RECURSOS, versao: '0.1.0' });
+  assert.deepEqual([...html.matchAll(/<h2 id="([\w-]+)"/g)].map((m) => m[1]), ['config-sessoes', 'config-aparencia', 'config-sobre-secao']);
+  for (const proibido of ['bandeja', 'Sair do Tomatito', 'X11', 'Sempre na frente', 'Full']) assert.ok(!html.includes(proibido), proibido);
+  assert.match(html, /<span id="config-sobre" class="tt-config-titulo">Tomatito para a web<\/span>/);
+  assert.ok(html.includes('<p class="tt-config-descricao tt-t-caption">Use o Tomatito numa aba só.</p>'));
+  assert.ok(
+    html.includes(
+      '<p class="tt-config-descricao tt-t-caption">Os dados ficam só neste navegador, neste aparelho. Limpar os dados do site apaga as estatísticas e as tarefas.</p>',
+    ),
+  );
+  assert.match(html, /data-avisos="avisos"/);
+  // O desktop continua com o nome curto e sem as linhas.
+  const desktop = marcacaoDoSobre({ versao: '0.1.0' });
+  assert.match(desktop, /class="tt-config-titulo">Tomatito<\/span>/);
+  assert.doesNotMatch(desktop, /data-sobre-web|numa aba só/);
+});
+
+test('W18: ligarSistemaESobre sem a seção Sistema (a web) liga o Sobre e não lança', async () => {
+  const ouvintes = {};
+  const sobre = {
+    addEventListener: (tipo, f) => (ouvintes[tipo] = f),
+    removeEventListener: (tipo) => delete ouvintes[tipo],
+    querySelector: () => null,
+  };
+  const raiz = { querySelector: (sel) => (sel.includes('config-sobre-secao') ? sobre : null) };
+  const desligar = ligarSistemaESobre(raiz, {
+    store: { configuracoes: PADROES, assinarConfiguracoes: () => () => {} },
+    ipc: { versao: async () => '0.1.0' },
+    recursos: { atuais: () => RECURSOS, assinar: () => () => {} },
+  });
+  assert.equal(typeof ouvintes.click, 'function');
+  await new Promise((r) => setTimeout(r, 0));
+  desligar();
   assert.equal(ouvintes.click, undefined);
 });

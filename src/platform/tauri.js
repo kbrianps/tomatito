@@ -42,3 +42,11 @@ export const avisosDaCasca = null;
  * O desktop atualiza pelo instalador: nada.
  */
 export const atualizacaoDaCasca = null;
+
+/**
+ * W18: o tempo no título da aba e o convite de instalação do navegador
+ * (platform/web/aba.js e platform/web/instalacao.js). O desktop tem a
+ * bandeja e o instalador: nada.
+ */
+export const abaDaCasca = null;
+export const instalacaoDaCasca = null;

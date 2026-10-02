@@ -37,6 +37,14 @@
 // Inter) abrem o diálogo com os arquivos do pacote (notices-dialog.js). As
 // opções que dependem de um recurso da plataforma (platform/recursos.js)
 // somem quando ele falta: hoje, o "Tempo na bandeja" sem o ícone da bandeja.
+//
+// W18 (PLANO-WEB-V1, 1 e W18): o que depende do invólucro vem da `casca`
+// (platform/tauri.js ou platform/web/index.js), nunca do `data-platform`.
+// Com `casca.web`, saem as seções Sistema e Avançado (e a dica do Alt+Espaço,
+// que é do Full), e o Sobre diz "Tomatito para a web", com as linhas das
+// limitações honestas; com `!casca.full`, a Aparência fica sem o Full. A
+// seção Navegador (Tempo na aba e Instalar) vem do navegador-web.js. O
+// padrão é a casca da plataforma: no desktop, nada disso muda.
 import t from '../lib/i18n/pt-BR.js';
 import { ESCOLHAS, EVENTO } from '../lib/theme.js';
 import { minutosPorExtenso } from '../lib/format.js';
@@ -49,6 +57,8 @@ import { ligarDicaSempreNaFrente } from './dica-sempre-na-frente.js';
 import { ligarOpcaoX11 } from './opcao-x11.js';
 import { ligarAvisosWeb } from './avisos-web.js';
 import { ligarAtualizarWeb } from './atualizar-web.js';
+import { ligarNavegadorWeb } from './navegador-web.js';
+import { casca as cascaDaPlataforma } from '#plataforma';
 
 const c = t.configuracoes;
 // M56: o `tomato_on_top_available`, carregado só quando a dica precisa (os
@@ -94,7 +104,10 @@ export function previa(escolha) {
 }
 
 /** A escolha marcada para uma preferência salva (o Full também, desde o M51). */
-export const escolhaDe = (pref) => (ESCOLHAS.includes(pref) ? pref : null);
+export const escolhaDe = (pref, escolhas = ESCOLHAS) => (escolhas.includes(pref) ? pref : null);
+
+/** W18: as opções da Aparência na casca `c`: sem o Full onde ele não existe. */
+export const escolhasDa = (c = cascaDaPlataforma) => (c?.full === false ? ESCOLHAS.filter((e) => e !== 'full') : ESCOLHAS);
 
 // M38: a seção "Sessões de foco".
 
@@ -302,7 +315,7 @@ let versaoConhecida = null;
  * (`versao`, ou vazio até o `getVersion()` responder) e, aberto, os avisos de
  * terceiros e o aviso de marcas.
  */
-export function marcacaoDoSobre({ icone = semIcone, versao = null, abertosAgora = new Set() } = {}) {
+export function marcacaoDoSobre({ icone = semIcone, versao = null, abertosAgora = new Set(), web = false } = {}) {
   // M46: os dois arquivos vão no pacote (bundle.resources), e cada botão abre
   // o seu no diálogo. O nome do botão é o texto dele; o rótulo da linha, a
   // descrição.
@@ -310,16 +323,22 @@ export function marcacaoDoSobre({ icone = semIcone, versao = null, abertosAgora 
     item('config-avisos', c.sobre.avisos, `<button type="button" data-avisos="avisos" aria-describedby="config-avisos">${c.sobre.verAvisos}</button>`) +
     item('config-fonte', c.sobre.fonte, `<button type="button" data-avisos="ofl" aria-describedby="config-fonte">${c.sobre.verLicenca}</button>`);
   const marcas = `<div class="tt-config-item tt-config-nota"><p id="config-marcas" class="tt-config-descricao tt-t-caption">${c.sobre.marcas}</p></div>`;
+  // W18: na web, as duas linhas das limitações honestas (PLANO-WEB-V1, 7).
+  const linhasDaWeb = web
+    ? '<div class="tt-config-item tt-config-nota" data-sobre-web>' +
+      `<p class="tt-config-descricao tt-t-caption">${c.sobre.web.umaAba}</p>` +
+      `<p class="tt-config-descricao tt-t-caption">${c.sobre.web.dados}</p></div>`
+    : '';
   return (
     '<section class="tt-config-secao" aria-labelledby="config-sobre-secao">' +
     `<h2 id="config-sobre-secao" class="tt-t-body-strong">${c.sobre.secao}</h2>` +
     expansor({
       id: 'sobre',
       iconeHtml: marcaDoApp('tt-marca'),
-      titulo: t.app.nome,
+      titulo: web ? c.sobre.web.nome : t.app.nome,
       descricao: c.sobre.licenca,
       valor: versao ? c.sobre.versao(versao) : '',
-      conteudo: avisos + marcas,
+      conteudo: linhasDaWeb + avisos + marcas,
       chevron: icone('chevron_down', 16),
       aberto: abertosAgora.has('sobre'),
     }) +
@@ -339,9 +358,11 @@ export function marcacao({
   abertosAgora = new Set(),
   recursos = SEM_RECURSOS,
   versao = null,
+  casca = cascaDaPlataforma,
 } = {}) {
-  const marcada = escolhaDe(pref);
-  const opcoes = ESCOLHAS.map(
+  const escolhas = escolhasDa(casca);
+  const marcada = escolhaDe(pref, escolhas);
+  const opcoes = escolhas.map(
     (e) =>
       `<label class="tt-tema" data-tema="${e}"${e === marcada ? ' data-marcado' : ''}>${previa(e)}` +
       `<span class="tt-opcao"><fluent-radio value="${e}"></fluent-radio>${c.temas[e]}</span></label>`,
@@ -358,15 +379,15 @@ export function marcacao({
     '<fluent-radio-group class="tt-temas" name="tema" orientation="horizontal" ' +
     `aria-labelledby="config-tema" aria-describedby="config-tema-desc"${marcada ? ` value="${marcada}"` : ''}>` +
     `${opcoes}</fluent-radio-group></div></section>` +
-    marcacaoDoSistema(configuracoes, { icone, recursos }) +
-    marcacaoDoSobre({ icone, versao, abertosAgora }) +
+    (casca?.web ? '' : marcacaoDoSistema(configuracoes, { icone, recursos })) +
+    marcacaoDoSobre({ icone, versao, abertosAgora, web: Boolean(casca?.web) }) +
     '</div>'
   );
 }
 
 /** Marca a opção `pref` no grupo e no `data-marcado` das molduras. */
 export function marcar(grupo, pref) {
-  const marcada = escolhaDe(pref);
+  const marcada = escolhaDe(pref, [...grupo.querySelectorAll('.tt-tema')].map((op) => op.dataset.tema));
   for (const op of grupo.querySelectorAll('.tt-tema')) op.toggleAttribute('data-marcado', op.dataset.tema === marcada);
   if (marcada && grupo.value !== marcada) grupo.value = marcada;
   if (!marcada) for (const r of grupo.querySelectorAll('fluent-radio')) r.checked = false;
@@ -559,7 +580,8 @@ export function ligarSistemaESobre(
 ) {
   const sistema = raiz.querySelector('[aria-labelledby="config-sistema"]');
   const sobre = raiz.querySelector('[aria-labelledby="config-sobre-secao"]');
-  const switches = [...sistema.querySelectorAll('fluent-switch[data-config]')];
+  // W18: na web não há a seção Sistema.
+  const switches = sistema ? [...sistema.querySelectorAll('fluent-switch[data-config]')] : [];
   let desligado = false;
   let dialogo = null;
 
@@ -572,7 +594,7 @@ export function ligarSistemaESobre(
     }
   };
   const aplicarRecursos = (rec) => {
-    if (desligado) return;
+    if (desligado || !sistema) return;
     for (const o of OPCOES_DO_SISTEMA) {
       const cartao = sistema.querySelector(`[data-cartao="${o.id}"]`);
       if (cartao) cartao.hidden = !seAplica(o, rec);
@@ -612,8 +634,8 @@ export function ligarSistemaESobre(
     dialogo.abrir(abre.dataset.avisos, abre);
   };
 
-  sistema.addEventListener('change', aoMudar);
-  sistema.addEventListener('click', aoClicarNoSistema);
+  sistema?.addEventListener('change', aoMudar);
+  sistema?.addEventListener('click', aoClicarNoSistema);
   sobre.addEventListener('click', aoClicarNoSobre);
   // A marcação saiu com a cópia do store e os recursos de então; daqui em
   // diante, cada cópia nova (e os recursos, que chegam no mesmo get_state).
@@ -634,8 +656,8 @@ export function ligarSistemaESobre(
     desligado = true;
     desassinar();
     desassinarRecursos();
-    sistema.removeEventListener('change', aoMudar);
-    sistema.removeEventListener('click', aoClicarNoSistema);
+    sistema?.removeEventListener('change', aoMudar);
+    sistema?.removeEventListener('click', aoClicarNoSistema);
     sobre.removeEventListener('click', aoClicarNoSobre);
     dialogo?.desligar();
   };
@@ -649,10 +671,11 @@ export function ligarSistemaESobre(
  * `compatX11` é o IPC da opção do M57 (opcao-x11.js; sem ele, o do app).
  * `avisosWeb` (W14) carrega a plataforma da seção Avisos (avisos-web.js; sem
  * ele, o `#plataforma`); a mesma serve ao cartão Atualizar (W16,
- * atualizar-web.js).
+ * atualizar-web.js) e à seção Navegador (W18, navegador-web.js). `casca`
+ * (W18) é a do `#plataforma`; os testes passam a da web.
  * Devolve a limpeza (o roteador a chama ao sair da tela).
  */
-export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.document, store = storeDoApp, ipc = ipcDoApp, porCodigo = sempreNaFrente, compatX11, avisosWeb } = {}) {
+export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.document, store = storeDoApp, ipc = ipcDoApp, porCodigo = sempreNaFrente, compatX11, avisosWeb, casca = cascaDaPlataforma } = {}) {
   const h = doc.documentElement;
   raiz.innerHTML = marcacao({
     pref: h.dataset.themePref,
@@ -661,11 +684,12 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
     abertosAgora: abertos,
     recursos: recursosAtuais,
     versao: versaoConhecida,
+    casca,
   });
   const grupo = raiz.querySelector('.tt-temas');
   const aoMudar = async () => {
     const pref = grupo.value;
-    if (!tema || !ESCOLHAS.includes(pref) || pref === h.dataset.themePref) return;
+    if (!tema || !escolhasDa(casca).includes(pref) || pref === h.dataset.themePref) return;
     marcar(grupo, pref);
     try {
       await tema.aplicar(pref);
@@ -679,12 +703,17 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
   h.addEventListener(EVENTO, aoTrocar);
   const desligarSessoes = ligarSessoes(raiz, { store, ipc, doc });
   const desligarSistema = ligarSistemaESobre(raiz, { store, ipc, icone });
-  // M56: a dica do Alt+Espaço no Wayland (dica-sempre-na-frente.js).
-  const semDica = ligarDicaSempreNaFrente(raiz.querySelector('.tt-config-secao'), { doc, porCodigo, evento: EVENTO });
-  // M57: a Compatibilidade X11 (opcao-x11.js), na seção Avançado, antes do Sobre.
-  const semX11 = ligarOpcaoX11(raiz.querySelector('.tt-pagina'), { icone, ipc: compatX11 });
+  // M56: a dica do Alt+Espaço no Wayland (dica-sempre-na-frente.js), só
+  // onde há o Full.
+  const semDica = casca?.full === false ? () => {} : ligarDicaSempreNaFrente(raiz.querySelector('.tt-config-secao'), { doc, porCodigo, evento: EVENTO });
+  // M57: a Compatibilidade X11 (opcao-x11.js), na seção Avançado, antes do
+  // Sobre; na web, não (W18).
+  const semX11 = casca?.web ? () => {} : ligarOpcaoX11(raiz.querySelector('.tt-pagina'), { icone, ipc: compatX11 });
   // W14: a seção Avisos, só na web (avisos-web.js), depois da Aparência.
   const semAvisos = ligarAvisosWeb(raiz.querySelector('.tt-pagina'), { icone, plataforma: avisosWeb });
+  // W18: a seção Navegador (Tempo na aba e Instalar), só na web
+  // (navegador-web.js), antes da Atualização e do Sobre.
+  const semNavegador = ligarNavegadorWeb(raiz.querySelector('.tt-pagina'), { icone, plataforma: avisosWeb });
   // W16: o cartão Atualizar, só na web e só com uma versão nova (atualizar-web.js).
   const semAtualizar = ligarAtualizarWeb(raiz.querySelector('.tt-pagina'), { icone, plataforma: avisosWeb });
   return () => {
@@ -695,6 +724,7 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
     semDica();
     semX11();
     semAvisos();
+    semNavegador();
     semAtualizar();
   };
 }

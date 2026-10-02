@@ -314,6 +314,29 @@ export default Object.freeze({
         fechar: 'Fechar',
       }),
       marcas: 'Interface inspirada no Fluent Design. Windows e Segoe são marcas da Microsoft. O Tomatito não é afiliado à Microsoft.',
+      // W18: o Sobre da versão web (PLANO-WEB, 4; PLANO-WEB-V1, 7): o nome e
+      // as duas linhas das limitações honestas, antes dos avisos.
+      web: Object.freeze({
+        nome: 'Tomatito para a web',
+        umaAba: 'Use o Tomatito numa aba só.',
+        dados: 'Os dados ficam só neste navegador, neste aparelho. Limpar os dados do site apaga as estatísticas e as tarefas.',
+      }),
+    }),
+    // W18: a seção "Navegador" da versão web (views/navegador-web.js;
+    // PLANO-WEB, 4): o tempo no título da aba e o convite de instalação.
+    // Sem atalhos no texto do Instalar: na web eles ficam desligados
+    // (PLANO-WEB-V1, 2.2 e 7).
+    navegador: Object.freeze({
+      secao: 'Navegador',
+      tempoNaAba: Object.freeze({
+        titulo: 'Tempo na aba',
+        descricao: 'Mostrar os minutos restantes no título da aba.',
+      }),
+      instalar: Object.freeze({
+        titulo: 'Instalar o Tomatito',
+        descricao: 'Abre numa janela própria, fora das abas do navegador.',
+        botao: 'Instalar',
+      }),
     }),
     // W14: a seção Avisos da versão web (views/avisos-web.js; PLANO-WEB, 4 e
     // 5; PLANO-WEB-V1, 7), com os quatro estados da permissão e o rodapé.

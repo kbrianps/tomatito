@@ -26,6 +26,9 @@
 // (o cartão Atualizar das Configurações).
 // W17: o título da aba (aba.js), com o tempo da sessão como na bandeja do
 // desktop, desligável pela chave `tomatito:web.tempoNaAba`.
+// W18: o cartão "Tempo na aba" chega à chave pelo `abaDaCasca`, e o
+// "Instalar o Tomatito" ao convite do navegador pelo `instalacaoDaCasca`
+// (instalacao.js).
 import focusEndUrl from '../../../src-tauri/sounds/focus-end.wav?url';
 import breakEndUrl from '../../../src-tauri/sounds/break-end.wav?url';
 import * as motor from './motor.js';
@@ -33,11 +36,12 @@ import { criarSom } from './som.js';
 import { criarAvisos, registrarServiceWorker, registroAtivo } from './avisos.js';
 import { criarPermissao } from './permissao.js';
 import { criarAtualizacao } from './atualizacao.js';
+import { criarInstalacao } from './instalacao.js';
 import * as configuracoes from './configuracoes.js';
 import * as estatisticas from './estatisticas.js';
 import * as tarefas from './tarefas.js';
 import { emitir, listen } from './barramento.js';
-import './aba.js';
+import { definirTempoNaAba, tempoNaAbaLigado } from './aba.js';
 
 // Os períodos que o motor fecha vão para o IndexedDB.
 motor.aoEfeito('period', estatisticas.gravarPeriodo);
@@ -212,10 +216,12 @@ export const casca = Object.freeze({
 // O que só o navegador oferece (PLANO-WEB-V1, 3.2): fora do `recursos` do
 // get_state (o platform/recursos.js é o do desktop e não muda). No desktop,
 // SEM_RECURSOS_DA_CASCA (platform/tauri.js), com as mesmas chaves.
-let recebeuConvite = false;
-globalThis.addEventListener?.('beforeinstallprompt', () => {
-  recebeuConvite = true;
-});
+/**
+ * W18: o convite de instalação do navegador (instalacao.js), para o cartão
+ * "Instalar o Tomatito" das Configurações. No desktop, null
+ * (platform/tauri.js).
+ */
+export const instalacaoDaCasca = criarInstalacao({ janela: globalThis });
 
 /**
  * `{ notificacoes, instalavel }`: avisos pelo service worker e o convite de
@@ -224,7 +230,7 @@ globalThis.addEventListener?.('beforeinstallprompt', () => {
 export function recursosDaCasca() {
   return Object.freeze({
     notificacoes: 'Notification' in globalThis && 'serviceWorker' in (globalThis.navigator ?? {}),
-    instalavel: recebeuConvite,
+    instalavel: instalacaoDaCasca.disponivel(),
   });
 }
 
@@ -238,3 +244,9 @@ export const avisosDaCasca = criarPermissao({
   permissoes: () => globalThis.navigator?.permissions ?? null,
   registro: () => registroAtivo(),
 });
+
+/**
+ * W18: o tempo no título da aba (aba.js), para o cartão "Tempo na aba" das
+ * Configurações. No desktop, null (platform/tauri.js).
+ */
+export const abaDaCasca = Object.freeze({ ligado: tempoNaAbaLigado, definir: definirTempoNaAba });
