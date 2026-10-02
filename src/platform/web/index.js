@@ -42,6 +42,7 @@ import * as estatisticas from './estatisticas.js';
 import * as tarefas from './tarefas.js';
 import { emitir, listen } from './barramento.js';
 import { definirTempoNaAba, tempoNaAbaLigado } from './aba.js';
+import { ligarTeclado } from './teclado.js';
 
 // Os períodos que o motor fecha vão para o IndexedDB.
 motor.aoEfeito('period', estatisticas.gravarPeriodo);
@@ -95,6 +96,8 @@ export const atualizacaoDaCasca = criarAtualizacao({
 });
 listen('tt://state', () => atualizacaoDaCasca.revisar());
 listen('tt://timers', () => atualizacaoDaCasca.revisar());
+// W37: o teclado virtual esconde a barra inferior (data-teclado).
+ligarTeclado();
 // Registrado na carga, sem pedir permissão (o pedido é por clique, W14).
 // A atualização só é acompanhada com o motor já retomado: antes disso o
 // `correndo` diria "nada" mesmo com uma fase guardada, e a página recarregaria.

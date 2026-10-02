@@ -143,3 +143,10 @@ html[data-casca="web"]{ touch-action:manipulation; }
 [data-forma="celular"] .tt-config-item{ padding-left:16px; padding-right:16px; }
 /* O arraste no deslizante é do deslizante, e não rolagem da página. */
 [data-casca="web"] input.tt-deslizante{ touch-action:pan-y; }
+
+/* ---------------------------------------------------------------------------
+   W37, 5.5: teclado virtual. Com o teclado aberto (platform/web/teclado.js
+   liga o data-teclado), a barra inferior some e a área que rola vai até o
+   fim, para o campo em edição ficar à vista. */
+[data-forma="celular"][data-teclado] .tt-barra-inferior{ display:none; }
+[data-forma="celular"][data-teclado] .tt-rolagem{ padding-bottom:16px; }
