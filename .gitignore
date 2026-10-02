@@ -30,3 +30,4 @@ src-tauri/target-wasm/
 
 # Saída do npm run build:web (PLANO-WEB, 3.9)
 dist-web/
+.wrangler/

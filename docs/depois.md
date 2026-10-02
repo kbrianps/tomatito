@@ -69,3 +69,14 @@ Formato: data, marco em que surgiu e uma linha sobre a ideia.
 - **Ícone nos avisos da web (anotado no W13, 30/09/2026).** O `showNotification` sai sem `icon` e sem `badge` (o Chrome mostra o ícone do site ou o dele). Os ícones do PWA chegam no W16; passar o de 192 px como `icon` (e um monocromático como `badge`, no Android) quando existirem.
 - **"Voltar ao Tomatito" nos avisos da web (anotado no W13).** O `sw.js` só trata o clique no corpo do aviso (foca a aba ou abre uma). Botões de ação ("Pular intervalo", "Iniciar próximo foco") exigiriam falar com o motor, que mora na aba, e não funcionam no iOS.
 - Barra inferior do celular (web): ícone preenchido no item atual (W31, decisão 2).
+
+## Web: o que ficou para depois (PLANO-WEB-V1, 2.2)
+
+- Manter a tela ligada durante o foco (Wake Lock).
+- Sonda e relógio em Worker para o segundo plano (W10).
+- Instância única entre abas (W15).
+- Exportar e importar os dados (W19).
+- Atalhos na aba (W21) e revisão de acessibilidade da web (W22).
+- CI da web (W25a) e documentação de uso (W25b).
+- Tomatito Full na web: tomate em tela cheia e mini tomate em Picture-in-Picture (WF0–WF4).
+- `--servidor pages` no `verificar.mjs` e o caso `pwa-publicado` (W40b).

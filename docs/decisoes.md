@@ -1490,3 +1490,12 @@ Feitos sem agentes paralelos nem revisor por etapa, a pedido do usuário (econom
 2. **Cronômetro em pé: a página não rola; quem rola é a lista de voltas.** O número e os botões ficam parados. Só com altura ≥ 500 px; com o celular deitado a página rola inteira.
 3. **Rótulos da barra inferior a 11 px abaixo de 350 px de largura**, para "Temporizador" e "Configurações" caberem a 320 px sem reticências.
 4. O diálogo do temporizador já tinha `max-width: calc(100vw − 32px)`; não precisou de regra nova.
+
+## W35–W37, W40a–W40b (web): fim do celular e publicação (02/10/2026)
+
+1. **W35 e W36 quase sem CSS novo:** as consultas de contêiner do desktop já resolviam o estreito. Entraram só as prévias de tema em 2 colunas, o recuo de 16 px das linhas e o `touch-action: pan-y` do deslizante.
+2. **W37: `data-teclado` em `src/platform/web/teclado.js`**, ligado por `platform/web/index.js`. A referência de "tela cheia" é a maior altura vista na orientação atual (recomeça ao girar), e não o `screen.height`, que no Chrome Android inclui as barras do sistema.
+3. **W40a: a página de privacidade já sai com o texto definitivo** (o plano previa uma linha provisória até o A23). O `sw.js` não precisou mudar: ele só responde pela página do app; `privacidade.html` e `_headers` ficam fora do precache.
+4. **W40a: o teste dos cabeçalhos chama `scripts/web/testar-cabecalhos.mjs`** (`npm run test:cabecalhos`), e não `headers.test.js`: a regra 3 do `regras-do-repo` proíbe em `scripts/web/` nomes que o `node --test` do desktop descobriria.
+5. **W40b enxuto:** em vez do `--servidor pages` no `verificar.mjs` e do caso `pwa-publicado`, a conferência é pelo emulador local (`wrangler pages dev dist-web`) com `curl` (registrada em `docs/web/publicar.md`) e, depois do deploy, pelas mesmas chamadas no endereço real (W41). Os casos `pwa` e `casca` passam no `--servidor preview`.
+6. A documentação do Pages recomenda Workers Static Assets para projetos novos (developers.cloudflare.com/pages/, 25/08/2026); ficamos no Pages por decisão do usuário, com troca documentada na 4.1 do PLANO-WEB-V1.
