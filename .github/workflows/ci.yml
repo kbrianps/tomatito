@@ -84,5 +84,11 @@ jobs:
         working-directory: src-tauri
         run: cargo test --workspace
 
+      # O teste dos avisos roda `cargo tree --offline` para os alvos Linux e Windows;
+      # sem isto, o runner só tem os crates do próprio sistema.
+      - name: 6a. cargo fetch (todos os alvos)
+        working-directory: src-tauri
+        run: cargo fetch --locked
+
       - name: 6. npm test
         run: npm test
