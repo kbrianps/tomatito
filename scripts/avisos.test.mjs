@@ -54,7 +54,7 @@ test('avisos: cada crate que entra no binário (Linux e Windows) está nos aviso
   assert.ok(!usados.some((c) => /^tomatito(-core|-motor)? /.test(c)), 'sem os crates do próprio app');
   const arvore = execFileSync(
     'cargo',
-    ['tree', '--offline', '--locked', '-e', 'normal,no-proc-macro', '--target', 'x86_64-unknown-linux-gnu',
+    ['tree', '--color', 'never', '--offline', '--locked', '-e', 'normal,no-proc-macro', '--target', 'x86_64-unknown-linux-gnu',
       '--target', 'x86_64-pc-windows-msvc', '--prefix', 'none', '-f', '{p}'],
     { cwd: new URL('../src-tauri/', import.meta.url), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
   );
