@@ -5,7 +5,7 @@
    nada nele. A exceção é o toque (5.3), que vale para a casca web inteira. */
 
 /* 5.3: sem a espera do toque duplo; o zoom com dois dedos continua. */
-html[data-casca="web"]{ touch-action:manipulation; }
+html[data-casca]{ touch-action:manipulation; }
 
 /* 5.2: as áreas seguras de cima e dos lados (o recorte da câmera, em pé e
    deitado). A de baixo é da barra inferior (W31). */
@@ -78,28 +78,28 @@ html[data-casca="web"]{ touch-action:manipulation; }
    menos 48 × 48 px de área: o desenho não muda; a área extra vem de um ::after
    transparente, centrado no controle. O desktop (Tauri) não tem data-casca. */
 @media (pointer:coarse){
-  :where([data-casca="web"]) :where(button, a.tt-nav-item, fluent-checkbox, fluent-switch, fluent-radio){
+  :where([data-casca]) :where(button, a.tt-nav-item, fluent-checkbox, fluent-switch, fluent-radio, fluent-dropdown){
     position:relative;
   }
-  [data-casca="web"] :is(button, a.tt-nav-item, fluent-checkbox, fluent-switch, fluent-radio)::after{
+  [data-casca] :is(button, a.tt-nav-item, fluent-checkbox, fluent-switch, fluent-radio, fluent-dropdown)::after{
     content:""; position:absolute; top:50%; left:50%;
     width:max(100%, 48px); height:max(100%, 48px);
     translate:-50% -50%;
   }
   /* Os controles do Fluent vêm com contain:content, que cortaria o ::after
      (pintura e toque) na caixa do controle. */
-  [data-casca="web"] :is(fluent-checkbox, fluent-switch, fluent-radio){ contain:layout style; }
+  [data-casca] :is(fluent-checkbox, fluent-switch, fluent-radio, fluent-dropdown){ contain:layout style; }
   /* O deslizante do volume não aceita ::after (é um <input>): a faixa inteira
      passa a ter 48 px de altura; o trilho e o polegar continuam os mesmos. */
-  [data-casca="web"] input.tt-deslizante{ height:48px; }
+  [data-casca] input.tt-deslizante{ height:48px; }
   /* Painel lateral (tablet): itens de 44 + 4 de margem, um por faixa de 48. */
-  [data-casca="web"]:not([data-forma="celular"]) .tt-nav-item{ height:44px; }
-  [data-casca="web"]:not([data-forma="celular"]) .tt-nav-indicador{ top:14px; }
+  [data-casca]:not([data-forma="celular"]) .tt-nav-item{ height:44px; }
+  [data-casca]:not([data-forma="celular"]) .tt-nav-indicador{ top:14px; }
 }
 /* Sem hover, sem dica: nem a do painel compacto, nem a dos botões de ícone
    (components/dica.js ignora o toque). */
 @media (hover:none){
-  [data-casca="web"] .tt-nav-dica{ display:none; }
+  [data-casca] .tt-nav-dica{ display:none; }
 }
 
 /* ---------------------------------------------------------------------------
@@ -142,7 +142,7 @@ html[data-casca="web"]{ touch-action:manipulation; }
 }
 [data-forma="celular"] .tt-config-item{ padding-left:16px; padding-right:16px; }
 /* O arraste no deslizante é do deslizante, e não rolagem da página. */
-[data-casca="web"] input.tt-deslizante{ touch-action:pan-y; }
+[data-casca] input.tt-deslizante{ touch-action:pan-y; }
 
 /* ---------------------------------------------------------------------------
    W37, 5.5: teclado virtual. Com o teclado aberto (platform/web/teclado.js

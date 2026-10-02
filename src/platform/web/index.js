@@ -214,6 +214,10 @@ export const casca = Object.freeze({
   sair: false,
   full: false, // o Full na web fica para depois
   formaCelular: true, // pode usar o layout de celular (quem liga é o boot-web.js, W07a)
+  android: false,
+  tomateTelaCheia: false,
+  secaoSistema: false, // nada de bandeja, X11 ou sair
+  volume: true,
 });
 
 // O que só o navegador oferece (PLANO-WEB-V1, 3.2): fora do `recursos` do

@@ -206,7 +206,7 @@ const opcoesDaLista = (valores, atual) =>
  * HTML da seção "Sessões de foco" com os valores de `s` (as configurações, no
  * formato do settings.json). `abertosAgora` são os ids dos cartões abertos.
  */
-export function marcacaoDasSessoes(s = PADROES, { icone = semIcone, abertosAgora = new Set() } = {}) {
+export function marcacaoDasSessoes(s = PADROES, { icone = semIcone, abertosAgora = new Set(), comVolume = true } = {}) {
   const chevron = icone('chevron_down', 16);
   const listas = LISTAS.map(({ chave, id, rotulo, valores }) =>
     item(
@@ -245,8 +245,10 @@ export function marcacaoDasSessoes(s = PADROES, { icone = semIcone, abertosAgora
     });
   }).join('');
   const v = volumeDe(s.volume);
-  const volume =
-    '<div class="tt-config-cartao" data-cartao="volume"><div class="tt-config-cabecalho">' +
+  // A05: no Android o som é do canal de notificação (sem volume próprio).
+  const volume = !comVolume
+    ? ''
+    : '<div class="tt-config-cartao" data-cartao="volume"><div class="tt-config-cabecalho">' +
     cabeca('volume', icone('speaker_2', 20), c.volume.titulo, c.volume.descricao) +
     '<span class="tt-config-controle">' +
     `<input type="range" class="tt-deslizante" min="0" max="100" step="1" value="${v}" data-config="volume" ` +
@@ -369,7 +371,7 @@ export function marcacao({
   ).join('');
   return (
     `<div class="tt-pagina"><h1 class="tt-t-title-large" tabindex="-1">${t.navegacao.configuracoes}</h1>` +
-    marcacaoDasSessoes(configuracoes, { icone, abertosAgora }) +
+    marcacaoDasSessoes(configuracoes, { icone, abertosAgora, comVolume: casca?.volume !== false }) +
     '<section class="tt-config-secao" aria-labelledby="config-aparencia">' +
     `<h2 id="config-aparencia" class="tt-t-body-strong">${c.aparencia}</h2>` +
     '<div class="tt-config-cartao" data-cartao="tema">' +
@@ -379,7 +381,7 @@ export function marcacao({
     '<fluent-radio-group class="tt-temas" name="tema" orientation="horizontal" ' +
     `aria-labelledby="config-tema" aria-describedby="config-tema-desc"${marcada ? ` value="${marcada}"` : ''}>` +
     `${opcoes}</fluent-radio-group></div></section>` +
-    (casca?.web ? '' : marcacaoDoSistema(configuracoes, { icone, recursos })) +
+    (casca?.secaoSistema === false || casca?.web ? '' : marcacaoDoSistema(configuracoes, { icone, recursos })) +
     marcacaoDoSobre({ icone, versao, abertosAgora, web: Boolean(casca?.web) }) +
     '</div>'
   );
@@ -490,7 +492,7 @@ export function ligarSessoes(raiz, { store = storeDoApp, ipc = ipcDoApp, doc = g
       escreverEstado(sw);
     }
     // Não puxa o controle de quem está arrastando.
-    if (!arrastando && Number.isInteger(s.volume) && volume.value !== String(s.volume)) {
+    if (volume && !arrastando && Number.isInteger(s.volume) && volume.value !== String(s.volume)) {
       volume.value = String(s.volume);
       pintarVolume();
     }
@@ -540,7 +542,7 @@ export function ligarSessoes(raiz, { store = storeDoApp, ipc = ipcDoApp, doc = g
 
   secao.addEventListener('change', aoMudar);
   secao.addEventListener('click', aoClicar);
-  volume.addEventListener('input', aoArrastar);
+  volume?.addEventListener('input', aoArrastar);
   volume.addEventListener('pointerdown', aoApertar);
   doc.addEventListener('pointerup', aoSoltar);
   doc.addEventListener('pointercancel', aoSoltar);
@@ -708,7 +710,7 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
   const semDica = casca?.full === false ? () => {} : ligarDicaSempreNaFrente(raiz.querySelector('.tt-config-secao'), { doc, porCodigo, evento: EVENTO });
   // M57: a Compatibilidade X11 (opcao-x11.js), na seção Avançado, antes do
   // Sobre; na web, não (W18).
-  const semX11 = casca?.web ? () => {} : ligarOpcaoX11(raiz.querySelector('.tt-pagina'), { icone, ipc: compatX11 });
+  const semX11 = casca?.secaoSistema === false || casca?.web ? () => {} : ligarOpcaoX11(raiz.querySelector('.tt-pagina'), { icone, ipc: compatX11 });
   // W14: a seção Avisos, só na web (avisos-web.js), depois da Aparência.
   const semAvisos = ligarAvisosWeb(raiz.querySelector('.tt-pagina'), { icone, plataforma: avisosWeb });
   // W18: a seção Navegador (Tempo na aba e Instalar), só na web

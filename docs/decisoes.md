@@ -1663,3 +1663,12 @@ Retomado em modo solo, depois do rebase da branch `android` sobre a `main` com a
 
 1. **`avisos.mjs notificacoes` (tt37): 14/14.** **`alarme` (tt31): 11/11**, com os dois itens do cartão em `naoConferido` (a WebView 91 da imagem do Android 12 não sobe a página; num aparelho real a WebView vem da Play).
 2. **`cartao` (tt37): 6/7.** O que falta, "a retomada reagenda como exatos", depende da retomada do Android (A14): o `am compat reset` mata o app e, ao reabrir, o motor ainda não restaura a sessão do `state.json` no Android, então o Rust manda uma agenda vazia. O roteiro `cartao` roda de novo no A14.
+
+## A05 (Android): casca e layout de celular (03/10/2026)
+
+1. **`casca` em tempo de execução no `platform/tauri.js`**: `DESKTOP` e `ANDROID`, escolhida pelo `__TT_PLATFORM__`. Chaves novas nas três cascas: `android`, `tomateTelaCheia`, `secaoSistema` (a seção Sistema das Configurações, antes decidida por `casca.web`) e `volume` (no Android o som é do canal de notificação, então sem o deslizante). O teste da casca no `regras-do-repo` passou a conferir as três, chave a chave.
+2. **A regra do `data-forma` num módulo comum**, `src/lib/forma.js` (`CONSULTA_CELULAR` e `ligarFormaCelular`), chamado pelo `main.js` no Android. O `boot-web.js` (script clássico, sem import) mantém a cópia literal; o `forma.test.js` confere que são iguais.
+3. **`[data-casca="web"]` virou `[data-casca]`** no `celular.css` e no `shell.css` (barra de título, altura da janela, alvos de toque): vale para qualquer casca que não seja o desktop, que não grava o atributo.
+4. **Achado pelo A05 e corrigido também na web:** as listas de minutos (`fluent-dropdown`) das Configurações tinham 33 px de altura de toque. O caso `celular-alvos` da web abria os expansores com o seletor errado (`.tt-expansor-cabeca`) e nunca as media. Agora o `fluent-dropdown` entra na regra do `::after` de 48 px, e o teste de toque real aceita o toque no controle que envolve o botão interno.
+5. **Geometria comparada sem as faixas das barras do sistema** (16 px em cima e 24 px embaixo no tt37, que ainda chegam pelo `env(safe-area-inset-*)`; o A06 as passa para o padding da WebView). A tela do tt37 tem 411,43 px CSS (1080 / 2,625), não 412: tolerância de 2 px também na largura.
+6. Roteiro: `node scripts/web/verificar.mjs geometria-g` (referência da web a 412 × 915) e `node scripts/android/casca.mjs` no tt37: **7/7**.

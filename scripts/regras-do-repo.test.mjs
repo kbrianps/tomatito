@@ -1201,19 +1201,27 @@ test('web: src/platform/web/ não importa @tauri-apps nem a prévia do desktop (
   assert.deepEqual(pkg.imports['#plataforma'], { 'tomatito-web': './src/platform/web/index.js', default: './src/platform/tauri.js' });
 });
 
-test('web: a casca das duas plataformas, com as mesmas chaves (PLANO-WEB-V1, 3.2)', async () => {
-  const chaves = ['web', 'barraDeTitulo', 'bloqueiosDeProducao', 'atalhosDaJanela', 'atalhosDeNavegacao', 'sair', 'full', 'formaCelular'];
-  const casca = (arq) => {
-    const m = /export const casca = Object\.freeze\(\{([\s\S]*?)\}\);/.exec(ler(arq));
-    assert.ok(m, `casca em ${arq}`);
+test('web e Android: a casca das três plataformas, com as mesmas chaves (PLANO-WEB-V1, 3.2; PLANO-ANDROID, 4.3)', async () => {
+  const chaves = ['web', 'android', 'barraDeTitulo', 'bloqueiosDeProducao', 'atalhosDaJanela', 'atalhosDeNavegacao', 'sair', 'full',
+    'tomateTelaCheia', 'formaCelular', 'secaoSistema', 'volume'];
+  const objeto = (arq, nome) => {
+    const m = new RegExp(`const ${nome} = Object\\.freeze\\(\\{([\\s\\S]*?)\\}\\);`).exec(ler(arq));
+    assert.ok(m, `${nome} em ${arq}`);
     return Object.fromEntries([...m[1].matchAll(/^\s*(\w+): (true|false),/gm)].map((x) => [x[1], x[2] === 'true']));
   };
-  const desktop = casca('src/platform/tauri.js');
-  const web = casca('src/platform/web/index.js');
-  assert.deepEqual(Object.keys(desktop), chaves);
-  assert.deepEqual(Object.keys(web), chaves);
-  for (const k of chaves) assert.equal(web[k], k === 'web' || k === 'formaCelular', `web.${k}`);
-  for (const k of chaves) assert.equal(desktop[k], k !== 'web' && k !== 'formaCelular', `desktop.${k}`);
+  const desktop = objeto('src/platform/tauri.js', 'DESKTOP');
+  const android = { ...desktop, ...objeto('src/platform/tauri.js', 'ANDROID') };
+  const web = objeto('src/platform/web/index.js', 'casca');
+  for (const c of [desktop, android, web]) assert.deepEqual(Object.keys(c).sort(), [...chaves].sort());
+  const esperado = {
+    desktop: { web: false, android: false, barraDeTitulo: true, bloqueiosDeProducao: true, atalhosDaJanela: true, atalhosDeNavegacao: true, sair: true, full: true, tomateTelaCheia: false, formaCelular: false, secaoSistema: true, volume: true },
+    web: { web: true, android: false, barraDeTitulo: false, bloqueiosDeProducao: false, atalhosDaJanela: false, atalhosDeNavegacao: false, sair: false, full: false, tomateTelaCheia: false, formaCelular: true, secaoSistema: false, volume: true },
+    android: { web: false, android: true, barraDeTitulo: false, bloqueiosDeProducao: true, atalhosDaJanela: false, atalhosDeNavegacao: false, sair: false, full: false, tomateTelaCheia: true, formaCelular: true, secaoSistema: false, volume: false },
+  };
+  assert.deepEqual(desktop, esperado.desktop);
+  assert.deepEqual(web, esperado.web);
+  assert.deepEqual(android, esperado.android);
+  assert.match(ler('src/platform/tauri.js'), /export const casca = globalThis\.__TT_PLATFORM__ === 'android' \? ANDROID : DESKTOP;/);
   const main = ler('src/main.js');
   assert.match(main, /^  if \(casca\.full\) ligarValidacaoDoFull\(\{ ipc \}\)/m);
   assert.match(main, /^  if \(casca\.atalhosDeNavegacao\) ligarAtalhosDeNavegacao\(/m);

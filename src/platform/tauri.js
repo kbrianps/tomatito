@@ -10,19 +10,39 @@ export { getCurrentWindow as janelaAtual } from '@tauri-apps/api/window';
 export { getVersion as versao } from '@tauri-apps/api/app';
 
 /**
- * O que o invólucro oferece (PLANO-WEB-V1, 3.2). Estático: não depende do
- * sistema. A decisão de cada tela é por aqui, nunca pelo `data-platform`.
+ * O que o invólucro oferece (PLANO-WEB-V1, 3.2). A decisão de cada tela é por
+ * aqui, nunca pelo `data-platform`. No desktop, estática; no Android (o mesmo
+ * Tauri, PLANO-ANDROID 4.3, A05), decidida na carga pelo `__TT_PLATFORM__` que
+ * o initialization_script grava (`std::env::consts::OS`).
  */
-export const casca = Object.freeze({
+const DESKTOP = Object.freeze({
   web: false,
+  android: false,
   barraDeTitulo: true, // minimizar, maximizar e fechar próprios
   bloqueiosDeProducao: true, // F5, Ctrl+R e menu do WebView presos no build
   atalhosDaJanela: true, // Ctrl+W e Ctrl+Q
   atalhosDeNavegacao: true, // Ctrl+1–3 trocam de tela
   sair: true,
   full: true, // o modo Full (M50–M57)
+  tomateTelaCheia: false,
   formaCelular: false, // nunca o layout de celular
+  secaoSistema: true, // bandeja, sempre na frente, X11, sair
+  volume: true, // o som toca pelo app
 });
+const ANDROID = Object.freeze({
+  ...DESKTOP,
+  android: true,
+  barraDeTitulo: false,
+  atalhosDaJanela: false,
+  atalhosDeNavegacao: false,
+  sair: false,
+  full: false, // o Full de janela não; o tomate em tela cheia é o A16
+  tomateTelaCheia: true,
+  formaCelular: true,
+  secaoSistema: false,
+  volume: false, // o som é do canal de notificação (5.5)
+});
+export const casca = globalThis.__TT_PLATFORM__ === 'android' ? ANDROID : DESKTOP;
 
 /**
  * O que só a web oferece (PLANO-WEB-V1, 3.2): no desktop, nada. A web devolve
