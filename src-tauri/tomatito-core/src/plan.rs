@@ -215,6 +215,8 @@ impl Plan {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(target_family = "wasm")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
 
     fn plano(total_minutes: u32) -> Plan {
         Plan::new(total_minutes, PlanSettings::DEFAULT, false).expect("plano válido")

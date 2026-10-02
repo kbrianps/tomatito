@@ -3,6 +3,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const ler = (caminho) => readFileSync(new URL(`../${caminho}`, import.meta.url), 'utf8');
 
@@ -146,7 +148,7 @@ const jsDoApp = readdirSync(new URL('../src', import.meta.url), { recursive: tru
   .map((arquivo) => ({ arquivo: `src/${arquivo}`, texto: ler(`src/${arquivo}`) }));
 
 test('folhas de estilo como <link> no index.html, na ordem da seção 4.2, e nunca por import no JS', () => {
-  const ordem = ['fluent-tokens.gen.css', 'tokens.css', 'bridge.css', 'fonts.css', 'base.css', 'shell.css', 'controls.css'];
+  const ordem = ['fluent-tokens.gen.css', 'tokens.css', 'bridge.css', 'fonts.css', 'base.css', 'shell.css', 'controls.css', 'celular.css'];
   const links = [...indexHtml.matchAll(/<link rel="stylesheet" href="\/src\/styles\/([^"]+)"/g)].map((m) => m[1]);
   // M11: o fluent-tokens.gen.css entra como primeira folha (scripts/build-theme-css.test.mjs).
   for (const folha of ['fluent-tokens.gen.css', 'tokens.css', 'bridge.css', 'fonts.css', 'base.css']) {
@@ -221,7 +223,7 @@ test('configurações no Rust: settings_get, settings_set e tt://settings, sem o
   assert.equal(lib.match(/generate_context!\(\)/g)?.length, 1);
   // M37: o Builder já nasce com o single-instance (o primeiro plugin, 3.4).
   assert.match(lib, /usar_x11_se_pedido\(&context\.config\(\)\.identifier\);\s*(?:\/\/.*\n\s*)*let builder =\s*tauri::Builder::default\(\)/);
-  assert.match(ler('src-tauri/src/events.rs'), /pub const SETTINGS: &str = "tt:\/\/settings";/);
+  assert.match(ler('src-tauri/tomatito-motor/src/events.rs'), /pub const SETTINGS: &str = "tt:\/\/settings";/);
   const ipcJs = ler('src/lib/ipc.js');
   assert.match(ipcJs, /configuracoes: 'tt:\/\/settings'/);
   assert.match(ipcJs, /invoke\('settings_set', \{ patch \}\)/);
@@ -241,7 +243,7 @@ test('bandeja: tray-icon e image-png, ícone depois do motor e CloseRequested s�
   const codigo = tray.split('#[cfg(test)]')[0].split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
   assert.doesNotMatch(codigo, /"(Iniciar|Pausar|Retomar) foco"|"Mostrar Tomatito"/);
   assert.match(tray, /run_on_main_thread\(move \|\|/, 'a bandeja posta na thread principal, sem esperar');
-  const i18n = ler('src-tauri/src/i18n.rs');
+  const i18n = ler('src-tauri/tomatito-motor/src/i18n.rs');
   for (const txt of ['Iniciar foco', 'Pausar foco', 'Mostrar Tomatito', 'Sair']) assert.ok(i18n.includes(`"${txt}"`), txt);
   // "Mostrar Tomatito" segue a 3.4: show, unminimize e set_focus na main.
   assert.match(ler('src-tauri/src/window/mod.rs'), /w\.show\(\);\s*let _ = w\.unminimize\(\);\s*let _ = w\.set_focus\(\);/);
@@ -270,7 +272,9 @@ test('M39: recursos no get_state, montados só no platform/recursos.js, e o Sobr
     }
   }
   // A versão vem do getVersion() (Cargo.toml), e "Sair do Tomatito" é o mesmo app_quit.
-  assert.match(ler('src/lib/ipc.js'), /^export \{ getVersion as versao \} from '@tauri-apps\/api\/app';$/m);
+  // Web (PLANO-WEB, 3.2): pelo `#plataforma`, que no desktop é o platform/tauri.js.
+  assert.match(ler('src/lib/ipc.js'), /^export \{ versao \} from '#plataforma';$/m);
+  assert.match(ler('src/platform/tauri.js'), /^export \{ getVersion as versao \} from '@tauri-apps\/api\/app';$/m);
   const tela = ler('src/views/settings.js');
   assert.match(tela, /ipc\.versao\?\.\(\)/);
   assert.match(tela, /ipc\.sair\(\)/);
@@ -336,9 +340,10 @@ test('temporizadores: comandos timer_*, tt://timers e o fim com som e notificaç
     assert.match(comandos, new RegExp(`pub fn ${c}\\(`));
     assert.match(ipcJs, new RegExp(`invoke\\('${c}'`), `${c} no ipc.js`);
   }
-  assert.match(ler('src-tauri/src/events.rs'), /pub const TIMERS: &str = "tt:\/\/timers";/);
+  assert.match(ler('src-tauri/tomatito-motor/src/events.rs'), /pub const TIMERS: &str = "tt:\/\/timers";/);
   assert.match(ipcJs, /temporizadores: 'tt:\/\/timers'/);
-  const motor = ler('src-tauri/src/engine.rs');
+  // W05: o motor genérico mora no tomatito-motor; o TauriSink, no desktop.
+  const motor = ler('src-tauri/tomatito-motor/src/engine.rs');
   assert.match(motor, /impl<S: Sink> CountdownEffects for TimersOutbox/);
   assert.match(motor, /if !ended\.late \{\s*self\.sink\.sound\(Sound::FocusEnd\);/);
   assert.match(motor, /Timers::with_defaults\(\)/);
@@ -354,7 +359,8 @@ test('temporizadores: comandos timer_*, tt://timers e o fim com som e notificaç
 test('temporizadores: barra, diálogo e state.json gravado pelo persist.rs a cada transição', () => {
   const estado = ler('src-tauri/src/state_file.rs');
   assert.match(estado, /pub const FILE: &str = "state\.json";/);
-  assert.match(estado, /pub const SCHEMA_VERSION: u32 = 1;/);
+  // W04b: a versão do formato mora no motor; o arquivo e a gravação, no desktop.
+  assert.match(ler('src-tauri/tomatito-motor/src/state_file.rs'), /pub const SCHEMA_VERSION: u32 = 1;/);
   assert.match(estado, /crate::persist::write_json_atomic\(/, 'gravação atômica');
   assert.match(ler('src-tauri/src/lib.rs'), /^mod state_file;$/m);
   assert.match(ler('src-tauri/src/lib.rs'), /state_file::StateStore::new\(&dados\)/);
@@ -383,7 +389,7 @@ test('cronômetro: comandos stopwatch_*, tt://stopwatch, state.json e a tela', (
     assert.match(ipcJs, new RegExp(`invoke\\('${c}'\\)`), `${c} no ipc.js`);
   }
   assert.match(ler('src-tauri/tomatito-core/src/lib.rs'), /^pub mod stopwatch;$/m);
-  assert.match(ler('src-tauri/src/events.rs'), /pub const STOPWATCH: &str = "tt:\/\/stopwatch";/);
+  assert.match(ler('src-tauri/tomatito-motor/src/events.rs'), /pub const STOPWATCH: &str = "tt:\/\/stopwatch";/);
   assert.match(ipcJs, /cronometro: 'tt:\/\/stopwatch'/);
   assert.match(ler('src-tauri/src/engine.rs'), /self\.emit\(events::STOPWATCH, stopwatch\);\s*(\/\/[^\n]*\n\s*)*self\.estado\.save_stopwatch\(stopwatch\);/);
   const shell = ler('src/styles/shell.css');
@@ -687,7 +693,9 @@ test('M37: single-instance primeiro, window-state restrito, app_quit e os bloque
   assert.match(ler('src-tauri/src/commands.rs'), /pub fn app_quit\(app: AppHandle\) \{\s*crate::window::sair\(&app\);/);
   assert.match(ler('src/lib/ipc.js'), /export const sair = \(\) => invoke\('app_quit'\);/);
   const main = ler('src/main.js');
-  assert.match(main, /^if \(import\.meta\.env\.PROD\) ligarBloqueiosDeProducao\(\);\nelse ligarRecargaDoDev\(\);$/m);
+  // Web (PLANO-WEB, 3.2): os dois só com a casca que os pede (no desktop, sempre).
+  assert.match(main, /^if \(casca\.bloqueiosDeProducao\) \{\n  if \(import\.meta\.env\.PROD\) ligarBloqueiosDeProducao\(\);\n  else ligarRecargaDoDev\(\);\n\}$/m);
+  assert.match(main, /^  if \(casca\.atalhosDaJanela\) ligarAtalhosDaJanela\(/m);
   assert.match(main, /ligarAtalhosDaJanela\(\{ fechar: \(\) => win\.close\(\), sair: ipc\.sair \}\)/);
   // Junção com o Full: a página do tomate liga as mesmas regras (3.8), e o
   // Ctrl+W e o Ctrl+Q.
@@ -713,14 +721,15 @@ test('M40: state.json carregado ao abrir, antes da bandeja e do laço, e o foco 
     'motor.restaurar(restaurado);',
     'estado.save_all(&motor.state());',
     'bandeja.criar_icone(',
-    'spawn(motor.run())',
+    'spawn(engine::laco(motor.clone(), acordador))',
     'build_main(',
   ].map((t) => [t, lib.indexOf(t)]);
   for (const [t, i] of ordem) assert.ok(i >= 0, t);
   for (let k = 1; k < ordem.length; k++) assert.ok(ordem[k - 1][1] < ordem[k][1], `${ordem[k - 1][0]} antes de ${ordem[k][0]}`);
   const motor = ler('src-tauri/src/engine.rs');
   assert.match(motor, /self\.emit\(events::STATE, focus\);[\s\S]{0,400}self\.estado\.save_focus\(focus\);\s*\}/);
-  assert.match(motor, /pub fn restaurar\(&self, r: Restored\)[\s\S]*focus\.advance_to\(now[\s\S]*timers\.advance_to\(/);
+  // W05: o restaurar subiu ao tomatito-motor com o resto do Engine.
+  assert.match(ler('src-tauri/tomatito-motor/src/engine.rs'), /pub fn restaurar\(&self, r: Restored\)[\s\S]*focus\.advance_to\(now[\s\S]*timers\.advance_to\(/);
   // Nenhum tick grava o arquivo: o laço só emite o tt://tick.
   assert.doesNotMatch(motor.slice(motor.indexOf('fn tick(&self, tick: &TickDto)'), motor.indexOf('fn phase(&self')), /estado/);
 });
@@ -1051,7 +1060,9 @@ test('Full: menu nativo completo, tamanho e sempre na frente pelo settings_set, 
   assert.match(lib, /window::tomato::fechada_pelo_usuario\(window\);/);
   assert.match(lib, /tauri::RunEvent::ExitRequested \{\s*code: None, api, \.\.\s*\} = &evento\s*&& window::manter_na_bandeja\(app\)/);
   // 3.3: false no Windows 10.
-  assert.match(ler('src-tauri/src/settings.rs'), /tomato_on_top: tomato_on_top_padrao\(\),/);
+  // W04b: o padrão mora no motor, e o desktop passa a versão do Windows antes de ler as configurações.
+  assert.match(ler('src-tauri/tomatito-motor/src/settings.rs'), /tomato_on_top: tomato_on_top_padrao\(\),/);
+  assert.match(ler('src-tauri/src/lib.rs'), /#\[cfg\(windows\)\]\s*settings::definir_tomato_on_top_padrao\(\s*window::region_windows::versao\(\)/);
   // A dica do Wayland, com o texto do catálogo, ligada nas Configurações.
   assert.match(ler('src/lib/i18n/pt-BR.js'), /'No GNOME, use Alt\+Espaço → Sempre na frente das outras janelas para manter o tomate por cima'/);
   assert.match(ler('src/views/settings.js'), /ligarDicaSempreNaFrente\(raiz\.querySelector\('\.tt-config-secao'\)/);
@@ -1083,4 +1094,192 @@ test('M57: Compatibilidade X11 (B2) lida antes do Builder, com a marca e o rein�
   const ipc = ler('src/lib/ipc.js');
   assert.match(ipc, /situacao: \(\) => invoke\('x11_compat_get'\)/);
   assert.match(ipc, /reiniciar: \(\) => invoke\('app_restart'\)/);
+});
+
+// Versão web (PLANO-WEB, 3.2, regras 3 e 4; marco W02): o `npm test` do
+// desktop não roda nada da web. O `node --test` sem argumentos descobre os
+// arquivos pelo nome, então nenhum script da web pode ter nome de teste, e os
+// testes unitários da camada web não carregam o wasm.
+const arquivosEm = (pasta) => {
+  const url = new URL(`../${pasta}/`, import.meta.url);
+  try {
+    return readdirSync(url, { recursive: true, withFileTypes: true })
+      .filter((d) => d.isFile())
+      .map((d) => `${pasta}/${relative(fileURLToPath(url), join(d.parentPath, d.name)).split(sep).join('/')}`);
+  } catch (e) {
+    if (e.code === 'ENOENT') return [];
+    throw e;
+  }
+};
+
+test('web: nenhum arquivo de scripts/web/ casa com a descoberta do node --test (regra 3)', () => {
+  const descoberta = /(^|\/)test\/|(^|\/)test(-[^/]*)?\.[cm]?[jt]s$|[._-]test\.[cm]?[jt]s$/;
+  // A própria regex, conferida contra os nomes que o Node 22 descobre e os que não.
+  for (const n of ['a/test/x.mjs', 'test-wasm.mjs', 'a/test.js', 'x.test.mjs', 'x-test.cjs', 'x_test.ts']) {
+    assert.match(n, descoberta, n);
+  }
+  for (const n of ['scripts/web/testar-wasm.mjs', 'scripts/web/rodar-testes-wasm.mjs', 'scripts/web/verificar.mjs']) {
+    assert.doesNotMatch(n, descoberta, n);
+  }
+  const web = arquivosEm('scripts/web');
+  assert.ok(web.includes('scripts/web/testar-wasm.mjs'), 'scripts/web/testar-wasm.mjs existe');
+  assert.deepEqual(web.filter((f) => descoberta.test(f)), []);
+  assert.equal(pkg.scripts['test:wasm'], 'node scripts/web/testar-wasm.mjs');
+  assert.equal(pkg.scripts.test, 'node --test');
+});
+
+test('web: nenhum teste de src/platform/web/ importa o pkg/, o motor.js ou o index.js (regra 4)', () => {
+  const testes = arquivosEm('src/platform/web').filter(
+    (f) => f.endsWith('.test.js') && !f.startsWith('src/platform/web/pkg/'),
+  );
+  const especificadores = (texto) =>
+    [...texto.matchAll(/\b(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g)].map((m) => m[1]);
+  const proibido = /(^|\/)pkg(\/|$)|(^|\/)motor\.js$|(^|\/)index\.js$/;
+  for (const f of testes) {
+    assert.deepEqual(especificadores(ler(f)).filter((e) => proibido.test(e)), [], f);
+  }
+});
+
+test('web: nenhum setInterval em src/platform/web/ (regra 5; PLANO-WEB-V1, W11, sem Worker)', () => {
+  const arquivos = arquivosEm('src/platform/web').filter((f) => /\.[cm]?js$/.test(f) && !f.startsWith('src/platform/web/pkg/'));
+  assert.ok(arquivos.includes('src/platform/web/motor.js'));
+  assert.ok(arquivos.includes('src/platform/web/prazo.js'));
+  const semComentarios = (texto) => texto.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  for (const f of arquivos) assert.doesNotMatch(semComentarios(ler(f)), /\bsetInterval\b/, f);
+  // O W11 da v1 não tem Worker: o relógio é todo por setTimeout na página.
+  assert.deepEqual(arquivos.filter((f) => /worker/i.test(f)), []);
+  const motor = semComentarios(ler('src/platform/web/motor.js'));
+  assert.match(motor, /from '\.\/prazo\.js'/);
+  assert.match(motor, /new MessageChannel\(\)/, 'o rearme do prazo sai de uma mensagem, fora da cadeia de timers');
+});
+
+// Versão web (PLANO-WEB-V1, 3.2; marco W03a): o `#plataforma` separa o Tauri
+// da camada web. Do src/main.js para dentro (o que o index.html carrega), só
+// o src/platform/tauri.js importa @tauri-apps; o tomato.js e o
+// menu-tomate.js (Full, só desktop) ficam fora desse grafo.
+const semComentarios = (texto) => texto.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"\\])\/\/.*$/gm, '$1');
+const importsEstaticos = (texto) =>
+  [...semComentarios(texto).matchAll(/(?:^|[;\s])(?:import|export)\s*(?:[^'";()]*?\bfrom\s*)?['"]([^'"]+)['"]/g)].map((m) => m[1]);
+
+test('web: do src/main.js em diante, só o platform/tauri.js importa @tauri-apps (W03a)', () => {
+  const visitados = new Set();
+  const comTauri = [];
+  const fila = ['src/main.js'];
+  while (fila.length) {
+    const arq = fila.shift();
+    if (visitados.has(arq)) continue;
+    visitados.add(arq);
+    for (const esp of importsEstaticos(ler(arq))) {
+      if (esp.startsWith('@tauri-apps/')) comTauri.push(arq);
+      let alvo = null;
+      if (esp === '#plataforma') alvo = 'src/platform/tauri.js';
+      else if (esp.startsWith('.')) alvo = new URL(esp, new URL(`file:///${arq}`)).pathname.slice(1);
+      if (alvo?.endsWith('.js')) fila.push(alvo);
+    }
+  }
+  // O grafo chegou onde devia (o parser não perdeu imports).
+  for (const f of ['src/lib/ipc.js', 'src/components/title-bar.js', 'src/views/settings.js', 'src/platform/tauri.js', 'src/lib/store.js']) {
+    assert.ok(visitados.has(f), `${f} no grafo do main.js`);
+  }
+  assert.ok(!visitados.has('src/tomato.js') && !visitados.has('src/lib/menu-tomate.js'), 'o Full fica fora do grafo');
+  assert.deepEqual([...new Set(comTauri)], ['src/platform/tauri.js']);
+  // O parser pega as três formas de import.
+  assert.deepEqual(importsEstaticos("import 'a.js';\nimport {\n  b,\n} from './b.js';\nexport { c } from '#c';\n// import 'x.js';"), ['a.js', './b.js', '#c']);
+});
+
+test('web: src/platform/web/ não importa @tauri-apps nem a prévia do desktop (regra 2)', () => {
+  const arquivos = arquivosEm('src/platform/web').filter((f) => /\.[cm]?js$/.test(f) && !f.startsWith('src/platform/web/pkg/'));
+  assert.ok(arquivos.includes('src/platform/web/index.js'));
+  for (const f of arquivos) {
+    const ruins = importsEstaticos(ler(f)).filter((e) => e.startsWith('@tauri-apps/') || /scripts\/preview\//.test(e));
+    assert.deepEqual(ruins, [], f);
+  }
+  // O `#plataforma` escolhe pela condição do build web; sem ela (desktop e node --test), o Tauri.
+  assert.deepEqual(pkg.imports['#plataforma'], { 'tomatito-web': './src/platform/web/index.js', default: './src/platform/tauri.js' });
+});
+
+test('web: a casca das duas plataformas, com as mesmas chaves (PLANO-WEB-V1, 3.2)', async () => {
+  const chaves = ['web', 'barraDeTitulo', 'bloqueiosDeProducao', 'atalhosDaJanela', 'atalhosDeNavegacao', 'sair', 'full', 'formaCelular'];
+  const casca = (arq) => {
+    const m = /export const casca = Object\.freeze\(\{([\s\S]*?)\}\);/.exec(ler(arq));
+    assert.ok(m, `casca em ${arq}`);
+    return Object.fromEntries([...m[1].matchAll(/^\s*(\w+): (true|false),/gm)].map((x) => [x[1], x[2] === 'true']));
+  };
+  const desktop = casca('src/platform/tauri.js');
+  const web = casca('src/platform/web/index.js');
+  assert.deepEqual(Object.keys(desktop), chaves);
+  assert.deepEqual(Object.keys(web), chaves);
+  for (const k of chaves) assert.equal(web[k], k === 'web' || k === 'formaCelular', `web.${k}`);
+  for (const k of chaves) assert.equal(desktop[k], k !== 'web' && k !== 'formaCelular', `desktop.${k}`);
+  const main = ler('src/main.js');
+  assert.match(main, /^  if \(casca\.full\) ligarValidacaoDoFull\(\{ ipc \}\)/m);
+  assert.match(main, /^  if \(casca\.atalhosDeNavegacao\) ligarAtalhosDeNavegacao\(/m);
+});
+
+test('web: todo literal de localStorage.getItem/setItem começa com tomatito: (regra 6, W07a)', () => {
+  const arquivos = arquivosEm('src').filter((f) => /\.m?js$/.test(f) && !f.startsWith('src/platform/web/pkg/'));
+  const literais = [];
+  for (const f of arquivos) {
+    for (const m of semComentarios(ler(f)).matchAll(/localStorage\s*\.\s*(?:getItem|setItem)\s*\(\s*(['"`])([^'"`]*)\1/g)) {
+      literais.push({ arquivo: f, chave: m[2] });
+    }
+  }
+  // A regra só vale se houver o que conferir: as configurações da web.
+  assert.ok(literais.some((l) => l.arquivo === 'src/platform/web/configuracoes.js' && l.chave === 'tomatito:config'));
+  assert.ok(literais.some((l) => l.arquivo === 'src/platform/web/boot-web.js' && l.chave === 'tomatito:config'));
+  assert.deepEqual(literais.filter((l) => !l.chave.startsWith('tomatito:')), []);
+});
+
+test('web: recursosDaCasca nas duas plataformas, com as mesmas chaves, e o recursos.js intocado (PLANO-WEB-V1, 3.2; W07a)', async () => {
+  const tauri = ler('src/platform/tauri.js');
+  const m = /export const SEM_RECURSOS_DA_CASCA = Object\.freeze\(\{ ([^}]*) \}\);/.exec(tauri);
+  assert.ok(m, 'SEM_RECURSOS_DA_CASCA no platform/tauri.js');
+  const desktop = Object.fromEntries(m[1].split(', ').map((par) => par.split(': ')));
+  assert.deepEqual(desktop, { notificacoes: 'false', instalavel: 'false' });
+  assert.match(tauri, /^export const recursosDaCasca = \(\) => SEM_RECURSOS_DA_CASCA;$/m);
+  const web = ler('src/platform/web/index.js');
+  const corpo = /export function recursosDaCasca\(\) \{\n  return Object\.freeze\(\{\n([\s\S]*?)\n  \}\);\n\}/.exec(web);
+  assert.ok(corpo, 'recursosDaCasca no platform/web/index.js');
+  assert.deepEqual([...corpo[1].matchAll(/^    (\w+):/gm)].map((x) => x[1]), Object.keys(desktop));
+  // O recursos.js (M39) continua com os três do Rust.
+  assert.match(ler('src/platform/recursos.js'), /export const SEM_RECURSOS = Object\.freeze\(\{ bandeja: false, sempreNaFrente: false, regiaoDeEntrada: false \}\);/);
+});
+
+test('web: boot, viewport e CSP pelo plugin-web.mjs, só no vite.web.config.js (W07a)', () => {
+  const web = ler('vite.web.config.js');
+  assert.match(web, /^import pluginWeb from '\.\/scripts\/web\/plugin-web\.mjs';$/m);
+  assert.match(web, /pluginWeb\(\{ cspNoDev: process\.env\.TOMATITO_WEB_CSP_DEV === '1' \}\)/);
+  assert.doesNotMatch(ler('vite.config.js'), /plugin-web/);
+  // O index.html do desktop não muda: a viewport e o boot da web só entram no build web.
+  assert.match(indexHtml, /<meta name="viewport" content="width=device-width, initial-scale=1\.0" \/>/);
+  assert.doesNotMatch(indexHtml, /boot-web|theme-color|data-forma/);
+});
+
+test('web: o pedido de permissão só no permissao.js, e o InfoBar e a seção Avisos pelo recursosDaCasca (W14)', () => {
+  const arquivos = arquivosEm('src').filter((f) => /\.m?js$/.test(f) && !f.endsWith('.test.js') && !f.startsWith('src/platform/web/pkg/'));
+  const comPedido = arquivos.filter((f) => /requestPermission/.test(semComentarios(ler(f))));
+  assert.deepEqual(comPedido, ['src/platform/web/permissao.js']);
+  assert.match(ler('src/platform/web/permissao.js'), /getItem\('tomatito:web\.avisoDispensado'\)/);
+  // A decisão é pela casca (recursosDaCasca), nunca pelo recursos.js do desktop.
+  for (const f of ['src/views/avisos-web.js', 'src/views/focus/pedido-de-avisos.js']) {
+    const texto = semComentarios(ler(f));
+    assert.match(texto, /recursosDaCasca/, f);
+    assert.doesNotMatch(texto, /platform\/recursos\.js/, f);
+  }
+  assert.match(ler('src/platform/tauri.js'), /^export const avisosDaCasca = null;$/m);
+});
+
+test('web: PWA com o manifest e o precache pelo plugin-web.mjs, e o SKIP_WAITING só pela página (W16)', () => {
+  const arquivos = arquivosEm('src').filter((f) => /\.m?js$/.test(f) && !f.endsWith('.test.js') && !f.startsWith('src/platform/web/pkg/'));
+  // O SW novo só assume pela mensagem da página (atualizacao.js), que ele atende.
+  const comMensagem = arquivos.filter((f) => /SKIP_WAITING/.test(semComentarios(ler(f))));
+  assert.deepEqual(comMensagem.sort(), ['src/platform/web/atualizacao.js', 'src/platform/web/sw.js']);
+  // O precache nunca cita o arquivo da página (4.2 do PLANO-WEB-V1).
+  assert.doesNotMatch(ler('src/platform/web/sw.js'), /index\.html/);
+  assert.match(ler('scripts/web/plugin-web.mjs'), /nome === 'index\.html' \? '\.\/' : nome/);
+  // A decisão é pela casca: o desktop não tem atualização pelo SW.
+  assert.match(ler('src/platform/tauri.js'), /^export const atualizacaoDaCasca = null;$/m);
+  assert.match(semComentarios(ler('src/views/atualizar-web.js')), /casca\?\.web/);
+  // O manifest e os ícones só no build web; o index.html do desktop não muda.
+  assert.doesNotMatch(indexHtml, /rel="manifest"|webmanifest/);
 });

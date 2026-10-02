@@ -1,0 +1,47 @@
+[package]
+name = "tomatito-wasm"
+version = "0.1.0"
+description = "Ponte do tomatito-core para o navegador (wasm-bindgen), da versão web"
+authors = ["kbrianps"]
+license = "MIT"
+edition = "2024"
+rust-version = "1.90"
+publish = false
+
+# PLANO-WEB, 1.1 e 3.3: membro do workspace do src-tauri, com o mesmo
+# Cargo.lock do desktop. O desktop não depende deste crate (o cargo tree do
+# pacote tomatito continua igual ao da linha de base).
+[lib]
+# cdylib: o .wasm; rlib: para o clippy e os testes nativos do workspace.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+tomatito-core = { path = "../tomatito-core" }
+# W06a: o motor do desktop (Engine, Sink, eventos e erros), hospedado aqui
+# com o RelogioJs e o WebSink.
+tomatito-motor = { path = "../tomatito-motor" }
+# Fixado: a versão do crate precisa ser a MESMA do wasm-bindgen-cli
+# (0.2.129, em /opt/cargo-target/ferramentas/wbg, e a que o wasm-pack usa).
+wasm-bindgen = "=0.2.129"
+serde = { version = "1.0", features = ["derive"] }
+serde-wasm-bindgen = "0.6.5"
+# W07a: as configurações passam como texto JSON (o localStorage guarda o
+# texto; o patch chega do JS por JSON.stringify), com o mesmo serde_json do
+# motor.
+serde_json = "1.0"
+# O `Date.now()` do RelogioJs (W06a). A mesma versão que o jiff (`js`) já
+# trazia no Cargo.lock.
+js-sys = "0.3.106"
+# Só aqui, nunca no core: a feature `js` liga Timestamp::now() e
+# TimeZone::system() pelo Date/Intl do navegador. Ela só age em
+# wasm32/wasm64-unknown-unknown; no nativo não muda nada.
+jiff = { version = "0.2.37", features = ["js"] }
+
+# Os mesmos testes no wasm (npm run test:wasm), como no tomatito-core.
+[target.'cfg(target_family = "wasm")'.dev-dependencies]
+wasm-bindgen-test = "0.3.79"
+
+# `npm run wasm` (scripts/web/wasm.mjs) usa `--profile wasm-release`, que o
+# wasm-pack lê desta seção `custom`. O perfil em si fica na raiz do workspace.
+[package.metadata.wasm-pack.profile.custom]
+wasm-opt = ["-Oz"]

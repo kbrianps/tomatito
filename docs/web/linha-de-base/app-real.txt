@@ -1,0 +1,6 @@
+0	cargo build (devUrl na porta do aninhado)
+aparencia	saída 0	21/21
+configuracoes	saída 0	17/17
+config-sistema	saída 0	16/16
+retomada	saída 0	25/25
+tomate	saída 0	28/28

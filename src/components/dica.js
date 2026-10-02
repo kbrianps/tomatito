@@ -102,6 +102,9 @@ export function ligarDicas(doc = document, win = window) {
   };
 
   const aoEntrar = (e) => {
+    // W32 (PLANO-WEB-V1, 5.3): dica não abre por toque. Vale também no desktop
+    // com tela de toque; por mouse e teclado nada muda (docs/decisoes.md).
+    if (e.pointerType === 'touch') return;
     if (e.target === dica || dica.contains(e.target)) {
       if (aberta()) win.clearTimeout(relogio);
       return;

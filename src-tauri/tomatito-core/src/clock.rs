@@ -308,6 +308,8 @@ impl<C: Clock> Clock for ScaledClock<C> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(target_family = "wasm")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
 
     const INICIO: EpochMs = EpochMs(1_790_000_000_000);
 
@@ -337,6 +339,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        target_family = "wasm",
+        ignore = "SystemTime do wasm32-unknown-unknown não vai antes de 1970"
+    )]
     fn epoch_ms_converte_antes_e_depois_de_1970() {
         assert_eq!(epoch_ms(UNIX_EPOCH), EpochMs(0));
         assert_eq!(
@@ -350,6 +356,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        target_family = "wasm",
+        ignore = "SystemTime::now() não existe no wasm32-unknown-unknown"
+    )]
     fn relogio_do_sistema_e_o_relogio_de_parede() {
         let antes = epoch_ms(SystemTime::now());
         let agora = SystemClock.now();
@@ -413,6 +423,8 @@ mod tests {
 mod tests_acelerado {
     use super::*;
     use std::ffi::OsStr;
+    #[cfg(target_family = "wasm")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
 
     const INICIO: EpochMs = EpochMs(1_790_000_000_000);
 
@@ -480,6 +492,10 @@ mod tests_acelerado {
     }
 
     #[test]
+    #[cfg_attr(
+        target_family = "wasm",
+        ignore = "SystemTime::now() não existe no wasm32-unknown-unknown"
+    )]
     fn variavel_de_ambiente() {
         let ler = |v: Option<&str>| ScaledClock::from_env_value(v.map(OsStr::new));
         assert!(matches!(ler(None), Ok(None)));

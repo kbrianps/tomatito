@@ -1,0 +1,152 @@
+/* Layout de celular da web (PLANO-WEB-V1, seção 5; marcos W30–W37).
+   Tudo aqui fica sob [data-forma="celular"], que só o boot-web.js liga (5.1:
+   largura < 600 px, ou toque com altura < 500 px). O desktop nunca tem o
+   atributo (scripts/web/desktop-sem-celular.mjs), então esta folha não muda
+   nada nele. A exceção é o toque (5.3), que vale para a casca web inteira. */
+
+/* 5.3: sem a espera do toque duplo; o zoom com dois dedos continua. */
+html[data-casca="web"]{ touch-action:manipulation; }
+
+/* 5.2: as áreas seguras de cima e dos lados (o recorte da câmera, em pé e
+   deitado). A de baixo é da barra inferior (W31). */
+[data-forma="celular"] .tt-janela{
+  padding-top:env(safe-area-inset-top);
+  padding-left:env(safe-area-inset-left);
+  padding-right:env(safe-area-inset-right);
+}
+
+/* 5.4: recuo lateral de 16 px em todas as telas. */
+[data-forma="celular"] .tt-pagina{ --tt-recuo-pagina:16px; }
+[data-forma="celular"] .tt-pagina:has(> h1.tt-t-title-large){ padding-inline:16px; }
+
+/* ---------------------------------------------------------------------------
+   W31, 5.2: a barra de navegação inferior (components/nav-view.js com
+   orientacao 'inline'; só a casca web a cria, em main.js). Fora do layout de
+   celular ela não existe. */
+.tt-barra-inferior{ display:none; }
+
+[data-forma="celular"] .tt-nav{ display:none; }
+/* Sem o painel, a camada de conteúdo encosta nos dois lados. */
+[data-forma="celular"] .tt-conteudo{ border-left:0; border-top-left-radius:0; }
+
+/* 64 px + a área segura de baixo, presa ao fim do viewport. Fundo do cartão e
+   borda de 1 px em cima. */
+[data-forma="celular"] .tt-barra-inferior{
+  display:block; position:fixed; z-index:20; left:0; right:0; bottom:0;
+  height:calc(64px + env(safe-area-inset-bottom));
+  padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background:var(--tt-bg-card); border-top:1px solid var(--tt-border);
+}
+[data-forma="celular"] .tt-barra-inferior .tt-nav-lista{ flex-direction:row; height:100%; }
+[data-forma="celular"] .tt-barra-inferior li{ flex:1 1 0; min-width:0; display:flex; }
+/* Cada item ocupa a coluna inteira e os 64 px (menos a borda): ícone de 24 px
+   sobre o rótulo em Caption. O atual em --tt-fg-1; os outros em --tt-fg-2. */
+[data-forma="celular"] .tt-barra-inferior .tt-nav-item{
+  flex:1; min-width:0; height:auto; margin:0; padding:10px 2px 6px;
+  flex-direction:column; justify-content:center; gap:4px;
+  border-radius:0; color:var(--tt-fg-2);
+}
+[data-forma="celular"] .tt-barra-inferior .tt-nav-item[aria-current="page"]{ color:var(--tt-fg-1); background:none; }
+[data-forma="celular"] .tt-barra-inferior .tt-nav-item:active{ background:var(--tt-subtle-press); }
+[data-forma="celular"] .tt-barra-inferior .tt-nav-item .tt-icone{ width:24px; height:24px; }
+/* O rótulo sempre à vista (o painel compacto do desktop o tira da tela abaixo
+   de 860 px; aqui não). */
+[data-forma="celular"] .tt-barra-inferior .tt-nav-rotulo{
+  position:static; width:auto; height:auto; max-width:100%; clip-path:none;
+  font:var(--tt-type-caption);
+}
+/* O indicador do painel, deitado: 16 × 3 px, centrado, sobre o ícone. */
+[data-forma="celular"] .tt-barra-inferior .tt-nav-indicador{
+  left:calc(50% - 8px); top:3px; width:16px; height:3px;
+}
+/* Sem hover no toque: o fundo de hover ficaria preso depois do toque. */
+@media (hover:none){
+  [data-forma="celular"] .tt-barra-inferior .tt-nav-item:hover{ background:none; }
+  [data-forma="celular"] .tt-barra-inferior .tt-nav-item:active{ background:var(--tt-subtle-press); }
+}
+
+/* A área que rola termina acima da barra, e não "puxa para recarregar" no
+   meio de uma sessão. */
+[data-forma="celular"] .tt-rolagem{
+  padding-bottom:calc(64px + env(safe-area-inset-bottom) + 16px);
+  overscroll-behavior:contain;
+}
+
+/* ---------------------------------------------------------------------------
+   W32, 5.3: toque. Vale para a casca web inteira com ponteiro grosso (o
+   celular e também o tablet, que mantém o painel lateral). Todo alvo tem ao
+   menos 48 × 48 px de área: o desenho não muda; a área extra vem de um ::after
+   transparente, centrado no controle. O desktop (Tauri) não tem data-casca. */
+@media (pointer:coarse){
+  :where([data-casca="web"]) :where(button, a.tt-nav-item, fluent-checkbox, fluent-switch, fluent-radio){
+    position:relative;
+  }
+  [data-casca="web"] :is(button, a.tt-nav-item, fluent-checkbox, fluent-switch, fluent-radio)::after{
+    content:""; position:absolute; top:50%; left:50%;
+    width:max(100%, 48px); height:max(100%, 48px);
+    translate:-50% -50%;
+  }
+  /* Os controles do Fluent vêm com contain:content, que cortaria o ::after
+     (pintura e toque) na caixa do controle. */
+  [data-casca="web"] :is(fluent-checkbox, fluent-switch, fluent-radio){ contain:layout style; }
+  /* O deslizante do volume não aceita ::after (é um <input>): a faixa inteira
+     passa a ter 48 px de altura; o trilho e o polegar continuam os mesmos. */
+  [data-casca="web"] input.tt-deslizante{ height:48px; }
+  /* Painel lateral (tablet): itens de 44 + 4 de margem, um por faixa de 48. */
+  [data-casca="web"]:not([data-forma="celular"]) .tt-nav-item{ height:44px; }
+  [data-casca="web"]:not([data-forma="celular"]) .tt-nav-indicador{ top:14px; }
+}
+/* Sem hover, sem dica: nem a do painel compacto, nem a dos botões de ícone
+   (components/dica.js ignora o toque). */
+@media (hover:none){
+  [data-casca="web"] .tt-nav-dica{ display:none; }
+}
+
+/* ---------------------------------------------------------------------------
+   W33, 5.4: tela Foco. Uma coluna (a grade do M10 já cai para uma coluna
+   nesta largura); os cartões ficam da altura do conteúdo, sem os mínimos do
+   desktop (422 px da sessão e 240 px das tarefas), para "Iniciar sessão de
+   foco" caber acima da barra sem rolar. */
+[data-forma="celular"] .tt-card.tt-sessao{ min-height:0; padding:36px 16px 20px; }
+[data-forma="celular"] .tt-card.tt-tarefas{ min-height:0; }
+
+/* ---------------------------------------------------------------------------
+   W34, 5.4: Temporizador e Cronômetro. */
+
+/* Barra inferior em telas de 320 a 350 px: "Temporizador" e "Configurações"
+   cabem inteiros. */
+@media (width < 350px){
+  [data-forma="celular"] .tt-barra-inferior .tt-nav-rotulo{ font-size:11px; letter-spacing:-.2px; }
+}
+
+/* Cronômetro em pé: o número e os botões ficam parados e quem rola é a lista
+   de voltas, por dentro. A página ocupa a altura que sobra acima da barra. Com
+   o celular deitado (altura < 500) não há altura para isso, e a página rola
+   inteira, como no desktop. */
+@media (height >= 500px){
+  [data-forma="celular"] .tt-rolagem:has(> .tt-pagina-cronometro){ display:flex; flex-direction:column; overflow:hidden; }
+  [data-forma="celular"] .tt-pagina-cronometro{ flex:1; min-height:0; display:flex; flex-direction:column; padding-bottom:0; }
+  [data-forma="celular"] .tt-pagina-cronometro .tt-cronometro{ flex:1; min-height:0; margin-top:clamp(16px, 6vh, 64px); }
+  [data-forma="celular"] .tt-pagina-cronometro .tt-cronometro-botoes{ margin-top:24px; }
+  [data-forma="celular"] .tt-pagina-cronometro .tt-voltas{
+    flex:1; min-height:0; margin:24px 0 0; overflow-y:auto; overscroll-behavior:contain;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   W36, 5.4: Configurações. As linhas já quebram no estreito (as consultas de
+   contêiner do desktop). Aqui: as prévias dos temas em 2 colunas e o recuo
+   das linhas de dentro dos expansores em 16 px dos dois lados. */
+[data-forma="celular"] fluent-radio-group.tt-temas{
+  grid-template-columns:repeat(2, minmax(0, 1fr)); padding:16px;
+}
+[data-forma="celular"] .tt-config-item{ padding-left:16px; padding-right:16px; }
+/* O arraste no deslizante é do deslizante, e não rolagem da página. */
+[data-casca="web"] input.tt-deslizante{ touch-action:pan-y; }
+
+/* ---------------------------------------------------------------------------
+   W37, 5.5: teclado virtual. Com o teclado aberto (platform/web/teclado.js
+   liga o data-teclado), a barra inferior some e a área que rola vai até o
+   fim, para o campo em edição ficar à vista. */
+[data-forma="celular"][data-teclado] .tt-barra-inferior{ display:none; }
+[data-forma="celular"][data-teclado] .tt-rolagem{ padding-bottom:16px; }

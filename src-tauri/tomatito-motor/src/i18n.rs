@@ -91,6 +91,37 @@ pub fn notice(notice: &Notice, tz: &TimeZone) -> NoticeText {
     }
 }
 
+/// O aviso de um fim de fase que chegou com atraso curto (PLANO-WEB, 3.6):
+/// na web, com a aba em segundo plano, o navegador pode entregar o fim de
+/// 10 a 60 s depois do prazo. Nessa janela o núcleo ainda manda o aviso
+/// normal (sem hora; o [`Notice::Late`] é de mais de 60 s), e aqui a hora do
+/// `prazo` entra no título, como no atrasado; o corpo fica o mesmo.
+///
+/// | Aviso | Título |
+/// |---|---|
+/// | fim do foco | Período de foco concluído às 14:32 |
+/// | fim do intervalo | Intervalo concluído às 14:32 |
+/// | fim da sessão | Sessão concluída às 14:32 |
+/// | atrasado | o de [`notice`], que já tem a hora |
+///
+/// Quem decide a janela é quem chama (a web usa só de 10 a 60 s).
+pub fn notice_com_atraso(n: &Notice, prazo: EpochMs, tz: &TimeZone) -> NoticeText {
+    let texto = notice(n, tz);
+    let base = match n {
+        Notice::Late { .. } => return texto,
+        Notice::FocusEnded { .. } => "Período de foco concluído",
+        Notice::BreakEnded { .. } => "Intervalo concluído",
+        Notice::SessionCompleted { .. } => "Sessão concluída",
+    };
+    match hh_mm(prazo, tz) {
+        Some(h) => NoticeText {
+            title: format!("{base} às {h}"),
+            body: texto.body,
+        },
+        None => texto,
+    }
+}
+
 /// A duração de um temporizador, curta, como o título do card sem nome
 /// (M32; `duracaoCurta` do `src/lib/format.js`): "1 min", "1 h 30 min",
 /// "45 s", "1 min 30 s". Os segundos quebrados são cortados.
@@ -360,6 +391,69 @@ mod tests {
                     Some("60 min de foco.".into())
                 ),
             ]
+        );
+    }
+
+    #[test]
+    fn com_atraso_curto_a_hora_do_prazo_vai_ao_titulo() {
+        let prazo = T0.plus_ms(2 * 60_000); // 14:32
+        let com = |n: Notice| {
+            let t = notice_com_atraso(&n, prazo, &sp());
+            (t.title, t.body)
+        };
+        assert_eq!(
+            com(Notice::FocusEnded {
+                n: 1,
+                blocks: 2,
+                break_s: 300,
+                next_focus_at: prazo.plus_ms(5 * 60_000),
+            }),
+            (
+                "Período de foco concluído às 14:32".into(),
+                Some("Intervalo de 5 min. Próximo foco às 14:37.".into())
+            )
+        );
+        assert_eq!(
+            com(Notice::BreakEnded {
+                next_n: 2,
+                blocks: 2,
+                next_focus_s: 1650,
+            }),
+            (
+                "Intervalo concluído às 14:32".into(),
+                Some("Período de foco 2 de 2, 27 min.".into())
+            )
+        );
+        assert_eq!(
+            com(Notice::SessionCompleted {
+                total_minutes: 60,
+                focus_s: 3300,
+            }),
+            (
+                "Sessão concluída às 14:32".into(),
+                Some("60 min de foco.".into())
+            )
+        );
+        // O atrasado já tem a hora (a do fim, não a do `prazo` passado).
+        let late = Notice::Late {
+            ended: Phase {
+                kind: PhaseKind::Focus,
+                n: 1,
+                duration_s: 1500,
+            },
+            ended_at: T0,
+            session_completed: false,
+        };
+        assert_eq!(notice_com_atraso(&late, prazo, &sp()), notice(&late, &sp()));
+        // Fora do calendário, fica o texto sem hora.
+        let fora = Notice::BreakEnded {
+            next_n: 2,
+            blocks: 2,
+            next_focus_s: 1650,
+        };
+        assert_eq!(
+            notice_com_atraso(&fora, EpochMs(i64::MAX), &sp()),
+            notice(&fora, &sp())
         );
     }
 

@@ -17,7 +17,7 @@ import '@fluentui/web-components/menu-list.js';
 import '@fluentui/web-components/menu-item.js';
 import '@fluentui/web-components/tooltip.js';
 import { Updates } from '@microsoft/fast-element';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { janelaAtual as getCurrentWindow, casca } from '#plataforma';
 import { montarBarraDeTitulo } from './components/title-bar.js';
 import { icone } from './components/icon.js';
 import { ligarDicas } from './components/dica.js';
@@ -57,9 +57,12 @@ const win = getCurrentWindow();
 // M37: no app de produção, sem o menu do WebView (fora dos campos de texto)
 // e sem recarregar pelo F5 ou pelo Ctrl+R. No `dev:app`, os dois continuam
 // (a recarga pelas teclas é nossa: o WebKitGTK não a tem). Antes de tudo,
-// para valer mesmo se a montagem abaixo falhar.
-if (import.meta.env.PROD) ligarBloqueiosDeProducao();
-else ligarRecargaDoDev();
+// para valer mesmo se a montagem abaixo falhar. Na web (casca), nenhum dos
+// dois: o F5 e o menu de contexto são do navegador.
+if (casca.bloqueiosDeProducao) {
+  if (import.meta.env.PROD) ligarBloqueiosDeProducao();
+  else ligarRecargaDoDev();
+}
 // Sem transições até o primeiro quadro: a página é montada com a janela
 // escondida, e uma troca de estilo aqui (o item atual do painel, por exemplo)
 // viraria uma transição que só começa depois do show(), com o primeiro quadro
@@ -81,7 +84,8 @@ try {
   ligarTema({ ipc, h }).catch((erro) => console.error('[tema]', erro));
   // M52: a validação com reversão do Full (5.9): a pergunta de 10 s e a
   // oferta do modo opaco, num diálogo por cima de qualquer tela.
-  ligarValidacaoDoFull({ ipc }).pronto.catch((erro) => console.error('[validação do Full]', erro));
+  // Na web não há Full (casca.full).
+  if (casca.full) ligarValidacaoDoFull({ ipc }).pronto.catch((erro) => console.error('[validação do Full]', erro));
   // M25: seguir o sistema, com as guardas (a) e (b) da 4.6. A troca pela
   // interface passa pelo `durante`, que segura as conferências até ela acabar.
   const midia = matchMedia('(prefers-color-scheme: dark)');
@@ -108,6 +112,15 @@ try {
     icone,
     navegar: (rota) => roteador.navegar(rota),
   });
+  // W31 (web): a barra inferior do layout de celular (PLANO-WEB-V1, 5.2). Só a
+  // casca web a cria; quem a mostra é o celular.css, sob [data-forma="celular"].
+  let barra = null;
+  if (casca.formaCelular) {
+    const el = document.createElement('nav');
+    el.className = 'tt-barra-inferior';
+    document.querySelector('.tt-janela').append(el);
+    barra = montarNavegacao(el, { icone, navegar: (rota) => roteador.navegar(rota), orientacao: 'inline' });
+  }
   const roteador = iniciarRoteador({
     raiz: document.querySelector('.tt-rolagem'),
     telas: { foco, temporizador, cronometro, configuracoes, dev },
@@ -116,14 +129,16 @@ try {
     // abre já pintada, 4.7).
     aoMudar: (rota, anterior) => {
       nav.selecionar(rota, { animar: anterior !== null });
+      barra?.selecionar(rota, { animar: anterior !== null });
       if (anterior !== null) entrarPagina(document.querySelector('.tt-rolagem'));
     },
   });
-  ligarAtalhosDeNavegacao((rota) => roteador.navegar(rota));
+  // Na web, o Ctrl+1–3 fica com o navegador (trocar de aba).
+  if (casca.atalhosDeNavegacao) ligarAtalhosDeNavegacao((rota) => roteador.navegar(rota));
   ligarEscDasListas();
   // M37: Ctrl+W fecha a janela (esconde, com "fechar para a bandeja" ligado)
   // e Ctrl+Q sai do app (3.4 e 3.8).
-  ligarAtalhosDaJanela({ fechar: () => win.close(), sair: ipc.sair });
+  if (casca.atalhosDaJanela) ligarAtalhosDaJanela({ fechar: () => win.close(), sair: ipc.sair });
   // Dica dos botões só de ícone (M13): uma para a página inteira.
   ligarDicas();
 

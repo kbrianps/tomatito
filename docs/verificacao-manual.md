@@ -1351,3 +1351,17 @@ O que já foi conferido sem você: os testes, o clippy (Linux e Windows), o buil
 3. [ ] Com o Orca ligado (Super+Alt+S) e o Full ativo, inicie uma sessão pelo tomate: o Orca diz "Começou o período de foco…" uma vez só. Saia do Full (Esc) e pule a fase na tela Foco: de novo, uma vez só.
 4. [ ] Em Configurações, a seção "Avançado" (Compatibilidade X11) aparece entre "Sistema" e "Sobre".
 5. [ ] Com o Orca ligado e o Full ativo, abra a main pelo botão "Configurações" do tomate (o tomate continua na tela), vá ao Cronômetro, inicie, marque uma volta e aperte "Copiar": o Orca diz "Voltas copiadas" (o anúncio da main não é descartado por o tomate estar aberto; `docs/decisoes.md`, Junção, correções da verificação).
+
+## Web no celular (depois de publicada; uns 10 min)
+
+No Chrome do Android, abra o endereço publicado (`docs/web/publicar.md`).
+
+1. A tela abre em vermelho (Lite), com a barra inferior de quatro itens. Nada cortado nas bordas nem atrás do recorte da câmera.
+2. Em Configurações, ponha o período de foco em 15 minutos (o menor) e inicie um foco. Aceite o pedido de avisos.
+3. Apague a tela por um minuto e volte: a contagem está certa (não atrasou).
+4. Gire o aparelho: a barra continua embaixo e nada rola de lado.
+5. Em Tarefas, toque em "Adicionar tarefa": com o teclado aberto, o campo fica à vista e a barra inferior some; ao fechar o teclado, ela volta.
+6. Menu do Chrome → "Adicionar à tela inicial" (ou "Instalar app"): o ícone do Tomatito aparece e abre em janela própria.
+7. Com o app instalado, ligue o modo avião e abra de novo: ele abre sem internet.
+
+Se tiver acesso a um iPhone, repita os passos 1 a 5 no Safari (lá os avisos só existem com o app na tela inicial).

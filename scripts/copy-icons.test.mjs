@@ -25,12 +25,15 @@ test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenc
       'copy',
       'arrow_minimize', 'clock', 'power',
       'window_wrench',
+      'alert', 'info',
+      'arrow_sync',
+      'arrow_download',
     ],
   );
   for (const [i, { nome, estilo }] of ICONES.entries()) {
     // M30: o segundo checkmark_circle é o preenchido da tarefa concluída.
     // M42: a bandeira da volta, preenchida como a do Relógio.
-    const preenchido = ['play', 'pause', 'stop', 'error_circle', 'flag'].includes(nome) || (nome === 'checkmark_circle' && ICONES.findIndex((x) => x.nome === nome) !== i);
+    const preenchido = ['play', 'pause', 'stop', 'error_circle', 'flag', 'info'].includes(nome) || (nome === 'checkmark_circle' && ICONES.findIndex((x) => x.nome === nome) !== i);
     assert.equal(estilo, preenchido ? 'filled' : 'regular', nome);
   }
   // M30: os desenhos das tarefas, na grade de 20.
@@ -47,7 +50,7 @@ test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenc
 test('src/assets/icons/ está em dia com a lista e com o pacote (node scripts/copy-icons.mjs --conferir)', () => {
   const r = spawnSync(process.execPath, [SCRIPT, '--conferir'], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /em dia \(38 ícones\)/);
+  assert.match(r.stdout, /em dia \(42 ícones\)/);
 });
 
 test('copiar() numa pasta vazia, de novo sem mudar nada, e a conferência acusando cada diferença', () => {

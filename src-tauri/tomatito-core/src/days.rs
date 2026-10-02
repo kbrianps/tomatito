@@ -141,6 +141,8 @@ pub fn stats_ranges(now: EpochMs, tz: &TimeZone, reset_hour: u8) -> Option<Stats
 mod tests {
     use super::*;
     use jiff::civil::date;
+    #[cfg(target_family = "wasm")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
 
     /// Um instante local em `tz`, para os testes lerem como um relógio.
     fn em(tz: &TimeZone, ano: i16, mes: i8, dia: i8, h: i8, m: i8) -> EpochMs {

@@ -79,6 +79,15 @@ export const ICONES = Object.freeze([
   { nome: 'power', estilo: 'regular', tamanhos: [20] },
   // M57: o cartão "Compatibilidade X11" das Configurações, na grade de 20
   { nome: 'window_wrench', estilo: 'regular', tamanhos: [20] },
+  // W14 (só a web usa): o sino do cartão "Notificações" das Configurações,
+  // na grade de 20, e o `info` preenchido do InfoBar do pedido de avisos,
+  // como o ícone do InfoBar informativo do WinUI
+  { nome: 'alert', estilo: 'regular', tamanhos: [20] },
+  { nome: 'info', estilo: 'filled', tamanhos: [16] },
+  // W16 (só a web usa): o cartão "Atualizar" das Configurações, na grade de 20
+  { nome: 'arrow_sync', estilo: 'regular', tamanhos: [20] },
+  // W18 (só a web usa): o cartão "Instalar o Tomatito"
+  { nome: 'arrow_download', estilo: 'regular', tamanhos: [20] },
 ]);
 
 /** Os arquivos da lista, no formato do pacote: `play_16_filled.svg`. */

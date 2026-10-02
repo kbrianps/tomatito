@@ -295,6 +295,25 @@
 .tt-andamento-rodape strong{ font-weight:600; color:var(--tt-fg-1); }
 /* Na última fase não há "A seguir"; a linha guarda o lugar. */
 .tt-andamento-rodape[data-vazio]{ visibility:hidden; }
+/* W14 (só a web): o InfoBar do pedido de avisos (views/focus/pedido-de-
+   avisos.js), logo abaixo de "A seguir:", como o InfoBar informativo do
+   WinUI: o ícone à esquerda, o título em Body Strong, o texto e os botões
+   embaixo. O fundo é o do controle, com o texto nos pares que a tabela de
+   contraste já confere (o de um botão). */
+.tt-infobar{
+  display:flex; gap:12px; align-self:stretch; margin:16px 0 0; padding:12px 16px;
+  background:var(--tt-ctl); border:1px solid var(--tt-ctl-stroke-top); border-radius:var(--tt-r-card);
+  color:var(--tt-fg-1); text-align:left;
+}
+.tt-infobar-icone{ flex:none; display:flex; padding-top:2px; }
+.tt-infobar-icone .tt-icone{ width:16px; height:16px; fill:var(--tt-accent-fg); }
+.tt-infobar-corpo{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+.tt-infobar-titulo, .tt-infobar-texto{ margin:0; }
+.tt-infobar-botoes{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+@media (forced-colors:active){
+  .tt-infobar{ border-color:CanvasText; }
+  .tt-infobar-icone .tt-icone{ fill:CanvasText; }
+}
 @media (forced-colors:active){
   .tt-mostrador-disco{ fill:Canvas; stroke:CanvasText; }
   .tt-mostrador-traco{ stroke:GrayText; }
@@ -476,6 +495,9 @@
   padding:12px 16px 12px 58px; border-top:1px solid var(--tt-border); color:var(--tt-fg-2);
 }
 .tt-config-rodape[hidden]{ display:none; }
+/* W14 (só a web): o rodapé da seção Avisos, com uma linha por limitação. */
+.tt-avisos-rodape{ flex-direction:column; align-items:flex-start; gap:4px; }
+.tt-avisos-rodape p{ margin:0; }
 fluent-radio-group.tt-temas{
   display:grid; grid-template-columns:repeat(auto-fill, minmax(min(156px, 100%), 1fr)); gap:16px 12px;
   padding:16px 16px 16px 58px; border-top:1px solid var(--tt-border);
@@ -828,3 +850,11 @@ input.tt-deslizante:focus-visible{ outline:2px solid var(--tt-focus-outer); outl
 .tt-amostra-icone-16 .tt-icone{ width:16px; height:16px; }
 .tt-amostra-icone-20 .tt-icone{ width:20px; height:20px; }
 .tt-amostra-icone-24 .tt-icone{ width:24px; height:24px; }
+
+/* Versão web (PLANO-WEB, 3.2, item 4): a janela é a do navegador. Sem a
+   barra de título própria (a grade fica com uma linha só), a altura da área
+   visível e 8 px em cima, o respiro que mantém o canto da camada de conteúdo.
+   O data-casca="web" só existe no build web. */
+[data-casca="web"] .tt-titlebar{ display:none; }
+[data-casca="web"] .tt-janela{ grid-template-rows:minmax(0,1fr); height:100dvh; }
+[data-casca="web"] .tt-corpo{ padding-top:8px; }

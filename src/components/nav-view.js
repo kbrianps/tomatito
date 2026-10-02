@@ -21,6 +21,10 @@
 // - M10: abaixo de 860 px de janela, o painel compacta para 48 px, só com os
 //   ícones (shell.css). Cada item traz a sua dica, que só existe no painel
 //   compacto; este arquivo só cuida de dispensá-la (ligarDicas).
+// - W31 (web, layout de celular): com `orientacao: 'inline'`, o mesmo
+//   componente desenha a barra inferior (PLANO-WEB-V1, 5.2): os quatro itens
+//   numa lista só, lado a lado, ←/→ no lugar de ↑/↓, o indicador deslizando
+//   na horizontal e sem dica. O desktop chama sem o parâmetro e nada muda.
 import { FocusGroup } from '@microsoft/focusgroup-polyfill/shadowless';
 import t from '../lib/i18n/pt-BR.js';
 import { hashDaRota } from '../router.js';
@@ -37,23 +41,29 @@ export const RODAPE = Object.freeze([Object.freeze({ rota: 'configuracoes', icon
 // então nenhum dos dois caminhos troca o papel dele nem o dos links.
 export const FOCUSGROUP = 'toolbar block nomemory';
 export const DEFINICAO = Object.freeze({ behavior: 'toolbar', axis: 'block', wrap: false, memory: false });
+export const FOCUSGROUP_INLINE = 'toolbar inline nomemory';
+export const DEFINICAO_INLINE = Object.freeze({ behavior: 'toolbar', axis: 'inline', wrap: false, memory: false });
 
 // A dica (M10) repete o rótulo e só aparece no painel compacto (shell.css). É
 // aria-hidden: o nome do link continua vindo do rótulo, que no painel compacto
 // sai da tela sem sair da árvore de acessibilidade.
-const item = ({ rota, icone: nome }, atual, icone) =>
+const item = ({ rota, icone: nome }, atual, icone, comDica = true) =>
   `<li><a class="tt-nav-item" href="${hashDaRota(rota)}" data-rota="${rota}" draggable="false"` +
   `${rota === atual ? ' aria-current="page" focusgroupstart' : ''}>` +
   '<span class="tt-nav-indicador" aria-hidden="true"></span>' +
   `${icone(nome)}<span class="tt-nav-rotulo">${t.navegacao[rota]}</span>` +
-  `<span class="tt-nav-dica" aria-hidden="true">${t.navegacao[rota]}</span></a></li>`;
+  `${comDica ? `<span class="tt-nav-dica" aria-hidden="true">${t.navegacao[rota]}</span>` : ''}</a></li>`;
 
 /**
  * HTML interno do painel. `icone(nome)` devolve o SVG de um ícone (o
  * components/icon.js no app; os testes passam um falso).
  */
-export function marcacao(atual, icone) {
-  const lista = (itens, classe) => `<ul class="${classe}">${itens.map((i) => item(i, atual, icone)).join('')}</ul>`;
+export function marcacao(atual, icone, { orientacao = 'block' } = {}) {
+  const inline = orientacao === 'inline';
+  const lista = (itens, classe) =>
+    `<ul class="${classe}">${itens.map((i) => item(i, atual, icone, !inline)).join('')}</ul>`;
+  // Na barra inferior (W31), os quatro destinos numa lista só.
+  if (inline) return lista([...ITENS, ...RODAPE], 'tt-nav-lista');
   return lista(ITENS, 'tt-nav-lista') + lista(RODAPE, 'tt-nav-lista tt-nav-rodape');
 }
 
@@ -68,17 +78,19 @@ function duracao(nome) {
  * Anima o indicador de `para` a partir de onde o de `de` estava (`topoDe`,
  * medido antes da troca). Com movimento reduzido, os dois só trocam com fade.
  */
-function animarIndicador(indDe, indPara, topoDe) {
+function animarIndicador(indDe, indPara, posDe, inline = false) {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
     const fade = { duration: duracao('--tt-dur-fast'), easing: 'linear' };
     indDe.animate([{ opacity: 1 }, { opacity: 0 }], fade);
     indPara.animate([{ opacity: 0 }, { opacity: 1 }], fade);
     return;
   }
-  const dy = topoDe - indPara.getBoundingClientRect().top;
-  if (!dy) return;
+  const agora = indPara.getBoundingClientRect();
+  const d = posDe - (inline ? agora.left : agora.top);
+  if (!d) return;
+  const eixo = inline ? 'X' : 'Y';
   const easing = getComputedStyle(document.documentElement).getPropertyValue('--tt-ease-point').trim() || 'ease';
-  indPara.animate([{ transform: `translateY(${dy}px)` }, { transform: 'translateY(0)' }], {
+  indPara.animate([{ transform: `translate${eixo}(${d}px)` }, { transform: `translate${eixo}(0)` }], {
     duration: duracao('--tt-dur-in'),
     easing,
   });
@@ -132,10 +144,11 @@ function ligarDicas(nav) {
  * troca de tela ao roteador; o painel só muda quando o roteador chama
  * `selecionar(rota)`, depois de trocar a tela.
  */
-export function montarNavegacao(nav, { icone, navegar }) {
+export function montarNavegacao(nav, { icone, navegar, orientacao = 'block' }) {
+  const inline = orientacao === 'inline';
   nav.setAttribute('aria-label', t.navegacao.rotulo);
-  nav.setAttribute('focusgroup', FOCUSGROUP);
-  nav.innerHTML = marcacao(null, icone);
+  nav.setAttribute('focusgroup', inline ? FOCUSGROUP_INLINE : FOCUSGROUP);
+  nav.innerHTML = marcacao(null, icone, { orientacao });
   const links = [...nav.querySelectorAll('a.tt-nav-item')];
   const doIndice = (i) => (i >= 0 && i < links.length ? links[i] : null);
 
@@ -156,7 +169,7 @@ export function montarNavegacao(nav, { icone, navegar }) {
         return links.find((a) => a.hasAttribute('focusgroupstart')) ?? null;
       },
     },
-    { definition: DEFINICAO },
+    { definition: inline ? DEFINICAO_INLINE : DEFINICAO },
   );
 
   // Todo clique num item passa pelo roteador, inclusive com Ctrl ou Shift (que
@@ -170,7 +183,7 @@ export function montarNavegacao(nav, { icone, navegar }) {
   nav.addEventListener('auxclick', (e) => {
     if (e.target.closest('a')) e.preventDefault();
   });
-  ligarDicas(nav);
+  if (!inline) ligarDicas(nav);
 
   return {
     /** Marca o item da rota (nenhum, no #/dev) e anima o indicador. */
@@ -181,7 +194,8 @@ export function montarNavegacao(nav, { icone, navegar }) {
       const indDe = de?.querySelector('.tt-nav-indicador');
       const indPara = para?.querySelector('.tt-nav-indicador');
       // Onde o indicador anterior está agora (com a animação em curso, se houver).
-      const topoDe = indDe?.getBoundingClientRect().top;
+      const retDe = indDe?.getBoundingClientRect();
+      const posDe = inline ? retDe?.left : retDe?.top;
       for (const ind of [indDe, indPara]) for (const a of ind?.getAnimations() ?? []) a.cancel();
       if (de) {
         de.removeAttribute('aria-current');
@@ -192,7 +206,7 @@ export function montarNavegacao(nav, { icone, navegar }) {
         para.setAttribute('focusgroupstart', '');
       }
       grupo.update(); // a parada do Tab passa a ser o item novo
-      if (animar && indDe && indPara) animarIndicador(indDe, indPara, topoDe);
+      if (animar && indDe && indPara) animarIndicador(indDe, indPara, posDe, inline);
     },
   };
 }

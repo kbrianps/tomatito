@@ -112,6 +112,9 @@ export function ligar(cartao, store, { icone = () => '', tarefa = () => null } =
     iniciar.disabled = true;
     try {
       await store.comando('iniciar', sel.valor, { pularIntervalos: marcado(), tarefa: tarefa() ?? null });
+      // W14: o InfoBar do pedido de avisos da web (pedido-de-avisos.js) ouve
+      // o início aceito; no desktop, ninguém ouve.
+      cartao.dispatchEvent(new CustomEvent('tt-foco-iniciado'));
     } catch (erro) {
       console.warn('[foco]', erro);
     } finally {

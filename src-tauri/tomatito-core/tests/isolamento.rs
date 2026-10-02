@@ -9,6 +9,7 @@
 //! - as de build e as de desenvolvimento, pelo `-e normal,build,dev`;
 //! - as indiretas, em qualquer nível (o `--prefix depth` dá o nível de cada
 //!   linha, que vai na mensagem de erro).
+#![cfg(not(target_family = "wasm"))] // processo filho (`cargo tree`): não existe no wasm
 
 use std::process::Command;
 

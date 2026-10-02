@@ -9,7 +9,18 @@ edition = "2024"
 rust-version = "1.90"
 
 [workspace]
-members = ["tomatito-core"]
+# tomatito-wasm: a ponte do core para o navegador (versão web, PLANO-WEB 3.3).
+# O app não depende dela; só o `npm run wasm` a compila para wasm32.
+members = ["tomatito-core", "tomatito-motor", "tomatito-wasm"]
+
+# Perfil só do pacote web (`npm run wasm`, wasm-pack --profile wasm-release):
+# não mexe no `release` do app desktop.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
 
 [lib]
 name = "tomatito_lib"
@@ -24,6 +35,9 @@ serde = { version = "1.0", features = ["derive"] }
 # A bandeja (M36) vem do próprio Tauri: `tray-icon`, e o ícone em PNG.
 tauri = { version = "=2.12.0", features = ["tray-icon", "image-png"] }
 tomatito-core = { path = "tomatito-core" }
+# Eventos e textos (e, nos W04b/W05, o resto do motor), compartilhados com a
+# versão web (PLANO-WEB, 3.3).
+tomatito-motor = { path = "tomatito-motor" }
 # O laço do motor (engine.rs): interval e Notify. É o mesmo tokio do Tauri.
 tokio = { version = "1.53", features = ["time", "sync", "macros"] }
 # Som (audio.rs, M20). Só a saída (cpal) e o WAV pelo hound: sem os

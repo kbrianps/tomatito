@@ -4,8 +4,6 @@ mod avisos;
 mod commands;
 mod compat_x11;
 mod engine;
-mod events;
-mod i18n;
 mod notify;
 mod persist;
 mod recursos;
@@ -16,6 +14,9 @@ mod tasks;
 mod tray;
 mod window;
 
+// Vieram para o tomatito-motor (PLANO-WEB, 3.3, W04a), sem mudar o conteúdo.
+pub use tomatito_motor::{events, i18n};
+
 use std::sync::Arc;
 
 use tauri::Manager;
@@ -24,6 +25,15 @@ use tauri::Manager;
 pub fn run() {
     // Um `generate_context!` só: ele embute a página no binário.
     let context = tauri::generate_context!();
+    // 3.3 (M56): no Windows 10, o `tomatoOnTop` nasce desligado (#15947). O
+    // padrão mora no motor (W04b), que não pergunta a versão ao sistema; ela
+    // vai para lá antes de qualquer leitura das configurações. Sem a versão,
+    // vale o do Windows 11.
+    #[cfg(windows)]
+    settings::definir_tomato_on_top_padrao(
+        window::region_windows::versao()
+            .is_none_or(|(maior, build)| settings::windows_11_ou_mais(maior, build)),
+    );
     // B2 (5.9): a `linuxX11` é lida antes do `Builder`, porque o GDK escolhe
     // o backend quando o GTK inicia (3.3).
     #[cfg(target_os = "linux")]
@@ -82,6 +92,10 @@ pub fn run() {
             // M40: o que estava em andamento quando o app fechou.
             let restaurado = estado.load();
             app.manage(estado.clone());
+            // W05: o `Notify` do laço; o `TauriSink` acorda o laço por ele
+            // (`Sink::acordar`), e o motor, no `tomatito-motor`, não sabe do
+            // tokio.
+            let acordador = Arc::new(tokio::sync::Notify::new());
             let motor = Arc::new(engine::Engine::new(
                 clock,
                 speed,
@@ -93,6 +107,7 @@ pub fn run() {
                     // temporizadores (do cronômetro, M34, e do foco, M40).
                     estado.clone(),
                     bandeja.clone(),
+                    acordador.clone(),
                 ),
             ));
             // M38: F, B e os sons de fim de fase das configurações; cada
@@ -104,7 +119,7 @@ pub fn run() {
             estado.save_all(&motor.state());
             app.manage(motor.clone());
             bandeja.criar_icone(&motor.state().focus);
-            tauri::async_runtime::spawn(motor.run());
+            tauri::async_runtime::spawn(engine::laco(motor.clone(), acordador));
 
             // As janelas nascem aqui, e não no tauri.conf.json (PLANO.md, 4.7).
             // Com `theme = full`, só a `tomato`; a `main` nasce sob demanda

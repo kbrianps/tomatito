@@ -8,6 +8,9 @@
 //! - a contagem negativa: `contagem_negativa_*` (e o fim disparando uma
 //!   única vez: `fim_dispara_uma_unica_vez_*`).
 
+#[cfg(target_family = "wasm")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
+
 use tomatito_core::{
     Clock, CountdownError, DEFAULT_MINUTES, EpochMs, FakeClock, FakeCountdownEffects,
     MAX_DURATION_MS, TimerId, TimerStatus, Timers,

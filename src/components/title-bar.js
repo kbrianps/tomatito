@@ -10,7 +10,7 @@
 // - O glifo e o rótulo de maximizar/restaurar acompanham o onResized e o
 //   isMaximized. O <html> ganha data-maximized, que o shell.css usa para tirar a
 //   borda de 1 px do Linux com a janela maximizada.
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { janelaAtual as getCurrentWindow } from '#plataforma';
 import t from '../lib/i18n/pt-BR.js';
 import { marcaDoApp } from './app-mark.js';
 

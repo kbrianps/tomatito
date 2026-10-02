@@ -16,3 +16,8 @@ publish = false
 # Horas e datas locais (3.6 e 3.8): o "às 14:35" das notificações (M21) e,
 # depois, os dias com a hora de zerar (days.rs).
 jiff = "0.2.37"
+
+# Só para rodar os mesmos testes em wasm (wasm-bindgen-test-runner, no Node).
+# Fora do wasm, a árvore de dependências não muda.
+[target.'cfg(target_family = "wasm")'.dev-dependencies]
+wasm-bindgen-test = "0.3.79"

@@ -13,7 +13,15 @@
     "shot:webkit": "node scripts/preview/webkit-shot.mjs",
     "test": "node --test",
     "dev:app": "tauri dev --config src-tauri/tauri.dev.conf.json",
-    "build:debug": "tauri build --debug --no-bundle --config src-tauri/tauri.dev.conf.json"
+    "build:debug": "tauri build --debug --no-bundle --config src-tauri/tauri.dev.conf.json",
+    "wasm": "node scripts/web/wasm.mjs",
+    "test:wasm": "node scripts/web/testar-wasm.mjs",
+    "predev:web": "node scripts/build-theme-css.mjs && node scripts/web/wasm.mjs",
+    "dev:web": "vite --config vite.web.config.js",
+    "prebuild:web": "node scripts/build-theme-css.mjs && node scripts/web/wasm.mjs",
+    "build:web": "vite build --config vite.web.config.js",
+    "serve:web": "vite preview --config vite.web.config.js",
+    "test:cabecalhos": "node --test scripts/web/testar-cabecalhos.mjs"
   },
   "devDependencies": {
     "@fluentui/svg-icons": "1.1.343",
@@ -27,5 +35,11 @@
     "@microsoft/fast-element": "3.0.3",
     "@microsoft/focusgroup-polyfill": "1.6.0",
     "@tauri-apps/api": "2.12.0"
+  },
+  "imports": {
+    "#plataforma": {
+      "tomatito-web": "./src/platform/web/index.js",
+      "default": "./src/platform/tauri.js"
+    }
   }
 }

@@ -314,6 +314,61 @@ export default Object.freeze({
         fechar: 'Fechar',
       }),
       marcas: 'Interface inspirada no Fluent Design. Windows e Segoe são marcas da Microsoft. O Tomatito não é afiliado à Microsoft.',
+      // W18: o Sobre da versão web (PLANO-WEB, 4; PLANO-WEB-V1, 7): o nome e
+      // as duas linhas das limitações honestas, antes dos avisos.
+      web: Object.freeze({
+        nome: 'Tomatito para a web',
+        umaAba: 'Use o Tomatito numa aba só.',
+        dados: 'Os dados ficam só neste navegador, neste aparelho. Limpar os dados do site apaga as estatísticas e as tarefas.',
+      }),
+    }),
+    // W18: a seção "Navegador" da versão web (views/navegador-web.js;
+    // PLANO-WEB, 4): o tempo no título da aba e o convite de instalação.
+    // Sem atalhos no texto do Instalar: na web eles ficam desligados
+    // (PLANO-WEB-V1, 2.2 e 7).
+    navegador: Object.freeze({
+      secao: 'Navegador',
+      tempoNaAba: Object.freeze({
+        titulo: 'Tempo na aba',
+        descricao: 'Mostrar os minutos restantes no título da aba.',
+      }),
+      instalar: Object.freeze({
+        titulo: 'Instalar o Tomatito',
+        descricao: 'Abre numa janela própria, fora das abas do navegador.',
+        botao: 'Instalar',
+      }),
+    }),
+    // W14: a seção Avisos da versão web (views/avisos-web.js; PLANO-WEB, 4 e
+    // 5; PLANO-WEB-V1, 7), com os quatro estados da permissão e o rodapé.
+    avisos: Object.freeze({
+      secao: 'Avisos',
+      titulo: 'Notificações',
+      estados: Object.freeze({
+        default: 'Mostrar um aviso quando o foco ou o intervalo terminar.',
+        granted: 'Ativadas neste navegador.',
+        denied: 'Bloqueadas neste navegador. Para ativar, abra as permissões do site (o ícone à esquerda do endereço).',
+        'sem-suporte': 'Neste navegador não há notificações.',
+      }),
+      permitir: 'Permitir avisos',
+      testar: 'Testar aviso',
+      iphone: 'No iPhone e no iPad, os avisos só funcionam com o Tomatito na Tela de Início.',
+      abaAberta: 'No navegador, o aviso depende de a aba continuar aberta.',
+      celular:
+        'No celular, com a tela apagada ou outro app aberto, o navegador pode segurar o aviso até você voltar ao Tomatito. A contagem não atrasa.',
+      // O aviso do "Testar aviso".
+      teste: Object.freeze({
+        titulo: 'Tomatito',
+        corpo: 'Os avisos estão ativados neste navegador.',
+      }),
+    }),
+    // W16: o cartão da atualização da versão web (views/atualizar-web.js;
+    // PLANO-WEB, 3.8). Só aparece com uma versão nova já baixada.
+    atualizar: Object.freeze({
+      secao: 'Atualização',
+      titulo: 'Nova versão disponível',
+      pronta: 'Já baixada. Ao atualizar, a página recarrega.',
+      correndo: 'Já baixada. Para atualizar, encerre a sessão e os temporizadores em andamento.',
+      botao: 'Atualizar',
     }),
     // M57: a opção avançada do plano B2 (views/opcao-x11.js).
     avancado: 'Avançado',
@@ -325,6 +380,17 @@ export default Object.freeze({
       reiniciar: 'Reiniciar agora',
       semXwayland: 'Esta sessão não tem Xwayland, e a opção fica sem efeito.',
     }),
+  }),
+  // W14: o InfoBar da versão web, no cartão de sessão, depois do primeiro
+  // "Iniciar sessão de foco" com a permissão ainda não pedida
+  // (views/focus/pedido-de-avisos.js; PLANO-WEB, 4).
+  pedidoDeAvisos: Object.freeze({
+    titulo: 'Aviso no fim de cada período?',
+    texto: 'O navegador pode mostrar uma notificação quando o foco ou o intervalo terminar.',
+    permitir: 'Permitir avisos',
+    agoraNao: 'Agora não',
+    bloqueados: 'Avisos bloqueados neste navegador. Dá para mudar nas permissões do site.',
+    fechar: 'Fechar',
   }),
   // Unidades por extenso, por categoria do Intl.PluralRules('pt-BR')
   // (format.js): o aria-valuetext do seletor de minutos ("25 minutos").
