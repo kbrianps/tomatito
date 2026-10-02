@@ -19,12 +19,15 @@ import '@fluentui/web-components/tooltip.js';
 import { Updates } from '@microsoft/fast-element';
 import { janelaAtual as getCurrentWindow, casca } from '#plataforma';
 import { ligarFormaCelular } from './lib/forma.js';
+import { ligarTeclado } from './lib/teclado.js';
 
 // A05 (Android): a casca e o layout de celular, antes de montar a interface.
 // Na web, o boot-web.js já fez os dois.
 if (casca.android) {
   document.documentElement.dataset.casca = 'android';
   if (casca.formaCelular) ligarFormaCelular();
+  // A06: com o teclado aberto, a barra inferior some e o campo vem à vista.
+  ligarTeclado();
 }
 import { montarBarraDeTitulo } from './components/title-bar.js';
 import { icone } from './components/icon.js';

@@ -21,7 +21,7 @@ const perto = (a, b, chaves = ['x', 'y', 'w', 'h']) => a && b && chaves.every((k
 
 const cdp = await conectar();
 const ir = (rota) =>
-  cdp.avaliar(`new Promise((ok) => { location.hash = '#/${rota}'; const olhar = () => location.hash === '#/${rota}' && document.querySelector('.tt-pagina') && !document.querySelector('.tt-rolagem[data-entrando]') ? setTimeout(ok, 300) : setTimeout(olhar, 50); olhar(); })`);
+  cdp.avaliar(`new Promise((ok) => { const t0 = Date.now(); location.hash = '#/${rota}'; const olhar = () => Date.now() - t0 > 250 && location.hash === '#/${rota}' && document.querySelector('.tt-pagina') && !document.querySelector('.tt-rolagem[data-entrando]') ? setTimeout(ok, 300) : setTimeout(olhar, 50); olhar(); })`);
 try {
   await ir('foco');
   const raiz = await cdp.avaliar(`({ casca: document.documentElement.dataset.casca, forma: document.documentElement.dataset.forma, innerWidth })`);
@@ -54,6 +54,12 @@ try {
   }
   conferir('nenhuma rolagem horizontal nas 4 telas', Object.values(rolagens).every(Boolean), rolagens);
   conferir('todo alvo tocável ≥ 48 × 48 nas 4 telas', Object.values(pequenos).every((p) => p.length === 0), pequenos);
+
+  // Sair das Configurações (com os expansores abertos) volta à Foco.
+  await ir('foco');
+  const saiu = await cdp.avaliar(`({ h1: document.querySelector('.tt-rolagem h1')?.textContent, sessao: !!document.querySelector('.tt-card.tt-sessao') })`);
+  conferir('das Configurações (expansores abertos) de volta à Foco', saiu.sessao, saiu);
+  await ir('configuracoes');
 
   const texto = await cdp.avaliar(`(() => {
     const t = document.querySelector('.tt-titlebar');

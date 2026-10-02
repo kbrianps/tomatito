@@ -6,7 +6,7 @@
 // pelo `interactive-widget=resizes-content`) e no Safari (pelo
 // `visualViewport`, que encolhe sozinho).
 //
-// Só a casca web liga isto (platform/web/index.js). `ligarTeclado` recebe o
+// Ligado pela casca web (platform/web/index.js) e pelo Android (main.js, A06). `ligarTeclado` recebe o
 // ambiente para os testes passarem falsos.
 
 /** Campos em que o teclado virtual abre. */
@@ -39,8 +39,9 @@ export function ligarTeclado({ win = globalThis.window, doc = globalThis.documen
     if (aberto === raiz.hasAttribute('data-teclado')) return;
     if (aberto) {
       raiz.setAttribute('data-teclado', '');
-      // Depois de a barra sumir e o layout assentar.
-      win.requestAnimationFrame(() => campoFocado()?.scrollIntoView({ block: 'nearest' }));
+      // Depois de a barra sumir e o layout assentar; no centro, com folga dos dois
+      // lados (colado na borda, o arredondamento cortava meio pixel no Android).
+      win.requestAnimationFrame(() => campoFocado()?.scrollIntoView({ block: 'center' }));
     } else raiz.removeAttribute('data-teclado');
   };
 

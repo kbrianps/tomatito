@@ -342,3 +342,10 @@ test('W18: ligarSistemaESobre sem a seção Sistema (a web) liga o Sobre e não 
   desligar();
   assert.equal(ouvintes.click, undefined);
 });
+
+test('A05: sem o cartão de volume (casca Android), as Configurações montam e desmontam sem erro', async () => {
+  const { montar, marcacaoDasSessoes } = await import('./settings.js');
+  assert.doesNotMatch(marcacaoDasSessoes(undefined, { comVolume: false }), /data-config="volume"/);
+  assert.match(marcacaoDasSessoes(undefined, {}), /data-config="volume"/);
+  assert.equal(typeof montar, 'function');
+});

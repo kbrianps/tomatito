@@ -453,6 +453,7 @@ export function ligarSessoes(raiz, { store = storeDoApp, ipc = ipcDoApp, doc = g
   win.requestAnimationFrame?.(() => !desligado && rotularListas());
 
   const pintarVolume = () => {
+    if (!volume) return; // A05: no Android não há volume
     const v = volumeDe(Number(volume.value));
     volume.style.setProperty('--tt-fracao', String(v / 100));
     volume.setAttribute('aria-valuetext', c.volume.valor(v));
@@ -543,7 +544,7 @@ export function ligarSessoes(raiz, { store = storeDoApp, ipc = ipcDoApp, doc = g
   secao.addEventListener('change', aoMudar);
   secao.addEventListener('click', aoClicar);
   volume?.addEventListener('input', aoArrastar);
-  volume.addEventListener('pointerdown', aoApertar);
+  volume?.addEventListener('pointerdown', aoApertar);
   doc.addEventListener('pointerup', aoSoltar);
   doc.addEventListener('pointercancel', aoSoltar);
   pintarVolume();
@@ -554,8 +555,8 @@ export function ligarSessoes(raiz, { store = storeDoApp, ipc = ipcDoApp, doc = g
     desassinar();
     secao.removeEventListener('change', aoMudar);
     secao.removeEventListener('click', aoClicar);
-    volume.removeEventListener('input', aoArrastar);
-    volume.removeEventListener('pointerdown', aoApertar);
+    volume?.removeEventListener('input', aoArrastar);
+    volume?.removeEventListener('pointerdown', aoApertar);
     doc.removeEventListener('pointerup', aoSoltar);
     doc.removeEventListener('pointercancel', aoSoltar);
   };

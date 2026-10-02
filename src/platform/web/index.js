@@ -42,7 +42,7 @@ import * as estatisticas from './estatisticas.js';
 import * as tarefas from './tarefas.js';
 import { emitir, listen } from './barramento.js';
 import { definirTempoNaAba, tempoNaAbaLigado } from './aba.js';
-import { ligarTeclado } from './teclado.js';
+import { ligarTeclado } from '../../lib/teclado.js';
 
 // Os períodos que o motor fecha vão para o IndexedDB.
 motor.aoEfeito('period', estatisticas.gravarPeriodo);
