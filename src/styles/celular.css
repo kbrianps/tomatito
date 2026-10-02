@@ -1,0 +1,20 @@
+/* Layout de celular da web (PLANO-WEB-V1, seção 5; marcos W30–W37).
+   Tudo aqui fica sob [data-forma="celular"], que só o boot-web.js liga (5.1:
+   largura < 600 px, ou toque com altura < 500 px). O desktop nunca tem o
+   atributo (scripts/web/desktop-sem-celular.mjs), então esta folha não muda
+   nada nele. A exceção é o toque (5.3), que vale para a casca web inteira. */
+
+/* 5.3: sem a espera do toque duplo; o zoom com dois dedos continua. */
+html[data-casca="web"]{ touch-action:manipulation; }
+
+/* 5.2: as áreas seguras de cima e dos lados (o recorte da câmera, em pé e
+   deitado). A de baixo é da barra inferior (W31). */
+[data-forma="celular"] .tt-janela{
+  padding-top:env(safe-area-inset-top);
+  padding-left:env(safe-area-inset-left);
+  padding-right:env(safe-area-inset-right);
+}
+
+/* 5.4: recuo lateral de 16 px em todas as telas. */
+[data-forma="celular"] .tt-pagina{ --tt-recuo-pagina:16px; }
+[data-forma="celular"] .tt-pagina:has(> h1.tt-t-title-large){ padding-inline:16px; }

@@ -148,7 +148,7 @@ const jsDoApp = readdirSync(new URL('../src', import.meta.url), { recursive: tru
   .map((arquivo) => ({ arquivo: `src/${arquivo}`, texto: ler(`src/${arquivo}`) }));
 
 test('folhas de estilo como <link> no index.html, na ordem da seção 4.2, e nunca por import no JS', () => {
-  const ordem = ['fluent-tokens.gen.css', 'tokens.css', 'bridge.css', 'fonts.css', 'base.css', 'shell.css', 'controls.css'];
+  const ordem = ['fluent-tokens.gen.css', 'tokens.css', 'bridge.css', 'fonts.css', 'base.css', 'shell.css', 'controls.css', 'celular.css'];
   const links = [...indexHtml.matchAll(/<link rel="stylesheet" href="\/src\/styles\/([^"]+)"/g)].map((m) => m[1]);
   // M11: o fluent-tokens.gen.css entra como primeira folha (scripts/build-theme-css.test.mjs).
   for (const folha of ['fluent-tokens.gen.css', 'tokens.css', 'bridge.css', 'fonts.css', 'base.css']) {
