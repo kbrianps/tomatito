@@ -170,7 +170,12 @@ try {
   const pronto = Promise.all([...USADOS.map((t) => customElements.whenDefined(t)), document.fonts.ready, ligado]);
   await Promise.race([pronto, new Promise((r) => setTimeout(r, 2000))]);   // nunca deixar a janela presa escondida
 
-  await montarBarraDeTitulo(document.querySelector('.tt-titlebar'), win);
+  // No Android não há barra de título (a casca a esconde) nem janela para
+  // maximizar: o `isMaximized` cairia no plugin `window` do Kotlin, que não
+  // existe, e a recusa ("Plugin window not initialized") interrompia este
+  // módulo antes do fim (as transições ficavam desligadas e a conferência do
+  // tema não rodava).
+  if (!casca.android) await montarBarraDeTitulo(document.querySelector('.tt-titlebar'), win);
   if (temaDeBase(h) === 'system') {
     const t = await temaDoSistemaAgora(win, h, () => midia.matches);
     if (t) h.dataset.theme = t;

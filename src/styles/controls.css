@@ -372,7 +372,7 @@ fluent-dialog.tt-dialogo-historico::part(dialog){ width:400px; max-width:calc(10
 /* As barras: uma por semana, da mais antiga à mais nova, na altura da fração
    da maior (a --tt-fracao vem do JS). A semana sem foco fica só com o traço. */
 .tt-historico-grafico{ display:flex; align-items:flex-end; gap:6px; height:72px; padding:0 2px; border-bottom:1px solid var(--tt-border); }
-.tt-historico-barra{ flex:1 1 0; min-width:0; height:max(2px, calc(var(--tt-fracao, 0) * 100%)); border-radius:3px 3px 0 0; background:var(--tt-accent-fg); }
+.tt-historico-barra{ flex:1 1 0; min-width:0; max-width:28px; height:max(2px, calc(var(--tt-fracao, 0) * 100%)); border-radius:3px 3px 0 0; background:var(--tt-accent-fg); }
 .tt-historico-barra[data-vazia]{ background:var(--tt-stroke-control); opacity:.5; }
 .tt-historico-rolagem{ max-height:min(196px, 30dvh); margin-top:12px; overflow-y:auto; border-radius:var(--tt-r-ctl); }
 .tt-historico-rolagem:focus-visible{ outline:2px solid var(--tt-focus-outer); outline-offset:2px; }

@@ -51,8 +51,10 @@ pub struct UpdateError {
 
 /// Evento do download: `{ downloaded, total }`, em bytes (`total` nulo se o
 /// servidor não disse o tamanho).
+#[cfg(desktop)]
 pub const EVENTO_PROGRESSO: &str = "tt://update-progress";
 /// Evento da procura ao abrir, quando acha uma versão: `{ version }`.
+#[cfg(desktop)]
 pub const EVENTO_DISPONIVEL: &str = "tt://update-available";
 
 #[cfg(desktop)]
