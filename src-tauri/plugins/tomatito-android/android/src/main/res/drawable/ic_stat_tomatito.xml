@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Ícone pequeno das notificações, PROVISÓRIO (A08): a silhueta de um tomate
-     (corpo redondo e o cabinho), em branco, como o sistema pede (ele só usa o
-     alfa). O definitivo, a partir do icon.svg, é do A15. -->
+<!-- Ícone pequeno das notificações (A15): o arco do icon.svg em silhueta
+     branca, como o sistema pede (ele só usa o alfa). O mesmo desenho da
+     camada monocromática do ícone do app (src-tauri/icons/android/). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M12,7.5C16.97,7.5 21,10.86 21,15C21,19.14 16.97,22 12,22C7.03,22 3,19.14 3,15C3,10.86 7.03,7.5 12,7.5Z" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M11,2h2v3.2l3.2,-1.2 0.7,1.9 -3.6,1.3 2.4,1.6 -1.1,1.7L12,8.6 9.4,10.5 8.3,8.8 10.7,7.2 7.1,5.9 7.8,4 11,5.2Z" />
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round"
+        android:pathData="M12,4.6A7.4,7.4 0,1 1,4.6 12" />
 </vector>

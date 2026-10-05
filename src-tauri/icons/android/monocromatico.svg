@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Tomatito, camada monocromática (ícones temáticos do Android 13+, A15):
+       só o arco; o sistema usa o alfa e pinta com a cor do tema. -->
+  <path d="M512 284A228 228 0 1 1 284 512" fill="none" stroke="#FFFFFF" stroke-width="80" stroke-linecap="round"/>
+</svg>

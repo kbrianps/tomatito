@@ -1688,3 +1688,11 @@ Retomado em modo solo, depois do rebase da branch `android` sobre a `main` com a
 2. **Roteiro novo `scripts/android/persistencia.mjs`: 6/6** no tt37 (arquivos na pasta do app; tema mantido depois de `am kill`; mesma fase, mesmo fim e mesma agenda exata depois de `am kill`; bloco de 1 min no "hoje"; com o relógio do aparelho no dia seguinte, ele passa para o "ontem").
 3. **A virada do dia é conferida pelo `stats_get`** (o DTO não traz a data): o bloco concluído sai do "hoje" e entra no "ontem" com o relógio em 00:01 do dia seguinte (`adb root` + `date`, e o relógio volta ao do host no fim).
 4. **`barras.mjs` (modo Sistema, `cmd uimode night`): 6/6**, e **`avisos.mjs cartao`: 7/7** (o item que faltava no A13).
+
+## A15 (Android): ícones do app e da notificação (05/10/2026)
+
+1. **Ícone adaptativo com camada monocromática**, gerado pelo `npx tauri icon src-tauri/icons/android/manifesto.json -o <pasta>` e copiado para `gen/android/app/src/main/res/mipmap-*` (só o Android; os ícones do desktop não foram regerados). Fontes em `src-tauri/icons/android/`: `fundo.svg` (o degradê do disco), `frente.svg` (o trilho e o arco, dentro da zona segura de 66/108) e `monocromatico.svg` (só o arco). Saíram os dois vetores do modelo do Tauri (`drawable*/ic_launcher_*`).
+2. **`ic_stat_tomatito` definitivo:** o arco do `icon.svg` em silhueta branca (vetor com traço), no lugar do tomate provisório do A08.
+3. **Conferido:** `aapt2 dump badging` com `application-label:'Tomatito'` e `application-icon-*` em `res/mipmap-anydpi-v26/ic_launcher.xml` (`adaptive-icon` com `foreground`, `background` e `monochrome`); `segundo-plano.mjs` 21/21 com o ícone novo; captura do lançador em `docs/android/capturas/a15-lancador.png` (o ícone no dock e o arco na barra de status).
+4. **Sem a correlação de imagem do plano:** a captura foi conferida a olho (o desenho é o mesmo `icon.svg`). O ícone legado (`ic_launcher.png`, Android 7) sai com o arco encostado na borda; só o Android 7.x o usa.
+5. **`versionCode 1` / `versionName 1.0` no APK de depuração:** a versão certa entra no A19 (`versao.mjs`).
