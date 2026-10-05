@@ -203,3 +203,7 @@ Numeração a partir de 201, para não cruzar com as pendências de outras faixa
 ## Android (05/10/2026)
 
 - **Guardar a chave de upload num gerenciador de senhas:** os dois arquivos de `~/.config/tomatito/android/` (`upload.jks` e `keystore.properties`). Sem eles não dá para enviar atualizações do app à Play. Detalhes em `docs/android/versoes.md`.
+- **Publicar na Play Store:** siga `docs/android/PUBLICAR.md` (blocos de 10 a 20 min). Antes do teste interno: aparelho verificado pelo app Play Console, pacote registrado na verificação de desenvolvedor e o e-mail público de contato.
+- **12 testadores por 14 dias** para o teste fechado; o convite pronto está em `docs/android/play/convite-testadores.txt`.
+- **Nome na loja:** "Tomatito: timer de foco" (pode trocar na ficha).
+- **Tomate em tela cheia no Android (A16):** adiado por decisão sua; entra numa atualização.

@@ -1737,3 +1737,10 @@ Na worktree `android`, com A13, A05, A06, A14 e A15 feitos: `npm test` 497/497; 
 2. **`privacidade.html` completo** (data, o que fica guardado, as três permissões do Android e por quê, "sem permissão de internet", os registros da hospedagem na versão web, como apagar, contato).
 3. **No "Sobre":** no Android, um botão "Abrir" que chama o `abrir_url` do plugin; na web, um link para `/privacidade`; no desktop, nada. Conferido no tt37: o toque faz o `dumpsys activity` mostrar `dat=https://tomatito.kbrianps.workers.dev/privacidade` com o Chrome na frente.
 4. O texto novo só chega ao endereço público quando a web for publicada de novo (A26).
+
+## A24–A25 (Android): ficha, formulários e passo a passo (05/10/2026)
+
+1. **`docs/android/play/ficha.md`** (nome de 23 caracteres, curta de 76, completa de 1 554), **`permissoes.md`** e **`formularios.md`**; `scripts/android/ficha.mjs` confere limites, palavras proibidas, permissões (na ficha e na política) e os gráficos: 9/9.
+2. A descrição não cita o tomate em tela cheia (A16, adiado) e diz "Não acessa a internet" (a sonda do A18 confirmou).
+3. **`docs/android/PUBLICAR.md`** em 7 blocos curtos, e o convite em `docs/android/play/convite-testadores.txt` (texto puro). `scripts/android/conferir-publicar.mjs` confere os arquivos citados e o SHA-256 do AAB contra o `versoes.md`.
+4. O e-mail público de contato ficou em aberto na ficha (aparece na loja; decisão do usuário).
