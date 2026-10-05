@@ -557,3 +557,48 @@ mod tests {
         );
     }
 }
+
+/// O que o `stats_history` devolve ao JS (v0.3): os totais de todo o tempo e
+/// o foco por semana, em camelCase. Tempos em segundos; datas `AAAA-MM-DD`.
+/// O desktop monta a partir do SQLite e a web a partir do IndexedDB, as duas
+/// pelo [`tomatito_core::history`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryDto {
+    pub total_s: u64,
+    /// Períodos de foco que contam.
+    pub periods: u64,
+    /// Dias com algum foco.
+    pub days: u64,
+    /// O dia do primeiro período, ou `null` sem nenhum.
+    pub since: Option<String>,
+    /// Da semana do primeiro período até a atual, em ordem.
+    pub weeks: Vec<WeekDto>,
+}
+
+/// Uma semana do histórico: a segunda-feira (`AAAA-MM-DD`) e o foco dela.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WeekDto {
+    pub monday: String,
+    pub focus_s: u64,
+}
+
+impl From<tomatito_core::History> for HistoryDto {
+    fn from(h: tomatito_core::History) -> Self {
+        Self {
+            total_s: h.total_s,
+            periods: h.periods,
+            days: h.days,
+            since: h.since.map(|d| d.to_string()),
+            weeks: h
+                .weeks
+                .into_iter()
+                .map(|w| WeekDto {
+                    monday: w.monday.to_string(),
+                    focus_s: w.focus_s,
+                })
+                .collect(),
+        }
+    }
+}

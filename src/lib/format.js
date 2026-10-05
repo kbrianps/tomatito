@@ -154,3 +154,12 @@ export function tempoDoCronometro(ms) {
   };
   return { ...partes, texto: `${partes.horas}:${partes.minutos}:${partes.segundos},${partes.centesimos}` };
 }
+
+/**
+ * v0.3 (histórico): uma duração em horas e minutos inteiros, para baixo:
+ * "6 h 20 min", "45 min", "3 h". Negativo ou inválido vale 0.
+ */
+export function horasEMinutos(segundos) {
+  const min = Number.isFinite(segundos) && segundos > 0 ? Math.floor(segundos / 60) : 0;
+  return t.foco.historico.horas(Math.floor(min / 60), min % 60);
+}

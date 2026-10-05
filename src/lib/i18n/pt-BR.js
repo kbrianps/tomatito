@@ -100,6 +100,31 @@ export default Object.freeze({
       // M28: o lápis do cartão (nome e dica).
       editar: 'Editar meta diária',
     }),
+    // v0.3: a janela "Histórico" (views/focus/history-dialog.js), aberta pelo
+    // botão "Ver histórico" do cartão de progresso: os totais de todo o tempo
+    // e o foco por semana (segunda a domingo). Sem sequência, recorde nem
+    // comparação (1.1, sem gamificação).
+    historico: Object.freeze({
+      abrir: 'Ver histórico',
+      titulo: 'Histórico',
+      fechar: 'Fechar',
+      total: 'Todo o tempo',
+      tempo: 'Tempo de foco',
+      periodos: 'Períodos de foco',
+      dias: 'Dias com foco',
+      desde: (data) => `Desde ${data}.`,
+      semanas: 'Por semana',
+      estaSemana: 'Esta semana',
+      semana: (de, ate) => `${de} a ${ate}`,
+      colunaSemana: 'Semana',
+      colunaFoco: 'Foco',
+      vazio: 'Ainda não há sessões de foco registradas.',
+      erro: 'Não foi possível ler o histórico.',
+      // O rótulo do gráfico (role="img"): quantas semanas e a maior delas.
+      grafico: (n, maior) => `Foco nas últimas ${n} semanas. A maior teve ${maior}.`,
+      // "6 h 20 min", "45 min", "3 h".
+      horas: (h, min) => (h === 0 ? `${min} min` : min === 0 ? `${h} h` : `${h} h ${min} min`),
+    }),
     // M28: o diálogo "Editar meta diária" (views/focus/goal-dialog.js). As
     // metas por extenso, como no cartão ("1 hora e 30 minutos", e não "1 h
     // 30"; docs/decisoes.md, M28).

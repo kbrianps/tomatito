@@ -27,6 +27,7 @@ import { duracao, minutosInteiros } from '../../lib/format.js';
 import * as anel from '../../components/ring.js';
 import * as ipcDoApp from '../../lib/ipc.js';
 import * as dialogoDaMeta from './goal-dialog.js';
+import * as dialogoDoHistorico from './history-dialog.js';
 
 const d = t.foco.diario;
 /** Intervalo da releitura periódica, em ms (a virada do dia). */
@@ -79,7 +80,9 @@ export function marcacao(s = ultimo, { icone = semIcone } = {}) {
     anel.marcacao({ fracao: n.fracao, rotulo: n.rotulo, centro, classe: 'tt-progresso-anel' }) +
     `<dl class="tt-progresso-lado">${coluna('semana', d.semana, n.semana)}</dl>` +
     `</div>` +
-    `<p class="tt-progresso-rodape" data-concluido>${n.concluido}</p>`
+    `<p class="tt-progresso-rodape" data-concluido>${n.concluido}</p>` +
+    // v0.3: a janela com os totais de todo o tempo e o foco por semana.
+    `<p class="tt-progresso-acoes"><button type="button" data-historico>${t.foco.historico.abrir}</button></p>`
   );
 }
 
@@ -92,7 +95,7 @@ const escrever = (el, texto) => {
  * `ipc`, o lib/ipc.js (`estatisticas.obter`, `ouvir` e `EVENTOS`). Devolve a
  * função de limpeza.
  */
-export function ligar(cartao, store, { ipc = ipcDoApp, doc = cartao.ownerDocument, relogio = globalThis, icone = semIcone, dialogo = dialogoDaMeta } = {}) {
+export function ligar(cartao, store, { ipc = ipcDoApp, doc = cartao.ownerDocument, relogio = globalThis, icone = semIcone, dialogo = dialogoDaMeta, historico = dialogoDoHistorico } = {}) {
   const corpo = cartao.querySelector('[data-progresso]');
   const rodape = cartao.querySelector('[data-concluido]');
   const a = anel.ligarAnel(corpo);
@@ -151,6 +154,17 @@ export function ligar(cartao, store, { ipc = ipcDoApp, doc = cartao.ownerDocumen
   const aoClicarNoLapis = () => void editar();
   lapis?.addEventListener('click', aoClicarNoLapis);
 
+  // v0.3: "Ver histórico" abre a janela (history-dialog.js), criada no
+  // primeiro clique.
+  const botaoDoHistorico = cartao.querySelector('[data-historico]');
+  let janelaDoHistorico = null;
+  const aoClicarNoHistorico = () => {
+    if (desligado) return;
+    janelaDoHistorico ??= historico.criar({ doc, gatilho: botaoDoHistorico, icone, ipc });
+    void janelaDoHistorico.abrir();
+  };
+  botaoDoHistorico?.addEventListener('click', aoClicarNoHistorico);
+
   const desassinar = store?.assinar(() => void atualizar()) ?? (() => {});
   let pararDeOuvir = null;
   Promise.resolve(ipc.ouvir(ipc.EVENTOS.configuracoes, () => void atualizar()))
@@ -165,6 +179,8 @@ export function ligar(cartao, store, { ipc = ipcDoApp, doc = cartao.ownerDocumen
     desligado = true;
     lapis?.removeEventListener('click', aoClicarNoLapis);
     janela?.desligar();
+    botaoDoHistorico?.removeEventListener('click', aoClicarNoHistorico);
+    janelaDoHistorico?.desligar();
     desassinar();
     pararDeOuvir?.();
     relogio.clearInterval(periodico);

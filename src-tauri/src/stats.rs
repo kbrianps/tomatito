@@ -22,7 +22,9 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use rusqlite::{Connection, params};
 use serde::Serialize;
-use tomatito_core::{DayRange, EpochMs, Period, PhaseKind, TimeZone, stats_ranges};
+use tomatito_core::{DayRange, EpochMs, FocusEntry, Period, PhaseKind, TimeZone, stats_ranges};
+
+use crate::events::HistoryDto;
 
 /// Nome do arquivo em `app_data_dir()`.
 pub const FILE_NAME: &str = "stats.sqlite";
@@ -236,6 +238,37 @@ impl Stats {
             |r| r.get(0),
         )?;
         Ok(u64::try_from(s).unwrap_or(0))
+    }
+
+    /// Todos os períodos de foco que contam (a regra do [`Stats::focus_seconds`]),
+    /// do mais antigo ao mais novo.
+    pub fn focus_entries(&self) -> rusqlite::Result<Vec<FocusEntry>> {
+        let conn = self.lock();
+        let mut stmt = conn.prepare(
+            "SELECT ended_at, actual_s FROM periods
+             WHERE kind = 'focus' AND (completed = 1 OR actual_s >= ?1)
+             ORDER BY ended_at",
+        )?;
+        let linhas = stmt.query_map(params![MIN_INTERRUPTED_S as i64], |r| {
+            let fim: i64 = r.get(0)?;
+            let s: i64 = r.get(1)?;
+            Ok(FocusEntry {
+                ended_at: EpochMs(fim),
+                seconds: u64::try_from(s).unwrap_or(0),
+            })
+        })?;
+        linhas.collect()
+    }
+
+    /// O histórico (v0.3): os totais de todo o tempo e o foco por semana. Um
+    /// erro de leitura vira o histórico vazio (e vai para o registro), como
+    /// no [`Stats::summary`].
+    pub fn history(&self, now: EpochMs, tz: &TimeZone, reset_hour: u8) -> HistoryDto {
+        let entradas = self.focus_entries().unwrap_or_else(|e| {
+            eprintln!("[tomatito] estatísticas: falha ao ler o histórico: {e}");
+            Vec::new()
+        });
+        tomatito_core::history(&entradas, now, tz, reset_hour).into()
     }
 
     /// Ontem, hoje e esta semana, vistos de `now` no fuso `tz`. Um erro de
@@ -549,5 +582,40 @@ mod tests {
         motor.stop().unwrap();
         let r = st.summary(relogio.now(), &sp(), 0, 60);
         assert_eq!(r.today_s, 3300 + 600);
+    }
+
+    #[test]
+    fn historico_usa_a_regra_do_que_conta_e_agrupa_por_semana() {
+        let stats = Stats::in_memory();
+        // Segunda 28/09: um período completo e um interrompido curto (não conta).
+        stats
+            .record(&periodo(PhaseKind::Focus, at(10 * H), 1500, true))
+            .unwrap();
+        stats
+            .record(&periodo(PhaseKind::Focus, at(11 * H), 30, false))
+            .unwrap();
+        // Um intervalo nunca conta.
+        stats
+            .record(&periodo(PhaseKind::Break, at(12 * H), 300, true))
+            .unwrap();
+        // Segunda seguinte (05/10): um interrompido longo (conta).
+        stats
+            .record(&periodo(PhaseKind::Focus, at(7 * DIA + 9 * H), 900, false))
+            .unwrap();
+        let h = stats.history(at(7 * DIA + 10 * H), &sp(), 0);
+        assert_eq!(h.total_s, 2400);
+        assert_eq!(h.periods, 2);
+        assert_eq!(h.days, 2);
+        assert_eq!(h.since.as_deref(), Some("2026-09-28"));
+        let semanas: Vec<_> = h
+            .weeks
+            .iter()
+            .map(|w| (w.monday.as_str(), w.focus_s))
+            .collect();
+        assert_eq!(semanas, vec![("2026-09-28", 1500), ("2026-10-05", 900)]);
+        // Em JSON, camelCase.
+        let json = serde_json::to_value(&h).unwrap();
+        assert_eq!(json["totalS"], 2400);
+        assert_eq!(json["weeks"][0]["focusS"], 1500);
     }
 }

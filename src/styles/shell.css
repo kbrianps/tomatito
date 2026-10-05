@@ -879,3 +879,6 @@ input.tt-deslizante:focus-visible{ outline:2px solid var(--tt-focus-outer); outl
    botão). */
 .tt-config-item a.tt-link{ position:relative; color:var(--tt-accent-fg); text-underline-offset:3px; border-radius:var(--tt-r-ctl); }
 .tt-config-item a.tt-link:focus-visible{ outline:2px solid var(--tt-focus-outer); outline-offset:2px; }
+
+/* v0.3: o botão "Ver histórico" do cartão de progresso, centrado sob o rodapé. */
+.tt-progresso-acoes{ display:flex; justify-content:center; margin:12px 0 0; }

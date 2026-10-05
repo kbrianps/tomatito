@@ -92,6 +92,12 @@ export const configuracoes = Object.freeze({
  */
 export const estatisticas = Object.freeze({
   obter: () => invoke('stats_get'),
+  /**
+   * v0.3: `{ totalS, periods, days, since, weeks: [{ monday, focusS }] }`: os
+   * totais de todo o tempo e o foco de cada semana (a segunda em
+   * `AAAA-MM-DD`), da primeira com foco até a atual, em ordem.
+   */
+  historico: () => invoke('stats_history'),
 });
 
 /**

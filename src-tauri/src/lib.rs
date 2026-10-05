@@ -198,6 +198,7 @@ pub fn run() {
             commands::focus_stop,
             commands::sound_test,
             commands::stats_get,
+            commands::stats_history,
             commands::task_list,
             commands::task_add,
             commands::task_complete,

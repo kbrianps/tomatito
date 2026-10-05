@@ -465,6 +465,26 @@ const handlers = {
       resetHour: configuracoes.resetHour,
     };
   },
+  // v0.3: o histórico da janela "Ver histórico". Catorze semanas inventadas
+  // (duas sem foco); ?historico=vazio para o estado sem sessões e
+  // ?historico=falha para o erro de leitura.
+  stats_history: () => {
+    window.__TOMATITO_PREVIEW_COMANDOS__.push('stats_history');
+    const modo = params.get('historico');
+    if (modo === 'falha') throw { code: 'io', message: 'prévia: histórico' };
+    if (modo === 'vazio') return { totalS: 0, periods: 0, days: 0, since: null, weeks: [] };
+    const minutos = [150, 320, 0, 95, 410, 505, 260, 0, 380, 615, 290, 445, 530, 75];
+    const segunda = new Date();
+    segunda.setHours(12, 0, 0, 0);
+    segunda.setDate(segunda.getDate() - ((segunda.getDay() + 6) % 7) - 7 * (minutos.length - 1));
+    const weeks = minutos.map((m, i) => {
+      const d = new Date(segunda);
+      d.setDate(d.getDate() + 7 * i);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return { monday: iso, focusS: m * 60 };
+    });
+    return { totalS: minutos.reduce((a, b) => a + b, 0) * 60, periods: 163, days: 61, since: weeks[0].monday, weeks };
+  },
   // M29: as tarefas numa lista em memória, com as regras do tasks.rs (título
   // limpo, de 1 a 255 caracteres; ordem de criação). A virada do dia não é
   // simulada: as concluídas ficam na lista.

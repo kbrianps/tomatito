@@ -13,7 +13,7 @@ use tomatito_core::{Sound, TimeZone};
 
 use crate::audio::Som;
 use crate::engine::{CommandError, Engine, Preferencias, TauriSink};
-use crate::events::{self, FocusDto, StateDto, StopwatchDto, TimersDto};
+use crate::events::{self, FocusDto, HistoryDto, StateDto, StopwatchDto, TimersDto};
 use crate::recursos::Recursos;
 use crate::settings::{Settings, SettingsError, SettingsStore};
 use crate::stats::{Stats, StatsDto};
@@ -210,6 +210,19 @@ pub fn stats_get(
         s.reset_hour,
         s.daily_goal_minutes,
     )
+}
+
+/// `stats_history` (v0.3): os totais de todo o tempo e o foco por semana, para
+/// a janela "Histórico" do cartão de progresso. Os dias e as semanas são os do
+/// fuso do sistema e da hora de zerar, como no `stats_get`.
+#[tauri::command]
+pub fn stats_history(
+    engine: State<'_, AppEngine>,
+    stats: State<'_, Arc<Stats>>,
+    settings: State<'_, SettingsStore>,
+) -> HistoryDto {
+    engine.state();
+    stats.history(engine.now(), &TimeZone::system(), settings.get().reset_hour)
 }
 
 /// O "agora" e a hora de zerar que as tarefas usam: o relógio do motor

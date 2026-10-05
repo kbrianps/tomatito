@@ -32,7 +32,7 @@ test('cada cartão é uma <section> com o título do catálogo em Subtitle, e a 
       // M17: o preparo e, durante a sessão, o mostrador do M18.
       sessao: '<div class="tt-preparo" data-preparo>.*</div><div data-andamento hidden>.*</div>',
       // M27: as três colunas e o rodapé; M28: o lápis antes delas.
-      progresso: '<button type="button" class="tt-sutil tt-progresso-editar" aria-label="Editar meta diária" data-dica data-editar-meta></button><div class="tt-progresso-corpo"[^>]*data-progresso>.*</div><p class="tt-progresso-rodape" data-concluido>.*</p>',
+      progresso: '<button type="button" class="tt-sutil tt-progresso-editar" aria-label="Editar meta diária" data-dica data-editar-meta></button><div class="tt-progresso-corpo"[^>]*data-progresso>.*</div><p class="tt-progresso-rodape" data-concluido>.*</p><p class="tt-progresso-acoes"><button type="button" data-historico>Ver histórico</button></p>',
       // M30: o "+" e o "…", e o corpo (subtítulo, lista, campo e estado vazio).
       tarefas: '<div class="tt-tarefas-acoes">.*</fluent-menu></div><div class="tt-tarefas-corpo"[^>]*data-tarefas>.*</div></div>',
     }[id] ?? '';
@@ -42,8 +42,8 @@ test('cada cartão é uma <section> com o título do catálogo em Subtitle, e a 
     );
     assert.match(html, re);
   }
-  const { andamento, preparo, fases, diario, metaDiaria, listaDeTarefas, ...titulos } = t.foco;
-  assert.ok(andamento && preparo && fases && diario && metaDiaria && listaDeTarefas);
+  const { andamento, preparo, fases, diario, metaDiaria, listaDeTarefas, historico, ...titulos } = t.foco;
+  assert.ok(andamento && preparo && fases && diario && metaDiaria && listaDeTarefas && historico);
   assert.deepEqual(titulos, { sessao: 'Pronto para focar', progresso: 'Progresso diário', tarefas: 'Tarefas' });
 });
 

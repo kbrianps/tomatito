@@ -181,6 +181,7 @@ const LOCAIS = Object.freeze({
   // O retrato inerte da validação do Full (window/validacao.rs, Fase::Nenhuma).
   full_validation_get: async () => ({ seq: 0, state: 'none' }),
   stats_get: () => estatisticas.obter(),
+  stats_history: () => estatisticas.historico(),
   task_list: () => tarefas.listar(),
   task_add: tarefas.adicionar,
   task_complete: tarefas.concluir,
