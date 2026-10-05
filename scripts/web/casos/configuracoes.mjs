@@ -204,8 +204,8 @@ export default async function configuracoes(t) {
   const arquivo = `${t.celular ? 'web-cel-configuracoes' : 'web-configuracoes'}.png`;
   writeFileSync(`${CAPTURAS}${arquivo}`, Buffer.from(data, 'base64'));
   t.conferir(
-    `(g) seções na ordem Sessões de foco, Aparência, Avisos, Navegador e Sobre; captura ${arquivo}`,
-    ordem.join('|') === 'Sessões de foco|Aparência|Avisos|Navegador|Sobre',
+    `(g) seções na ordem Sessões de foco, Aparência, Avisos, Navegador, Dados e Sobre; captura ${arquivo}`,
+    ordem.join('|') === 'Sessões de foco|Aparência|Avisos|Navegador|Dados|Sobre',
     ordem,
   );
 }

@@ -70,3 +70,5 @@ export const atualizacaoDaCasca = null;
  */
 export const abaDaCasca = null;
 export const instalacaoDaCasca = null;
+/** v0.3: exportar e importar os dados, só na web (platform/web/dados.js). */
+export const dadosDaCasca = null;

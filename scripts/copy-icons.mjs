@@ -88,6 +88,9 @@ export const ICONES = Object.freeze([
   { nome: 'arrow_sync', estilo: 'regular', tamanhos: [20] },
   // W18 (só a web usa): o cartão "Instalar o Tomatito"
   { nome: 'arrow_download', estilo: 'regular', tamanhos: [20] },
+  // v0.3: importar os dados na versão web (views/dados-web.js); o de
+  // exportar é o arrow_download acima.
+  { nome: 'arrow_upload', estilo: 'regular', tamanhos: [20] },
   // A13 (Android): a faixa da tela Foco com os avisos bloqueados (grade de 16);
   // o sino de 20 já vem do W14.
   { nome: 'alert_off', estilo: 'regular', tamanhos: [16] },

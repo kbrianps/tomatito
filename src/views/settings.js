@@ -58,6 +58,7 @@ import { ligarOpcaoX11 } from './opcao-x11.js';
 import { ligarAvisosWeb } from './avisos-web.js';
 import { ligarAtualizarWeb } from './atualizar-web.js';
 import { ligarAtualizarApp } from './atualizar-app.js';
+import { ligarDadosWeb } from './dados-web.js';
 import { ligarNavegadorWeb } from './navegador-web.js';
 import { casca as cascaDaPlataforma } from '#plataforma';
 import { POLITICA_DE_PRIVACIDADE } from '../lib/links.js';
@@ -735,6 +736,8 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
   const semNavegador = ligarNavegadorWeb(raiz.querySelector('.tt-pagina'), { icone, plataforma: avisosWeb });
   // W16: o cartão Atualizar, só na web e só com uma versão nova (atualizar-web.js).
   const semAtualizar = ligarAtualizarWeb(raiz.querySelector('.tt-pagina'), { icone, plataforma: avisosWeb });
+  // v0.3: a seção Dados (exportar e importar), só na web (dados-web.js).
+  const semDados = ligarDadosWeb(raiz.querySelector('.tt-pagina'), { icone, plataforma: avisosWeb });
   // v0.3: a atualização por dentro do app (atualizar-app.js), só no desktop.
   const semAtualizarApp = casca?.secaoSistema === false || casca?.web ? () => {} : ligarAtualizarApp(raiz.querySelector('.tt-pagina'), { icone, ipc: atualizarApp });
   return () => {
@@ -748,5 +751,6 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
     semNavegador();
     semAtualizar();
     semAtualizarApp();
+    semDados();
   };
 }

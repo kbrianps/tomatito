@@ -389,6 +389,32 @@ export default Object.freeze({
         botao: 'Instalar',
       }),
     }),
+    // v0.3: exportar e importar os dados da versão web (views/dados-web.js).
+    dados: Object.freeze({
+      secao: 'Dados',
+      exportar: Object.freeze({
+        titulo: 'Exportar dados',
+        descricao: 'Baixa um arquivo com as estatísticas, as tarefas e as configurações deste navegador.',
+        botao: 'Exportar',
+      }),
+      importar: Object.freeze({
+        titulo: 'Importar dados',
+        descricao: 'Lê um arquivo exportado pelo Tomatito e substitui os dados deste navegador.',
+        botao: 'Importar',
+      }),
+      confirmar: (periodos, tarefas, data) =>
+        `O arquivo${data ? ` de ${data}` : ''} tem ${periodos} ${periodos === 1 ? 'período' : 'períodos'} e ${tarefas} ${tarefas === 1 ? 'tarefa' : 'tarefas'}. ` +
+        'Importar apaga o que está neste navegador e põe o arquivo no lugar.',
+      substituir: 'Substituir',
+      cancelar: 'Cancelar',
+      gravando: 'Importando…',
+      erros: Object.freeze({
+        formato: 'Este não é um arquivo de dados do Tomatito.',
+        versao: 'O arquivo veio de uma versão mais nova do Tomatito. Atualize esta página e tente de novo.',
+        conteudo: 'O arquivo está incompleto ou danificado.',
+        gravacao: 'Não foi possível importar. Os dados deste navegador continuam como estavam.',
+      }),
+    }),
     // W14: a seção Avisos da versão web (views/avisos-web.js; PLANO-WEB, 4 e
     // 5; PLANO-WEB-V1, 7), com os quatro estados da permissão e o rodapé.
     avisos: Object.freeze({

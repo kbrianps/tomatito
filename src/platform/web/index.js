@@ -45,6 +45,7 @@ import * as tarefas from './tarefas.js';
 import { emitir, listen } from './barramento.js';
 import { definirTempoNaAba, tempoNaAbaLigado } from './aba.js';
 import { ligarTeclado } from '../../lib/teclado.js';
+import { criarDados } from './dados.js';
 
 // Os períodos que o motor fecha vão para o IndexedDB.
 motor.aoEfeito('period', estatisticas.gravarPeriodo);
@@ -253,6 +254,15 @@ export const avisosDaCasca = criarPermissao({
   armazenamento: () => globalThis.localStorage ?? null,
   permissoes: () => globalThis.navigator?.permissions ?? null,
   registro: () => registroAtivo(),
+});
+
+/**
+ * v0.3: exportar e importar os dados deste navegador (dados.js), para a seção
+ * "Dados" das Configurações. No desktop, null (platform/tauri.js).
+ */
+export const dadosDaCasca = criarDados({
+  versaoDoApp: typeof __TOMATITO_VERSAO__ === 'string' ? __TOMATITO_VERSAO__ : '',
+  antesDeLer: () => estatisticas.gravacoesPendentes(),
 });
 
 /**
