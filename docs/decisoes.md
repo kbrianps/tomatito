@@ -1710,3 +1710,11 @@ Na worktree `android`, com A13, A05, A06, A14 e A15 feitos: `npm test` 497/497; 
 3. **`npx tauri android build --aab --target aarch64 --target armv7 --target x86_64`:** AAB de 15,9 MB em `$TT_GRADLE_SAIDAS/app/outputs/bundle/universalRelease/`, ainda sem assinatura (A19).
 4. **R8:** `consumer-rules.pro` do plugin guarda também os três receivers.
 5. **Disco:** o `~/.gradle` virou um link para `/opt/cargo-target/gradle-home` e o cache do npm foi limpo (o `/home` tinha caído para 2,8 GB).
+
+## A19 (Android): versão 0.2.0, chave de upload e AAB assinado (05/10/2026)
+
+1. **Versão 0.2.0 no `Cargo.toml` (desktop e Android juntos) e também no `tauri.android.conf.json`:** o CLI do Tauri só grava o `tauri.properties` (de onde o Gradle lê `versionCode` e `versionName`) quando a configuração tem `version`; sem isso o APK saía com `versionCode 1`. O `tauri.conf.json` do desktop continua sem `version` (regra do M39). O `scripts/android/versao.mjs` e um teste do `regras-do-repo` conferem que as duas batem.
+2. **Chave de upload** em `~/.config/tomatito/android/` (RSA 4096, PKCS12, senha aleatória, modo 600), fora do repositório. O `app/build.gradle.kts` lê o `keystore.properties`; sem ele, qualquer tarefa de release falha com mensagem clara (`TOMATITO_SEM_ASSINATURA=1` libera o build sem assinatura).
+3. **`scripts/android/conferir-aab.mjs`: 7/7** (bundletool validate; jarsigner e o certificado igual ao da chave; pacote, versão 0.2.0/2000, minSdk 24, targetSdk 37, rótulo; três ABIs; permissões exatas, sem INTERNET; zipalign de 16 KB; `LOAD` em 0x4000).
+4. **`keytool` em inglês no script** (`-J-Duser.language=en`): o do Java 25 em pt-BR quebra ao imprimir um certificado (`MissingFormatArgumentException`).
+5. O SHA-256 do AAB entra no `docs/android/versoes.md` no A26, com o pacote final (o A23 ainda muda o app).

@@ -199,3 +199,7 @@ Numeração a partir de 201, para não cruzar com as pendências de outras faixa
 
 - ~~Login na Cloudflare para publicar a web~~ (feito em 02/10/2026; publicada em https://tomatito.kbrianps.workers.dev). Para publicar de novo: Rode `/opt/cargo-target/ferramentas/wrangler/node_modules/.bin/wrangler login`, autorize no navegador (em poucos minutos, senão expira) e depois `node scripts/web/publicar.mjs`. Passos em `docs/web/publicar.md`.
 - **Roteiro de 10 min no celular de verdade**, depois de publicado (`docs/verificacao-manual.md`, seção "Web no celular").
+
+## Android (05/10/2026)
+
+- **Guardar a chave de upload num gerenciador de senhas:** os dois arquivos de `~/.config/tomatito/android/` (`upload.jks` e `keystore.properties`). Sem eles não dá para enviar atualizações do app à Play. Detalhes em `docs/android/versoes.md`.

@@ -1,0 +1,27 @@
+# Versões do Android
+
+Uma linha por pacote (`.aab`) gerado para a Play. O `versionCode` vem da versão: `maior × 1 000 000 + menor × 1 000 + correção` (0.2.0 → 2000). A Play recusa um `versionCode` repetido ou menor que um já enviado: o `node scripts/android/versao.mjs` confere isso contra as linhas **enviadas** desta tabela.
+
+| Versão | versionCode | SHA-256 do AAB | Trilha | Data |
+|---|---|---|---|---|
+| 0.2.0 | 2000 | (o do pacote final, gravado no A26) | não enviado | 05/10/2026 |
+
+Ao enviar um pacote ao Play Console, troque "não enviado" pela trilha (teste interno, teste fechado, produção) e a data.
+
+## Como gerar
+
+```bash
+source scripts/android/ambiente.sh
+node scripts/android/versao.mjs
+npx tauri android build --aab --target aarch64 --target armv7 --target x86_64
+node scripts/android/conferir-aab.mjs
+```
+
+O pacote sai em `$TT_GRADLE_SAIDAS/app/outputs/bundle/universalRelease/app-universal-release.aab`.
+
+## A chave de upload
+
+- Fica **fora do repositório**, em `~/.config/tomatito/android/`: `upload.jks` (a chave) e `keystore.properties` (a senha e o caminho), os dois com permissão 600.
+- **Guarde uma cópia dos dois arquivos num gerenciador de senhas.** Sem ela não dá para enviar atualizações do app (a Play permite pedir a troca da chave de upload, mas é um processo com o suporte).
+- Na Play, o **Play App Signing** guarda a chave definitiva do app; esta é só a de envio.
+- Sem o `keystore.properties`, o build de release falha com uma mensagem clara. Para um build sem assinatura (teste): `TOMATITO_SEM_ASSINATURA=1`.

@@ -2,6 +2,7 @@
 // Rodam no `npm test` junto com os testes do JS que vierem depois.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -1349,4 +1350,15 @@ test('android: plugin tomatito-android, capability só do Android e as permissõ
   assert.match(kotlin, /^package io\.github\.kbrianps\.tomatito\.android$/m);
   assert.match(kotlin, /@TauriPlugin(\([^]*?\))?\nclass TomatitoPlugin\(/);
   assert.match(ler(`${plugin}/android/build.gradle.kts`), /namespace = "io\.github\.kbrianps\.tomatito\.android"/);
+});
+
+test('android: nenhuma chave de assinatura no repositório, e a versão do Android é a do Cargo.toml (A19)', () => {
+  const rastreados = execFileSync('git', ['ls-files'], { cwd: new URL('..', import.meta.url), encoding: 'utf8' }).split('\n');
+  assert.deepEqual(rastreados.filter((f) => /\.(jks|keystore|p12)$|keystore\.properties$/.test(f)), []);
+  const cargo = /^version = "([^"]+)"/m.exec(ler('src-tauri/Cargo.toml'))[1];
+  assert.equal(JSON.parse(ler('src-tauri/tauri.android.conf.json')).version, cargo);
+  // O release só sai assinado: sem a chave, o Gradle falha (7.3).
+  const gradle = ler('src-tauri/gen/android/app/build.gradle.kts');
+  assert.match(gradle, /if \(pedeRelease && !temChave && System\.getenv\("TOMATITO_SEM_ASSINATURA"\) != "1"\) \{\n    error\(/);
+  assert.doesNotMatch(gradle, /storePassword = "|keyPassword = "/);
 });
