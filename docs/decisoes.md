@@ -1718,3 +1718,8 @@ Na worktree `android`, com A13, A05, A06, A14 e A15 feitos: `npm test` 497/497; 
 3. **`scripts/android/conferir-aab.mjs`: 7/7** (bundletool validate; jarsigner e o certificado igual ao da chave; pacote, versão 0.2.0/2000, minSdk 24, targetSdk 37, rótulo; três ABIs; permissões exatas, sem INTERNET; zipalign de 16 KB; `LOAD` em 0x4000).
 4. **`keytool` em inglês no script** (`-J-Duser.language=en`): o do Java 25 em pt-BR quebra ao imprimir um certificado (`MissingFormatArgumentException`).
 5. O SHA-256 do AAB entra no `docs/android/versoes.md` no A26, com o pacote final (o A23 ainda muda o app).
+
+## A20 (Android): fumaça do release no emulador (05/10/2026)
+
+1. **`scripts/android/fumaca-release.mjs`: 5/5 no tt37 e 5/5 no tt37k (núcleo de 16 KB)**, com o AAB assinado instalado pelo `instalar.mjs --release`: o app abre com a tela Foco pintada; o toque em "Iniciar sessão de foco" agenda o fim como alarme exato e mostra a contínua; em segundo plano, com a tela apagada e Doze forçado, o aviso "Sessão de foco concluída" chega 6 ms depois do instante agendado (limite: 5 s); logcat sem `FATAL`, `panicked` nem classe faltando (o R8 não quebrou os receivers).
+2. **Desvio do plano:** em vez de pôr Foco e Intervalo em 1 min por toques nas Configurações e esperar uma sessão de 5 min, o roteiro inicia a sessão padrão e adianta o relógio do aparelho até 3 s antes do fim (`adb root` + `date`). Confere o mesmo caminho (alarme exato, receiver, aviso) sem depender de coordenadas de várias telas num build sem CDP. A presença do botão é conferida pelo pixel da captura (o `uiautomator` não expõe o conteúdo da WebView).
