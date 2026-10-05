@@ -383,7 +383,7 @@ function criarContexto(chrome, origem) {
       ouvintes.add(ouvir);
     });
 
-  async function novaAba({ celular: nomeDoPerfil, caminho } = {}) {
+  async function novaAba({ celular: nomeDoPerfil, caminho, duasAbas = false } = {}) {
     const { targetId } = await chrome.cmd('Target.createTarget', { url: 'about:blank' });
     const { sessionId } = await chrome.cmd('Target.attachToTarget', { targetId, flatten: true });
     const pagina = {
@@ -397,6 +397,8 @@ function criarContexto(chrome, origem) {
       segundoPlano: [],
       perfil: undefined,
       fechada: false,
+      noApp: false,
+      duasAbas,
       cmd: (method, params = {}) => chrome.cmd(method, params, sessionId),
       async avaliar(expression) {
         const r = await chrome.cmd('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }, sessionId);
@@ -409,6 +411,16 @@ function criarContexto(chrome, origem) {
       /** Navega para `caminho` (relativo à origem) e espera o load. */
       async abrir(destino = '/') {
         const url = /^[a-z]+:/.test(destino) ? destino : origem + destino;
+        // v0.3: o app roda numa aba só (platform/web/aba-unica.js). Antes de
+        // abri-lo aqui, as outras abas que o têm aberto vão para about:blank
+        // (soltando a trava); o caso `aba-unica` pede `duasAbas` para vê-lo
+        // bloquear.
+        if (url.startsWith(origem) && !pagina.duasAbas) {
+          for (const outra of paginas.values()) {
+            if (outra !== pagina && !outra.fechada && outra.noApp) await outra.abrir('about:blank');
+          }
+        }
+        pagina.noApp = url.startsWith(origem);
         const carregou = esperarEvento(pagina, 'Page.loadEventFired');
         const r = await pagina.cmd('Page.navigate', { url });
         if (r.errorText) throw new Error(`não abriu ${url}: ${r.errorText}`);

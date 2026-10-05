@@ -454,6 +454,13 @@ export default Object.freeze({
       semXwayland: 'Esta sessão não tem Xwayland, e a opção fica sem efeito.',
     }),
   }),
+  // v0.3: o aviso da aba duplicada na versão web (platform/web/aba-unica.js).
+  abaUnica: Object.freeze({
+    titulo: 'O Tomatito já está aberto em outra aba',
+    texto: 'Para não contar o tempo duas vezes, ele funciona numa aba só. Esta aba assume sozinha se a outra for fechada.',
+    usarAqui: 'Usar nesta aba',
+    passando: 'Passando para esta aba…',
+  }),
   // W14: o InfoBar da versão web, no cartão de sessão, depois do primeiro
   // "Iniciar sessão de foco" com a permissão ainda não pedida
   // (views/focus/pedido-de-avisos.js; PLANO-WEB, 4).

@@ -319,7 +319,9 @@ export default async function casoPermissao(t) {
 
   // (i) "Permitir avisos" nas Configurações: 1 pedido.
   await permissao(t, 'prompt');
-  await p.recarregar();
+  // v0.3: a primeira aba foi para about:blank quando a outra abriu o app (uma
+  // aba só); volta às Configurações, o que equivale à recarga de antes.
+  await p.abrir('/#/configuracoes');
   await esperar(p, visivel(`${CARTAO} [data-permitir]`));
   const antes = await p.avaliar(PEDIDOS);
   await clicar(t, `${CARTAO} [data-permitir]`);

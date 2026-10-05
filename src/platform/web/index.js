@@ -26,6 +26,8 @@
 // (o cartão Atualizar das Configurações).
 // W17: o título da aba (aba.js), com o tempo da sessão como na bandeja do
 // desktop, desligável pela chave `tomatito:web.tempoNaAba`.
+// v0.3: uma aba só (aba-unica.js). Quem espera pela trava é o motor (o
+// `motor.iniciar()`): sem ela, nenhum comando, estado ou gravação anda.
 // W18: o cartão "Tempo na aba" chega à chave pelo `abaDaCasca`, e o
 // "Instalar o Tomatito" ao convite do navegador pelo `instalacaoDaCasca`
 // (instalacao.js).
