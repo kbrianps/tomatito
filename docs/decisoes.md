@@ -1730,3 +1730,10 @@ Na worktree `android`, com A13, A05, A06, A14 e A15 feitos: `npm test` 497/497; 
 2. **A sexta captura é a Aparência**, e não o tomate em tela cheia (A16, adiado).
 3. A captura 5 (Claro) foi refeita à mão: a primeira saiu no meio da troca de tema; a espera do script subiu de 0,9 s para 2,5 s.
 4. **`scripts/android/graficos-loja.mjs`:** `icone-512.png` (512 × 512, RGBA, 28 KB) e `destaque-1024x500.png` (1024 × 500, RGB sem alfa), com a marca, "Tomatito" e a frase "Timer de foco simples, com intervalos na hora certa."
+
+## A23 (Android): política de privacidade (05/10/2026)
+
+1. **Endereço: `https://tomatito.kbrianps.workers.dev/privacidade`** (o plano falava em `pages.dev`; a web foi publicada no Workers, W41). Fica em `src/lib/links.js`.
+2. **`privacidade.html` completo** (data, o que fica guardado, as três permissões do Android e por quê, "sem permissão de internet", os registros da hospedagem na versão web, como apagar, contato).
+3. **No "Sobre":** no Android, um botão "Abrir" que chama o `abrir_url` do plugin; na web, um link para `/privacidade`; no desktop, nada. Conferido no tt37: o toque faz o `dumpsys activity` mostrar `dat=https://tomatito.kbrianps.workers.dev/privacidade` com o Chrome na frente.
+4. O texto novo só chega ao endereço público quando a web for publicada de novo (A26).

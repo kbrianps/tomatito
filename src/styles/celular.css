@@ -81,7 +81,7 @@ html[data-casca]{ touch-action:manipulation; }
   :where([data-casca]) :where(button, a.tt-nav-item, fluent-checkbox, fluent-switch, fluent-radio, fluent-dropdown){
     position:relative;
   }
-  [data-casca] :is(button, a.tt-nav-item, fluent-checkbox, fluent-switch, fluent-radio, fluent-dropdown)::after{
+  [data-casca] :is(button, a.tt-nav-item, a.tt-link, fluent-checkbox, fluent-switch, fluent-radio, fluent-dropdown)::after{
     content:""; position:absolute; top:50%; left:50%;
     width:max(100%, 48px); height:max(100%, 48px);
     translate:-50% -50%;

@@ -12,7 +12,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const SAIDA = join(RAIZ, 'docs/android/play');
@@ -23,7 +23,7 @@ const chrome = (html, largura, altura, saida, transparente) => {
   writeFileSync(pagina, html);
   execFileSync('google-chrome', ['--headless=new', '--disable-gpu', '--hide-scrollbars', `--user-data-dir=${join(tmp, 'perfil')}`,
     ...(transparente ? ['--default-background-color=00000000'] : []),
-    `--window-size=${largura},${altura}`, `--screenshot=${saida}`, `file://${pagina}`], { stdio: 'ignore' });
+    `--window-size=${largura},${altura}`, `--screenshot=${saida}`, pathToFileURL(pagina).href], { stdio: 'ignore' });
 };
 const cabecalho = (arq) => { const d = readFileSync(arq); return { largura: d.readUInt32BE(16), altura: d.readUInt32BE(20), bits: d[24], tipoDeCor: d[25], kb: Math.round(statSync(arq).size / 1024) }; };
 

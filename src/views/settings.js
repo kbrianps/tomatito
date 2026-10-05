@@ -59,6 +59,7 @@ import { ligarAvisosWeb } from './avisos-web.js';
 import { ligarAtualizarWeb } from './atualizar-web.js';
 import { ligarNavegadorWeb } from './navegador-web.js';
 import { casca as cascaDaPlataforma } from '#plataforma';
+import { POLITICA_DE_PRIVACIDADE } from '../lib/links.js';
 
 const c = t.configuracoes;
 // M56: o `tomato_on_top_available`, carregado só quando a dica precisa (os
@@ -317,13 +318,22 @@ let versaoConhecida = null;
  * (`versao`, ou vazio até o `getVersion()` responder) e, aberto, os avisos de
  * terceiros e o aviso de marcas.
  */
-export function marcacaoDoSobre({ icone = semIcone, versao = null, abertosAgora = new Set(), web = false } = {}) {
+export function marcacaoDoSobre({ icone = semIcone, versao = null, abertosAgora = new Set(), web = false, privacidade = null } = {}) {
   // M46: os dois arquivos vão no pacote (bundle.resources), e cada botão abre
   // o seu no diálogo. O nome do botão é o texto dele; o rótulo da linha, a
   // descrição.
   const avisos =
     item('config-avisos', c.sobre.avisos, `<button type="button" data-avisos="avisos" aria-describedby="config-avisos">${c.sobre.verAvisos}</button>`) +
     item('config-fonte', c.sobre.fonte, `<button type="button" data-avisos="ofl" aria-describedby="config-fonte">${c.sobre.verLicenca}</button>`);
+  // A23: a política de privacidade. Na web, um link para a página do próprio
+  // site; no Android, um botão que a abre no navegador (o plugin). No desktop,
+  // nada (não há como abrir um endereço sem um plugin a mais).
+  const politica =
+    privacidade === 'link'
+      ? item('config-privacidade', c.sobre.privacidade, `<a class="tt-link" href="/privacidade" target="_blank" rel="noopener" aria-describedby="config-privacidade">${c.sobre.verPolitica}</a>`)
+      : privacidade === 'botao'
+        ? item('config-privacidade', c.sobre.privacidade, `<button type="button" data-privacidade aria-describedby="config-privacidade">${c.sobre.verPolitica}</button>`)
+        : '';
   const marcas = `<div class="tt-config-item tt-config-nota"><p id="config-marcas" class="tt-config-descricao tt-t-caption">${c.sobre.marcas}</p></div>`;
   // W18: na web, as duas linhas das limitações honestas (PLANO-WEB-V1, 7).
   const linhasDaWeb = web
@@ -340,7 +350,7 @@ export function marcacaoDoSobre({ icone = semIcone, versao = null, abertosAgora 
       titulo: web ? c.sobre.web.nome : t.app.nome,
       descricao: c.sobre.licenca,
       valor: versao ? c.sobre.versao(versao) : '',
-      conteudo: linhasDaWeb + avisos + marcas,
+      conteudo: linhasDaWeb + avisos + politica + marcas,
       chevron: icone('chevron_down', 16),
       aberto: abertosAgora.has('sobre'),
     }) +
@@ -382,7 +392,7 @@ export function marcacao({
     `aria-labelledby="config-tema" aria-describedby="config-tema-desc"${marcada ? ` value="${marcada}"` : ''}>` +
     `${opcoes}</fluent-radio-group></div></section>` +
     (casca?.secaoSistema === false || casca?.web ? '' : marcacaoDoSistema(configuracoes, { icone, recursos })) +
-    marcacaoDoSobre({ icone, versao, abertosAgora, web: Boolean(casca?.web) }) +
+    marcacaoDoSobre({ icone, versao, abertosAgora, web: Boolean(casca?.web), privacidade: casca?.web ? 'link' : casca?.android ? 'botao' : null }) +
     '</div>'
   );
 }
@@ -629,6 +639,10 @@ export function ligarSistemaESobre(
     const botao = ev.target.closest?.('[data-expansor]');
     if (botao) {
       alternar(botao);
+      return;
+    }
+    if (ev.target.closest?.('[data-privacidade]')) {
+      Promise.resolve(ipc.android?.abrirUrl?.(POLITICA_DE_PRIVACIDADE)).catch((erro) => console.error('[privacidade]', erro));
       return;
     }
     const abre = ev.target.closest?.('[data-avisos]');

@@ -326,6 +326,10 @@ export default Object.freeze({
       // mostra os dois arquivos do pacote (views/notices-dialog.js).
       fonte: 'Licença da fonte Inter',
       verLicenca: 'Ver licença',
+      // A23: a política de privacidade (o site da versão web); no Android abre
+      // no navegador, e na web é um link.
+      privacidade: 'Política de privacidade',
+      verPolitica: 'Abrir',
       dialogo: Object.freeze({
         titulos: Object.freeze({
           avisos: 'Avisos de terceiros',

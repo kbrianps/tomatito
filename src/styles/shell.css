@@ -874,3 +874,8 @@ input.tt-deslizante:focus-visible{ outline:2px solid var(--tt-focus-outer); outl
 [data-casca] .tt-titlebar{ display:none; }
 [data-casca] .tt-janela{ grid-template-rows:minmax(0,1fr); height:100dvh; }
 [data-casca] .tt-corpo{ padding-top:8px; }
+
+/* A23: o link da política de privacidade no Sobre (só a web; no Android é um
+   botão). */
+.tt-config-item a.tt-link{ position:relative; color:var(--tt-accent-fg); text-underline-offset:3px; border-radius:var(--tt-r-ctl); }
+.tt-config-item a.tt-link:focus-visible{ outline:2px solid var(--tt-focus-outer); outline-offset:2px; }
