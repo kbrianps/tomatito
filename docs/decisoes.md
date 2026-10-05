@@ -1749,3 +1749,5 @@ Na worktree `android`, com A13, A05, A06, A14 e A15 feitos: `npm test` 497/497; 
 
 1. **Pacote final** (com o A23): `conferir-aab.mjs` 7/7, SHA-256 gravado no `docs/android/versoes.md`; `fumaca-release.mjs` 5/5 no tt37 com ele; `ficha.mjs` e `conferir-publicar.mjs` ok.
 2. O `versao.mjs` contava a linha "não enviado" como enviada (o `\s*` antes do lookahead recuava); corrigido.
+
+**Verificação final na `main` (05/10/2026):** `npm test` 498/498; 29 casos da web verdes no perfil de desktop e no `--celular m`; bateria do desktop com `build.txt` igual ao da base, 24/24 capturas iguais e nenhum teste do cargo a menos. O roteiro `config-sistema` acusou 14/16 só porque conferia o texto fixo "Versão 0.1.0"; passou a conferir a forma (`Versão x.y.z`) e voltou a 16/16.

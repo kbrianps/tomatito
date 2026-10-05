@@ -5,7 +5,7 @@
 // configuração: nada toca na máquina). Tudo pelo ponteiro virtual, nos
 // controles da tela:
 //   partida 1 (sem dados do app):
-//     - "Sistema" e "Sobre" na tela, nos padrões, com "Versão 0.1.0" (o
+//     - "Sistema" e "Sobre" na tela, nos padrões, com "Versão x.y.z" (o
 //       getVersion() do Cargo.toml) no cabeçalho do Sobre, que abre com o aviso
 //       de marcas;
 //     - os recursos no console do dev:app: `(await import('/src/platform/
@@ -21,6 +21,9 @@
 // O resumo-config-sistema.mjs confere as checagens e os logs.
 //
 //   bash scripts/gnome-aninhado/rodar.sh config-sistema
+// A versão é a do Cargo.toml (muda a cada lançamento): confere só a forma.
+const VERSAO = /^Versão \d+\.\d+\.\d+$/;
+
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -288,12 +291,12 @@ async function principal() {
   const e0 = await esperar(async () => { const e = await ler(); return e?.versao ? e : null; }, 10000, 'a versão no Sobre');
   R.inicial = e0;
   checar(
-    'Sistema e Sobre na tela, nos padrões (fechar para a bandeja ligado, tempo na bandeja desligado, Sair) e com "Versão 0.1.0"',
+    'Sistema e Sobre na tela, nos padrões (fechar para a bandeja ligado, tempo na bandeja desligado, Sair) e com "Versão x.y.z"',
     // Junção com o M57: no Wayland, a seção Avançado (Compatibilidade X11) entra antes do Sobre.
     JSON.stringify(e0.secoes) === '["Sessões de foco","Aparência","Sistema","Avançado","Sobre"]' &&
       e0.fechar?.visivel && e0.fechar.ligado === true && e0.fechar.estado === 'Ativado' &&
       e0.tempo?.visivel && e0.tempo.ligado === false && e0.tempo.estado === 'Desativado' &&
-      e0.sair === 'Sair' && e0.versao === 'Versão 0.1.0' && e0.sobreAberto === 'false',
+      e0.sair === 'Sair' && VERSAO.test(e0.versao) && e0.sobreAberto === 'false',
     e0,
   );
   const g0 = await invoke('get_state');
@@ -369,7 +372,7 @@ async function principal() {
   const f0 = await esperar(async () => { const e = await ler(); return e?.versao ? e : null; }, 10000, 'a versão no Sobre');
   checar(
     'partida 2: os valores voltam do disco (fechar desligado, tempo desligado)',
-    f0.fechar?.ligado === false && f0.fechar.estado === 'Desativado' && f0.tempo?.ligado === false && f0.versao === 'Versão 0.1.0',
+    f0.fechar?.ligado === false && f0.fechar.estado === 'Desativado' && f0.tempo?.ligado === false && VERSAO.test(f0.versao),
     { fechar: f0.fechar, tempo: f0.tempo, versao: f0.versao },
   );
   await clicar('[data-cartao="fechar-bandeja"] fluent-switch');
