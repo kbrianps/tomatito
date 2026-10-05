@@ -93,10 +93,12 @@ export function esperarVez({
       botao?.focus?.();
     };
     const liberar = (como) => {
+      const avisou = aviso !== null;
       aviso?.remove();
       aviso = null;
       delete doc.documentElement.dataset.abaBloqueada;
-      doc.querySelector?.('.tt-janela')?.toggleAttribute?.('inert', false);
+      // Só se o aviso chegou a aparecer: o `inert` também é do palco do Full.
+      if (avisou && !('palco' in doc.documentElement.dataset)) doc.querySelector?.('.tt-janela')?.toggleAttribute?.('inert', false);
       assumir();
       pronto(como);
     };

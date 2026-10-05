@@ -725,7 +725,7 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
   const desligarSistema = ligarSistemaESobre(raiz, { store, ipc, icone });
   // M56: a dica do Alt+Espaço no Wayland (dica-sempre-na-frente.js), só
   // onde há o Full.
-  const semDica = casca?.full === false ? () => {} : ligarDicaSempreNaFrente(raiz.querySelector('.tt-config-secao'), { doc, porCodigo, evento: EVENTO });
+  const semDica = casca?.full === false || casca?.web ? () => {} : ligarDicaSempreNaFrente(raiz.querySelector('.tt-config-secao'), { doc, porCodigo, evento: EVENTO });
   // M57: a Compatibilidade X11 (opcao-x11.js), na seção Avançado, antes do
   // Sobre; na web, não (W18).
   const semX11 = casca?.secaoSistema === false || casca?.web ? () => {} : ligarOpcaoX11(raiz.querySelector('.tt-pagina'), { icone, ipc: compatX11 });

@@ -1,0 +1,111 @@
+/* O palco do Tomatito Full na versão web (v0.3; views/palco-tomate.js): o
+   tomate por cima do app, no fundo do tema, com a barra de ações embaixo.
+   Aplicada junto com o tomato.css pelo platform/web/palco-carga.js. */
+.tt-palco {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  background: var(--tt-tomato-10, #1c0d0b);
+  color: var(--tt-tomato-ink, #fff);
+}
+.tt-palco[hidden] {
+  display: none;
+}
+/* O lado do tomate: o que couber, deixando a barra de baixo. */
+.tt-palco-tomate {
+  flex: none;
+  width: min(92vw, calc(100dvh - 120px), 560px);
+}
+.tt-palco .stage,
+.tt-mini-tomate .stage {
+  --size: 100%;
+  pointer-events: auto;
+}
+.tt-palco .art .calyx,
+.tt-palco .art .stem,
+.tt-mini-tomate .art .calyx,
+.tt-mini-tomate .art .stem {
+  cursor: default;
+}
+/* Os ícones com medida própria: na página do app, o 50% do tomato.css
+   resolve pela metade do que resolve na janela do desktop. */
+.tt-palco .btn svg,
+.tt-mini-tomate .btn svg {
+  width: max(16px, 6.9cqw);
+  height: max(16px, 6.9cqw);
+}
+.tt-palco .btn-primary svg,
+.tt-mini-tomate .btn-primary svg {
+  width: max(18px, 7.2cqw);
+  height: max(18px, 7.2cqw);
+}
+/* No palco, quem volta ao modo normal é o botão da barra, com texto. */
+.tt-palco .face > .pos-restore {
+  display: none;
+}
+.tt-palco-barra {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.tt-palco-barra button {
+  appearance: none;
+  min-height: 36px;
+  padding: 0 16px;
+  font: inherit;
+  font-family: var(--tt-font-text);
+  font-size: 14px;
+  color: inherit;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 24%, transparent);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.tt-palco-barra button:hover {
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+.tt-palco-barra button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+@media (pointer: coarse) {
+  .tt-palco-barra button {
+    min-height: 48px;
+  }
+}
+/* Deitado e baixo (celular na horizontal): a barra vai para o lado. */
+@media (max-height: 420px) {
+  .tt-palco {
+    flex-direction: row;
+  }
+  .tt-palco-tomate {
+    width: min(calc(100dvh - 32px), 60vw);
+  }
+  .tt-palco-barra {
+    flex-direction: column;
+  }
+}
+
+/* O mini tomate (Document Picture-in-Picture): a janelinha inteira é o tomate. */
+.tt-mini-tomate,
+.tt-mini-tomate body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--tt-tomato-10, #1c0d0b);
+}
+.tt-mini-tomate body {
+  display: grid;
+  place-items: center;
+}
+.tt-mini-tomate .stage {
+  --size: min(100vw, 100vh);
+}

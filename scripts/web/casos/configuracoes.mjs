@@ -6,8 +6,8 @@
 //
 // (a) o texto da tela (o visível e o de todo o conteúdo, inclusive o que está
 //     dentro do Sobre fechado) não contém "bandeja", "Sair do Tomatito",
-//     "X11", "Sempre na frente" nem "Full", e contém "Tempo na aba";
-// (b) a Aparência tem 5 opções: os 4 temas e o Sistema;
+//     "X11" nem "Sempre na frente", e contém "Tempo na aba";
+// (b) a Aparência tem 6 opções: os 4 temas, o Full (v0.3) e o Sistema;
 // (c) "Ver avisos" abre o diálogo com o começo do THIRD_PARTY_NOTICES.md;
 // (d) a versão no Sobre é a do Cargo.toml, e o Sobre diz "Tomatito para a
 //     web", com as duas linhas da seção 7 do PLANO-WEB-V1;
@@ -53,7 +53,8 @@ const BARRAR_CONVITE = `window.addEventListener('beforeinstallprompt', (e) => {
 }, true);`;
 
 const PRONTA = `!!document.querySelector('[data-secao="navegador"] [data-tempo-aba]') && !!document.querySelector('[data-secao="avisos"]') && /\\d/.test(document.querySelector('#config-sobre-valor')?.textContent ?? '')`;
-const PROIBIDOS = ['bandeja', 'Sair do Tomatito', 'X11', 'Sempre na frente', 'Full'];
+// v0.3: o Full passou a existir na web (o palco); o que é da janela do desktop continua fora.
+const PROIBIDOS = ['bandeja', 'Sair do Tomatito', 'X11', 'Sempre na frente'];
 
 async function irAsConfiguracoes(p) {
   await p.avaliar(`location.hash = '#/foco'`);
@@ -76,7 +77,7 @@ export default async function configuracoes(t) {
   })`);
   const achados = PROIBIDOS.filter((w) => textos.visivel.includes(w) || textos.tudo.includes(w));
   t.conferir(
-    '(a) sem "bandeja", "Sair do Tomatito", "X11", "Sempre na frente" nem "Full"; com "Tempo na aba"',
+    '(a) sem "bandeja", "Sair do Tomatito", "X11" nem "Sempre na frente"; com "Tempo na aba"',
     achados.length === 0 && textos.visivel.includes('Tempo na aba'),
     { achados, temTempoNaAba: textos.visivel.includes('Tempo na aba') },
   );
@@ -84,8 +85,8 @@ export default async function configuracoes(t) {
   // (b)
   const temas = await p.avaliar(`[...document.querySelectorAll('.tt-temas .tt-tema')].map((o) => [o.dataset.tema, o.textContent.trim()])`);
   t.conferir(
-    '(b) a Aparência tem 5 opções (4 temas e Sistema)',
-    temas.map(([e]) => e).join() === 'lite,suave,light,dark,system',
+    '(b) a Aparência tem 6 opções (4 temas, o Full e o Sistema)',
+    temas.map(([e]) => e).join() === 'lite,suave,light,dark,full,system',
     temas.map(([, n]) => n),
   );
 

@@ -480,6 +480,15 @@ export default Object.freeze({
       semXwayland: 'Esta sessão não tem Xwayland, e a opção fica sem efeito.',
     }),
   }),
+  // v0.3: o palco do Tomatito Full na versão web (views/palco-tomate.js).
+  palco: Object.freeze({
+    nome: 'Tomatito Full',
+    telaCheia: 'Tela cheia',
+    sairDaTelaCheia: 'Sair da tela cheia',
+    mini: 'Mini tomate',
+    tituloDoMini: 'Tomatito',
+    fecharMini: 'Fechar o mini tomate',
+  }),
   // v0.3: o aviso da aba duplicada na versão web (platform/web/aba-unica.js).
   abaUnica: Object.freeze({
     titulo: 'O Tomatito já está aberto em outra aba',

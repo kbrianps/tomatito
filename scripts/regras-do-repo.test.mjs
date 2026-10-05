@@ -1218,7 +1218,7 @@ test('web e Android: a casca das três plataformas, com as mesmas chaves (PLANO-
   for (const c of [desktop, android, web]) assert.deepEqual(Object.keys(c).sort(), [...chaves].sort());
   const esperado = {
     desktop: { web: false, android: false, barraDeTitulo: true, bloqueiosDeProducao: true, atalhosDaJanela: true, atalhosDeNavegacao: true, sair: true, full: true, tomateTelaCheia: false, formaCelular: false, secaoSistema: true, volume: true },
-    web: { web: true, android: false, barraDeTitulo: false, bloqueiosDeProducao: false, atalhosDaJanela: false, atalhosDeNavegacao: false, sair: false, full: false, tomateTelaCheia: false, formaCelular: true, secaoSistema: false, volume: true },
+    web: { web: true, android: false, barraDeTitulo: false, bloqueiosDeProducao: false, atalhosDaJanela: false, atalhosDeNavegacao: false, sair: false, full: true, tomateTelaCheia: false, formaCelular: true, secaoSistema: false, volume: true },
     android: { web: false, android: true, barraDeTitulo: false, bloqueiosDeProducao: true, atalhosDaJanela: false, atalhosDeNavegacao: false, sair: false, full: false, tomateTelaCheia: true, formaCelular: true, secaoSistema: false, volume: false },
   };
   assert.deepEqual(desktop, esperado.desktop);
@@ -1226,7 +1226,7 @@ test('web e Android: a casca das três plataformas, com as mesmas chaves (PLANO-
   assert.deepEqual(android, esperado.android);
   assert.match(ler('src/platform/tauri.js'), /export const casca = globalThis\.__TT_PLATFORM__ === 'android' \? ANDROID : DESKTOP;/);
   const main = ler('src/main.js');
-  assert.match(main, /^  if \(casca\.full\) ligarValidacaoDoFull\(\{ ipc \}\)/m);
+  assert.match(main, /^  if \(casca\.full && !casca\.web\) ligarValidacaoDoFull\(\{ ipc \}\)/m);
   assert.match(main, /^  if \(casca\.atalhosDeNavegacao\) ligarAtalhosDeNavegacao\(/m);
 });
 

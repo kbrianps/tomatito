@@ -17,7 +17,7 @@ import '@fluentui/web-components/menu-list.js';
 import '@fluentui/web-components/menu-item.js';
 import '@fluentui/web-components/tooltip.js';
 import { Updates } from '@microsoft/fast-element';
-import { janelaAtual as getCurrentWindow, casca } from '#plataforma';
+import { janelaAtual as getCurrentWindow, casca, palcoDaCasca } from '#plataforma';
 import { ligarFormaCelular } from './lib/forma.js';
 import { ligarTeclado } from './lib/teclado.js';
 
@@ -99,8 +99,10 @@ try {
   ligarCoresDasBarras({ h, cores: ipc.android.cores });
   // M52: a validação com reversão do Full (5.9): a pergunta de 10 s e a
   // oferta do modo opaco, num diálogo por cima de qualquer tela.
-  // Na web não há Full (casca.full).
-  if (casca.full) ligarValidacaoDoFull({ ipc }).pronto.catch((erro) => console.error('[validação do Full]', erro));
+  // Só no desktop: na web, o Full é um palco na própria página (abaixo).
+  if (casca.full && !casca.web) ligarValidacaoDoFull({ ipc }).pronto.catch((erro) => console.error('[validação do Full]', erro));
+  // v0.3: o Tomatito Full na web (views/palco-tomate.js), por cima do app.
+  if (casca.full && casca.web) palcoDaCasca?.({ store }).catch((erro) => console.error('[palco]', erro));
   // M25: seguir o sistema, com as guardas (a) e (b) da 4.6. A troca pela
   // interface passa pelo `durante`, que segura as conferências até ela acabar.
   const midia = matchMedia('(prefers-color-scheme: dark)');

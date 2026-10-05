@@ -114,10 +114,8 @@ const DESPERTAM = new Set(['focus_start', 'focus_resume', 'focus_skip', 'timer_s
 export { emit, listen } from './barramento.js';
 export { janelaAtual } from './janela.js';
 
-/** Comandos do desktop que não existem no navegador (o Full, reiniciar e sair). */
+/** Comandos do desktop que não existem no navegador (a janela do Full, reiniciar e sair). */
 export const SEM_SUPORTE = Object.freeze([
-  'switch_window_mode',
-  'show_main',
   'full_validation_answer',
   'set_tomato_region',
   'tomato_debug_size',
@@ -164,8 +162,31 @@ async function gravarConfiguracoes({ patch } = {}) {
   return s;
 }
 
+/**
+ * v0.3: o Full na web. `switch_window_mode{full}` faz o que o Rust faz com as
+ * configurações (window/tomato.rs): entrar grava `theme: 'full'` (o
+ * `lastNormalTheme` fica), e sair volta a ele. Quem mostra o tomate é o
+ * palco (views/palco-tomate.js), pelo `tt://settings` que a main reflete no
+ * <html>.
+ */
+async function trocarModo({ full } = {}) {
+  // O `ler` normaliza pelo wasm: só com o motor carregado.
+  await motor.iniciar();
+  const atual = configuracoes.ler();
+  if (Boolean(full) === (atual.theme === 'full')) return;
+  await gravarConfiguracoes({ patch: { theme: full ? 'full' : atual.lastNormalTheme } });
+}
+
+/** `show_main{route}`: sai do Full e abre a rota pedida (as Configurações). */
+async function mostrarMain({ route } = {}) {
+  await trocarModo({ full: false });
+  if (typeof route === 'string' && route.startsWith('#/')) globalThis.location.hash = route;
+}
+
 /** Os comandos atendidos aqui mesmo, sem o motor. */
 const LOCAIS = Object.freeze({
+  switch_window_mode: trocarModo,
+  show_main: mostrarMain,
   get_state: async () => ({
     ...(await motor.estado()),
     settings: configuracoes.ler(),
@@ -216,7 +237,7 @@ export const casca = Object.freeze({
   atalhosDaJanela: false, // Ctrl+W e Ctrl+Q são do navegador
   atalhosDeNavegacao: false, // Ctrl+1–3 trocam de aba no navegador
   sair: false,
-  full: false, // o Full na web fica para depois
+  full: true, // v0.3: o tomate num palco por cima do app (views/palco-tomate.js)
   formaCelular: true, // pode usar o layout de celular (quem liga é o boot-web.js, W07a)
   android: false,
   tomateTelaCheia: false,
@@ -255,6 +276,22 @@ export const avisosDaCasca = criarPermissao({
   permissoes: () => globalThis.navigator?.permissions ?? null,
   registro: () => registroAtivo(),
 });
+
+/**
+ * v0.3: monta o palco do Tomatito Full (views/palco-tomate.js) com o store
+ * da página. O desenho e as folhas chegam só aqui (palco-carga.js). No
+ * desktop, null (platform/tauri.js): lá o Full é uma janela.
+ */
+export async function palcoDaCasca({ store }) {
+  const [{ criarPalco }, carga] = await Promise.all([import('../../views/palco-tomate.js'), import('./palco-carga.js')]);
+  return criarPalco({
+    store,
+    desenho: carga.desenhoDoTomate(),
+    estilos: carga.estilos,
+    sair: () => trocarModo({ full: false }),
+    configuracoes: () => mostrarMain({ route: '#/configuracoes' }),
+  });
+}
 
 /**
  * v0.3: exportar e importar os dados deste navegador (dados.js), para a seção
