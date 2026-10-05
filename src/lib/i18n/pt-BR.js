@@ -281,6 +281,28 @@ export default Object.freeze({
     // de terceiros (o botão funciona a partir do M46) e o aviso de marcas da
     // seção 9 do plano.
     sistema: 'Sistema',
+    // A13 (PLANO-ANDROID 4.3): o cartão "Avisos", só no Android
+    // (views/avisos-android.js). A permissão de notificação e, sem alarme
+    // exato (Android 12/12L), o aviso de atraso.
+    notificacoes: Object.freeze({
+      secao: 'Avisos',
+      titulo: 'Avisos do sistema',
+      estados: Object.freeze({
+        granted: 'Permitidos. O fim de cada fase aparece mesmo com o Tomatito fechado.',
+        denied: 'Bloqueados. O fim das fases não aparece fora do Tomatito.',
+        prompt: 'Ainda não permitidos. O pedido aparece no primeiro início de uma sessão.',
+        // `prompt` depois de o pedido já ter saído uma vez (recusado ou revogado).
+        recusado: 'Ainda não permitidos. O fim das fases não aparece fora do Tomatito.',
+      }),
+      permitir: 'Permitir avisos',
+      abrir: 'Abrir configurações de avisos do sistema',
+      atrasar: 'Os avisos podem atrasar alguns minutos, porque o sistema não permite alarmes exatos para o Tomatito.',
+      // A faixa discreta da tela Foco quando os avisos estão bloqueados.
+      faixa: Object.freeze({
+        texto: 'Os avisos estão bloqueados: o fim das fases não aparece com o Tomatito fechado.',
+        permitir: 'Permitir avisos',
+      }),
+    }),
     fecharParaBandeja: Object.freeze({
       titulo: 'Fechar para a bandeja',
       descricao: 'Fechar a janela só a esconde: a sessão de foco e os temporizadores continuam.',
@@ -304,6 +326,10 @@ export default Object.freeze({
       // mostra os dois arquivos do pacote (views/notices-dialog.js).
       fonte: 'Licença da fonte Inter',
       verLicenca: 'Ver licença',
+      // A23: a política de privacidade (o site da versão web); no Android abre
+      // no navegador, e na web é um link.
+      privacidade: 'Política de privacidade',
+      verPolitica: 'Abrir',
       dialogo: Object.freeze({
         titulos: Object.freeze({
           avisos: 'Avisos de terceiros',

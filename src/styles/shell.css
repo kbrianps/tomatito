@@ -498,6 +498,22 @@
 /* W14 (só a web): o rodapé da seção Avisos, com uma linha por limitação. */
 .tt-avisos-rodape{ flex-direction:column; align-items:flex-start; gap:4px; }
 .tt-avisos-rodape p{ margin:0; }
+/* A13 (Android, views/avisos-android.js): os botões do cartão "Avisos",
+   alinhados à esquerda; e a faixa discreta da tela Foco com os avisos
+   bloqueados, no fundo e na borda do cartão, uma linha em Caption. */
+.tt-config-rodape.tt-avisos-acoes{ justify-content:flex-start; }
+.tt-config-rodape.tt-avisos-acoes > button{ max-width:100%; height:auto; min-height:32px; padding-block:4px; white-space:normal; text-align:start; }
+.tt-config-rodape.tt-avisos-acoes [hidden]{ display:none; }
+.tt-faixa-avisos{
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; max-width:1000px; margin:0 0 12px;
+  padding:8px 12px; background:var(--tt-bg-card); border:1px solid var(--tt-border); border-radius:var(--tt-r-ctl);
+  color:var(--tt-fg-1);
+}
+.tt-faixa-avisos[hidden]{ display:none; }
+.tt-faixa-avisos-icone{ display:flex; flex:none; color:var(--tt-fg-2); }
+.tt-faixa-avisos-icone .tt-icone{ display:block; width:16px; height:16px; fill:currentColor; }
+.tt-faixa-avisos-texto{ flex:1 1 16em; min-width:0; }
+.tt-faixa-avisos > button{ flex:none; }
 fluent-radio-group.tt-temas{
   display:grid; grid-template-columns:repeat(auto-fill, minmax(min(156px, 100%), 1fr)); gap:16px 12px;
   padding:16px 16px 16px 58px; border-top:1px solid var(--tt-border);
@@ -855,6 +871,11 @@ input.tt-deslizante:focus-visible{ outline:2px solid var(--tt-focus-outer); outl
    barra de título própria (a grade fica com uma linha só), a altura da área
    visível e 8 px em cima, o respiro que mantém o canto da camada de conteúdo.
    O data-casca="web" só existe no build web. */
-[data-casca="web"] .tt-titlebar{ display:none; }
-[data-casca="web"] .tt-janela{ grid-template-rows:minmax(0,1fr); height:100dvh; }
-[data-casca="web"] .tt-corpo{ padding-top:8px; }
+[data-casca] .tt-titlebar{ display:none; }
+[data-casca] .tt-janela{ grid-template-rows:minmax(0,1fr); height:100dvh; }
+[data-casca] .tt-corpo{ padding-top:8px; }
+
+/* A23: o link da política de privacidade no Sobre (só a web; no Android é um
+   botão). */
+.tt-config-item a.tt-link{ position:relative; color:var(--tt-accent-fg); text-underline-offset:3px; border-radius:var(--tt-r-ctl); }
+.tt-config-item a.tt-link:focus-visible{ outline:2px solid var(--tt-focus-outer); outline-offset:2px; }

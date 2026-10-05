@@ -20,7 +20,7 @@ const ipc = (cmd, args = {}) => `import('/src/lib/ipc.js').then((m) => m.default
 // do centro (fora do desenho de 32) ainda cai no próprio alvo, em pelo menos
 // uma direção livre de vizinhos. Pega um ::after cortado por overflow.
 const TOQUE_REAL = `(() => {
-  const sel = 'button, a.tt-nav-item, fluent-checkbox, fluent-switch, fluent-radio';
+  const sel = 'button, a.tt-nav-item, fluent-checkbox, fluent-switch, fluent-radio, fluent-dropdown';
   const falhas = [];
   let conferidos = 0;
   for (const el of document.querySelectorAll(sel)) {
@@ -35,7 +35,9 @@ const TOQUE_REAL = `(() => {
     conferidos += 1;
     const acertos = pontos.filter(([x, y]) => {
       const alvo = document.elementFromPoint(x, y);
-      return alvo && (alvo === el || el.contains(alvo));
+      // Também vale cair no controle que envolve o alvo (o botão interno do
+      // fluent-dropdown: o toque na lista a abre do mesmo jeito).
+      return alvo && (alvo === el || el.contains(alvo) || (alvo.contains(el) && alvo.matches(sel)));
     }).length;
     if (!acertos) falhas.push((el.getAttribute('aria-label') || el.textContent.trim().slice(0, 30) || el.localName) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height));
   }
@@ -76,7 +78,7 @@ async function medir(t, p, nome) {
   const dicas = await p.avaliar(`new Promise((ok) => setTimeout(() => ok([...document.querySelectorAll('.tt-dica')].filter((d) => getComputedStyle(d).visibility !== 'hidden' && getComputedStyle(d).display !== 'none' && d.getBoundingClientRect().width > 0).length), 500))`);
   t.conferir(`${nome}: nenhum toque deixou uma .tt-dica visível 500 ms depois`, dicas === 0, dicas);
   await p.avaliar(assentar('configuracoes'));
-  await p.avaliar(`(document.querySelectorAll('.tt-expansor-cabeca[aria-expanded="false"]').forEach((b) => b.click()), new Promise((ok) => setTimeout(ok, 400)))`);
+  await p.avaliar(`(document.querySelectorAll('.tt-expansor-botao[aria-expanded="false"]').forEach((b) => b.click()), new Promise((ok) => setTimeout(ok, 400)))`);
   telas.configuracoes = await p.alvos({ excecoes: EXCECOES });
   const toques = {};
   for (const rota of ['foco', 'temporizador', 'cronometro', 'configuracoes']) {

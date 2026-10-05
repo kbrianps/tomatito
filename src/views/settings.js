@@ -59,6 +59,7 @@ import { ligarAvisosWeb } from './avisos-web.js';
 import { ligarAtualizarWeb } from './atualizar-web.js';
 import { ligarNavegadorWeb } from './navegador-web.js';
 import { casca as cascaDaPlataforma } from '#plataforma';
+import { POLITICA_DE_PRIVACIDADE } from '../lib/links.js';
 
 const c = t.configuracoes;
 // M56: o `tomato_on_top_available`, carregado só quando a dica precisa (os
@@ -206,7 +207,7 @@ const opcoesDaLista = (valores, atual) =>
  * HTML da seção "Sessões de foco" com os valores de `s` (as configurações, no
  * formato do settings.json). `abertosAgora` são os ids dos cartões abertos.
  */
-export function marcacaoDasSessoes(s = PADROES, { icone = semIcone, abertosAgora = new Set() } = {}) {
+export function marcacaoDasSessoes(s = PADROES, { icone = semIcone, abertosAgora = new Set(), comVolume = true } = {}) {
   const chevron = icone('chevron_down', 16);
   const listas = LISTAS.map(({ chave, id, rotulo, valores }) =>
     item(
@@ -245,8 +246,10 @@ export function marcacaoDasSessoes(s = PADROES, { icone = semIcone, abertosAgora
     });
   }).join('');
   const v = volumeDe(s.volume);
-  const volume =
-    '<div class="tt-config-cartao" data-cartao="volume"><div class="tt-config-cabecalho">' +
+  // A05: no Android o som é do canal de notificação (sem volume próprio).
+  const volume = !comVolume
+    ? ''
+    : '<div class="tt-config-cartao" data-cartao="volume"><div class="tt-config-cabecalho">' +
     cabeca('volume', icone('speaker_2', 20), c.volume.titulo, c.volume.descricao) +
     '<span class="tt-config-controle">' +
     `<input type="range" class="tt-deslizante" min="0" max="100" step="1" value="${v}" data-config="volume" ` +
@@ -315,13 +318,22 @@ let versaoConhecida = null;
  * (`versao`, ou vazio até o `getVersion()` responder) e, aberto, os avisos de
  * terceiros e o aviso de marcas.
  */
-export function marcacaoDoSobre({ icone = semIcone, versao = null, abertosAgora = new Set(), web = false } = {}) {
+export function marcacaoDoSobre({ icone = semIcone, versao = null, abertosAgora = new Set(), web = false, privacidade = null } = {}) {
   // M46: os dois arquivos vão no pacote (bundle.resources), e cada botão abre
   // o seu no diálogo. O nome do botão é o texto dele; o rótulo da linha, a
   // descrição.
   const avisos =
     item('config-avisos', c.sobre.avisos, `<button type="button" data-avisos="avisos" aria-describedby="config-avisos">${c.sobre.verAvisos}</button>`) +
     item('config-fonte', c.sobre.fonte, `<button type="button" data-avisos="ofl" aria-describedby="config-fonte">${c.sobre.verLicenca}</button>`);
+  // A23: a política de privacidade. Na web, um link para a página do próprio
+  // site; no Android, um botão que a abre no navegador (o plugin). No desktop,
+  // nada (não há como abrir um endereço sem um plugin a mais).
+  const politica =
+    privacidade === 'link'
+      ? item('config-privacidade', c.sobre.privacidade, `<a class="tt-link" href="/privacidade" target="_blank" rel="noopener" aria-describedby="config-privacidade">${c.sobre.verPolitica}</a>`)
+      : privacidade === 'botao'
+        ? item('config-privacidade', c.sobre.privacidade, `<button type="button" data-privacidade aria-describedby="config-privacidade">${c.sobre.verPolitica}</button>`)
+        : '';
   const marcas = `<div class="tt-config-item tt-config-nota"><p id="config-marcas" class="tt-config-descricao tt-t-caption">${c.sobre.marcas}</p></div>`;
   // W18: na web, as duas linhas das limitações honestas (PLANO-WEB-V1, 7).
   const linhasDaWeb = web
@@ -338,7 +350,7 @@ export function marcacaoDoSobre({ icone = semIcone, versao = null, abertosAgora 
       titulo: web ? c.sobre.web.nome : t.app.nome,
       descricao: c.sobre.licenca,
       valor: versao ? c.sobre.versao(versao) : '',
-      conteudo: linhasDaWeb + avisos + marcas,
+      conteudo: linhasDaWeb + avisos + politica + marcas,
       chevron: icone('chevron_down', 16),
       aberto: abertosAgora.has('sobre'),
     }) +
@@ -369,7 +381,7 @@ export function marcacao({
   ).join('');
   return (
     `<div class="tt-pagina"><h1 class="tt-t-title-large" tabindex="-1">${t.navegacao.configuracoes}</h1>` +
-    marcacaoDasSessoes(configuracoes, { icone, abertosAgora }) +
+    marcacaoDasSessoes(configuracoes, { icone, abertosAgora, comVolume: casca?.volume !== false }) +
     '<section class="tt-config-secao" aria-labelledby="config-aparencia">' +
     `<h2 id="config-aparencia" class="tt-t-body-strong">${c.aparencia}</h2>` +
     '<div class="tt-config-cartao" data-cartao="tema">' +
@@ -379,8 +391,8 @@ export function marcacao({
     '<fluent-radio-group class="tt-temas" name="tema" orientation="horizontal" ' +
     `aria-labelledby="config-tema" aria-describedby="config-tema-desc"${marcada ? ` value="${marcada}"` : ''}>` +
     `${opcoes}</fluent-radio-group></div></section>` +
-    (casca?.web ? '' : marcacaoDoSistema(configuracoes, { icone, recursos })) +
-    marcacaoDoSobre({ icone, versao, abertosAgora, web: Boolean(casca?.web) }) +
+    (casca?.secaoSistema === false || casca?.web ? '' : marcacaoDoSistema(configuracoes, { icone, recursos })) +
+    marcacaoDoSobre({ icone, versao, abertosAgora, web: Boolean(casca?.web), privacidade: casca?.web ? 'link' : casca?.android ? 'botao' : null }) +
     '</div>'
   );
 }
@@ -451,6 +463,7 @@ export function ligarSessoes(raiz, { store = storeDoApp, ipc = ipcDoApp, doc = g
   win.requestAnimationFrame?.(() => !desligado && rotularListas());
 
   const pintarVolume = () => {
+    if (!volume) return; // A05: no Android não há volume
     const v = volumeDe(Number(volume.value));
     volume.style.setProperty('--tt-fracao', String(v / 100));
     volume.setAttribute('aria-valuetext', c.volume.valor(v));
@@ -490,7 +503,7 @@ export function ligarSessoes(raiz, { store = storeDoApp, ipc = ipcDoApp, doc = g
       escreverEstado(sw);
     }
     // Não puxa o controle de quem está arrastando.
-    if (!arrastando && Number.isInteger(s.volume) && volume.value !== String(s.volume)) {
+    if (volume && !arrastando && Number.isInteger(s.volume) && volume.value !== String(s.volume)) {
       volume.value = String(s.volume);
       pintarVolume();
     }
@@ -540,8 +553,8 @@ export function ligarSessoes(raiz, { store = storeDoApp, ipc = ipcDoApp, doc = g
 
   secao.addEventListener('change', aoMudar);
   secao.addEventListener('click', aoClicar);
-  volume.addEventListener('input', aoArrastar);
-  volume.addEventListener('pointerdown', aoApertar);
+  volume?.addEventListener('input', aoArrastar);
+  volume?.addEventListener('pointerdown', aoApertar);
   doc.addEventListener('pointerup', aoSoltar);
   doc.addEventListener('pointercancel', aoSoltar);
   pintarVolume();
@@ -552,8 +565,8 @@ export function ligarSessoes(raiz, { store = storeDoApp, ipc = ipcDoApp, doc = g
     desassinar();
     secao.removeEventListener('change', aoMudar);
     secao.removeEventListener('click', aoClicar);
-    volume.removeEventListener('input', aoArrastar);
-    volume.removeEventListener('pointerdown', aoApertar);
+    volume?.removeEventListener('input', aoArrastar);
+    volume?.removeEventListener('pointerdown', aoApertar);
     doc.removeEventListener('pointerup', aoSoltar);
     doc.removeEventListener('pointercancel', aoSoltar);
   };
@@ -626,6 +639,10 @@ export function ligarSistemaESobre(
     const botao = ev.target.closest?.('[data-expansor]');
     if (botao) {
       alternar(botao);
+      return;
+    }
+    if (ev.target.closest?.('[data-privacidade]')) {
+      Promise.resolve(ipc.android?.abrirUrl?.(POLITICA_DE_PRIVACIDADE)).catch((erro) => console.error('[privacidade]', erro));
       return;
     }
     const abre = ev.target.closest?.('[data-avisos]');
@@ -708,7 +725,7 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
   const semDica = casca?.full === false ? () => {} : ligarDicaSempreNaFrente(raiz.querySelector('.tt-config-secao'), { doc, porCodigo, evento: EVENTO });
   // M57: a Compatibilidade X11 (opcao-x11.js), na seção Avançado, antes do
   // Sobre; na web, não (W18).
-  const semX11 = casca?.web ? () => {} : ligarOpcaoX11(raiz.querySelector('.tt-pagina'), { icone, ipc: compatX11 });
+  const semX11 = casca?.secaoSistema === false || casca?.web ? () => {} : ligarOpcaoX11(raiz.querySelector('.tt-pagina'), { icone, ipc: compatX11 });
   // W14: a seção Avisos, só na web (avisos-web.js), depois da Aparência.
   const semAvisos = ligarAvisosWeb(raiz.querySelector('.tt-pagina'), { icone, plataforma: avisosWeb });
   // W18: a seção Navegador (Tempo na aba e Instalar), só na web

@@ -2,6 +2,7 @@
 // Rodam no `npm test` junto com os testes do JS que vierem depois.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -222,7 +223,8 @@ test('configurações no Rust: settings_get, settings_set e tt://settings, sem o
   // Um generate_context! só (ele embute a página), e o linuxX11 lido antes do Builder.
   assert.equal(lib.match(/generate_context!\(\)/g)?.length, 1);
   // M37: o Builder já nasce com o single-instance (o primeiro plugin, 3.4).
-  assert.match(lib, /usar_x11_se_pedido\(&context\.config\(\)\.identifier\);\s*(?:\/\/.*\n\s*)*let builder =\s*tauri::Builder::default\(\)/);
+  // A03: o Builder com o single-instance é só do desktop (`#[cfg(desktop)]`).
+  assert.match(lib, /usar_x11_se_pedido\(&context\.config\(\)\.identifier\);\s*(?:(?:\/\/.*|#\[cfg\(desktop\)\])\n\s*)*let builder =\s*tauri::Builder::default\(\)/);
   assert.match(ler('src-tauri/tomatito-motor/src/events.rs'), /pub const SETTINGS: &str = "tt:\/\/settings";/);
   const ipcJs = ler('src/lib/ipc.js');
   assert.match(ipcJs, /configuracoes: 'tt:\/\/settings'/);
@@ -679,7 +681,9 @@ test('M37: single-instance primeiro, window-state restrito, app_quit e os bloque
   assert.match(cargo, /^tauri-plugin-window-state = "=2\.4\.1"$/m);
   const lib = ler('src-tauri/src/lib.rs');
   // O single-instance é o primeiro plugin; depois vêm o de notificação e o window-state.
-  const plugins = [...lib.matchAll(/\.plugin\(\s*(tauri_plugin_\w+)/g)].map((m) => m[1]);
+  // A07a (PLANO-ANDROID 4.2): o plugin do Android entra só no braço do Android e fica fora da ordem do desktop.
+  assert.match(lib, /#\[cfg\(target_os = "android"\)\]\n    let builder = builder\.plugin\(tauri_plugin_tomatito_android::init\(\)\);/);
+  const plugins = [...lib.matchAll(/\.plugin\(\s*(tauri_plugin_\w+)/g)].map((m) => m[1]).filter((p) => p !== 'tauri_plugin_tomatito_android');
   assert.deepEqual(plugins, ['tauri_plugin_single_instance', 'tauri_plugin_notification', 'tauri_plugin_window_state']);
   assert.match(lib, /tauri_plugin_single_instance::init\(\s*\|app, _argv, _cwd\|\s*\{?\s*window::mostrar\(app\)/);
   assert.match(lib, /\.with_state_flags\(window::ESTADO_DA_JANELA\)\s*\.with_denylist\(&\[window::TOMATO_LABEL\]\)/);
@@ -1198,19 +1202,27 @@ test('web: src/platform/web/ não importa @tauri-apps nem a prévia do desktop (
   assert.deepEqual(pkg.imports['#plataforma'], { 'tomatito-web': './src/platform/web/index.js', default: './src/platform/tauri.js' });
 });
 
-test('web: a casca das duas plataformas, com as mesmas chaves (PLANO-WEB-V1, 3.2)', async () => {
-  const chaves = ['web', 'barraDeTitulo', 'bloqueiosDeProducao', 'atalhosDaJanela', 'atalhosDeNavegacao', 'sair', 'full', 'formaCelular'];
-  const casca = (arq) => {
-    const m = /export const casca = Object\.freeze\(\{([\s\S]*?)\}\);/.exec(ler(arq));
-    assert.ok(m, `casca em ${arq}`);
+test('web e Android: a casca das três plataformas, com as mesmas chaves (PLANO-WEB-V1, 3.2; PLANO-ANDROID, 4.3)', async () => {
+  const chaves = ['web', 'android', 'barraDeTitulo', 'bloqueiosDeProducao', 'atalhosDaJanela', 'atalhosDeNavegacao', 'sair', 'full',
+    'tomateTelaCheia', 'formaCelular', 'secaoSistema', 'volume'];
+  const objeto = (arq, nome) => {
+    const m = new RegExp(`const ${nome} = Object\\.freeze\\(\\{([\\s\\S]*?)\\}\\);`).exec(ler(arq));
+    assert.ok(m, `${nome} em ${arq}`);
     return Object.fromEntries([...m[1].matchAll(/^\s*(\w+): (true|false),/gm)].map((x) => [x[1], x[2] === 'true']));
   };
-  const desktop = casca('src/platform/tauri.js');
-  const web = casca('src/platform/web/index.js');
-  assert.deepEqual(Object.keys(desktop), chaves);
-  assert.deepEqual(Object.keys(web), chaves);
-  for (const k of chaves) assert.equal(web[k], k === 'web' || k === 'formaCelular', `web.${k}`);
-  for (const k of chaves) assert.equal(desktop[k], k !== 'web' && k !== 'formaCelular', `desktop.${k}`);
+  const desktop = objeto('src/platform/tauri.js', 'DESKTOP');
+  const android = { ...desktop, ...objeto('src/platform/tauri.js', 'ANDROID') };
+  const web = objeto('src/platform/web/index.js', 'casca');
+  for (const c of [desktop, android, web]) assert.deepEqual(Object.keys(c).sort(), [...chaves].sort());
+  const esperado = {
+    desktop: { web: false, android: false, barraDeTitulo: true, bloqueiosDeProducao: true, atalhosDaJanela: true, atalhosDeNavegacao: true, sair: true, full: true, tomateTelaCheia: false, formaCelular: false, secaoSistema: true, volume: true },
+    web: { web: true, android: false, barraDeTitulo: false, bloqueiosDeProducao: false, atalhosDaJanela: false, atalhosDeNavegacao: false, sair: false, full: false, tomateTelaCheia: false, formaCelular: true, secaoSistema: false, volume: true },
+    android: { web: false, android: true, barraDeTitulo: false, bloqueiosDeProducao: true, atalhosDaJanela: false, atalhosDeNavegacao: false, sair: false, full: false, tomateTelaCheia: true, formaCelular: true, secaoSistema: false, volume: false },
+  };
+  assert.deepEqual(desktop, esperado.desktop);
+  assert.deepEqual(web, esperado.web);
+  assert.deepEqual(android, esperado.android);
+  assert.match(ler('src/platform/tauri.js'), /export const casca = globalThis\.__TT_PLATFORM__ === 'android' \? ANDROID : DESKTOP;/);
   const main = ler('src/main.js');
   assert.match(main, /^  if \(casca\.full\) ligarValidacaoDoFull\(\{ ipc \}\)/m);
   assert.match(main, /^  if \(casca\.atalhosDeNavegacao\) ligarAtalhosDeNavegacao\(/m);
@@ -1282,4 +1294,71 @@ test('web: PWA com o manifest e o precache pelo plugin-web.mjs, e o SKIP_WAITING
   assert.match(semComentarios(ler('src/views/atualizar-web.js')), /casca\?\.web/);
   // O manifest e os ícones só no build web; o index.html do desktop não muda.
   assert.doesNotMatch(indexHtml, /rel="manifest"|webmanifest/);
+});
+
+test('android: manifesto, saídas do Gradle fora do /home e identificador (A04)', () => {
+  const gen = 'src-tauri/gen/android';
+  const manifesto = ler(`${gen}/app/src/main/AndroidManifest.xml`);
+  // Sem Android TV, sem cópia de segurança, só retrato (PLANO-ANDROID 1.1 e 5.4).
+  assert.doesNotMatch(manifesto, /leanback|LEANBACK_LAUNCHER/i);
+  assert.match(manifesto, /<application\s[^>]*android:allowBackup="false"/);
+  assert.match(manifesto, /android:screenOrientation="portrait"/);
+  // O release tira a INTERNET que o main declara para o `android dev`.
+  assert.match(ler(`${gen}/app/src/release/AndroidManifest.xml`),
+    /<uses-permission android:name="android\.permission\.INTERNET" tools:node="remove" \/>/);
+  // Todos os módulos (e o buildSrc) constroem em $TT_GRADLE_SAIDAS (7.1).
+  assert.match(ler(`${gen}/build.gradle.kts`), /allprojects \{\n    layout\.buildDirectory = file\("\$saidas\/\$\{project\.name\}"\)/);
+  assert.match(ler(`${gen}/buildSrc/build.gradle.kts`), /layout\.buildDirectory = file\("\$saidas\/buildSrc"\)/);
+  // O identificador do desktop não muda (ele define o app_data_dir); o Android usa o mesmo (1.1, 1.2.2).
+  assert.equal(tauriConf.identifier, 'io.github.kbrianps.tomatito');
+  assert.match(ler(`${gen}/app/build.gradle.kts`), /applicationId = "io\.github\.kbrianps\.tomatito"/);
+  const android = JSON.parse(ler('src-tauri/tauri.android.conf.json'));
+  assert.equal(android.bundle.android.minSdkVersion, 24);
+  assert.equal(android.identifier, undefined);
+});
+
+test('android: plugin tomatito-android, capability só do Android e as permissões dos comandos (A07a)', () => {
+  const plugin = 'src-tauri/plugins/tomatito-android';
+  // Só no Android, pelo caminho da 4.2.
+  assert.match(ler('src-tauri/Cargo.toml'),
+    /\[target\.'cfg\(target_os = "android"\)'\.dependencies\]\ntauri-plugin-tomatito-android = \{ path = "plugins\/tomatito-android" \}/);
+  // A capability vale só no Android e só na main.
+  const cap = JSON.parse(ler('src-tauri/capabilities/android.json'));
+  assert.deepEqual(cap.platforms, ['android']);
+  assert.deepEqual(cap.windows, ['main']);
+  assert.deepEqual(cap.permissions, ['tomatito-android:default']);
+  // Cada comando do build.rs tem a permissão no default, e a Kotlin tem o @Command de mesmo nome.
+  // As listas podem ter vírgula no fim (o rustfmt põe), que o JSON não aceita.
+  const lista = (texto) => JSON.parse(texto.replace(/,\s*\]$/, ']'));
+  const comandos = lista(/const COMMANDS: &\[&str\] = &(\[[^\]]*\]);/.exec(ler(`${plugin}/build.rs`))[1]);
+  const padrao = /permissions = (\[[^\]]*\])/.exec(ler(`${plugin}/permissions/default.toml`))[1];
+  assert.deepEqual(lista(padrao), comandos.map((c) => `allow-${c.replaceAll('_', '-')}`));
+  const kotlin = ler(`${plugin}/android/src/main/java/io/github/kbrianps/tomatito/android/TomatitoPlugin.kt`);
+  // O Tauri entrega `plugin:tomatito-android|abrir_url` ao método em lowerCamelCase (`abrirUrl`).
+  const camelo = (c) => c.replace(/_([a-z])/g, (_, l) => l.toUpperCase());
+  for (const c of comandos) assert.match(kotlin, new RegExp(`@Command\\n\\s+fun ${camelo(c)}\\(invoke: Invoke\\)`), c);
+  // E nenhum @Command fica sem permissão, salvo os que só o Rust chama
+  // (A10a: `agendar`), que ficam fora do build.rs e da ACL (o JS não os alcança).
+  const soDoRust = ['agendar'];
+  for (const c of soDoRust) assert.ok(!comandos.includes(c), `${c} é só do Rust`);
+  const daKotlin = [...kotlin.matchAll(/@Command\n\s+fun (\w+)\(/g)].map((m) => m[1]);
+  assert.deepEqual(daKotlin.sort(), [...comandos, ...soDoRust].map(camelo).sort());
+  // O pacote e a classe que o Rust registra são os da Kotlin.
+  const lib = ler(`${plugin}/src/lib.rs`);
+  assert.match(lib, /const PACOTE: &str = "io\.github\.kbrianps\.tomatito\.android";/);
+  assert.match(lib, /const CLASSE: &str = "TomatitoPlugin";/);
+  assert.match(kotlin, /^package io\.github\.kbrianps\.tomatito\.android$/m);
+  assert.match(kotlin, /@TauriPlugin(\([^]*?\))?\nclass TomatitoPlugin\(/);
+  assert.match(ler(`${plugin}/android/build.gradle.kts`), /namespace = "io\.github\.kbrianps\.tomatito\.android"/);
+});
+
+test('android: nenhuma chave de assinatura no repositório, e a versão do Android é a do Cargo.toml (A19)', () => {
+  const rastreados = execFileSync('git', ['ls-files'], { cwd: new URL('..', import.meta.url), encoding: 'utf8' }).split('\n');
+  assert.deepEqual(rastreados.filter((f) => /\.(jks|keystore|p12)$|keystore\.properties$/.test(f)), []);
+  const cargo = /^version = "([^"]+)"/m.exec(ler('src-tauri/Cargo.toml'))[1];
+  assert.equal(JSON.parse(ler('src-tauri/tauri.android.conf.json')).version, cargo);
+  // O release só sai assinado: sem a chave, o Gradle falha (7.3).
+  const gradle = ler('src-tauri/gen/android/app/build.gradle.kts');
+  assert.match(gradle, /if \(pedeRelease && !temChave && System\.getenv\("TOMATITO_SEM_ASSINATURA"\) != "1"\) \{\n    error\(/);
+  assert.doesNotMatch(gradle, /storePassword = "|keyPassword = "/);
 });

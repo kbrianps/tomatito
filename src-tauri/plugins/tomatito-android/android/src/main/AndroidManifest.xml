@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- O pedir_notificacoes (A07b), os avisos de fim (A10a) e a contínua (5.4). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Fim de fase e de temporizador na hora, com setAlarmClock (5.2, 5.4; A10a):
+         USE_EXACT_ALARM do Android 13 em diante (app de alarme/timer, não se
+         desliga); SCHEDULE_EXACT_ALARM só no 12/12L, concedida na instalação. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <!-- Reagendar a agenda gravada depois de reiniciar (5.2, item 5; A10b). -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application>
+        <!-- O alarme de cada fim chega aqui, com o processo vivo ou morto (A10a).
+             Só o AlarmManager, pelo PendingIntent do próprio app, o chama. -->
+        <receiver
+            android:name=".FimReceiver"
+            android:exported="false" />
+        <!-- A10b: reagendam a partir das SharedPreferences, sem o Rust. Os dois
+             broadcasts vêm do sistema, que alcança receivers não exportados;
+             nenhum outro app os dispara. -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".PermissaoAlarmeReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

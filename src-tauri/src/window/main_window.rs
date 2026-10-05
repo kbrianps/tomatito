@@ -5,11 +5,18 @@
 //! A janela nasce escondida e com a cor de fundo do tema, e só aparece quando
 //! o JS chama `show()`. As preferências de tema vêm do `settings.json`
 //! (`settings.rs`, M23), lido no `setup` antes de a janela existir.
+//!
+//! No Android (A03, PLANO-ANDROID 4.1), a `main` ocupa a tela: sem tamanho,
+//! moldura, sombra, zoom nem tema nativo, e visível desde o começo.
 
 use tauri::window::Color;
-use tauri::{AppHandle, Theme, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{AppHandle, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+#[cfg(desktop)]
+use tauri::{Manager, Runtime, Theme};
 
-use crate::settings::{NormalTheme, ResolvedTheme, Settings};
+#[cfg(desktop)]
+use crate::settings::NormalTheme;
+use crate::settings::{ResolvedTheme, Settings};
 
 /// Rótulo da janela; as permissões dela estão em `capabilities/main.json`.
 pub const LABEL: &str = "main";
@@ -32,6 +39,7 @@ pub fn background_for(resolved_theme: ResolvedTheme) -> Color {
 /// claro), ou nenhum no modo Sistema, que segue o sistema. É o mesmo
 /// `NATIVE` do `applyTheme` (4.6, `src/lib/theme.js`), aplicado já na
 /// criação, para a janela nascer com o tema nativo certo (M24).
+#[cfg(desktop)]
 pub fn native_theme(s: &Settings) -> Option<Theme> {
     if s.last_normal_theme == NormalTheme::System {
         return None;
@@ -80,22 +88,13 @@ pub fn build_main_na_rota(
 ) -> tauri::Result<WebviewWindow> {
     let builder = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("index.html".into()))
         .title("Tomatito")
-        .inner_size(1000.0, 700.0)
-        .min_inner_size(480.0, 500.0)
-        // Barra de título própria (32 px). No Linux, a borda de 1 px vem do shell.css.
-        .decorations(false)
-        // Windows 11: borda do DWM e cantos arredondados. Linux: sem efeito.
-        .shadow(true)
-        // Ctrl+ / Ctrl− / Ctrl+0 (PLANO.md, 3.8). No Linux, o Tauri injeta um
-        // script que pede `set_webview_zoom`, liberado em capabilities/main.json.
-        .zoom_hotkeys_enabled(true)
-        .background_color(background_for(s.resolved_theme))
-        // Windows: o tema do builder vale. Linux: o tao ignora o do builder e
-        // começa pelo do portal; o `set_theme` logo abaixo corrige.
-        .theme(native_theme(s))
-        // Aparece quando o JS chamar `show()`, já pintada.
-        .visible(false)
-        .initialization_script(init_script(s));
+        .background_color(background_for(s.resolved_theme));
+    #[cfg(desktop)]
+    let builder = builder_desktop(builder, s);
+    // No Android, a Activity já está na tela; a WebView pinta por cima.
+    #[cfg(mobile)]
+    let builder = builder.visible(true);
+    let builder = builder.initialization_script(init_script(s));
     let builder = match rota {
         Some(r) => builder.initialization_script(rota_inicial(r)),
         None => builder,
@@ -112,6 +111,29 @@ pub fn build_main_na_rota(
     }
     // A borda do DWM na cor do tema (`window::dwm::set_border`) entra no M48.
     Ok(win)
+}
+
+/// O que só existe numa janela de desktop.
+#[cfg(desktop)]
+fn builder_desktop<'a, R: Runtime, M: Manager<R>>(
+    builder: WebviewWindowBuilder<'a, R, M>,
+    s: &Settings,
+) -> WebviewWindowBuilder<'a, R, M> {
+    builder
+        .inner_size(1000.0, 700.0)
+        .min_inner_size(480.0, 500.0)
+        // Barra de título própria (32 px). No Linux, a borda de 1 px vem do shell.css.
+        .decorations(false)
+        // Windows 11: borda do DWM e cantos arredondados. Linux: sem efeito.
+        .shadow(true)
+        // Ctrl+ / Ctrl− / Ctrl+0 (PLANO.md, 3.8). No Linux, o Tauri injeta um
+        // script que pede `set_webview_zoom`, liberado em capabilities/main.json.
+        .zoom_hotkeys_enabled(true)
+        // Windows: o tema do builder vale. Linux: o tao ignora o do builder e
+        // começa pelo do portal; o `set_theme` logo abaixo corrige.
+        .theme(native_theme(s))
+        // Aparece quando o JS chamar `show()`, já pintada.
+        .visible(false)
 }
 
 #[cfg(test)]

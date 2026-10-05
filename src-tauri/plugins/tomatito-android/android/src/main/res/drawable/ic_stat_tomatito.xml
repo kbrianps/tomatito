@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícone pequeno das notificações (A15): o arco do icon.svg em silhueta
+     branca, como o sistema pede (ele só usa o alfa). O mesmo desenho da
+     camada monocromática do ícone do app (src-tauri/icons/android/). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round"
+        android:pathData="M12,4.6A7.4,7.4 0,1 1,4.6 12" />
+</vector>

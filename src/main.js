@@ -18,6 +18,17 @@ import '@fluentui/web-components/menu-item.js';
 import '@fluentui/web-components/tooltip.js';
 import { Updates } from '@microsoft/fast-element';
 import { janelaAtual as getCurrentWindow, casca } from '#plataforma';
+import { ligarFormaCelular } from './lib/forma.js';
+import { ligarTeclado } from './lib/teclado.js';
+
+// A05 (Android): a casca e o layout de celular, antes de montar a interface.
+// Na web, o boot-web.js já fez os dois.
+if (casca.android) {
+  document.documentElement.dataset.casca = 'android';
+  if (casca.formaCelular) ligarFormaCelular();
+  // A06: com o teclado aberto, a barra inferior some e o campo vem à vista.
+  ligarTeclado();
+}
 import { montarBarraDeTitulo } from './components/title-bar.js';
 import { icone } from './components/icon.js';
 import { ligarDicas } from './components/dica.js';
@@ -30,13 +41,14 @@ import * as ipc from './lib/ipc.js';
 import { ligarAnuncioDeFases } from './lib/a11y.js';
 import { entrarPagina } from './lib/movimento.js';
 import { ligarLarguras } from './lib/larguras.js';
-import { aplicarTema, ligarSistema, ligarTema, temaDeBase } from './lib/theme.js';
+import { aplicarTema, ligarCoresDasBarras, ligarSistema, ligarTema, temaDeBase, temaDoSistemaAgora } from './lib/theme.js';
 import * as foco from './views/focus/index.js';
 import * as temporizador from './views/timers.js';
 import * as cronometro from './views/stopwatch.js';
 import * as configuracoes from './views/settings.js';
 import * as dev from './views/dev-catalog.js';
 import { ligar as ligarValidacaoDoFull } from './views/validacao-full.js';
+import { ligarAvisosDoAndroid } from './views/avisos-android.js';
 // Os tokens do Fluent vêm do fluent-tokens.gen.css, um bloco por data-theme
 // (PLANO.md, 4.5): sem setTheme() em runtime desde o M11.
 
@@ -82,6 +94,9 @@ try {
   // M24: o Rust é o dono das configurações, e a main reflete cada gravação
   // (tt://settings) nos atributos de tema do <html> (4.6).
   ligarTema({ ipc, h }).catch((erro) => console.error('[tema]', erro));
+  // A07a (PLANO-ANDROID 4.2): no Android, a cor atrás das barras do sistema
+  // e a dos ícones delas acompanham o tema (nas outras plataformas, nada).
+  ligarCoresDasBarras({ h, cores: ipc.android.cores });
   // M52: a validação com reversão do Full (5.9): a pergunta de 10 s e a
   // oferta do modo opaco, num diálogo por cima de qualquer tela.
   // Na web não há Full (casca.full).
@@ -108,6 +123,9 @@ try {
   // tela, para o número dela já sair do tamanho certo.
   document.querySelector('.tt-rolagem').dataset.largura = '--tt-larg-rolagem';
   ligarLarguras();
+  // A13 (PLANO-ANDROID 4.3): no Android, o cartão "Avisos", a faixa da tela
+  // Foco e o pedido no primeiro "Iniciar" (nas outras plataformas, null).
+  const avisosDoAndroid = ligarAvisosDoAndroid({ api: ipc.android, store, icone });
   const nav = montarNavegacao(document.querySelector('.tt-nav'), {
     icone,
     navegar: (rota) => roteador.navegar(rota),
@@ -130,6 +148,7 @@ try {
     aoMudar: (rota, anterior) => {
       nav.selecionar(rota, { animar: anterior !== null });
       barra?.selecionar(rota, { animar: anterior !== null });
+      avisosDoAndroid?.aoMudar(rota, document.querySelector('.tt-rolagem'));
       if (anterior !== null) entrarPagina(document.querySelector('.tt-rolagem'));
     },
   });
@@ -151,7 +170,7 @@ try {
 
   await montarBarraDeTitulo(document.querySelector('.tt-titlebar'), win);
   if (temaDeBase(h) === 'system') {
-    const t = await win.theme();
+    const t = await temaDoSistemaAgora(win, h, () => midia.matches);
     if (t) h.dataset.theme = t;
   }
 } finally {

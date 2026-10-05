@@ -436,3 +436,104 @@ test('desligar tira os dois ouvintes', async () => {
   assert.equal(h.dataset.theme, 'light');
   assert.deepEqual(gravar.patches, []);
 });
+
+// A07a (PLANO-ANDROID 4.2): as cores das barras do sistema no Android.
+function estiloFalso(cores) {
+  return (h) => ({ getPropertyValue: (nome) => (nome === '--tt-bg-app' ? cores[h.dataset.theme] ?? '' : '') });
+}
+const FUNDOS = { lite: ' #A5342B', suave: '#F6ECE9', light: '#f3f3f3', dark: '#202020', full: 'transparent', curto: '#abc' };
+
+test('coresDasBarras: o --tt-bg-app em #rrggbb minúsculo e o claro pelo NATIVO', async () => {
+  const { coresDasBarras } = await import('./theme.js');
+  const estilo = estiloFalso(FUNDOS);
+  const de = (tema) => coresDasBarras(htmlFalso({ tema, plataforma: 'android' }), estilo);
+  assert.deepEqual(de('lite'), { fundo: '#a5342b', claro: false });
+  assert.deepEqual(de('suave'), { fundo: '#f6ece9', claro: true });
+  assert.deepEqual(de('light'), { fundo: '#f3f3f3', claro: true });
+  assert.deepEqual(de('dark'), { fundo: '#202020', claro: false });
+  assert.deepEqual(de('curto'), { fundo: '#aabbcc', claro: false });
+  assert.equal(de('full'), null);
+});
+
+test('ligarCoresDasBarras: manda na hora e a cada tt-tema, sem repetir, e tenta de novo depois de um erro', async () => {
+  const { ligarCoresDasBarras } = await import('./theme.js');
+  const h = htmlFalso({ pref: 'lite', tema: 'lite', plataforma: 'android' });
+  const enviadas = [];
+  let falhar = false;
+  const cores = async (fundo, claro) => {
+    enviadas.push([fundo, claro]);
+    if (falhar) throw { code: 'x', message: 'falhou' };
+  };
+  const erros = [];
+  const desligar = ligarCoresDasBarras({ h, cores, estilo: estiloFalso(FUNDOS), log: { error: (...a) => erros.push(a) } });
+  assert.deepEqual(enviadas, [['#a5342b', false]]);
+  trocarAtributos(h, 'lite', 'lite', { quadro: null }); // mesmo tema: nada
+  assert.equal(enviadas.length, 1);
+  trocarAtributos(h, 'light', 'light', { quadro: null });
+  assert.deepEqual(enviadas.at(-1), ['#f3f3f3', true]);
+  falhar = true;
+  trocarAtributos(h, 'dark', 'dark', { quadro: null });
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(erros.length, 1);
+  falhar = false;
+  trocarAtributos(h, 'dark', 'dark', { quadro: null }); // depois do erro, o mesmo tema vai de novo
+  assert.deepEqual(enviadas.slice(-2), [['#202020', false], ['#202020', false]]);
+  trocarAtributos(h, 'system', 'suave', { quadro: null });
+  assert.deepEqual(enviadas.at(-1), ['#f6ece9', true]);
+  const antes = enviadas.length;
+  desligar();
+  trocarAtributos(h, 'lite', 'lite', { quadro: null });
+  assert.equal(enviadas.length, antes);
+});
+
+test('ligarCoresDasBarras: fora do Android não chama o plugin', async () => {
+  const { ligarCoresDasBarras } = await import('./theme.js');
+  for (const plataforma of ['linux', 'windows', 'web']) {
+    const h = htmlFalso({ plataforma });
+    const enviadas = [];
+    ligarCoresDasBarras({ h, cores: (...a) => enviadas.push(a), estilo: estiloFalso(FUNDOS) })();
+    trocarAtributos(h, 'dark', 'dark', { quadro: null });
+    assert.deepEqual(enviadas, [], plataforma);
+  }
+});
+
+// A07a (PLANO-ANDROID 5.7): no Android, o theme() da janela é sempre `light`
+// e o setTheme não faz nada; o sistema chega pelo prefers-color-scheme.
+test('Android, Sistema: o tema vem da mídia (o theme() da janela é sempre claro), sem setTheme', async () => {
+  const { h, midia, win, gravar, s } = montarSistema({ plataforma: 'android', janela: { sistema: 'light' } });
+  await s.ouvindo;
+  midia.mudar('dark'); // cmd uimode night yes
+  await pausa();
+  assert.equal(h.dataset.theme, 'dark');
+  assert.deepEqual(gravar.patches, [{ resolvedTheme: 'dark' }]);
+  midia.mudar('light');
+  await pausa();
+  assert.equal(h.dataset.theme, 'light');
+  assert.deepEqual(win.chamadas, []);
+  s.desligar();
+});
+
+test('Android, tema explícito: a guarda (b) não reaplica nada', async () => {
+  const { h, midia, win, gravar, s } = montarSistema({ plataforma: 'android', pref: 'lite', tema: 'lite', midiaInicial: 'light' });
+  await s.ouvindo;
+  assert.equal(await s.conferir(), 'igual');
+  midia.mudar('dark');
+  await pausa();
+  assert.equal(h.dataset.theme, 'lite');
+  assert.deepEqual(win.chamadas, []);
+  assert.deepEqual(gravar.patches, []);
+  s.desligar();
+});
+
+test('Android: aplicarTema(system) e o boot no Sistema leem a mídia, não o theme() da janela', async () => {
+  const { temaDoSistemaAgora } = await import('./theme.js');
+  const h = htmlFalso({ pref: 'lite', tema: 'lite', plataforma: 'android' });
+  const win = janelaFalsa({ sistema: 'light' });
+  const gravar = gravadorFalso();
+  await aplicarTema('system', { win, h, gravar, trocarModo: async () => {}, quadro: null, escuroPelaMidia: () => true });
+  assert.equal(h.dataset.theme, 'dark');
+  assert.deepEqual(gravar.patches, [{ theme: 'system', resolvedTheme: 'dark' }]);
+  assert.deepEqual(win.chamadas, []);
+  assert.equal(await temaDoSistemaAgora(win, h, () => true), 'dark');
+  assert.equal(await temaDoSistemaAgora(win, htmlFalso({ plataforma: 'windows' }), () => true), 'light', 'fora do Android, o theme() da janela');
+});

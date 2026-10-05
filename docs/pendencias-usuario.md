@@ -168,6 +168,20 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 116. **Conferir o M45 na sua sessão e no Windows** (desde o M45). Uns 5 minutos no Linux e 10 no Windows, com os passos em `docs/verificacao-manual.md`, seção M45: o Tomatito de uso diário (já reinstalado em `~/.local` com os pacotes do M45) abre pelo dock com o ícone e o nome certos no Alt+Tab; se quiser, o `.deb` pelo apt (item 33). No Windows, com os arquivos do rascunho (item 94): o `.exe` instala sem pedir administrador (`currentUser`), em português, e baixa o WebView2 se faltar (`downloadBootstrapper`); o `.msi` instala em português. O roteiro aninhado `instalado` já conferiu o AppImage e o `.deb` extraído (9 de 9 nos dois).
 117. **Limpar as pastas `/tmp/com.google.Chrome.*` que sobraram** (desde o W01b, faixa web; 1 minuto, opcional). O Chrome headless dos scripts de conferência deixava, a cada execução, uma pasta pequena no `/tmp` (o socket de instância única e as baixas do atualizador de componentes). Desde a correção do W01b (o `TMPDIR` do Chrome fica dentro do perfil temporário), nenhuma nova sobra. As antigas (algumas centenas, poucos KB cada; o `/tmp` se esvazia no reinício) podem ser do seu Chrome de uso diário, por isso não foram apagadas. Com o Chrome fechado, se quiser: `rm -rf /tmp/com.google.Chrome.*`.
 
+### Android (faixa Android, `PLANO-ANDROID.md`, 1.2 e 10)
+
+Numeração a partir de 201, para não cruzar com as pendências de outras faixas.
+
+201. **(Opcional) Criar `/opt/android`** (desde o A00; o A01 seguiu sem ela). Uma linha: `sudo install -d -o kbrianps -g kbrianps /opt/android`. Sem ela, o kit foi para `/opt/cargo-target/android` (A01, sem sudo; `docs/android/kit.md`). Nada bloqueia: o kit funciona onde está. Se criar a pasta depois, mover é um `mv` no mesmo disco e trocar o `TT_ANDROID` do `~/.config/tomatito/android.env`, mas os AVDs (A02) guardam caminhos absolutos e teriam de ser recriados (`bash scripts/android/criar-avds.sh --recriar`, uns 5 minutos com as primeiras partidas).
+202. **Identificador do app.** No A04 (30/09/2026) seguiu o padrão, por omissão: `io.github.kbrianps.tomatito` (debug: `io.github.kbrianps.tomatito.debug`). Ainda dá para trocar até o primeiro envio à Play (A19), só no `tauri.android.conf.json` (alternativa: `com.kbrianps.tomatito`); depois do envio é permanente. Sem resposta, fica o padrão.
+203. **Nome na loja** (≤ 30 caracteres; antes do primeiro envio, A19). Proposta: "Tomatito: timer de foco".
+204. **E-mail de contato público da ficha** (antes do primeiro envio). O da conta ou outro.
+205. **(Opcional) `sudo usermod -aG kvm kbrianps`** (vale depois de sair e entrar na sessão). Hoje o `/dev/kvm` vem de uma ACL do logind que só existe com a sessão gráfica ativa; sem ela, o emulador perde o KVM.
+206. **Depois do A19:** guardar `~/.config/tomatito/android/upload.jks` e a senha num gerenciador de senhas.
+207. **Play Console, teste fechado com 12 testadores por 14 dias, pedido de produção** (A25, passo a passo em `docs/android/PUBLICAR.md`). Começar a juntar os testadores já. Antes do teste interno: a verificação do aparelho da conta nova no app Play Console, conferir o registro do nome do pacote e, se for instalar pelo `adb`, a depuração USB no celular.
+208. **Login na Cloudflare** (`! npx wrangler login`) para publicar a política de privacidade (A23), se a web ainda não estiver publicada.
+209. **Declaração de alarmes exatos no Play Console** (A10a; no envio, A24/A25). O app declara `USE_EXACT_ALARM` (fim de fase e de temporizador na hora). É uma permissão restrita: no formulário do Console, marcar que o app é de alarme/timer ("The app is an alarm or timer app"). O texto pronto sai no `docs/android/play/formularios.md` (A24).
+
 ## Resolvidas
 
 - **Itens 1, 6, 7, 43 e 51** (29/09/2026): substituídos por conferências mais novas; o motivo está no próprio item.
@@ -185,3 +199,11 @@ O que depende de você (decisão, `sudo`, conta no GitHub, outra máquina ou olh
 
 - ~~Login na Cloudflare para publicar a web~~ (feito em 02/10/2026; publicada em https://tomatito.kbrianps.workers.dev). Para publicar de novo: Rode `/opt/cargo-target/ferramentas/wrangler/node_modules/.bin/wrangler login`, autorize no navegador (em poucos minutos, senão expira) e depois `node scripts/web/publicar.mjs`. Passos em `docs/web/publicar.md`.
 - **Roteiro de 10 min no celular de verdade**, depois de publicado (`docs/verificacao-manual.md`, seção "Web no celular").
+
+## Android (05/10/2026)
+
+- **Guardar a chave de upload num gerenciador de senhas:** os dois arquivos de `~/.config/tomatito/android/` (`upload.jks` e `keystore.properties`). Sem eles não dá para enviar atualizações do app à Play. Detalhes em `docs/android/versoes.md`.
+- **Publicar na Play Store:** siga `docs/android/PUBLICAR.md` (blocos de 10 a 20 min). Antes do teste interno: aparelho verificado pelo app Play Console, pacote registrado na verificação de desenvolvedor e o e-mail público de contato.
+- **12 testadores por 14 dias** para o teste fechado; o convite pronto está em `docs/android/play/convite-testadores.txt`.
+- **Nome na loja:** "Tomatito: timer de foco" (pode trocar na ficha).
+- **Tomate em tela cheia no Android (A16):** adiado por decisão sua; entra numa atualização.

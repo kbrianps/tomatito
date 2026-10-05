@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-pedir-notificacoes"
+description = "Enables the pedir_notificacoes command without any pre-configured scope."
+commands.allow = ["pedir_notificacoes"]
+
+[[permission]]
+identifier = "deny-pedir-notificacoes"
+description = "Denies the pedir_notificacoes command without any pre-configured scope."
+commands.deny = ["pedir_notificacoes"]

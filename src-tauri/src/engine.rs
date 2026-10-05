@@ -62,9 +62,11 @@ pub async fn laco<S: Sink>(motor: Arc<Engine<S>>, acordar: Arc<Notify>) {
 
 /// O relógio do motor e a velocidade dele. Num build de debug,
 /// `TOMATITO_SPEED` acelera o tempo (3.2); um valor inválido é registrado e
-/// ignorado. No release, a variável não é lida.
+/// ignorado. No release, a variável não é lida. No Android, nem no debug
+/// (PLANO-ANDROID 4.1, A09): os avisos de fim são alarmes do `AlarmManager`,
+/// no relógio de parede, e a agenda recusa um motor acelerado.
 pub fn clock_from_env() -> (Box<dyn Clock>, f64) {
-    #[cfg(debug_assertions)]
+    #[cfg(all(debug_assertions, not(target_os = "android")))]
     {
         match tomatito_core::ScaledClock::from_env() {
             Ok(Some(c)) => {
@@ -83,6 +85,8 @@ pub fn clock_from_env() -> (Box<dyn Clock>, f64) {
 /// e as notificações.
 pub struct TauriSink {
     app: tauri::AppHandle,
+    /// No Android, o motor não pede som (`sound`, abaixo).
+    #[cfg_attr(mobile, allow(dead_code))]
     som: Arc<Som>,
     notificador: Notificador,
     stats: Arc<Stats>,
@@ -92,6 +96,13 @@ pub struct TauriSink {
     bandeja: Arc<Bandeja>,
     /// W05: o `Notify` do [`laco`].
     acordador: Arc<Notify>,
+    /// A09: a agenda dos avisos de fim (PLANO-ANDROID 5.2), remontada a cada
+    /// `state` e `timers`.
+    #[cfg(target_os = "android")]
+    agenda: std::sync::Mutex<crate::agenda::Viva>,
+    /// A10a: a thread que entrega a agenda ao plugin Kotlin.
+    #[cfg(target_os = "android")]
+    entrega: crate::agenda::Entrega,
 }
 
 impl TauriSink {
@@ -104,6 +115,8 @@ impl TauriSink {
         acordador: Arc<Notify>,
     ) -> Self {
         let notificador = Notificador::new(app.clone());
+        #[cfg(target_os = "android")]
+        let entrega = crate::agenda::Entrega::iniciar(app.clone());
         Self {
             app,
             som,
@@ -112,6 +125,10 @@ impl TauriSink {
             estado,
             bandeja,
             acordador,
+            #[cfg(target_os = "android")]
+            agenda: std::sync::Mutex::default(),
+            #[cfg(target_os = "android")]
+            entrega,
         }
     }
 
@@ -121,10 +138,73 @@ impl TauriSink {
             eprintln!("[tomatito] falha ao emitir {event}: {e}");
         }
     }
+
+    /// A09: as preferências e a velocidade do motor, no `setup`.
+    #[cfg(target_os = "android")]
+    pub fn configurar_agenda(&self, prefs: Preferencias, speed: f64) {
+        self.agenda(|v, fuso| v.configurar(prefs, speed, fuso));
+    }
+
+    /// A09: cada `settings_set` (os sons ligados escolhem o canal).
+    #[cfg(target_os = "android")]
+    pub fn preferencias_da_agenda(&self, prefs: Preferencias) {
+        self.agenda(|v, fuso| v.preferencias(prefs, fuso));
+    }
+
+    /// A14: a agenda do que a retomada restaurou. O `restaurar` só passa pelo
+    /// `state`/`timers` quando uma fase venceu com o app fechado; reaberto no
+    /// meio de uma fase, nada chegaria à agenda, e os alarmes (que o sistema
+    /// apaga ao matar o app em alguns casos) não voltariam.
+    #[cfg(target_os = "android")]
+    pub fn retomar_agenda(&self, focus: &FocusDto, timers: &TimersDto) {
+        self.agenda(|v, fuso| v.foco(focus, fuso));
+        self.agenda(|v, fuso| v.temporizadores(timers, fuso));
+    }
+
+    /// A09 (PLANO-ANDROID 5.2, item 2): remonta a agenda (e, desde o A11, a
+    /// contínua de agora) e, se o pacote mudou, o entrega. Chamado em cada `state` e cada `timers`: o `tt://phase`
+    /// sempre vem logo depois de um `state`, então não precisa remontar. Chamado com o motor travado, como o resto do sink: a
+    /// montagem é pura e curta (uma sessão tem no máximo 239 fases).
+    #[cfg(target_os = "android")]
+    fn agenda(
+        &self,
+        passo: impl for<'a> FnOnce(
+            &'a mut crate::agenda::Viva,
+            &tomatito_core::TimeZone,
+        ) -> Result<
+            Option<&'a crate::agenda::Pacote>,
+            crate::agenda::AgendaRecusada,
+        >,
+    ) {
+        let fuso = tomatito_core::TimeZone::system();
+        let mut viva = self
+            .agenda
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        match passo(&mut viva, &fuso) {
+            Ok(Some(pacote)) => {
+                // A10a: o plugin cancela os alarmes anteriores, grava a
+                // agenda e chama o `setAlarmClock` (numa thread à parte);
+                // A11: e mostra, troca ou tira a contínua.
+                eprintln!(
+                    "[tomatito] agenda: {} aviso(s), contínua: {}",
+                    pacote.agenda.len(),
+                    pacote.continua.as_ref().map_or("nenhuma", |c| c.tipo)
+                );
+                self.entrega.enviar(pacote);
+            }
+            Ok(None) => {}
+            Err(e) => eprintln!("[tomatito] {e}"),
+        }
+    }
 }
 
 impl Sink for TauriSink {
     fn state(&self, focus: &FocusDto) {
+        // A09: no Android, os fins que faltam viram alarmes (PLANO-ANDROID
+        // 5.2).
+        #[cfg(target_os = "android")]
+        self.agenda(|v, fuso| v.foco(focus, fuso));
         self.emit(events::STATE, focus);
         // M36: "Iniciar foco" vira "Pausar foco" (só posta; não espera a
         // thread principal com o motor travado, tray.rs).
@@ -144,7 +224,12 @@ impl Sink for TauriSink {
     fn sound(&self, sound: Sound) {
         // Só manda o pedido: o motor está travado aqui, e a thread de som é
         // que espera o som acabar, com o volume que ela guarda.
+        #[cfg(desktop)]
         self.som.tocar(sound);
+        // No Android, o som de fim é o do canal do aviso (PLANO-ANDROID 5.2,
+        // item 6, e 5.5): tocar aqui também o repetiria com o app aberto.
+        #[cfg(mobile)]
+        let _ = sound;
     }
     fn notice(&self, notice: Notice) {
         // Também sem esperar: o plugin entrega numa tarefa à parte.
@@ -157,6 +242,9 @@ impl Sink for TauriSink {
         // como o período: a gravação atômica leva poucos ms, e quem faz um
         // `cat` logo depois do clique já vê a lista nova.
         self.estado.save_timers(timers);
+        // A09: a agenda também tem os temporizadores correndo.
+        #[cfg(target_os = "android")]
+        self.agenda(|v, fuso| v.temporizadores(timers, fuso));
     }
     fn timer_notice(&self, ended: &TimerEnded) {
         self.notificador.mostrar_temporizador(ended);

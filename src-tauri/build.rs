@@ -16,11 +16,22 @@ fn main() {
         embutir_manifesto_pelo_linker();
     }
 
+    if alvo_android() {
+        // A18: páginas de 16 KB (exigência da Play para o Android 15+). O NDK
+        // novo já alinha assim; a flag garante com qualquer NDK, e o
+        // `llvm-readelf -lW` do A18 confere os `LOAD` em 0x4000.
+        println!("cargo:rustc-link-arg=-Wl,-z,max-page-size=16384");
+    }
+
     if let Err(erro) = tauri_build::try_build(atributos) {
         // Mesma saída do `tauri_build::build()`.
         println!("{erro:#}");
         std::process::exit(1);
     }
+}
+
+fn alvo_android() -> bool {
+    env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("android")
 }
 
 /// O build script roda no host; o alvo vem das variáveis `CARGO_CFG_*`.

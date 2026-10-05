@@ -25,7 +25,15 @@
 //! **Erro nunca derruba o app.** Sem dispositivo, com o WAV ruim ou com um
 //! pânico dentro do rodio, a thread registra no stderr e segue para o pedido
 //! seguinte. Se a própria thread tiver morrido, o [`Som::tocar`] só registra.
+//!
+//! **Android (A03 e A08, PLANO-ANDROID 5.5).** Sem rodio, e o motor não pede
+//! som nenhum (`TauriSink::sound`): o som de fim vem do canal da notificação,
+//! tocado pelo sistema mesmo com o app fechado. O [`Som`] fica só para o
+//! "Testar" das Configurações (`sound_test`): a mesma thread entrega cada
+//! pedido ao comando `tocar` do plugin ([`pelo_plugin`]), um de cada vez, e o
+//! volume é o de notificação do sistema (o das configurações não vale).
 
+#[cfg(desktop)]
 use std::io::Cursor;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Mutex;
@@ -34,15 +42,19 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
 
+#[cfg(desktop)]
 use rodio::{Decoder, DeviceSinkBuilder, Source};
 use tomatito_core::Sound;
 
 /// Os WAVs gerados por `scripts/gen-sounds.py` (mono, 44,1 kHz, 16 bits, 1 s).
+#[cfg(desktop)]
 const FOCUS_END: &[u8] = include_bytes!("../sounds/focus-end.wav");
+#[cfg(desktop)]
 const BREAK_END: &[u8] = include_bytes!("../sounds/break-end.wav");
 
 /// Quanto tempo a saída fica aberta depois de receber o som: o WAV tem 1 s, e
-/// a folga cobre o buffer do dispositivo (fechar antes corta o fim).
+/// a folga cobre o buffer do dispositivo (fechar antes corta o fim). No
+/// Android, é a pausa entre um "Testar" e o seguinte ([`pelo_plugin`]).
 pub const SEGURAR: Duration = Duration::from_millis(1500);
 
 /// O padrão do `volume` das configurações (3.3: "a confirmar"), de 0 a 100.
@@ -50,6 +62,7 @@ pub const SEGURAR: Duration = Duration::from_millis(1500);
 pub use tomatito_motor::settings::VOLUME_PADRAO;
 
 /// Os bytes do WAV de cada som.
+#[cfg(desktop)]
 pub fn wav(sound: Sound) -> &'static [u8] {
     match sound {
         Sound::FocusEnd => FOCUS_END,
@@ -66,6 +79,7 @@ pub struct Pedido {
 
 impl Pedido {
     /// O fator do `amplify`: linear, de 0,0 a 1,0.
+    #[cfg(desktop)]
     pub fn ganho(&self) -> f32 {
         f32::from(self.volume.min(100)) / 100.0
     }
@@ -85,6 +99,7 @@ impl Som {
     /// Sobe a thread `tomatito-som`, que toca na saída padrão do sistema, com
     /// o `volume` das configurações (M38). Num build de debug, o
     /// [`volume_forcado`] vence.
+    #[cfg(desktop)]
     pub fn iniciar(volume: u8) -> Self {
         let mut som = Self::com_saida(tocar_na_saida_padrao);
         som.forcado = volume_forcado();
@@ -138,7 +153,9 @@ impl Som {
 
 /// Num build de debug, o `TOMATITO_VOLUME` (0 a 100), que fixa o volume por
 /// cima das configurações; `None` sem a variável, com um valor inválido (que é
-/// registrado) e sempre no release.
+/// registrado) e sempre no release. Não existe no Android, onde o volume é o
+/// de notificação do sistema.
+#[cfg(desktop)]
 pub fn volume_forcado() -> Option<u8> {
     #[cfg(debug_assertions)]
     if let Ok(v) = std::env::var("TOMATITO_VOLUME") {
@@ -176,6 +193,7 @@ where
 }
 
 /// Decodifica o WAV embutido e aplica o volume.
+#[cfg(desktop)]
 pub fn fonte(pedido: Pedido) -> Result<impl Source + Send + 'static, String> {
     let decoder = Decoder::new_wav(Cursor::new(wav(pedido.sound)))
         .map_err(|e| format!("WAV inválido: {e}"))?;
@@ -183,6 +201,7 @@ pub fn fonte(pedido: Pedido) -> Result<impl Source + Send + 'static, String> {
 }
 
 /// Os três passos do M20 na saída padrão do momento.
+#[cfg(desktop)]
 fn tocar_na_saida_padrao(pedido: Pedido) -> Result<(), String> {
     if pedido.volume == 0 {
         return Ok(());
@@ -195,6 +214,34 @@ fn tocar_na_saida_padrao(pedido: Pedido) -> Result<(), String> {
     saida.mixer().add(fonte);
     thread::sleep(SEGURAR);
     Ok(())
+}
+
+/// O nome de cada som no JS e no plugin: o do `SoundDto` (`focusEnd`,
+/// `breakEnd`), que a Kotlin traduz para o recurso de `res/raw` (A08). Só o
+/// Android o usa; no desktop, compila para o teste que o confere.
+#[cfg(any(test, target_os = "android"))]
+pub fn nome(sound: Sound) -> &'static str {
+    match sound {
+        Sound::FocusEnd => "focusEnd",
+        Sound::BreakEnd => "breakEnd",
+    }
+}
+
+/// No Android (A08), a saída da thread é o `tocar` do plugin: ele volta
+/// quando o som começa, e a thread segura [`SEGURAR`] antes do
+/// próximo pedido, para o "Testar" dos dois sons não os sobrepor.
+#[cfg(target_os = "android")]
+pub fn pelo_plugin<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> impl FnMut(Pedido) -> Result<(), String> + Send + 'static {
+    use tauri_plugin_tomatito_android::TomatitoAndroidExt;
+    move |pedido| {
+        app.tomatito_android()
+            .tocar(nome(pedido.sound))
+            .map_err(|e| format!("o plugin não tocou: {e}"))?;
+        thread::sleep(SEGURAR);
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -264,6 +311,16 @@ mod tests {
         };
         assert_eq!(ataques(Sound::FocusEnd), 2);
         assert_eq!(ataques(Sound::BreakEnd), 1);
+    }
+
+    #[test]
+    fn o_nome_de_cada_som_e_o_do_sound_dto() {
+        // O plugin (A08) recebe os mesmos nomes que o JS manda ao `sound_test`.
+        use crate::commands::SoundDto;
+        for sound in [Sound::FocusEnd, Sound::BreakEnd] {
+            let dto: SoundDto = serde_json::from_value(serde_json::json!(nome(sound))).unwrap();
+            assert_eq!(Sound::from(dto), sound);
+        }
     }
 
     #[test]

@@ -190,5 +190,27 @@ export const compatX11 = Object.freeze({
   reiniciar: () => invoke('app_restart'),
 });
 
+/**
+ * A07a/A07b (PLANO-ANDROID 4.2): o plugin `tomatito-android`, que só existe
+ * no Android (a Kotlin responde direto, sem comando no Rust do app).
+ * `permissoes()` resolve com `{ notificacoes: 'granted'|'denied'|'prompt',
+ * jaPediu, alarmeExato, sdk }` (`jaPediu`: o pedido do sistema já saiu uma
+ * vez, A13); `cores(fundo, claro)` pinta atrás das barras do
+ * sistema (`fundo` em `#rrggbb`) e escolhe ícones escuros (`claro`) ou claros;
+ * `pedirNotificacoes()` mostra o pedido do sistema, se ele ainda aparece, e
+ * resolve com o mesmo objeto do `permissoes()`; `abrirConfigAvisos()` abre a
+ * tela de avisos do app no sistema (resolve com `{ tela }`); `tocar(som)`
+ * toca `'focusEnd'` ou `'breakEnd'` (os WAV entram no A08); `abrirUrl(url)`
+ * abre um link `http(s)` no navegador, fora do app.
+ */
+export const android = Object.freeze({
+  permissoes: () => invoke('plugin:tomatito-android|permissoes'),
+  cores: (fundo, claro) => invoke('plugin:tomatito-android|cores', { fundo, claro }),
+  pedirNotificacoes: () => invoke('plugin:tomatito-android|pedir_notificacoes'),
+  abrirConfigAvisos: () => invoke('plugin:tomatito-android|abrir_config_avisos'),
+  tocar: (som) => invoke('plugin:tomatito-android|tocar', { som }),
+  abrirUrl: (url) => invoke('plugin:tomatito-android|abrir_url', { url }),
+});
+
 /** Ouve um evento do Rust; `cb` recebe só o conteúdo. Devolve o `unlisten`. */
 export const ouvir = (evento, cb) => listen(evento, (e) => cb(e.payload));
