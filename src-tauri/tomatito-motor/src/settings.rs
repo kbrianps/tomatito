@@ -193,6 +193,9 @@ pub struct Settings {
     pub full_validated: String,
     #[serde(rename = "linuxX11")]
     pub linux_x11: bool,
+    /// v0.3: procurar atualizações ao abrir (só no desktop; desligada por
+    /// padrão, porque é a única coisa que faz o app falar com a internet).
+    pub auto_update: bool,
 }
 
 impl Default for Settings {
@@ -221,6 +224,7 @@ impl Default for Settings {
             full_mode: FullMode::Auto,
             full_validated: String::new(),
             linux_x11: false,
+            auto_update: false,
         }
     }
 }
@@ -482,6 +486,7 @@ mod tests {
                 "fullMode": "auto",
                 "fullValidated": "",
                 "linuxX11": false,
+                "autoUpdate": false,
             })
         );
     }

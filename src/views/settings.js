@@ -57,6 +57,7 @@ import { ligarDicaSempreNaFrente } from './dica-sempre-na-frente.js';
 import { ligarOpcaoX11 } from './opcao-x11.js';
 import { ligarAvisosWeb } from './avisos-web.js';
 import { ligarAtualizarWeb } from './atualizar-web.js';
+import { ligarAtualizarApp } from './atualizar-app.js';
 import { ligarNavegadorWeb } from './navegador-web.js';
 import { casca as cascaDaPlataforma } from '#plataforma';
 import { POLITICA_DE_PRIVACIDADE } from '../lib/links.js';
@@ -685,14 +686,15 @@ export function ligarSistemaESobre(
  * main.js o passa pelo contexto do roteador); sem ele, a tela só desenha.
  * `store` e `ipc` (M38) são os do app; os testes passam falsos.
  * `porCodigo()` resolve com o `tomato_on_top_available` (M56, a dica), e
- * `compatX11` é o IPC da opção do M57 (opcao-x11.js; sem ele, o do app).
+ * `compatX11` é o IPC da opção do M57 (opcao-x11.js; sem ele, o do app), e
+ * `atualizarApp`, o da atualização (v0.3, atualizar-app.js).
  * `avisosWeb` (W14) carrega a plataforma da seção Avisos (avisos-web.js; sem
  * ele, o `#plataforma`); a mesma serve ao cartão Atualizar (W16,
  * atualizar-web.js) e à seção Navegador (W18, navegador-web.js). `casca`
  * (W18) é a do `#plataforma`; os testes passam a da web.
  * Devolve a limpeza (o roteador a chama ao sair da tela).
  */
-export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.document, store = storeDoApp, ipc = ipcDoApp, porCodigo = sempreNaFrente, compatX11, avisosWeb, casca = cascaDaPlataforma } = {}) {
+export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.document, store = storeDoApp, ipc = ipcDoApp, porCodigo = sempreNaFrente, compatX11, atualizarApp, avisosWeb, casca = cascaDaPlataforma } = {}) {
   const h = doc.documentElement;
   raiz.innerHTML = marcacao({
     pref: h.dataset.themePref,
@@ -733,6 +735,8 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
   const semNavegador = ligarNavegadorWeb(raiz.querySelector('.tt-pagina'), { icone, plataforma: avisosWeb });
   // W16: o cartão Atualizar, só na web e só com uma versão nova (atualizar-web.js).
   const semAtualizar = ligarAtualizarWeb(raiz.querySelector('.tt-pagina'), { icone, plataforma: avisosWeb });
+  // v0.3: a atualização por dentro do app (atualizar-app.js), só no desktop.
+  const semAtualizarApp = casca?.secaoSistema === false || casca?.web ? () => {} : ligarAtualizarApp(raiz.querySelector('.tt-pagina'), { icone, ipc: atualizarApp });
   return () => {
     grupo.removeEventListener('change', aoMudar);
     h.removeEventListener(EVENTO, aoTrocar);
@@ -743,5 +747,6 @@ export function montar(raiz, { icone = semIcone, tema = null, doc = globalThis.d
     semAvisos();
     semNavegador();
     semAtualizar();
+    semAtualizarApp();
   };
 }

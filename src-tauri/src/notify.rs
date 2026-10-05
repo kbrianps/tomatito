@@ -53,6 +53,13 @@ impl Notificador {
         self.entrega.enviar(texto);
     }
 
+    /// v0.3: um texto pronto (a atualização achada ao abrir, update.rs).
+    #[cfg(desktop)]
+    pub fn mostrar_texto(&self, texto: i18n::NoticeText) {
+        eprintln!("[tomatito] notificação: {}", texto.title);
+        self.entrega.enviar(texto);
+    }
+
     /// M32: o fim de um temporizador, pela mesma entrega.
     pub fn mostrar_temporizador(&self, ended: &TimerEnded) {
         let texto = i18n::timer_ended(ended, &TimeZone::system());

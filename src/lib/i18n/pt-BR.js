@@ -421,6 +421,28 @@ export default Object.freeze({
       correndo: 'Já baixada. Para atualizar, encerre a sessão e os temporizadores em andamento.',
       botao: 'Atualizar',
     }),
+    // v0.3: a atualização por dentro do app, só no desktop
+    // (views/atualizar-app.js).
+    atualizarApp: Object.freeze({
+      secao: 'Atualização',
+      titulo: 'Atualizações',
+      descricao: 'Consulta o GitHub em busca da versão mais recente.',
+      descricaoDeb: 'Consulta o GitHub em busca da versão mais recente. As versões novas também chegam pelo atualizador do sistema.',
+      procurar: 'Procurar atualizações',
+      instalar: 'Atualizar agora',
+      procurando: 'Procurando…',
+      atual: (v) => (v ? `O Tomatito está atualizado (versão ${v}).` : 'O Tomatito está atualizado.'),
+      disponivel: (v) => `Versão ${v} disponível. O Tomatito reinicia ao terminar a instalação.`,
+      baixando: 'Baixando…',
+      baixandoEm: (p) => `Baixando… ${p}%`,
+      instalando: 'Instalando. O Tomatito vai reiniciar.',
+      erroDeRede: 'Não foi possível consultar o GitHub. Verifique a conexão e tente de novo.',
+      erroAoInstalar: 'Não foi possível instalar a atualização.',
+      auto: Object.freeze({
+        titulo: 'Procurar ao abrir',
+        descricao: 'Consulta o GitHub cada vez que o Tomatito abre. Desligada, o Tomatito só acessa a internet quando você pede.',
+      }),
+    }),
     // M57: a opção avançada do plano B2 (views/opcao-x11.js).
     avancado: 'Avançado',
     x11: Object.freeze({

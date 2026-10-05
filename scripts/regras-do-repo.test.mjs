@@ -684,7 +684,9 @@ test('M37: single-instance primeiro, window-state restrito, app_quit e os bloque
   // A07a (PLANO-ANDROID 4.2): o plugin do Android entra só no braço do Android e fica fora da ordem do desktop.
   assert.match(lib, /#\[cfg\(target_os = "android"\)\]\n    let builder = builder\.plugin\(tauri_plugin_tomatito_android::init\(\)\);/);
   const plugins = [...lib.matchAll(/\.plugin\(\s*(tauri_plugin_\w+)/g)].map((m) => m[1]).filter((p) => p !== 'tauri_plugin_tomatito_android');
-  assert.deepEqual(plugins, ['tauri_plugin_single_instance', 'tauri_plugin_notification', 'tauri_plugin_window_state']);
+  // v0.3: por último, o da atualização (update.rs), sem comandos liberados à página.
+  assert.deepEqual(plugins, ['tauri_plugin_single_instance', 'tauri_plugin_notification', 'tauri_plugin_window_state', 'tauri_plugin_updater']);
+  assert.doesNotMatch(ler('src-tauri/capabilities/main.json'), /updater/);
   assert.match(lib, /tauri_plugin_single_instance::init\(\s*\|app, _argv, _cwd\|\s*\{?\s*window::mostrar\(app\)/);
   assert.match(lib, /\.with_state_flags\(window::ESTADO_DA_JANELA\)\s*\.with_denylist\(&\[window::TOMATO_LABEL\]\)/);
   assert.match(lib, /commands::app_quit,/);

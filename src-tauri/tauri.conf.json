@@ -14,6 +14,14 @@
       "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' ipc: http://ipc.localhost"
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDAyM0QxQUVGQ0YzNjQ4QTAKUldTZ1NEYlA3eG85QXFPYURnMTZmczlxZlBMNDFsYUFyUXB4bFFMajNxTnU2bUNCamVZTkVhVEEK",
+      "endpoints": [
+        "https://github.com/kbrianps/tomatito/releases/latest/download/latest.json"
+      ]
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",
@@ -40,7 +48,11 @@
       "deb": {
         "depends": [
           "libasound2t64 | libasound2"
-        ]
+        ],
+        "files": {
+          "/etc/apt/sources.list.d/tomatito.sources": "../packaging/apt/tomatito.sources",
+          "/usr/share/keyrings/tomatito-archive-keyring.gpg": "../packaging/apt/tomatito-archive-keyring.gpg"
+        }
       },
       "appimage": {
         "bundleMediaFramework": false
