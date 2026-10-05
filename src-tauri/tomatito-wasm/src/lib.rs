@@ -959,10 +959,12 @@ pub fn historico_em(
     hora_de_zerar: u8,
 ) -> tomatito_motor::events::HistoryDto {
     let entradas: Vec<tomatito_core::FocusEntry> = pares
-        .chunks_exact(2)
-        .map(|p| tomatito_core::FocusEntry {
-            ended_at: EpochMs(p[0] as i64),
-            seconds: if p[1] > 0.0 { p[1] as u64 } else { 0 },
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|&[fim, segundos]| tomatito_core::FocusEntry {
+            ended_at: EpochMs(fim as i64),
+            seconds: if segundos > 0.0 { segundos as u64 } else { 0 },
         })
         .collect();
     tomatito_core::history(&entradas, agora, tz, hora_de_zerar).into()
