@@ -1696,3 +1696,9 @@ Retomado em modo solo, depois do rebase da branch `android` sobre a `main` com a
 3. **Conferido:** `aapt2 dump badging` com `application-label:'Tomatito'` e `application-icon-*` em `res/mipmap-anydpi-v26/ic_launcher.xml` (`adaptive-icon` com `foreground`, `background` e `monochrome`); `segundo-plano.mjs` 21/21 com o ícone novo; captura do lançador em `docs/android/capturas/a15-lancador.png` (o ícone no dock e o arco na barra de status).
 4. **Sem a correlação de imagem do plano:** a captura foi conferida a olho (o desenho é o mesmo `icon.svg`). O ícone legado (`ic_launcher.png`, Android 7) sai com o arco encostado na borda; só o Android 7.x o usa.
 5. **`versionCode 1` / `versionName 1.0` no APK de depuração:** a versão certa entra no A19 (`versao.mjs`).
+
+## A17 (Android): verificação cruzada (05/10/2026)
+
+Na worktree `android`, com A13, A05, A06, A14 e A15 feitos: `npm test` 497/497; `npm run build:web`, `test:cabecalhos` 2/2; `verificar.mjs --todos` e `--todos --celular m` verdes (29 casos); bateria do desktop (`bateria-desktop.sh --app`) com `build.txt` e `app-real.txt` iguais aos da linha de base, 24/24 capturas iguais e nenhum teste do cargo a menos. O único nome de teste do node que "sumiu" é o da lista de ícones, que traz a lista no nome e ganhou o `alert_off` (A13).
+
+**`npm run test:wasm`: 114 no Node; a parte do Chrome não rodou** ("o Chrome for Testing não tem chromedriver 154.0.8037.97"): o Chrome do sistema subiu para a 154 e o chromedriver dessa versão ainda não foi publicado. É do ambiente; os casos do `verificar.mjs` rodam o mesmo wasm no Chrome 154 de verdade. Rodar de novo quando o chromedriver sair.
