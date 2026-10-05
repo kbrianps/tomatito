@@ -16,7 +16,7 @@ export const versionCode = (v) => { const [a, b, c] = v.split('.').map(Number); 
 const cargo = /^version = "([^"]+)"/m.exec(ler('src-tauri/Cargo.toml'))[1];
 const android = JSON.parse(ler('src-tauri/tauri.android.conf.json')).version;
 // Linhas da tabela marcadas como enviadas: | versão | versionCode | sha256 | trilha | data |
-const enviados = [...ler('docs/android/versoes.md').matchAll(/^\|\s*\d+\.\d+\.\d+\s*\|\s*(\d+)\s*\|[^|]*\|\s*(?!não enviado)[^|]+\|/gm)].map((m) => Number(m[1]));
+const enviados = [...ler('docs/android/versoes.md').matchAll(/^\|\s*\d+\.\d+\.\d+\s*\|\s*(\d+)\s*\|[^|]*\|\s*(?!não enviado)(?=\S)[^|]+\|/gm)].map((m) => Number(m[1]));
 const ultimo = enviados.length ? Math.max(...enviados) : 0;
 const erros = [];
 if (android !== cargo) erros.push(`tauri.android.conf.json diz ${android}; o Cargo.toml diz ${cargo}`);

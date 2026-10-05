@@ -1744,3 +1744,8 @@ Na worktree `android`, com A13, A05, A06, A14 e A15 feitos: `npm test` 497/497; 
 2. A descrição não cita o tomate em tela cheia (A16, adiado) e diz "Não acessa a internet" (a sonda do A18 confirmou).
 3. **`docs/android/PUBLICAR.md`** em 7 blocos curtos, e o convite em `docs/android/play/convite-testadores.txt` (texto puro). `scripts/android/conferir-publicar.mjs` confere os arquivos citados e o SHA-256 do AAB contra o `versoes.md`.
 4. O e-mail público de contato ficou em aberto na ficha (aparece na loja; decisão do usuário).
+
+## A26 (Android): pacote final e v0.2.0 (05/10/2026)
+
+1. **Pacote final** (com o A23): `conferir-aab.mjs` 7/7, SHA-256 gravado no `docs/android/versoes.md`; `fumaca-release.mjs` 5/5 no tt37 com ele; `ficha.mjs` e `conferir-publicar.mjs` ok.
+2. O `versao.mjs` contava a linha "não enviado" como enviada (o `\s*` antes do lookahead recuava); corrigido.

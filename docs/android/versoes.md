@@ -4,7 +4,7 @@ Uma linha por pacote (`.aab`) gerado para a Play. O `versionCode` vem da versão
 
 | Versão | versionCode | SHA-256 do AAB | Trilha | Data |
 |---|---|---|---|---|
-| 0.2.0 | 2000 | (o do pacote final, gravado no A26) | não enviado | 05/10/2026 |
+| 0.2.0 | 2000 | `28ca9b06383c41c85ddf7fac621fde2ef1019ec2f94b9935fd58ce2b4f4fb764` | não enviado | 05/10/2026 |
 
 Ao enviar um pacote ao Play Console, troque "não enviado" pela trilha (teste interno, teste fechado, produção) e a data.
 
