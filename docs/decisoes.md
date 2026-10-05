@@ -1702,3 +1702,11 @@ Retomado em modo solo, depois do rebase da branch `android` sobre a `main` com a
 Na worktree `android`, com A13, A05, A06, A14 e A15 feitos: `npm test` 497/497; `npm run build:web`, `test:cabecalhos` 2/2; `verificar.mjs --todos` e `--todos --celular m` verdes (29 casos); bateria do desktop (`bateria-desktop.sh --app`) com `build.txt` e `app-real.txt` iguais aos da linha de base, 24/24 capturas iguais e nenhum teste do cargo a menos. O único nome de teste do node que "sumiu" é o da lista de ícones, que traz a lista no nome e ganhou o `alert_off` (A13).
 
 **`npm run test:wasm`: 114 no Node; a parte do Chrome não rodou** ("o Chrome for Testing não tem chromedriver 154.0.8037.97"): o Chrome do sistema subiu para a 154 e o chromedriver dessa versão ainda não foi publicado. É do ambiente; os casos do `verificar.mjs` rodam o mesmo wasm no Chrome 154 de verdade. Rodar de novo quando o chromedriver sair.
+
+## A18 (Android): build de release e 16 KB (05/10/2026)
+
+1. **Sonda da `INTERNET`: sem INTERNET funciona.** APK de release x86_64 (assinado com a chave de depuração, só para o teste) instalado no tt37: o app abre na tela Foco, sem `net::ERR_*`, `FATAL` nem erro no console. O `aapt2 dump permissions` do release traz só `POST_NOTIFICATIONS`, `USE_EXACT_ALARM`, `SCHEDULE_EXACT_ALARM` (até o SDK 32) e `RECEIVE_BOOT_COMPLETED` (mais a permissão interna do AndroidX). A conferência foi pela captura da tela (a árvore do `uiautomator` não expõe o conteúdo da WebView neste aparelho).
+2. **16 KB:** `build.rs` passa `-Wl,-z,max-page-size=16384` no Android. `llvm-readelf -lW` nas três `libtomatito_lib.so` (arm64-v8a, armeabi-v7a, x86_64): todos os `LOAD` com `0x4000`.
+3. **`npx tauri android build --aab --target aarch64 --target armv7 --target x86_64`:** AAB de 15,9 MB em `$TT_GRADLE_SAIDAS/app/outputs/bundle/universalRelease/`, ainda sem assinatura (A19).
+4. **R8:** `consumer-rules.pro` do plugin guarda também os três receivers.
+5. **Disco:** o `~/.gradle` virou um link para `/opt/cargo-target/gradle-home` e o cache do npm foi limpo (o `/home` tinha caído para 2,8 GB).
