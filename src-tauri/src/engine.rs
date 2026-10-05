@@ -151,6 +151,16 @@ impl TauriSink {
         self.agenda(|v, fuso| v.preferencias(prefs, fuso));
     }
 
+    /// A14: a agenda do que a retomada restaurou. O `restaurar` só passa pelo
+    /// `state`/`timers` quando uma fase venceu com o app fechado; reaberto no
+    /// meio de uma fase, nada chegaria à agenda, e os alarmes (que o sistema
+    /// apaga ao matar o app em alguns casos) não voltariam.
+    #[cfg(target_os = "android")]
+    pub fn retomar_agenda(&self, focus: &FocusDto, timers: &TimersDto) {
+        self.agenda(|v, fuso| v.foco(focus, fuso));
+        self.agenda(|v, fuso| v.temporizadores(timers, fuso));
+    }
+
     /// A09 (PLANO-ANDROID 5.2, item 2): remonta a agenda (e, desde o A11, a
     /// contínua de agora) e, se o pacote mudou, o entrega. Chamado em cada `state` e cada `timers`: o `tt://phase`
     /// sempre vem logo depois de um `state`, então não precisa remontar. Chamado com o motor travado, como o resto do sink: a

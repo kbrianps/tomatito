@@ -1681,3 +1681,10 @@ Retomado em modo solo, depois do rebase da branch `android` sobre a `main` com a
 4. **Achado e corrigido ao rodar o A05 de novo: as Configurações quebravam no Android sem o cartão de volume** (`volume.addEventListener` em `null`), e a navegação ficava presa na tela. Todo uso do volume agora confere se ele existe; o `casca.mjs` ganhou a conferência "das Configurações de volta à Foco".
 5. **Roteiros:** `node scripts/android/bordas.mjs` 5/5 e `node scripts/android/casca.mjs` 8/8 no tt37.
 6. **Em aberto (depois):** um "Uncaught #<Object>" no console na abertura do app no Android (um objeto lançado, sem pilha). Não quebra nada que os roteiros conferem; anotado no `docs/depois.md`.
+
+## A14 (Android): persistência, retomada e tema do sistema (05/10/2026)
+
+1. **A agenda do que foi retomado.** O `motor.restaurar` só passava pelo `state`/`timers` do sink quando uma fase vencia com o app fechado; reaberto no meio de uma fase, nada chegava à agenda e os alarmes não voltavam (o que o `cartao` do A13 acusou). O `lib.rs` agora chama `TauriSink::retomar_agenda` com o estado retomado (só Android).
+2. **Roteiro novo `scripts/android/persistencia.mjs`: 6/6** no tt37 (arquivos na pasta do app; tema mantido depois de `am kill`; mesma fase, mesmo fim e mesma agenda exata depois de `am kill`; bloco de 1 min no "hoje"; com o relógio do aparelho no dia seguinte, ele passa para o "ontem").
+3. **A virada do dia é conferida pelo `stats_get`** (o DTO não traz a data): o bloco concluído sai do "hoje" e entra no "ontem" com o relógio em 00:01 do dia seguinte (`adb root` + `date`, e o relógio volta ao do host no fim).
+4. **`barras.mjs` (modo Sistema, `cmd uimode night`): 6/6**, e **`avisos.mjs cartao`: 7/7** (o item que faltava no A13).

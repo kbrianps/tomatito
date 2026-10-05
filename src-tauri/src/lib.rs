@@ -153,6 +153,14 @@ pub fn run() {
             // da bandeja e das janelas; o arquivo passa a ser o do motor.
             motor.restaurar(restaurado);
             estado.save_all(&motor.state());
+            // A14: os alarmes do que foi retomado (Android).
+            #[cfg(target_os = "android")]
+            {
+                let retomado = motor.state();
+                motor
+                    .sink()
+                    .retomar_agenda(&retomado.focus, &retomado.timers);
+            }
             app.manage(motor.clone());
             bandeja.criar_icone(&motor.state().focus);
             tauri::async_runtime::spawn(engine::laco(motor.clone(), acordador));
