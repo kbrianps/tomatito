@@ -17,6 +17,7 @@ mod stats;
 mod tasks;
 #[cfg(desktop)]
 mod tray;
+mod update;
 // No Android, a mesma API sem bandeja (A03, PLANO-ANDROID 4.1).
 #[cfg(mobile)]
 #[path = "tray_mobile.rs"]
@@ -82,7 +83,10 @@ pub fn run() {
                 .with_state_flags(window::ESTADO_DA_JANELA)
                 .with_denylist(&[window::TOMATO_LABEL])
                 .build(),
-        );
+        )
+        // v0.3: a atualização por dentro do app (update.rs). Os comandos do
+        // plugin não são liberados à página: quem fala com ele é o Rust.
+        .plugin(tauri_plugin_updater::Builder::new().build());
     // Fechar (X, Ctrl+W, Alt+F4) com "fechar para a bandeja" ligado só
     // esconde a `main` (3.4, M36). No Android, não há o que fechar.
     #[cfg(desktop)]
@@ -106,6 +110,14 @@ pub fn run() {
             // ícone nasce depois dele, porque o menu fala com o motor (M36).
             let bandeja = Arc::new(tray::Bandeja::new(app.handle().clone(), s.tray_time));
             app.manage(bandeja.clone());
+            // v0.3: a procura de atualizações ao abrir, só com a opção ligada.
+            #[cfg(desktop)]
+            {
+                app.manage(update::Atualizador::new(app.handle().clone()));
+                if s.auto_update {
+                    update::procurar_ao_abrir(app.handle());
+                }
+            }
             let (clock, speed) = engine::clock_from_env();
             // A thread de som sobe junto: o motor e o `sound_test` usam a mesma,
             // com o volume das configurações (M38).
@@ -198,6 +210,7 @@ pub fn run() {
             commands::focus_stop,
             commands::sound_test,
             commands::stats_get,
+            commands::stats_history,
             commands::task_list,
             commands::task_add,
             commands::task_complete,
@@ -223,6 +236,9 @@ pub fn run() {
             commands::tomato_on_top_available,
             compat_x11::x11_compat_get,
             compat_x11::app_restart,
+            update::update_info,
+            update::update_check,
+            update::update_install,
         ])
         .build(context)
         .expect("error while building tauri application")

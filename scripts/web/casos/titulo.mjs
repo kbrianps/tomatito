@@ -45,8 +45,8 @@ const titEh = (texto) => `document.title === ${JSON.stringify(texto)}`;
 
 async function prontoNaFoco(p) {
   const ok = await esperar(p, `(() => {
-    const b = document.querySelector('[data-preparo] [data-iniciar]') ?? document.querySelector('[data-andamento]');
-    return !!b && b.getBoundingClientRect().height > 0;
+    // O preparo ou, com uma sessão retomada, o andamento (um dos dois à vista).
+    return ['[data-preparo] [data-iniciar]', '[data-andamento]'].some((sel) => document.querySelector(sel)?.getBoundingClientRect().height > 0);
   })()`);
   if (!ok) throw new Error('a tela Foco não apareceu');
 }

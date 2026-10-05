@@ -30,6 +30,8 @@
 // (f) o motor provisório saiu: o console não tem "[provisório]" e o
 //     `sound_test` resolve com null (desde o W12 ele toca: o som.js anota o
 //     pedido no `historico`, com a origem 'teste').
+// (h) v0.3: o `stats_history` soma os 2 focos (3000 s, 2 períodos, 1 dia,
+//     desde 30/09, na semana de 28/09) e a janela "Histórico" mostra o mesmo.
 // O item (g) é do Node: `src/platform/web/motor-prototipo.js` não existe e
 // nada no `src/` o cita.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -171,6 +173,27 @@ export default async function estatisticas(t) {
   await telaPronta(p);
   const b = await p.avaliar(LER);
   t.conferir('(b) depois de recarregar, continua "Concluído: 50 minutos"', b.concluido === 'Concluído: 50 minutos', b.concluido);
+
+  // (h) v0.3: o histórico de todo o tempo e por semana, pelo ipc e pela janela.
+  const hist = await ipc(p, `return await ipc.estatisticas.historico();`);
+  await p.avaliar(`document.querySelector('[data-historico]').click()`);
+  const abriu = await esperar(p, `!!document.querySelector('.tt-dialogo-historico tbody tr')`, 4000);
+  const janela = await p.avaliar(`(() => {
+    const d = document.querySelector('.tt-dialogo-historico');
+    return {
+      totais: [...d.querySelectorAll('.tt-historico-total dd')].map((e) => e.textContent.trim()),
+      linhas: [...d.querySelectorAll('tbody tr')].map((e) => e.textContent.trim()),
+      barras: d.querySelectorAll('.tt-historico-barra').length,
+    };
+  })()`);
+  await p.avaliar(`document.querySelector('.tt-dialogo-historico [data-fechar]').click()`);
+  t.conferir(
+    '(h) histórico: 3000 s em 2 períodos e 1 dia, desde 30/09, na semana de 28/09; a janela mostra o mesmo',
+    hist.totalS === 3000 && hist.periods === 2 && hist.days === 1 && hist.since === '2026-09-30' &&
+      hist.weeks.length === 1 && hist.weeks[0].monday === '2026-09-28' && hist.weeks[0].focusS === 3000 &&
+      abriu && janela.totais.join('|') === '50 min|2|1' && janela.linhas.length === 1 && /^Esta semana\s*50 min$/.test(janela.linhas[0]) && janela.barras === 1,
+    { hist, janela },
+  );
 
   // (c)
   const c = await ipc(

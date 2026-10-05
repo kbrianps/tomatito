@@ -15,6 +15,10 @@ export const EVENTOS = Object.freeze({
   temporizadores: 'tt://timers',
   // M34: o retrato do cronômetro, a cada transição.
   cronometro: 'tt://stopwatch',
+  // v0.3: o download da atualização (`{ downloaded, total }`) e a versão
+  // achada pela procura ao abrir (`{ version }`); só no desktop.
+  atualizacaoProgresso: 'tt://update-progress',
+  atualizacaoDisponivel: 'tt://update-available',
 });
 
 /** `get_state`: `{ focus, speed, setup, timers, stopwatch, settings, recursos }`. */
@@ -92,6 +96,12 @@ export const configuracoes = Object.freeze({
  */
 export const estatisticas = Object.freeze({
   obter: () => invoke('stats_get'),
+  /**
+   * v0.3: `{ totalS, periods, days, since, weeks: [{ monday, focusS }] }`: os
+   * totais de todo o tempo e o foco de cada semana (a segunda em
+   * `AAAA-MM-DD`), da primeira com foco até a atual, em ordem.
+   */
+  historico: () => invoke('stats_history'),
 });
 
 /**
@@ -188,6 +198,18 @@ export const full = Object.freeze({
 export const compatX11 = Object.freeze({
   situacao: () => invoke('x11_compat_get'),
   reiniciar: () => invoke('app_restart'),
+});
+
+/**
+ * v0.3 (src-tauri/src/update.rs): a atualização por dentro do app, no desktop.
+ * `info()` resolve com `{ available, channel, pending }`; `procurar()`, com
+ * `{ current, version }` (`version` nulo: já é a última); `instalar()` baixa,
+ * instala e o Rust reinicia. Os erros são `{ code, message }`.
+ */
+export const atualizacao = Object.freeze({
+  info: () => invoke('update_info'),
+  procurar: () => invoke('update_check'),
+  instalar: () => invoke('update_install'),
 });
 
 /**

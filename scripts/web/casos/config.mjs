@@ -198,6 +198,8 @@ export default async function config(t) {
       viewport: /<meta name="viewport" content="[^"]*viewport-fit=cover[^"]*interactive-widget=resizes-content[^"]*" \/>/.test(html),
     };
   }
+  // v0.3: a primeira aba cedeu a vez às outras (uma aba só); volta ao app.
+  await p.abrir('/#/foco');
   const cspNaPagina = await p.avaliar(`document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.content ?? null`);
   t.conferir(
     '(h) dist-web/index.html com a CSP e a viewport da 5.1; a página rodou com a CSP',

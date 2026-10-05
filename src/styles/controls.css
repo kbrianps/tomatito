@@ -354,3 +354,34 @@ fluent-dropdown[disabled]{ --colorNeutralBackgroundDisabled:transparent; }
   .tt-seletor:has(.tt-seletor-campo:focus-visible){ outline-color:Highlight; }
   .tt-seletor-chevron:disabled{ color:GrayText; }
 }
+
+/* v0.3: a janela "Histórico" (views/focus/history-dialog.js). No molde do
+   diálogo da meta, mais larga, com a tabela das semanas rolando por dentro. */
+fluent-dialog.tt-dialogo-historico::part(dialog){ width:400px; max-width:calc(100vw - 32px); box-shadow:var(--shadow64); }
+.tt-dialogo-historico fluent-dialog-body::part(actions){ flex-direction:row; align-items:stretch; justify-content:stretch; margin-block-start:0; padding-block-start:24px; }
+.tt-dialogo-historico [slot="action"]{ flex:1 1 0; min-width:0; }
+.tt-historico{ display:flex; flex-direction:column; gap:20px; padding-top:12px; }
+.tt-historico h3{ margin:0 0 10px; }
+.tt-historico-nota{ margin:8px 0; color:var(--tt-fg-2); min-height:20px; }
+.tt-historico-totais{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; margin:0; }
+.tt-historico-total{ display:flex; flex-direction:column-reverse; justify-content:flex-end; gap:2px; padding:10px 8px; text-align:center;
+  background:var(--tt-bg-card); border:1px solid var(--tt-border); border-radius:var(--tt-r-ctl); }
+.tt-historico-total dt{ font:var(--tt-type-caption); color:var(--tt-fg-2); }
+.tt-historico-total dd{ margin:0; font:600 16px/24px var(--tt-font-display); white-space:nowrap; }
+.tt-historico-desde{ margin:8px 0 0; color:var(--tt-fg-2); }
+/* As barras: uma por semana, da mais antiga à mais nova, na altura da fração
+   da maior (a --tt-fracao vem do JS). A semana sem foco fica só com o traço. */
+.tt-historico-grafico{ display:flex; align-items:flex-end; gap:6px; height:72px; padding:0 2px; border-bottom:1px solid var(--tt-border); }
+.tt-historico-barra{ flex:1 1 0; min-width:0; max-width:28px; height:max(2px, calc(var(--tt-fracao, 0) * 100%)); border-radius:3px 3px 0 0; background:var(--tt-accent-fg); }
+.tt-historico-barra[data-vazia]{ background:var(--tt-stroke-control); opacity:.5; }
+.tt-historico-rolagem{ max-height:min(196px, 30dvh); margin-top:12px; overflow-y:auto; border-radius:var(--tt-r-ctl); }
+.tt-historico-rolagem:focus-visible{ outline:2px solid var(--tt-focus-outer); outline-offset:2px; }
+.tt-historico-tabela{ width:100%; border-collapse:collapse; }
+.tt-historico-tabela th, .tt-historico-tabela td{ height:32px; padding:0 4px; text-align:left; font:var(--tt-type-body); font-weight:400; }
+.tt-historico-tabela td{ text-align:right; white-space:nowrap; }
+.tt-historico-tabela thead th{ position:sticky; top:0; height:28px; font:var(--tt-type-caption); color:var(--tt-fg-2); background:var(--colorNeutralBackground1, var(--tt-bg-card)); }
+.tt-historico-tabela thead th:last-child{ text-align:right; }
+.tt-historico-tabela tbody tr{ border-top:1px solid var(--tt-border); }
+.tt-historico-tabela tr[data-vazia] > *{ color:var(--tt-fg-2); }
+@media (forced-colors:active){ .tt-historico-barra{ background:Highlight; } }
+@media (max-width:420px){ .tt-historico-total{ padding:10px 2px; } .tt-historico-total dd{ font-size:15px; } }

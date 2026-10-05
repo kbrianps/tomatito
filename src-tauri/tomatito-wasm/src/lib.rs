@@ -949,6 +949,37 @@ pub fn faixas_em(agora: EpochMs, tz: &TimeZone, hora_de_zerar: u8) -> Option<Fai
     })
 }
 
+/// O histórico (v0.3) dos períodos de foco que contam: `pares` é
+/// `[endedAt, segundos, endedAt, segundos, ...]` (quem filtra o que conta é o
+/// `contagem.js`, com a regra do desktop).
+pub fn historico_em(
+    pares: &[f64],
+    agora: EpochMs,
+    tz: &TimeZone,
+    hora_de_zerar: u8,
+) -> tomatito_motor::events::HistoryDto {
+    let entradas: Vec<tomatito_core::FocusEntry> = pares
+        .chunks_exact(2)
+        .map(|p| tomatito_core::FocusEntry {
+            ended_at: EpochMs(p[0] as i64),
+            seconds: if p[1] > 0.0 { p[1] as u64 } else { 0 },
+        })
+        .collect();
+    tomatito_core::history(&entradas, agora, tz, hora_de_zerar).into()
+}
+
+/// `historico(pares, agora, horaDeZerar)`: `{ totalS, periods, days, since,
+/// weeks: [{ monday, focusS }] }`, no fuso do navegador.
+#[wasm_bindgen(js_name = historico)]
+pub fn historico_js(pares: &[f64], agora: f64, hora_de_zerar: u8) -> Result<JsValue, JsValue> {
+    para_js(&historico_em(
+        pares,
+        EpochMs(agora as i64),
+        &TimeZone::system(),
+        hora_de_zerar,
+    ))
+}
+
 /// `faixas(agora, horaDeZerar)`: `{ yesterday, today, week }`, cada uma
 /// `{ start, end }` em ms, no fuso do navegador; ou `null`.
 #[wasm_bindgen(js_name = faixas)]

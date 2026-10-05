@@ -27,7 +27,10 @@ pub use countdown::{
     MAX_NAME_CHARS, MIN_DURATION_MS, TimerEnded, TimerId, TimerRecord, TimerRunRecord,
     TimerSnapshot, TimerStatus, Timers, TimersSnapshot, clean_name,
 };
-pub use days::{DayRange, StatsRanges, day_range, logical_date, stats_ranges, week_range};
+pub use days::{
+    DayRange, FocusEntry, History, MAX_WEEKS, StatsRanges, WeekTotal, day_range, history,
+    logical_date, stats_ranges, week_range,
+};
 pub use effects::{ChangeCause, Effect, Effects, FakeEffects, Notice, Period, PhaseChange, Sound};
 pub use focus::{
     Focus, FocusError, FocusSnapshot, LATE_AFTER_MS, RestoreError, RunRecord, SessionConfig,

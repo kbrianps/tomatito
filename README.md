@@ -1,15 +1,17 @@
 # Tomatito
 
-Timer de foco leve para Windows e Linux.
+Timer de foco leve para Windows, Linux, Android e navegador.
 
 Você escolhe a duração da sessão de foco, e o Tomatito intercala intervalos curtos nas sessões longas. A v1 terá também temporizadores, cronômetro, progresso diário e cinco temas, com estética sóbria e sem gamificação.
 
-**Em desenvolvimento.** Ainda não há versão publicada nem instaladores.
+Versão web, sem instalar: <https://tomatito.kbrianps.workers.dev>. Instaladores: [releases](https://github.com/kbrianps/tomatito/releases/latest).
 
 ## Plataformas
 
 - Linux: Ubuntu 26.04 com GNOME 50 (Wayland).
 - Windows 11. O Windows 10 é suportado em melhor esforço.
+- Android 12 ou mais novo.
+- Navegador (Chrome, Edge, Firefox ou Safari recentes), no computador e no celular.
 
 ## Bandeja
 
@@ -19,11 +21,21 @@ No GNOME, a bandeja depende da extensão AppIndicator (vem ativa no Ubuntu). Sem
 
 ## Privacidade
 
-Nenhum dado sai do computador: sem rede e sem contas. Configurações e histórico ficam na pasta de dados do app.
+Nenhum dado sai do aparelho, e não há contas. Configurações e histórico ficam na pasta de dados do app (na web, no próprio navegador, com exportar e importar nas Configurações).
+
+O app do computador só acessa a internet para procurar atualizações, e só quando você clica em "Procurar atualizações" ou liga "Procurar ao abrir" (desligada por padrão). O app do Android não acessa a internet.
 
 ## Instalar
 
 Os instaladores ficam nos releases do repositório: `.deb` e AppImage para Linux, `.msi` e `.exe` para Windows. O `.exe` instala só para o seu usuário, sem pedir administrador. Cada tag `v*` gera um rascunho de release pelo `.github/workflows/release.yml`; a versão vem do `src-tauri/Cargo.toml`.
+
+## Atualizar
+
+- **Windows e AppImage:** Configurações → Atualização → "Procurar atualizações". O Tomatito baixa a versão nova, confere a assinatura, instala e reinicia.
+- **`.deb` (Ubuntu e Debian):** o pacote configura o repositório APT do Tomatito, e as versões novas chegam pelo atualizador do sistema (`sudo apt update && sudo apt upgrade`). O botão das Configurações também funciona.
+- **Android:** pela Google Play. **Web:** a página se atualiza sozinha.
+
+Os detalhes (endereços, chaves e como parar de receber) estão em [`docs/atualizacoes.md`](docs/atualizacoes.md).
 
 ## Desenvolvimento
 

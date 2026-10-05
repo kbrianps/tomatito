@@ -68,7 +68,7 @@ const settingsATrocar = (tema) =>
     schemaVersion: 1, theme: tema, lastNormalTheme: 'lite', resolvedTheme: 'lite', focusMinutes: 25,
     breakMinutes: 5, sounds: { focusEnd: true, breakEnd: true }, volume: 80, closeToTray: true, trayTime: false,
     dailyGoalMinutes: 120, resetHour: 0, tomatoSize: 280, tomatoOnTop: true, fullMode: 'auto',
-    fullValidated: '', linuxX11: false,
+    fullValidated: '', linuxX11: false, autoUpdate: false,
   }, null, 2);
 function gravarSettings() {
   if (!TEMA) return;

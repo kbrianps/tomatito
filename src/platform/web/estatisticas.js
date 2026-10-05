@@ -10,9 +10,9 @@
 //     `stats_ranges` do core, no fuso do navegador e com a hora de zerar), e
 //     a regra de soma é a do `contagem.js`. Um erro de leitura vira 0, como
 //     no desktop: o cartão mostra zero, não quebra.
-import { faixas } from './pkg/tomatito_wasm.js';
+import { faixas, historico as historicoDoMotor } from './pkg/tomatito_wasm.js';
 import { esperar, transacao } from './armazenamento.js';
-import { somarFoco } from './contagem.js';
+import { conta, somarFoco } from './contagem.js';
 import * as configuracoes from './configuracoes.js';
 import * as motor from './motor.js';
 
@@ -62,4 +62,31 @@ export async function obter() {
     somas = { yesterdayS: 0, todayS: 0, weekS: 0 };
   }
   return { ...somas, dailyGoalMinutes, resetHour };
+}
+
+const SEM_HISTORICO = Object.freeze({ totalS: 0, periods: 0, days: 0, since: null, weeks: [] });
+
+/**
+ * `stats_history` (v0.3): `{ totalS, periods, days, since, weeks }`. Lê todos
+ * os períodos, fica com os de foco que contam (a regra do `contagem.js`) e
+ * entrega os pares `[endedAt, segundos]` ao mesmo cálculo do desktop
+ * (`history` do core, em wasm), no fuso do navegador e com a hora de zerar.
+ * Um erro de leitura vira o histórico vazio, como no desktop.
+ */
+export async function historico() {
+  await motor.estado();
+  await gravacoesPendentes();
+  try {
+    const lidos = await transacao(['periods'], 'readonly', ({ periods }) => esperar(periods.getAll()));
+    const pares = new Float64Array(
+      lidos
+        .filter(conta)
+        .sort((a, b) => a.endedAt - b.endedAt)
+        .flatMap((p) => [p.endedAt, Math.max(0, p.actualS)]),
+    );
+    return historicoDoMotor(pares, Date.now(), configuracoes.ler().resetHour);
+  } catch (erro) {
+    console.error('[estatísticas] falha ao ler o histórico', erro);
+    return { ...SEM_HISTORICO };
+  }
 }

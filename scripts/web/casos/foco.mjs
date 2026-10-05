@@ -21,7 +21,7 @@
 // (f) "Pular intervalo" leva ao "Período de foco (2 de 2)";
 // (g) pausar sem fase correndo rejeita com o code do CommandError do
 //     desktop (notRunning);
-// (h) ipc.full.trocarModo(true) rejeita com code === 'unsupported';
+// (h) ipc.full.trocarModo entra no Full e sai dele pelas configurações (v0.3);
 // (i) ipc.anunciarAoLeitor('x') resolve;
 // (j) os demais comandos novos do desktop (PLANO-WEB-V1, 3.2): notices_read
 //     lê os dois documentos, x11_compat_get, tomato_on_top_available e
@@ -184,8 +184,16 @@ export default async function foco(t) {
   t.conferir("(g) pausar sem fase correndo rejeita com code 'notRunning'", g?.code === 'notRunning' && typeof g.message === 'string', g);
 
   // (h)
-  const h = await ipc(p, `try { await ipc.full.trocarModo(true); return { resolveu: true }; } catch (e) { return e; }`);
-  t.conferir("(h) ipc.full.trocarModo(true) rejeita com code === 'unsupported'", h?.code === 'unsupported', h);
+  // v0.3: o Full existe na web (o palco, caso `full`): entrar grava o tema, e sair volta ao anterior.
+  const h = await ipc(
+    p,
+    `const antes = (await ipc.configuracoes.obter()).theme;
+  await ipc.full.trocarModo(true);
+  const dentro = (await ipc.configuracoes.obter()).theme;
+  await ipc.full.trocarModo(false);
+  return { antes, dentro, depois: (await ipc.configuracoes.obter()).theme };`,
+  );
+  t.conferir('(h) ipc.full.trocarModo entra no Full (theme full) e volta ao tema anterior', h.dentro === 'full' && h.depois === h.antes && h.antes !== 'full', h);
 
   // (i)
   const i = await ipc(p, `try { return { resolveu: true, valor: await ipc.anunciarAoLeitor('x') }; } catch (e) { return { resolveu: false, e }; }`);
@@ -204,7 +212,6 @@ export default async function foco(t) {
     naFrente: await ipc.full.sempreNaFrente(),
     validacao: await ipc.full.validacao(),
     semSuporte: {
-      mostrarMain: await rejeita(() => ipc.full.mostrarMain('#/foco')),
       responderValidacao: await rejeita(() => ipc.full.responderValidacao('keep')),
       definirRegiao: await rejeita(() => ipc.full.definirRegiao([])),
       tamanhoDeDebug: await rejeita(() => ipc.full.tamanhoDeDebug(280)),

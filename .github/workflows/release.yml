@@ -4,6 +4,10 @@
 #
 #   git tag v0.1.0 && git push origin v0.1.0
 #
+# v0.3: o rascunho leva também o latest.json e as assinaturas (.sig) que a
+# atualização por dentro do app lê (src-tauri/src/update.rs). Ao publicar o
+# release, o apt.yml refaz o repositório APT (docs/atualizacoes.md).
+#
 # A versão da tag precisa ser a do src-tauri/Cargo.toml (o passo "Versão" confere).
 # Para gerar os pacotes do Linux sem o GitHub: `npx tauri build --bundles deb appimage`
 # (ou `bash scripts/instalar-uso-diario.sh`, que também instala em ~/.local).
@@ -82,10 +86,15 @@ jobs:
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # v0.3: a chave que assina os instaladores para a atualização por
+          # dentro do app (a pública está no tauri.conf.json, plugins.updater).
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: Tomatito ${{ github.ref_name }}
           releaseBody: Instaladores do Tomatito ${{ github.ref_name }} para Linux (.deb e AppImage) e Windows (.msi e .exe).
           releaseDraft: true
           prerelease: false
-          args: --bundles ${{ matrix.bundles }}
+          # O tauri.release.conf.json liga as assinaturas (.sig) e o latest.json.
+          args: --bundles ${{ matrix.bundles }} --config src-tauri/tauri.release.conf.json

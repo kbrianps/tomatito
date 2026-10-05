@@ -100,6 +100,31 @@ export default Object.freeze({
       // M28: o lápis do cartão (nome e dica).
       editar: 'Editar meta diária',
     }),
+    // v0.3: a janela "Histórico" (views/focus/history-dialog.js), aberta pelo
+    // botão "Ver histórico" do cartão de progresso: os totais de todo o tempo
+    // e o foco por semana (segunda a domingo). Sem sequência, recorde nem
+    // comparação (1.1, sem gamificação).
+    historico: Object.freeze({
+      abrir: 'Ver histórico',
+      titulo: 'Histórico',
+      fechar: 'Fechar',
+      total: 'Todo o tempo',
+      tempo: 'Tempo de foco',
+      periodos: 'Períodos de foco',
+      dias: 'Dias com foco',
+      desde: (data) => `Desde ${data}.`,
+      semanas: 'Por semana',
+      estaSemana: 'Esta semana',
+      semana: (de, ate) => `${de} a ${ate}`,
+      colunaSemana: 'Semana',
+      colunaFoco: 'Foco',
+      vazio: 'Ainda não há sessões de foco registradas.',
+      erro: 'Não foi possível ler o histórico.',
+      // O rótulo do gráfico (role="img"): quantas semanas e a maior delas.
+      grafico: (n, maior) => `Foco nas últimas ${n} semanas. A maior teve ${maior}.`,
+      // "6 h 20 min", "45 min", "3 h".
+      horas: (h, min) => (h === 0 ? `${min} min` : min === 0 ? `${h} h` : `${h} h ${min} min`),
+    }),
     // M28: o diálogo "Editar meta diária" (views/focus/goal-dialog.js). As
     // metas por extenso, como no cartão ("1 hora e 30 minutos", e não "1 h
     // 30"; docs/decisoes.md, M28).
@@ -364,6 +389,32 @@ export default Object.freeze({
         botao: 'Instalar',
       }),
     }),
+    // v0.3: exportar e importar os dados da versão web (views/dados-web.js).
+    dados: Object.freeze({
+      secao: 'Dados',
+      exportar: Object.freeze({
+        titulo: 'Exportar dados',
+        descricao: 'Baixa um arquivo com as estatísticas, as tarefas e as configurações deste navegador.',
+        botao: 'Exportar',
+      }),
+      importar: Object.freeze({
+        titulo: 'Importar dados',
+        descricao: 'Lê um arquivo exportado pelo Tomatito e substitui os dados deste navegador.',
+        botao: 'Importar',
+      }),
+      confirmar: (periodos, tarefas, data) =>
+        `O arquivo${data ? ` de ${data}` : ''} tem ${periodos} ${periodos === 1 ? 'período' : 'períodos'} e ${tarefas} ${tarefas === 1 ? 'tarefa' : 'tarefas'}. ` +
+        'Importar apaga o que está neste navegador e põe o arquivo no lugar.',
+      substituir: 'Substituir',
+      cancelar: 'Cancelar',
+      gravando: 'Importando…',
+      erros: Object.freeze({
+        formato: 'Este não é um arquivo de dados do Tomatito.',
+        versao: 'O arquivo veio de uma versão mais nova do Tomatito. Atualize esta página e tente de novo.',
+        conteudo: 'O arquivo está incompleto ou danificado.',
+        gravacao: 'Não foi possível importar. Os dados deste navegador continuam como estavam.',
+      }),
+    }),
     // W14: a seção Avisos da versão web (views/avisos-web.js; PLANO-WEB, 4 e
     // 5; PLANO-WEB-V1, 7), com os quatro estados da permissão e o rodapé.
     avisos: Object.freeze({
@@ -396,6 +447,28 @@ export default Object.freeze({
       correndo: 'Já baixada. Para atualizar, encerre a sessão e os temporizadores em andamento.',
       botao: 'Atualizar',
     }),
+    // v0.3: a atualização por dentro do app, só no desktop
+    // (views/atualizar-app.js).
+    atualizarApp: Object.freeze({
+      secao: 'Atualização',
+      titulo: 'Atualizações',
+      descricao: 'Consulta o GitHub em busca da versão mais recente.',
+      descricaoDeb: 'Consulta o GitHub em busca da versão mais recente. As versões novas também chegam pelo atualizador do sistema.',
+      procurar: 'Procurar atualizações',
+      instalar: 'Atualizar agora',
+      procurando: 'Procurando…',
+      atual: (v) => (v ? `O Tomatito está atualizado (versão ${v}).` : 'O Tomatito está atualizado.'),
+      disponivel: (v) => `Versão ${v} disponível. O Tomatito reinicia ao terminar a instalação.`,
+      baixando: 'Baixando…',
+      baixandoEm: (p) => `Baixando… ${p}%`,
+      instalando: 'Instalando. O Tomatito vai reiniciar.',
+      erroDeRede: 'Não foi possível consultar o GitHub. Verifique a conexão e tente de novo.',
+      erroAoInstalar: 'Não foi possível instalar a atualização.',
+      auto: Object.freeze({
+        titulo: 'Procurar ao abrir',
+        descricao: 'Consulta o GitHub cada vez que o Tomatito abre. Desligada, o Tomatito só acessa a internet quando você pede.',
+      }),
+    }),
     // M57: a opção avançada do plano B2 (views/opcao-x11.js).
     avancado: 'Avançado',
     x11: Object.freeze({
@@ -406,6 +479,22 @@ export default Object.freeze({
       reiniciar: 'Reiniciar agora',
       semXwayland: 'Esta sessão não tem Xwayland, e a opção fica sem efeito.',
     }),
+  }),
+  // v0.3: o palco do Tomatito Full na versão web (views/palco-tomate.js).
+  palco: Object.freeze({
+    nome: 'Tomatito Full',
+    telaCheia: 'Tela cheia',
+    sairDaTelaCheia: 'Sair da tela cheia',
+    mini: 'Mini tomate',
+    tituloDoMini: 'Tomatito',
+    fecharMini: 'Fechar o mini tomate',
+  }),
+  // v0.3: o aviso da aba duplicada na versão web (platform/web/aba-unica.js).
+  abaUnica: Object.freeze({
+    titulo: 'O Tomatito já está aberto em outra aba',
+    texto: 'Para não contar o tempo duas vezes, ele funciona numa aba só. Esta aba assume sozinha se a outra for fechada.',
+    usarAqui: 'Usar nesta aba',
+    passando: 'Passando para esta aba…',
   }),
   // W14: o InfoBar da versão web, no cartão de sessão, depois do primeiro
   // "Iniciar sessão de foco" com a permissão ainda não pedida

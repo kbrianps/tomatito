@@ -26,6 +26,8 @@
 // (o cartão Atualizar das Configurações).
 // W17: o título da aba (aba.js), com o tempo da sessão como na bandeja do
 // desktop, desligável pela chave `tomatito:web.tempoNaAba`.
+// v0.3: uma aba só (aba-unica.js). Quem espera pela trava é o motor (o
+// `motor.iniciar()`): sem ela, nenhum comando, estado ou gravação anda.
 // W18: o cartão "Tempo na aba" chega à chave pelo `abaDaCasca`, e o
 // "Instalar o Tomatito" ao convite do navegador pelo `instalacaoDaCasca`
 // (instalacao.js).
@@ -43,6 +45,7 @@ import * as tarefas from './tarefas.js';
 import { emitir, listen } from './barramento.js';
 import { definirTempoNaAba, tempoNaAbaLigado } from './aba.js';
 import { ligarTeclado } from '../../lib/teclado.js';
+import { criarDados } from './dados.js';
 
 // Os períodos que o motor fecha vão para o IndexedDB.
 motor.aoEfeito('period', estatisticas.gravarPeriodo);
@@ -111,10 +114,8 @@ const DESPERTAM = new Set(['focus_start', 'focus_resume', 'focus_skip', 'timer_s
 export { emit, listen } from './barramento.js';
 export { janelaAtual } from './janela.js';
 
-/** Comandos do desktop que não existem no navegador (o Full, reiniciar e sair). */
+/** Comandos do desktop que não existem no navegador (a janela do Full, reiniciar e sair). */
 export const SEM_SUPORTE = Object.freeze([
-  'switch_window_mode',
-  'show_main',
   'full_validation_answer',
   'set_tomato_region',
   'tomato_debug_size',
@@ -161,8 +162,31 @@ async function gravarConfiguracoes({ patch } = {}) {
   return s;
 }
 
+/**
+ * v0.3: o Full na web. `switch_window_mode{full}` faz o que o Rust faz com as
+ * configurações (window/tomato.rs): entrar grava `theme: 'full'` (o
+ * `lastNormalTheme` fica), e sair volta a ele. Quem mostra o tomate é o
+ * palco (views/palco-tomate.js), pelo `tt://settings` que a main reflete no
+ * <html>.
+ */
+async function trocarModo({ full } = {}) {
+  // O `ler` normaliza pelo wasm: só com o motor carregado.
+  await motor.iniciar();
+  const atual = configuracoes.ler();
+  if (Boolean(full) === (atual.theme === 'full')) return;
+  await gravarConfiguracoes({ patch: { theme: full ? 'full' : atual.lastNormalTheme } });
+}
+
+/** `show_main{route}`: sai do Full e abre a rota pedida (as Configurações). */
+async function mostrarMain({ route } = {}) {
+  await trocarModo({ full: false });
+  if (typeof route === 'string' && route.startsWith('#/')) globalThis.location.hash = route;
+}
+
 /** Os comandos atendidos aqui mesmo, sem o motor. */
 const LOCAIS = Object.freeze({
+  switch_window_mode: trocarModo,
+  show_main: mostrarMain,
   get_state: async () => ({
     ...(await motor.estado()),
     settings: configuracoes.ler(),
@@ -181,6 +205,7 @@ const LOCAIS = Object.freeze({
   // O retrato inerte da validação do Full (window/validacao.rs, Fase::Nenhuma).
   full_validation_get: async () => ({ seq: 0, state: 'none' }),
   stats_get: () => estatisticas.obter(),
+  stats_history: () => estatisticas.historico(),
   task_list: () => tarefas.listar(),
   task_add: tarefas.adicionar,
   task_complete: tarefas.concluir,
@@ -212,7 +237,7 @@ export const casca = Object.freeze({
   atalhosDaJanela: false, // Ctrl+W e Ctrl+Q são do navegador
   atalhosDeNavegacao: false, // Ctrl+1–3 trocam de aba no navegador
   sair: false,
-  full: false, // o Full na web fica para depois
+  full: true, // v0.3: o tomate num palco por cima do app (views/palco-tomate.js)
   formaCelular: true, // pode usar o layout de celular (quem liga é o boot-web.js, W07a)
   android: false,
   tomateTelaCheia: false,
@@ -250,6 +275,31 @@ export const avisosDaCasca = criarPermissao({
   armazenamento: () => globalThis.localStorage ?? null,
   permissoes: () => globalThis.navigator?.permissions ?? null,
   registro: () => registroAtivo(),
+});
+
+/**
+ * v0.3: monta o palco do Tomatito Full (views/palco-tomate.js) com o store
+ * da página. O desenho e as folhas chegam só aqui (palco-carga.js). No
+ * desktop, null (platform/tauri.js): lá o Full é uma janela.
+ */
+export async function palcoDaCasca({ store }) {
+  const [{ criarPalco }, carga] = await Promise.all([import('../../views/palco-tomate.js'), import('./palco-carga.js')]);
+  return criarPalco({
+    store,
+    desenho: carga.desenhoDoTomate(),
+    estilos: carga.estilos,
+    sair: () => trocarModo({ full: false }),
+    configuracoes: () => mostrarMain({ route: '#/configuracoes' }),
+  });
+}
+
+/**
+ * v0.3: exportar e importar os dados deste navegador (dados.js), para a seção
+ * "Dados" das Configurações. No desktop, null (platform/tauri.js).
+ */
+export const dadosDaCasca = criarDados({
+  versaoDoApp: typeof __TOMATITO_VERSAO__ === 'string' ? __TOMATITO_VERSAO__ : '',
+  antesDeLer: () => estatisticas.gravacoesPendentes(),
 });
 
 /**

@@ -52,6 +52,7 @@
 //   `RuntimeError` do wasm faz o motor parar (nenhuma chamada nem gravação
 //   depois) e recarregar a página, ou, se o pânico se repetir logo depois da
 //   recarga, mostrar o aviso (panico.js).
+import { esperarVez } from './aba-unica.js';
 import init, { Motor } from './pkg/tomatito_wasm.js';
 import { emitir } from './barramento.js';
 import * as configuracoes from './configuracoes.js';
@@ -112,7 +113,9 @@ const visivel = () => globalThis.document?.visibilityState !== 'hidden';
  * Resolve com o motor.
  */
 export function iniciar() {
-  carregando ??= init().then(() => {
+  // v0.3: só com a trava da aba única (aba-unica.js). Numa aba duplicada, o
+  // motor não nasce, e tudo o que depende dele fica à espera.
+  carregando ??= esperarVez().then(() => init()).then(() => {
     motor = new Motor();
     motor.configurar(JSON.stringify(configuracoes.ler()));
     retomar();

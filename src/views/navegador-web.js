@@ -74,8 +74,12 @@ export function ligarNavegadorWeb(pagina, { icone = semIcone, plataforma = plata
     const aba = plat.abaDaCasca ?? null;
     const inst = plat.instalacaoDaCasca ?? null;
     const html = marcacao({ ligado: aba ? aba.ligado() : true, instalavel: Boolean(inst?.disponivel()), icone });
+    // v0.3: antes da Dados (dados-web.js), se ela já montou: as duas chegam
+    // em qualquer ordem, e a página fica sempre Navegador, Dados.
     const antes =
-      pagina.querySelector?.('[data-secao="atualizacao"]') ?? pagina.querySelector?.('[aria-labelledby="config-sobre-secao"]');
+      pagina.querySelector?.('[data-secao="dados"]') ??
+      pagina.querySelector?.('[data-secao="atualizacao"]') ??
+      pagina.querySelector?.('[aria-labelledby="config-sobre-secao"]');
     if (antes) {
       antes.insertAdjacentHTML('beforebegin', html);
       secao = antes.previousElementSibling;

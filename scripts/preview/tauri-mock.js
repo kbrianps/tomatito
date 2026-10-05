@@ -220,7 +220,7 @@ const configuracoes = {
   schemaVersion: 1, theme: window.__TT_PREF__ ?? 'lite', lastNormalTheme: window.__TT_LAST__ ?? 'lite',
   resolvedTheme: 'lite', focusMinutes: 25, breakMinutes: 5, sounds: { focusEnd: true, breakEnd: true },
   volume: 80, closeToTray: true, trayTime: false, dailyGoalMinutes: 120, resetHour: 0, tomatoSize: 280,
-  tomatoOnTop: true, fullMode: 'auto', fullValidated: '', linuxX11: false,
+  tomatoOnTop: true, fullMode: 'auto', fullValidated: '', linuxX11: false, autoUpdate: false,
 };
 function normalizarConfiguracoes(c) {
   if (c.theme !== 'full') c.lastNormalTheme = c.theme;
@@ -464,6 +464,48 @@ const handlers = {
       dailyGoalMinutes: configuracoes.dailyGoalMinutes,
       resetHour: configuracoes.resetHour,
     };
+  },
+  // v0.3: a atualização por dentro do app. ?atualizacao=nova acha a 9.9.9 (e
+  // a instalação anda em quatro passos e não termina), =falha recusa a
+  // consulta, =sem diz que não há instalador (a seção some); sem nada, o app
+  // está na última versão.
+  update_info: () => {
+    window.__TOMATITO_PREVIEW_COMANDOS__.push('update_info');
+    return { available: params.get('atualizacao') !== 'sem', channel: params.get('canal') ?? 'appimage', pending: null };
+  },
+  update_check: async () => {
+    window.__TOMATITO_PREVIEW_COMANDOS__.push('update_check');
+    await new Promise((r) => setTimeout(r, 300));
+    if (params.get('atualizacao') === 'falha') throw { code: 'network', message: 'prévia: sem rede' };
+    return { current: '0.1.0', version: params.get('atualizacao') === 'nova' ? '9.9.9' : null };
+  },
+  update_install: async () => {
+    window.__TOMATITO_PREVIEW_COMANDOS__.push('update_install');
+    for (const downloaded of [250, 500, 750]) {
+      await new Promise((r) => setTimeout(r, 250));
+      emit('tt://update-progress', { downloaded, total: 1000 });
+    }
+    return new Promise(() => {});
+  },
+  // v0.3: o histórico da janela "Ver histórico". Catorze semanas inventadas
+  // (duas sem foco); ?historico=vazio para o estado sem sessões e
+  // ?historico=falha para o erro de leitura.
+  stats_history: () => {
+    window.__TOMATITO_PREVIEW_COMANDOS__.push('stats_history');
+    const modo = params.get('historico');
+    if (modo === 'falha') throw { code: 'io', message: 'prévia: histórico' };
+    if (modo === 'vazio') return { totalS: 0, periods: 0, days: 0, since: null, weeks: [] };
+    const minutos = [150, 320, 0, 95, 410, 505, 260, 0, 380, 615, 290, 445, 530, 75];
+    const segunda = new Date();
+    segunda.setHours(12, 0, 0, 0);
+    segunda.setDate(segunda.getDate() - ((segunda.getDay() + 6) % 7) - 7 * (minutos.length - 1));
+    const weeks = minutos.map((m, i) => {
+      const d = new Date(segunda);
+      d.setDate(d.getDate() + 7 * i);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return { monday: iso, focusS: m * 60 };
+    });
+    return { totalS: minutos.reduce((a, b) => a + b, 0) * 60, periods: 163, days: 61, since: weeks[0].monday, weeks };
   },
   // M29: as tarefas numa lista em memória, com as regras do tasks.rs (título
   // limpo, de 1 a 255 caracteres; ordem de criação). A virada do dia não é

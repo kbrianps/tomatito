@@ -684,7 +684,9 @@ test('M37: single-instance primeiro, window-state restrito, app_quit e os bloque
   // A07a (PLANO-ANDROID 4.2): o plugin do Android entra só no braço do Android e fica fora da ordem do desktop.
   assert.match(lib, /#\[cfg\(target_os = "android"\)\]\n    let builder = builder\.plugin\(tauri_plugin_tomatito_android::init\(\)\);/);
   const plugins = [...lib.matchAll(/\.plugin\(\s*(tauri_plugin_\w+)/g)].map((m) => m[1]).filter((p) => p !== 'tauri_plugin_tomatito_android');
-  assert.deepEqual(plugins, ['tauri_plugin_single_instance', 'tauri_plugin_notification', 'tauri_plugin_window_state']);
+  // v0.3: por último, o da atualização (update.rs), sem comandos liberados à página.
+  assert.deepEqual(plugins, ['tauri_plugin_single_instance', 'tauri_plugin_notification', 'tauri_plugin_window_state', 'tauri_plugin_updater']);
+  assert.doesNotMatch(ler('src-tauri/capabilities/main.json'), /updater/);
   assert.match(lib, /tauri_plugin_single_instance::init\(\s*\|app, _argv, _cwd\|\s*\{?\s*window::mostrar\(app\)/);
   assert.match(lib, /\.with_state_flags\(window::ESTADO_DA_JANELA\)\s*\.with_denylist\(&\[window::TOMATO_LABEL\]\)/);
   assert.match(lib, /commands::app_quit,/);
@@ -1216,7 +1218,7 @@ test('web e Android: a casca das três plataformas, com as mesmas chaves (PLANO-
   for (const c of [desktop, android, web]) assert.deepEqual(Object.keys(c).sort(), [...chaves].sort());
   const esperado = {
     desktop: { web: false, android: false, barraDeTitulo: true, bloqueiosDeProducao: true, atalhosDaJanela: true, atalhosDeNavegacao: true, sair: true, full: true, tomateTelaCheia: false, formaCelular: false, secaoSistema: true, volume: true },
-    web: { web: true, android: false, barraDeTitulo: false, bloqueiosDeProducao: false, atalhosDaJanela: false, atalhosDeNavegacao: false, sair: false, full: false, tomateTelaCheia: false, formaCelular: true, secaoSistema: false, volume: true },
+    web: { web: true, android: false, barraDeTitulo: false, bloqueiosDeProducao: false, atalhosDaJanela: false, atalhosDeNavegacao: false, sair: false, full: true, tomateTelaCheia: false, formaCelular: true, secaoSistema: false, volume: true },
     android: { web: false, android: true, barraDeTitulo: false, bloqueiosDeProducao: true, atalhosDaJanela: false, atalhosDeNavegacao: false, sair: false, full: false, tomateTelaCheia: true, formaCelular: true, secaoSistema: false, volume: false },
   };
   assert.deepEqual(desktop, esperado.desktop);
@@ -1224,7 +1226,7 @@ test('web e Android: a casca das três plataformas, com as mesmas chaves (PLANO-
   assert.deepEqual(android, esperado.android);
   assert.match(ler('src/platform/tauri.js'), /export const casca = globalThis\.__TT_PLATFORM__ === 'android' \? ANDROID : DESKTOP;/);
   const main = ler('src/main.js');
-  assert.match(main, /^  if \(casca\.full\) ligarValidacaoDoFull\(\{ ipc \}\)/m);
+  assert.match(main, /^  if \(casca\.full && !casca\.web\) ligarValidacaoDoFull\(\{ ipc \}\)/m);
   assert.match(main, /^  if \(casca\.atalhosDeNavegacao\) ligarAtalhosDeNavegacao\(/m);
 });
 

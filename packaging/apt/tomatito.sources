@@ -1,0 +1,10 @@
+# Repositório APT do Tomatito: as versões novas chegam pelo atualizador do
+# sistema. Instalado pelo pacote .deb; para parar de receber, apague este
+# arquivo ou troque "Enabled: yes" por "Enabled: no".
+Enabled: yes
+Types: deb
+URIs: https://kbrianps.github.io/tomatito/apt
+Suites: stable
+Components: main
+Architectures: amd64
+Signed-By: /usr/share/keyrings/tomatito-archive-keyring.gpg

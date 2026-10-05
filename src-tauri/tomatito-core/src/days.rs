@@ -137,6 +137,91 @@ pub fn stats_ranges(now: EpochMs, tz: &TimeZone, reset_hour: u8) -> Option<Stats
     })
 }
 
+/// Um período de foco que conta nas estatísticas: quando terminou e quantos
+/// segundos durou. Quem decide o que conta é quem lê o banco (`stats.rs` no
+/// desktop, `contagem.js` na web).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FocusEntry {
+    pub ended_at: EpochMs,
+    pub seconds: u64,
+}
+
+/// O foco de uma semana, de segunda a domingo (com a hora de zerar).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WeekTotal {
+    /// A segunda-feira da semana.
+    pub monday: Date,
+    pub focus_s: u64,
+}
+
+/// O histórico: os totais de todo o tempo e o foco por semana.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct History {
+    pub total_s: u64,
+    /// Períodos de foco que contam.
+    pub periods: u64,
+    /// Dias (do Tomatito, com a hora de zerar) com algum foco.
+    pub days: u64,
+    /// O dia do primeiro período, ou `None` sem nenhum.
+    pub since: Option<Date>,
+    /// Da semana do primeiro período até a de `now`, em ordem, com as semanas
+    /// vazias no meio (zero). Vazio sem nenhum período.
+    pub weeks: Vec<WeekTotal>,
+}
+
+/// No máximo dez anos de semanas (um relógio muito errado não gera uma lista
+/// sem fim).
+pub const MAX_WEEKS: usize = 520;
+
+/// O histórico de `entries`, visto de `now`: cada período cai no dia e na
+/// semana do Tomatito em que terminou (a mesma regra do "hoje" e do "esta
+/// semana" do cartão). Um período com o fim depois de `now` (relógio
+/// atrasado) ainda entra nos totais; a lista de semanas vai até a mais nova
+/// das duas.
+#[must_use]
+pub fn history(entries: &[FocusEntry], now: EpochMs, tz: &TimeZone, reset_hour: u8) -> History {
+    use std::collections::{BTreeMap, BTreeSet};
+    let mut h = History::default();
+    let mut dias = BTreeSet::new();
+    let mut semanas: BTreeMap<Date, u64> = BTreeMap::new();
+    for e in entries {
+        let Some(dia) = logical_date(e.ended_at, tz, reset_hour) else {
+            continue;
+        };
+        let Some(segunda) = monday_of(dia) else {
+            continue;
+        };
+        h.total_s = h.total_s.saturating_add(e.seconds);
+        h.periods += 1;
+        dias.insert(dia);
+        let s = semanas.entry(segunda).or_insert(0);
+        *s = s.saturating_add(e.seconds);
+    }
+    h.days = dias.len() as u64;
+    h.since = dias.first().copied();
+    let (Some(&primeira), Some(&ultima_com_foco)) =
+        (semanas.keys().next(), semanas.keys().next_back())
+    else {
+        return h;
+    };
+    let atual = logical_date(now, tz, reset_hour)
+        .and_then(monday_of)
+        .unwrap_or(ultima_com_foco);
+    let ultima = atual.max(ultima_com_foco);
+    let mut segunda = primeira;
+    while segunda <= ultima && h.weeks.len() < MAX_WEEKS {
+        h.weeks.push(WeekTotal {
+            monday: segunda,
+            focus_s: semanas.get(&segunda).copied().unwrap_or(0),
+        });
+        match segunda.checked_add(jiff::Span::new().days(7)) {
+            Ok(proxima) => segunda = proxima,
+            Err(_) => break,
+        }
+    }
+    h
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -290,5 +375,74 @@ mod tests {
     fn instante_fora_da_faixa_nao_quebra() {
         assert_eq!(logical_date(EpochMs(i64::MAX), &TimeZone::UTC, 0), None);
         assert_eq!(stats_ranges(EpochMs(i64::MAX), &TimeZone::UTC, 0), None);
+    }
+
+    fn entrada(tz: &TimeZone, ano: i16, mes: i8, dia: i8, h: i8, m: i8, s: u64) -> FocusEntry {
+        FocusEntry {
+            ended_at: em(tz, ano, mes, dia, h, m),
+            seconds: s,
+        }
+    }
+
+    #[test]
+    fn historico_vazio_nao_tem_semanas() {
+        let tz = TimeZone::fixed(jiff::tz::offset(-3));
+        let h = history(&[], em(&tz, 2026, 10, 5, 12, 0), &tz, 0);
+        assert_eq!(h, History::default());
+    }
+
+    #[test]
+    fn historico_soma_totais_dias_e_semanas_com_as_vazias_no_meio() {
+        let tz = TimeZone::fixed(jiff::tz::offset(-3));
+        let entradas = [
+            // Segunda 14/09 e terça 15/09 (semana de 14/09).
+            entrada(&tz, 2026, 9, 14, 10, 0, 1500),
+            entrada(&tz, 2026, 9, 14, 11, 0, 1500),
+            entrada(&tz, 2026, 9, 15, 9, 0, 600),
+            // Nada na semana de 21/09. Domingo 04/10 (semana de 28/09).
+            entrada(&tz, 2026, 10, 4, 23, 0, 900),
+        ];
+        // "Agora": segunda 05/10, numa semana ainda sem foco.
+        let h = history(&entradas, em(&tz, 2026, 10, 5, 12, 0), &tz, 0);
+        assert_eq!(h.total_s, 4500);
+        assert_eq!(h.periods, 4);
+        assert_eq!(h.days, 3);
+        assert_eq!(h.since, Some(date(2026, 9, 14)));
+        let semanas: Vec<_> = h.weeks.iter().map(|w| (w.monday, w.focus_s)).collect();
+        assert_eq!(
+            semanas,
+            vec![
+                (date(2026, 9, 14), 3600),
+                (date(2026, 9, 21), 0),
+                (date(2026, 9, 28), 900),
+                (date(2026, 10, 5), 0),
+            ]
+        );
+    }
+
+    #[test]
+    fn historico_respeita_a_hora_de_zerar() {
+        let tz = TimeZone::fixed(jiff::tz::offset(-3));
+        // Segunda 05/10 às 02:00, com o dia virando às 04:00: ainda é domingo
+        // 04/10, da semana de 28/09.
+        let e = [entrada(&tz, 2026, 10, 5, 2, 0, 1500)];
+        let h = history(&e, em(&tz, 2026, 10, 5, 3, 0), &tz, 4);
+        assert_eq!(h.since, Some(date(2026, 10, 4)));
+        assert_eq!(h.weeks.len(), 1);
+        assert_eq!(h.weeks[0].monday, date(2026, 9, 28));
+        // Com a virada à meia-noite, o mesmo período é da segunda 05/10.
+        let h = history(&e, em(&tz, 2026, 10, 5, 3, 0), &tz, 0);
+        assert_eq!(h.weeks[0].monday, date(2026, 10, 5));
+    }
+
+    #[test]
+    fn historico_com_o_relogio_atrasado_vai_ate_a_semana_do_ultimo_periodo() {
+        let tz = TimeZone::fixed(jiff::tz::offset(-3));
+        let e = [entrada(&tz, 2026, 10, 14, 10, 0, 1500)];
+        // "Agora" antes do período (relógio atrasado).
+        let h = history(&e, em(&tz, 2026, 9, 30, 10, 0), &tz, 0);
+        assert_eq!(h.periods, 1);
+        assert_eq!(h.weeks.len(), 1);
+        assert_eq!(h.weeks[0].monday, date(2026, 10, 12));
     }
 }
