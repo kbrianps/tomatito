@@ -1723,3 +1723,10 @@ Na worktree `android`, com A13, A05, A06, A14 e A15 feitos: `npm test` 497/497; 
 
 1. **`scripts/android/fumaca-release.mjs`: 5/5 no tt37 e 5/5 no tt37k (núcleo de 16 KB)**, com o AAB assinado instalado pelo `instalar.mjs --release`: o app abre com a tela Foco pintada; o toque em "Iniciar sessão de foco" agenda o fim como alarme exato e mostra a contínua; em segundo plano, com a tela apagada e Doze forçado, o aviso "Sessão de foco concluída" chega 6 ms depois do instante agendado (limite: 5 s); logcat sem `FATAL`, `panicked` nem classe faltando (o R8 não quebrou os receivers).
 2. **Desvio do plano:** em vez de pôr Foco e Intervalo em 1 min por toques nas Configurações e esperar uma sessão de 5 min, o roteiro inicia a sessão padrão e adianta o relógio do aparelho até 3 s antes do fim (`adb root` + `date`). Confere o mesmo caminho (alarme exato, receiver, aviso) sem depender de coordenadas de várias telas num build sem CDP. A presença do botão é conferida pelo pixel da captura (o `uiautomator` não expõe o conteúdo da WebView).
+
+## A21–A22 (Android): capturas e gráficos da loja (05/10/2026)
+
+1. **`scripts/android/capturas-loja.mjs`:** 6 capturas em `docs/android/play/capturas/` (1080 × 1920, PNG de 24 bits sem alfa, conferido pelo IHDR: tipo de cor 2), com tarefas, 54 min de foco "hoje" (uma sessão de 60 min com o relógio do aparelho adiantado fase a fase), temporizador correndo e 4 voltas; barra de status no modo demo (10:00, bateria cheia). Nenhuma tela traz "Pomodoro" (conferido pelo texto do DOM).
+2. **A sexta captura é a Aparência**, e não o tomate em tela cheia (A16, adiado).
+3. A captura 5 (Claro) foi refeita à mão: a primeira saiu no meio da troca de tema; a espera do script subiu de 0,9 s para 2,5 s.
+4. **`scripts/android/graficos-loja.mjs`:** `icone-512.png` (512 × 512, RGBA, 28 KB) e `destaque-1024x500.png` (1024 × 500, RGB sem alfa), com a marca, "Tomatito" e a frase "Timer de foco simples, com intervalos na hora certa."
