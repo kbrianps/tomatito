@@ -29,7 +29,7 @@ Console → Presença na loja → **Ficha principal da loja**.
 2. [ ] Ícone: `docs/android/play/icone-512.png`.
 3. [ ] Gráfico de destaque: `docs/android/play/destaque-1024x500.png`.
 4. [ ] Capturas de tela do telefone: os seis arquivos de `docs/android/play/capturas/`, na ordem.
-5. [ ] Em **Configurações da loja**: categoria **Produtividade**, o e-mail de contato e o site `https://tomatito.kbrianps.workers.dev`.
+5. [ ] Em **Configurações da loja**: categoria **Produtividade**, o e-mail de contato e o site `https://tomatito.kbrianps.com`.
 6. [ ] Salve.
 
 ## Bloco 3: formulários

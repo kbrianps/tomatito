@@ -1,5 +1,5 @@
 // Publica a versão web na Cloudflare (PLANO-WEB-V1, 4.1; marcos W40b e W41),
-// em https://tomatito.kbrianps.workers.dev.
+// em https://tomatito.kbrianps.com.
 //
 //   node scripts/web/publicar.mjs
 //

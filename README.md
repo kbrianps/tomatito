@@ -4,7 +4,7 @@ Timer de foco leve para Windows, Linux, Android e navegador.
 
 Você escolhe a duração da sessão de foco, e o Tomatito intercala intervalos curtos nas sessões longas. A v1 terá também temporizadores, cronômetro, progresso diário e cinco temas, com estética sóbria e sem gamificação.
 
-Versão web, sem instalar: <https://tomatito.kbrianps.workers.dev>. Instaladores: [releases](https://github.com/kbrianps/tomatito/releases/latest).
+Versão web, sem instalar: <https://tomatito.kbrianps.com>. Instaladores: [releases](https://github.com/kbrianps/tomatito/releases/latest).
 
 ## Plataformas
 
@@ -100,7 +100,7 @@ Team roles:
 
 Release builds are produced only by GitHub Actions ([`release.yml`](.github/workflows/release.yml)) on GitHub-hosted runners, from a version tag on the `main` branch.
 
-Privacy policy: this program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The desktop app contacts GitHub only to look for updates, and only when the user clicks "Procurar atualizações" or turns on "Procurar ao abrir" (off by default). Full policy (in Portuguese): <https://tomatito.kbrianps.workers.dev/privacidade>.
+Privacy policy: this program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The desktop app contacts GitHub only to look for updates, and only when the user clicks "Procurar atualizações" or turns on "Procurar ao abrir" (off by default). Full policy (in Portuguese): <https://tomatito.kbrianps.com/privacidade>.
 
 ## Licença
 

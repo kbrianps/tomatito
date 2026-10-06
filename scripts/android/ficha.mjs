@@ -31,7 +31,7 @@ const itens = [
   ['cada permissão tem justificativa no permissoes.md', PERMISSOES.every((p) => permissoes.includes(`android.permission.${p}`))],
   ['cada permissão aparece na política de privacidade', PERMISSOES.every((p) => naPolitica[p].test(politica))],
   ['a ficha e a política dizem que o app não acessa a internet', /Não acessa a internet/.test(completa ?? '') && /não tem permissão de acesso à internet/.test(politica)],
-  ['a ficha aponta para a política publicada', ficha.includes('https://tomatito.kbrianps.workers.dev/privacidade')],
+  ['a ficha aponta para a política publicada', ficha.includes('https://tomatito.kbrianps.com/privacidade')],
   ['ícone 512, gráfico de destaque e seis capturas', existsSync(raiz('docs/android/play/icone-512.png')) && existsSync(raiz('docs/android/play/destaque-1024x500.png')) && capturas.length === 6, capturas.length],
 ];
 const falhas = itens.filter(([, ok]) => !ok);

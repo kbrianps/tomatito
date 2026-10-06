@@ -46,8 +46,8 @@ O Tomatito também existe para Windows e Linux e como versão web. O código é 
 
 - **Categoria:** Produtividade.
 - **Tags:** as que o Console oferecer para timer e foco.
-- **Site:** https://tomatito.kbrianps.workers.dev
-- **Política de privacidade:** https://tomatito.kbrianps.workers.dev/privacidade
+- **Site:** https://tomatito.kbrianps.com
+- **Política de privacidade:** https://tomatito.kbrianps.com/privacidade
 - **E-mail de contato:** o seu e-mail público (ele aparece na loja; decisão sua).
 
 ## Gráficos (em `docs/android/play/`)

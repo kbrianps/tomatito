@@ -197,7 +197,7 @@ Numeração a partir de 201, para não cruzar com as pendências de outras faixa
 
 ## Web (02/10/2026)
 
-- ~~Login na Cloudflare para publicar a web~~ (feito em 02/10/2026; publicada em https://tomatito.kbrianps.workers.dev). Para publicar de novo: Rode `/opt/cargo-target/ferramentas/wrangler/node_modules/.bin/wrangler login`, autorize no navegador (em poucos minutos, senão expira) e depois `node scripts/web/publicar.mjs`. Passos em `docs/web/publicar.md`.
+- ~~Login na Cloudflare para publicar a web~~ (feito em 02/10/2026; publicada em https://tomatito.kbrianps.com). Para publicar de novo: Rode `/opt/cargo-target/ferramentas/wrangler/node_modules/.bin/wrangler login`, autorize no navegador (em poucos minutos, senão expira) e depois `node scripts/web/publicar.mjs`. Passos em `docs/web/publicar.md`.
 - **Roteiro de 10 min no celular de verdade**, depois de publicado (`docs/verificacao-manual.md`, seção "Web no celular").
 
 ## Android (05/10/2026)

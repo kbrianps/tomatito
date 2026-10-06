@@ -1786,3 +1786,7 @@ Na worktree `android`, com A13, A05, A06, A14 e A15 feitos: `npm test` 497/497; 
 5. **Processo morto.** O `Intent` novo chega antes de o plugin carregar; a `MainActivity` passa a guardá-lo (`setIntent`) e o plugin o lê no `load()`. Um número de pedido (`ACAO_ID`) evita repetir a ação quando o sistema recria a atividade com o mesmo `Intent`.
 6. **Conferido no emulador** (`scripts/android/acoes.mjs`, 8/8): os botões e os `PendingIntent`, pausar e retomar em segundo plano (com a volta ao segundo plano), pausar com o processo morto e encerrar com o app na frente. O roteiro dispara o mesmo `Intent` dos botões por `am start`, porque o `uiautomator dump` não funciona com o cronômetro da notificação andando; um toque de verdade em "Pausar" foi feito à mão e funcionou.
 
+## Endereço próprio da web (06/10/2026)
+
+A versão web passou a responder em **https://tomatito.kbrianps.com** (domínio personalizado do Worker, no `wrangler.jsonc`). O `tomatito.kbrianps.workers.dev` continua no ar de propósito (`workers_dev: true`; com `routes`, ele sai por padrão): os dados da web são por endereço, e quem usava o antigo os leva com Exportar e Importar. Os links do app e dos documentos apontam para o endereço novo; os apps já publicados (até a 0.5.0) abrem a política de privacidade pelo antigo, que segue valendo.
+

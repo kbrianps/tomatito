@@ -16,7 +16,7 @@ node scripts/web/publicar.mjs
 
 O script faz o build (`npm run build:web`) e roda `wrangler deploy`, que envia a pasta `dist-web` conforme o `wrangler.jsonc` da raiz (Workers com arquivos estáticos). Sem login, ele avisa e sai com o código 3, sem publicar nada.
 
-**Endereço publicado:** https://tomatito.kbrianps.workers.dev (primeiro deploy em 02/10/2026, conta kbrianps).
+**Endereço publicado:** https://tomatito.kbrianps.com (primeiro deploy em 02/10/2026, conta kbrianps).
 
 ## O que vai junto
 

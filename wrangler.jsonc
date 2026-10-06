@@ -6,6 +6,12 @@
 {
   "name": "tomatito",
   "compatibility_date": "2026-09-26",
+  // O endereço próprio (06/10/2026). O tomatito.kbrianps.workers.dev continua
+  // no ar: os dados da web são por endereço, e quem já usava o antigo não os
+  // perde (dá para levá-los com Exportar e Importar).
+  "routes": [{ "pattern": "tomatito.kbrianps.com", "custom_domain": true }],
+  // Com `routes`, o workers.dev sai por padrão: fica ligado de propósito.
+  "workers_dev": true,
   "assets": {
     "directory": "./dist-web",
     // O app é uma página só: caminho desconhecido devolve o index.html.

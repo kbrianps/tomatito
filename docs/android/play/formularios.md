@@ -4,7 +4,7 @@ Em "Política e programas → Conteúdo do app". Cada item abaixo é uma seção
 
 ## Política de privacidade
 
-`https://tomatito.kbrianps.workers.dev/privacidade`
+`https://tomatito.kbrianps.com/privacidade`
 
 ## Acesso ao app
 
