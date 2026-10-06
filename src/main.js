@@ -49,6 +49,7 @@ import * as configuracoes from './views/settings.js';
 import * as dev from './views/dev-catalog.js';
 import { ligar as ligarValidacaoDoFull } from './views/validacao-full.js';
 import { ligarAvisosDoAndroid } from './views/avisos-android.js';
+import { ligarAcoesDoAndroid } from './lib/acoes-android.js';
 // Os tokens do Fluent vêm do fluent-tokens.gen.css, um bloco por data-theme
 // (PLANO.md, 4.5): sem setTheme() em runtime desde o M11.
 
@@ -128,6 +129,9 @@ try {
   // A13 (PLANO-ANDROID 4.3): no Android, o cartão "Avisos", a faixa da tela
   // Foco e o pedido no primeiro "Iniciar" (nas outras plataformas, null).
   const avisosDoAndroid = ligarAvisosDoAndroid({ api: ipc.android, store, icone });
+  // v0.5: os botões da notificação contínua (pausar, pular, encerrar): a
+  // ação pedida é buscada com o motor já ligado.
+  if (casca.android) ligado.then(() => ligarAcoesDoAndroid({ api: ipc.android, store }).buscar());
   const nav = montarNavegacao(document.querySelector('.tt-nav'), {
     icone,
     navegar: (rota) => roteador.navegar(rota),

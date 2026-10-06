@@ -405,3 +405,31 @@ fun reagendamento(itens: List<Alarme>, agoraMs: Long, motivo: MotivoDoReagendame
         MotivoDoReagendamento.PERMISSAO -> trocaDeAgenda(itens, pendentes, agoraMs)
     }
 }
+
+/** O extra do `Intent` com a ação pedida num botão da contínua (v0.5). */
+const val EXTRA_ACAO = "io.github.kbrianps.tomatito.ACAO"
+
+/**
+ * O número do pedido (o instante em que a notificação foi postada). O plugin
+ * guarda o último atendido: uma Activity recriada com o mesmo `Intent` (o
+ * app reaberto pelos recentes) não repete a ação.
+ */
+const val EXTRA_ACAO_ID = "io.github.kbrianps.tomatito.ACAO_ID"
+
+/** Um botão da notificação contínua: o nome da ação e o texto. */
+data class BotaoDaContinua(val acao: String, val rotulo: String)
+
+/**
+ * Os botões da contínua (v0.5, o controle pela barra de notificações): com a
+ * fase correndo, "Pausar", "Pular" e "Encerrar"; pausada, "Retomar" e
+ * "Encerrar". O temporizador não tem botões (só o foco é controlado daqui).
+ */
+fun botoesDaContinua(c: Continua): List<BotaoDaContinua> = when {
+    c.tipo == "temporizador" -> emptyList()
+    c.pausado -> listOf(BotaoDaContinua("retomar", "Retomar"), BotaoDaContinua("encerrar", "Encerrar"))
+    else -> listOf(
+        BotaoDaContinua("pausar", "Pausar"),
+        BotaoDaContinua("pular", "Pular"),
+        BotaoDaContinua("encerrar", "Encerrar"),
+    )
+}

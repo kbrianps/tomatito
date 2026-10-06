@@ -319,6 +319,18 @@
           "markdownDescription": "Denies the abrir_url command without any pre-configured scope."
         },
         {
+          "description": "Enables the acao_pendente command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-acao-pendente",
+          "markdownDescription": "Enables the acao_pendente command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the acao_pendente command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-acao-pendente",
+          "markdownDescription": "Denies the acao_pendente command without any pre-configured scope."
+        },
+        {
           "description": "Enables the cores command without any pre-configured scope.",
           "type": "string",
           "const": "allow-cores",
@@ -329,6 +341,18 @@
           "type": "string",
           "const": "deny-cores",
           "markdownDescription": "Denies the cores command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the para_o_fundo command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-para-o-fundo",
+          "markdownDescription": "Enables the para_o_fundo command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the para_o_fundo command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-para-o-fundo",
+          "markdownDescription": "Denies the para_o_fundo command without any pre-configured scope."
         },
         {
           "description": "Enables the pedir_notificacoes command without any pre-configured scope.",
@@ -367,10 +391,10 @@
           "markdownDescription": "Denies the tocar command without any pre-configured scope."
         },
         {
-          "description": "O que a janela main do Tomatito usa no Android (capabilities/android.json).\n#### This default permission set includes:\n\n- `allow-permissoes`\n- `allow-cores`\n- `allow-pedir-notificacoes`\n- `allow-abrir-config-avisos`\n- `allow-tocar`\n- `allow-abrir-url`",
+          "description": "O que a janela main do Tomatito usa no Android (capabilities/android.json).\n#### This default permission set includes:\n\n- `allow-permissoes`\n- `allow-cores`\n- `allow-pedir-notificacoes`\n- `allow-abrir-config-avisos`\n- `allow-tocar`\n- `allow-abrir-url`\n- `allow-acao-pendente`\n- `allow-para-o-fundo`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "O que a janela main do Tomatito usa no Android (capabilities/android.json).\n#### This default permission set includes:\n\n- `allow-permissoes`\n- `allow-cores`\n- `allow-pedir-notificacoes`\n- `allow-abrir-config-avisos`\n- `allow-tocar`\n- `allow-abrir-url`"
+          "markdownDescription": "O que a janela main do Tomatito usa no Android (capabilities/android.json).\n#### This default permission set includes:\n\n- `allow-permissoes`\n- `allow-cores`\n- `allow-pedir-notificacoes`\n- `allow-abrir-config-avisos`\n- `allow-tocar`\n- `allow-abrir-url`\n- `allow-acao-pendente`\n- `allow-para-o-fundo`"
         }
       ]
     }
