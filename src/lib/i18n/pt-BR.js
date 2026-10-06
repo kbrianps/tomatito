@@ -104,6 +104,8 @@ export default Object.freeze({
     // botão "Ver histórico" do cartão de progresso: os totais de todo o tempo
     // e o foco por semana (segunda a domingo). Sem sequência, recorde nem
     // comparação (1.1, sem gamificação).
+    // v0.4: o botão do cartão de sessão que abre a janelinha (views/focus/compacto.js).
+    compacto: 'Modo compacto',
     historico: Object.freeze({
       abrir: 'Ver histórico',
       titulo: 'Histórico',
@@ -335,6 +337,11 @@ export default Object.freeze({
     tempoNaBandeja: Object.freeze({
       titulo: 'Tempo na bandeja',
       descricao: 'Mostrar no ícone da bandeja quantos minutos faltam da sessão de foco.',
+    }),
+    // v0.4: a barra que o sistema desenha sobre o ícone do app.
+    progressoNoIcone: Object.freeze({
+      titulo: 'Progresso no ícone',
+      descricao: 'Mostrar o andamento do foco e do intervalo no ícone do Tomatito, na dock ou na barra de tarefas.',
     }),
     sair: Object.freeze({
       titulo: 'Sair do Tomatito',

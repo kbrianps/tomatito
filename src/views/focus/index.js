@@ -7,6 +7,7 @@
 // (card-tasks.js), com o ícone no título; a tarefa escolhida nele vai no
 // "Iniciar sessão de foco" do cartão de sessão. W14: na web, o InfoBar do
 // pedido de avisos no cartão de sessão (pedido-de-avisos.js).
+import * as compacto from './compacto.js';
 import t from '../../lib/i18n/pt-BR.js';
 import { PREPARO_PADRAO, store as storeDoApp } from '../../lib/store.js';
 import * as sessao from './card-session.js';
@@ -61,6 +62,8 @@ export function montar(raiz, { store = storeDoApp, icone = semIcone, ipc } = {})
     tarefas.ligar(raiz.querySelector('[data-cartao="tarefas"]'), store, ipc ? { ipc, icone } : { icone }),
     progresso.ligar(raiz.querySelector('[data-cartao="progresso"]'), store, ipc ? { ipc, icone } : { icone }),
     pedidoDeAvisos.ligar(raiz.querySelector('[data-cartao="sessao"]'), { icone }),
+    // v0.4: o botão "Modo compacto", só no desktop (compacto.js).
+    compacto.ligar(raiz.querySelector('[data-cartao="sessao"]'), { icone }),
   ];
   return () => limpar.forEach((f) => f());
 }

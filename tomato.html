@@ -6,9 +6,11 @@
          e data-full-mode="opaque" só no plano B3 (M52). -->
     <script>(function(){var h=document.documentElement,w=window,p=w.__TT_PREF__||'lite';
 var tomato=location.pathname.indexOf('tomato')>=0;
-var base=tomato?'full':(p==='full'?(w.__TT_LAST__||'lite'):p);
+var cartao=tomato&&w.__TT_SKIN__==='card';
+var base=tomato&&!cartao?'full':(p==='full'?(w.__TT_LAST__||'lite'):p);
 var r=base==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):base;
 h.dataset.themePref=p;h.dataset.theme=r;h.dataset.platform=w.__TT_PLATFORM__||'web';
+if(cartao)h.dataset.skin='card';
 if(tomato&&w.__TT_FULL_MODE__==='opaque')h.dataset.fullMode='opaque';})();</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tomatito</title>
@@ -80,6 +82,14 @@ if(tomato&&w.__TT_FULL_MODE__==='opaque')h.dataset.fullMode='opaque';})();</scri
           <ellipse cx="160" cy="86" rx="13" ry="6.5" />
         </g>
         <path class="calyx-vein" d="M170 85 Q190 79 210 78 M150 85 Q130 79 110 78" />
+      </svg>
+
+      <!-- v0.4, modo compacto: o anel redondo do cartão (como a janelinha do Relógio do Windows), no
+           lugar do tomate. Só aparece com data-skin="card" (tomato.css). O pathLength 89 é a faixa do
+           --tt-anel (lib/tomate.js), e o traço começa no alto. -->
+      <svg class="art-cartao" viewBox="0 0 320 320" aria-hidden="true" focusable="false">
+        <circle class="ring-track" cx="160" cy="140" r="108" />
+        <circle class="ring-progress" data-anel-cartao pathLength="89" cx="160" cy="140" r="108" transform="rotate(-90 160 140)" />
       </svg>
 
       <div class="face">

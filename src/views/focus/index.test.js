@@ -42,8 +42,8 @@ test('cada cartão é uma <section> com o título do catálogo em Subtitle, e a 
     );
     assert.match(html, re);
   }
-  const { andamento, preparo, fases, diario, metaDiaria, listaDeTarefas, historico, ...titulos } = t.foco;
-  assert.ok(andamento && preparo && fases && diario && metaDiaria && listaDeTarefas && historico);
+  const { andamento, preparo, fases, diario, metaDiaria, listaDeTarefas, historico, compacto, ...titulos } = t.foco;
+  assert.ok(andamento && preparo && fases && diario && metaDiaria && listaDeTarefas && historico && compacto);
   assert.deepEqual(titulos, { sessao: 'Pronto para focar', progresso: 'Progresso diário', tarefas: 'Tarefas' });
 });
 

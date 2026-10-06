@@ -183,11 +183,12 @@ const RECURSOS = Object.freeze({ bandeja: true, sempreNaFrente: false, regiaoDeE
 test('Sistema: fechar para a bandeja e tempo na bandeja com switch, e "Sair do Tomatito" com botão, nos textos do catálogo', () => {
   const html = marcacaoDoSistema(PADROES, { icone, recursos: RECURSOS });
   assert.match(html, /^<section class="tt-config-secao" aria-labelledby="config-sistema"><h2 id="config-sistema" class="tt-t-body-strong">Sistema<\/h2>/);
-  assert.deepEqual(cartoes(html), ['fechar-bandeja', 'tempo-bandeja', 'sair']);
-  assert.deepEqual([...html.matchAll(/data-icone="(\w+)" data-grade="20"/g)].map((m) => m[1]), ['arrow_minimize', 'clock', 'power']);
+  assert.deepEqual(cartoes(html), ['fechar-bandeja', 'tempo-bandeja', 'progresso-icone', 'sair']);
+  assert.deepEqual([...html.matchAll(/data-icone="(\w+)" data-grade="20"/g)].map((m) => m[1]), ['arrow_minimize', 'clock', 'arrow_sync', 'power']);
   for (const [id, titulo, descricao] of [
     ['fechar-bandeja', 'Fechar para a bandeja', 'Fechar a janela só a esconde: a sessão de foco e os temporizadores continuam.'],
     ['tempo-bandeja', 'Tempo na bandeja', 'Mostrar no ícone da bandeja quantos minutos faltam da sessão de foco.'],
+    ['progresso-icone', 'Progresso no ícone', 'Mostrar o andamento do foco e do intervalo no ícone do Tomatito, na dock ou na barra de tarefas.'],
     ['sair', 'Sair do Tomatito', 'Encerrar a sessão de foco e fechar o aplicativo.'],
   ]) {
     assert.ok(html.includes(`<span id="config-${id}" class="tt-config-titulo">${titulo}</span><span id="config-${id}-desc" class="tt-config-descricao tt-t-caption">${descricao}</span>`), id);

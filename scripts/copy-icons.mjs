@@ -91,6 +91,8 @@ export const ICONES = Object.freeze([
   // v0.3: importar os dados na versão web (views/dados-web.js); o de
   // exportar é o arrow_download acima.
   { nome: 'arrow_upload', estilo: 'regular', tamanhos: [20] },
+  // v0.4: o botão "Modo compacto" do cartão de sessão.
+  { nome: 'picture_in_picture', estilo: 'regular', tamanhos: [16] },
   // A13 (Android): a faixa da tela Foco com os avisos bloqueados (grade de 16);
   // o sino de 20 já vem do W14.
   { nome: 'alert_off', estilo: 'regular', tamanhos: [16] },

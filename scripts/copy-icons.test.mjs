@@ -29,6 +29,7 @@ test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenc
       'arrow_sync',
       'arrow_download',
       'arrow_upload',
+      'picture_in_picture',
       'alert_off',
     ],
   );
@@ -52,7 +53,7 @@ test('a lista é a do M13 (os 18 ícones do plano, com play, pause e stop preenc
 test('src/assets/icons/ está em dia com a lista e com o pacote (node scripts/copy-icons.mjs --conferir)', () => {
   const r = spawnSync(process.execPath, [SCRIPT, '--conferir'], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /em dia \(44 ícones\)/);
+  assert.match(r.stdout, /em dia \(45 ícones\)/);
 });
 
 test('copiar() numa pasta vazia, de novo sem mudar nada, e a conferência acusando cada diferença', () => {

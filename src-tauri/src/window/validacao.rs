@@ -321,7 +321,7 @@ pub async fn responder(app: &AppHandle, resposta: Resposta) -> Result<Value, Str
             let store = app.state::<SettingsStore>();
             crate::commands::gravar_configuracoes(app, &store, &json!({ "fullMode": "opaque" }))
                 .map_err(|e| format!("{:?}: {}", e.code, e.message))?;
-            tomato::entrar(app).await?;
+            tomato::entrar(app, None).await?;
             Ok(r)
         }
         Resposta::Dismiss => {

@@ -307,6 +307,7 @@ marcação: título do documento, o bloco rolável com nome, carregando, o erro 
 marcação: título, os três campos com role=spinbutton, o nome escapado e os botões
 marcação: três colunas (Ontem, o anel com a meta dentro, Esta semana) e o rodapé
 marcação: um alertdialog com o título, o texto e "Usar nesta aba"
+marcação: um botão só de ícone, com o nome "Modo compacto"
 maximizada, o botão do meio vira Restaurar, com o glifo de dois quadrados
 minutos inteiros e a categoria com o zero no plural
 minutos por extenso e a escolha da forma
@@ -343,6 +344,7 @@ o beforeinstallprompt é guardado (com preventDefault) e avisado a quem assinou
 o botão principal inicia a mesma duração do seletor da tela Foco e da bandeja
 ocioso: sem anel, "Pronto", 30:00 e "Sessão de 30 min"; Encerrar e Pular desabilitados
 o clique no fundo não fecha; desligar fecha, tira os ouvintes e remove o elemento
+o clique pede o Full no modo compacto, uma vez por vez, e a limpeza tira o botão
 o DOM só é tocado quando o número ou o traço aceso mudam
 OFL da Inter, bundle.resources e o README dos sons
 o gerado só tem tokens do Fluent: nenhum --tt-*, nada que feche a regra, sem :root nem html
@@ -457,6 +459,7 @@ situação na sessão: "Você está focando em", a tarefa da sessão vem do retr
 situação sem sessão: "Escolha uma tarefa para a sessão" e a escolhida só se estiver pendente
 Sobre: expansível com o nome, a licença e a versão no cabeçalho; aberto, os avisos, a licença da fonte (M46) e o aviso de marcas
 só foco conta: concluído, ou interrompido com pelo menos 1 min
+só no desktop com Full: na web e no Android, nada
 sons: o switch no cabeçalho, fora do botão, com o nome do cartão; o "Testar" dentro, com o nome do som
 src/assets/icons/ está em dia com a lista e com o pacote (node scripts/copy-icons.mjs --conferir)
 sw.js do build: as três marcas trocadas; a fonte sem precache e sem citar o arquivo da página

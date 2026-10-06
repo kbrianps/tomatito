@@ -107,6 +107,8 @@ pub fn gravar_configuracoes(
         // M36: ligar ou desligar o tempo na bandeja vale na hora.
         if let Some(b) = app.try_state::<Arc<Bandeja>>() {
             b.tray_time(s.tray_time);
+            // v0.4: o progresso no ícone também.
+            b.icon_progress(s.icon_progress);
         }
         // M38: F e B (a próxima sessão), os sons de fim de fase (o próximo
         // fim) e o volume (o próximo som) também. Sem trava invertida: o
@@ -347,9 +349,14 @@ pub fn stopwatch_reset(engine: State<'_, AppEngine>) -> Result<StopwatchDto, Com
 /// (5.3). Os detalhes estão em `window/tomato.rs`.
 #[cfg(desktop)]
 #[tauri::command]
-pub async fn switch_window_mode(app: AppHandle, full: bool) -> Result<(), String> {
+pub async fn switch_window_mode(
+    app: AppHandle,
+    full: bool,
+    compact: Option<bool>,
+) -> Result<(), String> {
     if full {
-        crate::window::tomato::entrar(&app).await
+        // v0.4: `compact` escolhe o cartão no tema normal; sem ele, o tomate.
+        crate::window::tomato::entrar(&app, Some(compact.unwrap_or(false))).await
     } else {
         crate::window::tomato::sair(&app).await
     }

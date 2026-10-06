@@ -892,3 +892,7 @@ input.tt-deslizante:focus-visible{ outline:2px solid var(--tt-focus-outer); outl
 .tt-aba-unica-caixa p{ color:var(--tt-fg-2); }
 .tt-aba-unica-caixa button{ margin-top:8px; }
 :root[data-forma="celular"] .tt-aba-unica-caixa button{ min-height:48px; width:100%; }
+
+/* v0.4: o botão "Modo compacto", no canto do cartão de sessão (como o lápis do progresso). */
+.tt-card.tt-sessao{ position:relative; }
+.tt-sessao-compacto{ position:absolute; top:2px; right:2px; }

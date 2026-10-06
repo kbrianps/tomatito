@@ -2,7 +2,7 @@
 
 <!-- Gerado por scripts/copy-icons.mjs; não edite à mão. -->
 
-Cópia de 44 arquivos do pacote npm `@fluentui/svg-icons` 1.1.343
+Cópia de 45 arquivos do pacote npm `@fluentui/svg-icons` 1.1.343
 (Fluent System Icons, repositório `microsoft/fluentui-system-icons`), sem
 nenhuma alteração. Licença MIT, a mesma declarada no `package.json` do pacote;
 o texto completo vai para os avisos de terceiros do app (PLANO.md, 9).
@@ -42,6 +42,7 @@ lista `ICONES` de `scripts/copy-icons.mjs` e rode `node scripts/copy-icons.mjs`.
 - `paint_brush_20_regular.svg`
 - `pause_16_filled.svg`
 - `pause_24_filled.svg`
+- `picture_in_picture_16_regular.svg`
 - `play_16_filled.svg`
 - `play_24_filled.svg`
 - `power_20_regular.svg`

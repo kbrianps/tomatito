@@ -61,7 +61,7 @@ pub fn mostrar(app: &AppHandle) {
         // tomate antes da página nem no meio de uma troca.
         let app = app.clone();
         tauri::async_runtime::spawn(async move {
-            if let Err(e) = tomato::entrar(&app).await {
+            if let Err(e) = tomato::entrar(&app, None).await {
                 eprintln!("[tomatito] tomate não mostrado: {e}");
             }
         });
