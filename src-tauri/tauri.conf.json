@@ -52,7 +52,8 @@
         "files": {
           "/etc/apt/sources.list.d/tomatito.sources": "../packaging/apt/tomatito.sources",
           "/usr/share/keyrings/tomatito-archive-keyring.gpg": "../packaging/apt/tomatito-archive-keyring.gpg"
-        }
+        },
+        "desktopTemplate": "../packaging/linux/tomatito.desktop"
       },
       "appimage": {
         "bundleMediaFramework": false

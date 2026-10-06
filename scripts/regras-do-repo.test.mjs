@@ -687,7 +687,7 @@ test('M37: single-instance primeiro, window-state restrito, app_quit e os bloque
   // v0.3: por último, o da atualização (update.rs), sem comandos liberados à página.
   assert.deepEqual(plugins, ['tauri_plugin_single_instance', 'tauri_plugin_notification', 'tauri_plugin_window_state', 'tauri_plugin_updater']);
   assert.doesNotMatch(ler('src-tauri/capabilities/main.json'), /updater/);
-  assert.match(lib, /tauri_plugin_single_instance::init\(\s*\|app, _argv, _cwd\|\s*\{?\s*window::mostrar\(app\)/);
+  assert.match(lib, /tauri_plugin_single_instance::init\(\s*\|app, argv, _cwd\|\s*\{[\s\S]{0,400}?acoes::executar\(app, acao\);\s*return;\s*\}\s*window::mostrar\(app\)/);
   assert.match(lib, /\.with_state_flags\(window::ESTADO_DA_JANELA\)\s*\.with_denylist\(&\[window::TOMATO_LABEL\]\)/);
   assert.match(lib, /commands::app_quit,/);
   const janela = ler('src-tauri/src/window/mod.rs');

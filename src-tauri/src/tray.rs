@@ -292,7 +292,7 @@ fn montar(app: &AppHandle) -> tauri::Result<Alcas> {
 /// "Iniciar foco", "Pausar foco" ou "Retomar foco", conforme o estado de
 /// agora. Roda na thread principal; o motor emite o `tt://state`, e a tela
 /// e o próprio menu se atualizam por ele.
-fn alternar_foco(app: &AppHandle) {
+pub(crate) fn alternar_foco(app: &AppHandle) {
     let Some(motor) = app.try_state::<AppEngine>() else {
         return;
     };
