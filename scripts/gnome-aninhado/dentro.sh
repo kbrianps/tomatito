@@ -12,6 +12,9 @@ gnome-shell --headless --wayland $X11 --wayland-display=tt-aninhado \
   --virtual-monitor 1920x1080 --automation-script="$TT_ROTEIRO" > "$TT_OUT/shell.log" 2>&1 &
 SHELL_PID=$!
 for _ in $(seq 150); do [ -S "$XDG_RUNTIME_DIR/tt-aninhado" ] && break; sleep 0.2; done
+# v0.4: o que o app manda à dock (o progresso no ícone, progresso.rs), para os
+# resumos conferirem.
+dbus-monitor --session "type='signal',interface='com.canonical.Unity.LauncherEntry'" > "$TT_OUT/dock.log" 2>&1 &
 if [ -n "${TT_APP_PELO_ROTEIRO:-}" ]; then
   # O roteiro abre o app sozinho (M08: várias partidas a frio).
   APP_PID=

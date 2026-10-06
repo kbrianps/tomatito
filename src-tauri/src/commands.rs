@@ -107,6 +107,8 @@ pub fn gravar_configuracoes(
         // M36: ligar ou desligar o tempo na bandeja vale na hora.
         if let Some(b) = app.try_state::<Arc<Bandeja>>() {
             b.tray_time(s.tray_time);
+            // v0.4: o progresso no ícone também.
+            b.icon_progress(s.icon_progress);
         }
         // M38: F e B (a próxima sessão), os sons de fim de fase (o próximo
         // fim) e o volume (o próximo som) também. Sem trava invertida: o

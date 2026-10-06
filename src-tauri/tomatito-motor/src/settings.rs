@@ -199,6 +199,9 @@ pub struct Settings {
     /// v0.4: o Full no modo compacto: a janelinha é um cartão quadrado nas
     /// cores do `lastNormalTheme`, e não o tomate. Só vale com `theme = full`.
     pub compact: bool,
+    /// v0.4: a barra de progresso da fase no ícone do app (a dock do Ubuntu e
+    /// a barra de tarefas do Windows).
+    pub icon_progress: bool,
 }
 
 impl Default for Settings {
@@ -229,6 +232,7 @@ impl Default for Settings {
             linux_x11: false,
             auto_update: false,
             compact: false,
+            icon_progress: true,
         }
     }
 }
@@ -492,6 +496,7 @@ mod tests {
                 "linuxX11": false,
                 "autoUpdate": false,
                 "compact": false,
+                "iconProgress": true,
             })
         );
     }

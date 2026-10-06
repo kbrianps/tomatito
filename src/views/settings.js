@@ -132,6 +132,7 @@ export const PADROES = Object.freeze({
   // M39
   closeToTray: true,
   trayTime: false,
+  iconProgress: true,
 });
 
 /** Os valores de uma lista com o atual incluído, em ordem. */
@@ -276,6 +277,8 @@ export function marcacaoDasSessoes(s = PADROES, { icone = semIcone, abertosAgora
 export const OPCOES_DO_SISTEMA = Object.freeze([
   Object.freeze({ chave: 'closeToTray', id: 'fechar-bandeja', icone: 'arrow_minimize', textos: c.fecharParaBandeja, padrao: true, precisa: null }),
   Object.freeze({ chave: 'trayTime', id: 'tempo-bandeja', icone: 'clock', textos: c.tempoNaBandeja, padrao: false, precisa: 'bandeja' }),
+  // v0.4: a barra de progresso da fase no ícone do app (progresso.rs).
+  Object.freeze({ chave: 'iconProgress', id: 'progresso-icone', icone: 'arrow_sync', textos: c.progressoNoIcone, padrao: true, precisa: null }),
 ]);
 
 /** Se a opção vale com os recursos `rec` (a que não se aplica some da tela). */

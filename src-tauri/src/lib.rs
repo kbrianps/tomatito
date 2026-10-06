@@ -10,6 +10,8 @@ mod compat_x11;
 mod engine;
 mod notify;
 mod persist;
+#[cfg(desktop)]
+mod progresso;
 mod recursos;
 mod settings;
 mod state_file;

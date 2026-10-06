@@ -26,4 +26,6 @@ impl Bandeja {
     pub fn tick(&self, _tick: &TickDto) {}
 
     pub fn tray_time(&self, _ligado: bool) {}
+
+    pub fn icon_progress(&self, _ligado: bool) {}
 }

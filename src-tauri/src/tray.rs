@@ -154,11 +154,19 @@ pub struct Bandeja {
     app: AppHandle,
     alcas: OnceLock<Alcas>,
     estado: Mutex<Estado>,
+    /// v0.4: o progresso da fase no ícone do app (progresso.rs), que recebe
+    /// os mesmos retratos que a bandeja.
+    progresso: crate::progresso::Progresso,
 }
 
 impl Bandeja {
     pub fn new(app: AppHandle, tray_time: bool) -> Self {
+        use tauri::Manager;
+        let no_icone = app
+            .try_state::<crate::settings::SettingsStore>()
+            .is_none_or(|s| s.get().icon_progress);
         Self {
+            progresso: crate::progresso::Progresso::new(app.clone(), no_icone),
             app,
             alcas: OnceLock::new(),
             estado: Mutex::new(Estado {
@@ -189,12 +197,19 @@ impl Bandeja {
 
     /// `tt://state`.
     pub fn foco(&self, foco: &FocusDto) {
+        self.progresso.foco(foco);
         self.mudar(|e| e.contagem = Contagem::do_foco(foco));
     }
 
     /// `tt://tick`.
     pub fn tick(&self, tick: &TickDto) {
+        self.progresso.tick(tick);
         self.mudar(|e| e.contagem = Contagem::do_tick(tick));
+    }
+
+    /// `iconProgress` depois de um `settings_set` (v0.4).
+    pub fn icon_progress(&self, ligado: bool) {
+        self.progresso.ligar(ligado);
     }
 
     /// `trayTime` depois de um `settings_set`.

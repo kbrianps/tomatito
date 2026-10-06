@@ -220,7 +220,7 @@ const configuracoes = {
   schemaVersion: 1, theme: window.__TT_PREF__ ?? 'lite', lastNormalTheme: window.__TT_LAST__ ?? 'lite',
   resolvedTheme: 'lite', focusMinutes: 25, breakMinutes: 5, sounds: { focusEnd: true, breakEnd: true },
   volume: 80, closeToTray: true, trayTime: false, dailyGoalMinutes: 120, resetHour: 0, tomatoSize: 280,
-  tomatoOnTop: true, fullMode: 'auto', fullValidated: '', linuxX11: false, autoUpdate: false, compact: false,
+  tomatoOnTop: true, fullMode: 'auto', fullValidated: '', linuxX11: false, autoUpdate: false, compact: false, iconProgress: true,
 };
 function normalizarConfiguracoes(c) {
   if (c.theme !== 'full') c.lastNormalTheme = c.theme;

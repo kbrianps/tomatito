@@ -338,6 +338,11 @@ export default Object.freeze({
       titulo: 'Tempo na bandeja',
       descricao: 'Mostrar no ícone da bandeja quantos minutos faltam da sessão de foco.',
     }),
+    // v0.4: a barra que o sistema desenha sobre o ícone do app.
+    progressoNoIcone: Object.freeze({
+      titulo: 'Progresso no ícone',
+      descricao: 'Mostrar o andamento do foco e do intervalo no ícone do Tomatito, na dock ou na barra de tarefas.',
+    }),
     sair: Object.freeze({
       titulo: 'Sair do Tomatito',
       descricao: 'Encerrar a sessão de foco e fechar o aplicativo.',
