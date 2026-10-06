@@ -50,7 +50,7 @@ test('manifest: nome, base, standalone, cor do Lite, focus-existing e os 3 ícon
   assert.doesNotMatch(JSON.stringify(m), new RegExp(['pomo', 'doro'].join(''), 'i'));
 });
 
-test('ícones: os PNG do repositório têm o lado do manifest; o maskable pinta o quadrado e o anel cabe na zona segura', () => {
+test('ícones: os PNG do repositório têm o lado do manifest; o maskable pinta o quadrado e o tomate cabe na zona segura', () => {
   for (const i of ICONES) {
     const { largura, altura } = tamanhoDoPng(ler(i.fonte));
     assert.deepEqual([largura, altura], [i.lado, i.lado], i.fonte);
@@ -60,10 +60,11 @@ test('ícones: os PNG do repositório têm o lado do manifest; o maskable pinta 
     ICONES.map((i) => [i.fonte.split('/').pop(), i.lado, i.proposito]),
   );
   const svg = svgMaskable(ler('src-tauri/icons/icon.svg').toString('utf8'));
-  assert.match(svg, /<rect width="1024" height="1024" fill="url\(#corpo\)"\/>/);
-  // O anel do mestre: raio 264, traço de 96 (raio externo 312), escalado.
-  const escala = Number(/scale\(([\d.]+)\)/.exec(svg)[1]);
-  assert.ok(312 * escala <= RAIO_SEGURO * 1024, `anel com raio externo ${312 * escala}`);
+  // v0.4.1: o fundo creme de ponta a ponta e o tomate no centro.
+  assert.match(svg, /<rect width="1024" height="1024" fill="#FFF1EA"\/>/);
+  // O tomate do mestre vai de 64 a 960 px (448 do centro, na largura), escalado.
+  const escala = Number(/translate\(512 512\) scale\(([\d.]+)\)/.exec(svg)[1]);
+  assert.ok(448 * escala <= RAIO_SEGURO * 1024, `tomate com meia largura ${448 * escala}`);
 });
 
 test('precache: a página entra como ./ (nunca pelo nome do arquivo), sem o sw.js, em ordem', () => {

@@ -1,14 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <!-- Tomatito, ícone do app (M44): disco vermelho com um anel de progresso
-       creme, aberto no quadrante de cima à esquerda. Desenho próprio, MIT.
-       Sem tomate, sem mostrador e sem ponteiros (plano, 8 e 9). -->
+  <!-- Tomatito, ícone do app (v0.4.1): o tomate do Tomatito Full (o corpo, o
+       cabinho e o cálice do tomato.html), com o anel de progresso creme
+       acompanhando o contorno. Desenho próprio, MIT. Substitui o disco com o
+       anel do M44: na dock e no menu, o disco lia como um círculo vazio. -->
   <defs>
-    <linearGradient id="corpo" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#DD634B"/>
-      <stop offset="1" stop-color="#B8402D"/>
-    </linearGradient>
+    <radialGradient id="corpo" cx="0.36" cy="0.30" r="0.80">
+      <stop offset="0" stop-color="#DA4A38"/>
+      <stop offset="0.55" stop-color="#C4342A"/>
+      <stop offset="1" stop-color="#9C241C"/>
+    </radialGradient>
   </defs>
-  <circle cx="512" cy="512" r="448" fill="url(#corpo)"/>
-  <circle cx="512" cy="512" r="264" fill="none" stroke="#FFF6F1" stroke-opacity=".18" stroke-width="96"/>
-  <path d="M512 248A264 264 0 1 1 248 512" fill="none" stroke="#FFF6F1" stroke-width="96" stroke-linecap="round"/>
+  <g transform="scale(3.2) translate(0 -12)">
+    <path d="M160 80 C190 64 236 62 268 86 C296 108 306 150 300 190 C293 252 236 298 160 298 C84 298 27 252 20 190 C14 150 24 108 52 86 C84 62 130 64 160 80 Z" fill="url(#corpo)"/>
+    <path d="M160 96 C186 83 224 82 250 101 C272 119 280 152 275 186 C270 238 222 276 160 276 C98 276 50 238 45 186 C40 152 48 119 70 101 C96 82 134 83 160 96 Z" fill="none" stroke="#FFF6F1" stroke-opacity=".22" stroke-width="15"/>
+    <path d="M160 96 C186 83 224 82 250 101 C272 119 280 152 275 186 C270 238 222 276 160 276 C98 276 50 238 45 186 C40 152 48 119 70 101 C96 82 134 83 160 96 Z" fill="none" stroke="#FFF6F1" stroke-width="15" stroke-linecap="round" stroke-dasharray="430.8 694.9" stroke-dashoffset="-55.6"/>
+    <path d="M155.5 88 C155 74 157 60 160.5 47.5 Q163.5 43 169 45.5 C166 58 164.8 72 165.5 88 Z" fill="#56683A"/>
+    <g fill="#789F6B"><path d="M166 83 Q190 66 216 77 Q192 92 164 91 Z"/><path d="M154 83 Q130 66 104 77 Q128 92 156 91 Z"/><path d="M155 90 Q148 100 147 113 Q158 105 165 91 Z"/><path d="M165 82 Q176 64 192 60 Q186 76 168 87 Z"/><path d="M155 82 Q140 64 126 62 Q134 76 152 87 Z"/><ellipse cx="160" cy="86" rx="13" ry="6.5"/></g>
+  </g>
 </svg>

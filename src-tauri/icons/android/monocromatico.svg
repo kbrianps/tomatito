@@ -1,5 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <!-- Tomatito, camada monocromática (ícones temáticos do Android 13+, A15):
-       só o arco; o sistema usa o alfa e pinta com a cor do tema. -->
-  <path d="M512 284A228 228 0 1 1 284 512" fill="none" stroke="#FFFFFF" stroke-width="80" stroke-linecap="round"/>
+  <!-- Tomatito, camada monocromática (ícones temáticos do Android 13+;
+       v0.4.1): a silhueta do tomate com o arco vazado; o sistema usa o alfa e
+       pinta com a cor do tema. -->
+  <defs>
+    <mask id="vazado" maskUnits="userSpaceOnUse" x="0" y="0" width="320" height="340">
+      <rect width="320" height="340" fill="#FFFFFF"/>
+      <path d="M160 96 C186 83 224 82 250 101 C272 119 280 152 275 186 C270 238 222 276 160 276 C98 276 50 238 45 186 C40 152 48 119 70 101 C96 82 134 83 160 96 Z" fill="none" stroke="#000000" stroke-width="16" stroke-linecap="round" stroke-dasharray="430.8 694.9" stroke-dashoffset="-55.6"/>
+    </mask>
+  </defs>
+  <g transform="translate(512 512) scale(0.58) translate(-512 -512)">
+    <g transform="scale(3.2) translate(0 -12)" fill="#FFFFFF">
+      <path d="M160 80 C190 64 236 62 268 86 C296 108 306 150 300 190 C293 252 236 298 160 298 C84 298 27 252 20 190 C14 150 24 108 52 86 C84 62 130 64 160 80 Z" mask="url(#vazado)"/>
+      <path d="M155.5 88 C155 74 157 60 160.5 47.5 Q163.5 43 169 45.5 C166 58 164.8 72 165.5 88 Z"/>
+      <path d="M165 82 Q176 64 192 60 Q186 76 168 87 Z"/><path d="M155 82 Q140 64 126 62 Q134 76 152 87 Z"/>
+    </g>
+  </g>
 </svg>

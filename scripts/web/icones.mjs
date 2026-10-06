@@ -4,12 +4,11 @@
 // headless (não há rsvg-convert nesta máquina). Gera, em
 // src/platform/web/icones/:
 //
-//   - icone-192.png e icone-512.png: o próprio icon.svg (disco com o anel),
-//     fundo transparente (purpose "any");
-//   - icone-maskable-512.png: o fundo do disco (o mesmo gradiente) de ponta a
-//     ponta e o anel no centro, com o anel dentro da zona segura (o círculo de
-//     raio 40% do lado), para o Android recortar na forma que quiser
-//     (purpose "maskable").
+//   - icone-192.png e icone-512.png: o próprio icon.svg (o tomate com o
+//     anel), fundo transparente (purpose "any");
+//   - icone-maskable-512.png: um fundo creme de ponta a ponta e o tomate no
+//     centro, dentro da zona segura (o círculo de raio 40% do lado), para o
+//     Android recortar na forma que quiser (purpose "maskable").
 //
 //   node scripts/web/icones.mjs            # regrava os três PNG
 //   node scripts/web/icones.mjs --conferir # só confere se os PNG batem com o SVG
@@ -26,22 +25,24 @@ const PASTA = fileURLToPath(new URL('../../src/platform/web/icones/', import.met
 /** Lado da zona segura do maskable: o anel cabe no círculo de raio 40%. */
 export const RAIO_SEGURO = 0.4;
 
+/** O fundo do maskable e do ícone adaptativo do Android: creme liso. */
+export const FUNDO_DO_MASKABLE = '#FFF1EA';
+
 /**
- * O SVG do maskable a partir do mestre: o `<defs>` e o gradiente do disco
- * pintando o quadrado inteiro, e o que vem depois do disco (o anel) reduzido
- * a `escala` em torno do centro.
+ * O SVG do maskable a partir do mestre (v0.4.1): o fundo creme de ponta a
+ * ponta e o tomate (tudo o que vem depois do `<defs>`) reduzido a `escala`
+ * em torno do centro, dentro da zona segura.
  */
-export function svgMaskable(mestre, escala = 0.9) {
-  const defs = /<defs>[\s\S]*?<\/defs>/.exec(mestre)?.[0];
-  const disco = /<circle[^>]*fill="url\(#corpo\)"[^>]*\/>/.exec(mestre);
+export function svgMaskable(mestre, escala = 0.72) {
+  const defs = /<defs>[\s\S]*?<\/defs>/.exec(mestre);
   const fim = mestre.lastIndexOf('</svg>');
-  if (!defs || !disco || fim < 0) throw new Error('icones.mjs: o icon.svg mudou de forma (sem <defs> ou sem o disco)');
-  const anel = mestre.slice(disco.index + disco[0].length, fim).trim();
+  if (!defs || fim < 0) throw new Error('icones.mjs: o icon.svg mudou de forma (sem <defs>)');
+  const desenho = mestre.slice(defs.index + defs[0].length, fim).trim();
   return (
     '<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">' +
-    defs +
-    '<rect width="1024" height="1024" fill="url(#corpo)"/>' +
-    `<g transform="translate(512 512) scale(${escala}) translate(-512 -512)">${anel}</g>` +
+    defs[0] +
+    `<rect width="1024" height="1024" fill="${FUNDO_DO_MASKABLE}"/>` +
+    `<g transform="translate(512 512) scale(${escala}) translate(-512 -512)">${desenho}</g>` +
     '</svg>'
   );
 }

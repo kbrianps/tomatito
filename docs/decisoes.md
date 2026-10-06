@@ -1769,3 +1769,11 @@ Na worktree `android`, com A13, A05, A06, A14 e A15 feitos: `npm test` 497/497; 
 3. **Progresso no ícone.** A barra que o sistema desenha sobre o ícone do app acompanha a fase (`progresso.rs`): no Linux, o sinal `com.canonical.Unity.LauncherEntry.Update` com `application://Tomatito.desktop`, direto pelo zbus; no Windows, o `set_progress_bar` das janelas. Trocar o desenho do ícone em si não dá no GNOME (a dock usa o ícone do `.desktop`). Conferido no GNOME aninhado pelo `dbus-monitor` (`dock.log`); o desenho na dock de verdade e o Windows ficaram sem conferência visual.
 4. **Web e Android:** o modo compacto não entrou (na web, o Full já tem o "Mini tomate"; no Android não há janelas).
 
+## v0.4.1 (06/10/2026)
+
+1. **Ícone novo: o tomate com o anel.** Na dock e no menu de apps do Ubuntu, o disco com o anel do M44 lia como um círculo vazio (retorno do usuário, que escolheu entre quatro desenhos). O mestre (`src-tauri/icons/icon.svg`) passa a ser o tomate do Tomatito Full (corpo, cabinho e cálice do `tomato.html`) com o anel creme acompanhando o contorno. Isso desfaz o "sem tomate" do plano (seções 8 e 9), por decisão do usuário.
+2. **O traço do anel usa medidas reais.** O `npx tauri icon` (resvg) ignora o `pathLength`, e o `stroke-dasharray` em unidades de 100 saía picotado; o comprimento do contorno (694,9) foi calculado e o traço vai em unidades do desenho.
+3. **Arquivos regerados:** os PNG, o `.ico` e o `.icns` do desktop (pelo `npx tauri icon ... -o <pasta temporária>`, copiando só os do desktop); o ícone adaptativo do Android (fundo creme `#FFF1EA`, o tomate a 58% na frente e a silhueta com o arco vazado na camada monocromática); os três ícones da web (o maskable com o mesmo fundo creme e o tomate a 72%); o ícone de 512 e o destaque da loja.
+4. **Ficaram como estavam:** o ícone da bandeja (`tray.svg`), a marca de uma cor da barra de título e do "Sobre" (`app-mark.js`) e o ícone da notificação do Android: os três são o arco, legível a 16 px.
+5. **Atualização:** o erro de uma instalação que falha vai inteiro para o registro do app.
+
