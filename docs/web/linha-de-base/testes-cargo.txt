@@ -157,6 +157,10 @@ plan::tests::sequencia_de_fases_de_60_min: test
 plan::tests::soma_das_fases_da_t_vezes_60_de_5_a_240: test
 plan::tests::t_e_f_iguais_a_zero_sao_recusados: test
 plan::tests::valores_extremos_nao_estouram: test
+progresso::tests::desligado_nao_mostra_nada_e_religado_volta_ao_ponto: test
+progresso::tests::percentual_de_0_a_100: test
+progresso::tests::propriedades_do_sinal_da_dock: test
+progresso::tests::so_avisa_quando_o_ponto_percentual_muda_e_recomeca_a_cada_fase: test
 pular_intervalos_da_um_foco_so_de_t: test
 pular_o_foco_vai_ao_intervalo_e_pular_o_intervalo_vai_ao_foco: test
 pular_uma_fase_pausada_comeca_a_seguinte_correndo: test

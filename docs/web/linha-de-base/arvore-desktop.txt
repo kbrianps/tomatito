@@ -295,7 +295,7 @@ tokio-util v0.7.19
 tokio v1.53.1
 tomatito-core v0.1.0 (<raiz>/src-tauri/tomatito-core)
 tomatito-motor v0.1.0 (<raiz>/src-tauri/tomatito-motor)
-tomatito v0.3.0 (<raiz>/src-tauri)
+tomatito v0.4.0 (<raiz>/src-tauri)
 toml_datetime v0.6.3
 toml_datetime v1.1.1+spec-1.1.0
 toml_edit v0.19.15
