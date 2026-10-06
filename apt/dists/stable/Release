@@ -1,0 +1,24 @@
+Architectures: amd64
+Codename: stable
+Components: main
+Date: Tue, 06 Oct 2026 13:08:00 +0000
+Description: Tomatito, timer de foco
+Label: Tomatito
+Origin: Tomatito
+Suite: stable
+MD5Sum:
+ caf38b0c2e4919836b1126cad6e228e5              177 Release
+ 99db604a3fa512296b577d43fd6e6230              609 main/binary-amd64/Packages
+ 8f5c0d88cf177c627e92b6549d6bb002              439 main/binary-amd64/Packages.gz
+SHA1:
+ f997fbee3251a3f1b9a3de79801d0d39f4a711a0              177 Release
+ 59ef6c80af961604c61b5462799c9bfd6d338882              609 main/binary-amd64/Packages
+ 2fc5c0e01be008b7ff07e0a662b51a3cbd443e94              439 main/binary-amd64/Packages.gz
+SHA256:
+ f9a377c30153bb53dd3a11df04c3d75de69636bb97e5faf3327ebc9105d297cd              177 Release
+ 1072573690dcf8d21e71e8cecc56325cdcbed4ff619a0fb82fdda171a79b26b6              609 main/binary-amd64/Packages
+ 572109a03234af80d874d9634ceb14752d99fe62c654b227f5694b26aa688ee9              439 main/binary-amd64/Packages.gz
+SHA512:
+ f22cbedba9941460f914bfad7338d04bf9a17df792c065b1a9d30d2ff81c74396ed0c045626e9fa5780287d1fd91b9807a58e893ef8bc2a7052957ba2e16a8e0              177 Release
+ 53c96701c83c0276babd426e8a970253d0dc5c6c5ec1b4dd88ce7d59e260efd40e5b6a41a044c42f7dc21248777e0f7dbbd18cae1020b42e08f4f40adeab7e5f              609 main/binary-amd64/Packages
+ 69edd25adb26ba3394ff45df6b5f4b7be0fa531ac3b49cfe7f1752c2125dbbbeeb47ea3e0ac117a0b15ca031c6c6820593792ca3d3250c1bd9c8be46846fb7e5              439 main/binary-amd64/Packages.gz

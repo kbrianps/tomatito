@@ -1,0 +1,15 @@
+Package: tomatito
+Version: 0.5.0
+Architecture: amd64
+Maintainer: kbrianps
+Installed-Size: 26020
+Depends: libasound2t64 | libasound2, libayatana-appindicator3-1, libwebkit2gtk-4.1-0, libgtk-3-0
+Filename: pool/main/t/tomatito/Tomatito_0.5.0_amd64.deb
+Size: 8678612
+MD5sum: 93b07d35894e693743338c4d2c320c37
+SHA1: 7debd10101158795a4e5ca72e1a6f23463e162b0
+SHA256: 6df12e2de60015596c0c8ddb339c34817add54f2361cdab6fed4cbec15b715db
+Priority: optional
+Description: Timer de foco para Windows e Linux
+ Timer de foco com sessões de foco e intervalo, temporizadores, cronômetro, lista de tarefas e o progresso do dia.
+
