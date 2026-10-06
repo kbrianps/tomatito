@@ -87,6 +87,21 @@ Estrutura:
 
 As versões das dependências são exatas (`.npmrc` com `save-exact`, crates do Tauri com `=`), e os arquivos `package-lock.json` e `Cargo.lock` ficam no repositório.
 
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+
+*Status: application in progress. Until it is approved, the Windows installers are not signed and Windows SmartScreen shows a warning.*
+
+Team roles:
+
+- Committers and reviewers: [kbrianps](https://github.com/kbrianps)
+- Approvers: [kbrianps](https://github.com/kbrianps)
+
+Release builds are produced only by GitHub Actions ([`release.yml`](.github/workflows/release.yml)) on GitHub-hosted runners, from a version tag on the `main` branch.
+
+Privacy policy: this program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The desktop app contacts GitHub only to look for updates, and only when the user clicks "Procurar atualizações" or turns on "Procurar ao abrir" (off by default). Full policy (in Portuguese): <https://tomatito.kbrianps.workers.dev/privacidade>.
+
 ## Licença
 
 MIT. Veja o arquivo `LICENSE`. As licenças dos componentes de terceiros estão em `THIRD_PARTY_NOTICES.md` (gerado por `node scripts/gerar-avisos.mjs`, com o `cargo-about` e o `license-checker`), e a da fonte Inter, em `src/assets/OFL-Inter.txt`; os dois vão nos instaladores e aparecem em Configurações > Sobre.
