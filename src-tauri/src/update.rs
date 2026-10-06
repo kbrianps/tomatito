@@ -231,6 +231,9 @@ mod desktop {
             )
             .await
             .map_err(|e| {
+                // A mensagem inteira vai para o registro: a tela só diz se foi
+                // a rede ou a instalação.
+                eprintln!("[tomatito] atualização não instalada: {e} ({e:?})");
                 let code = match e {
                     tauri_plugin_updater::Error::Reqwest(_)
                     | tauri_plugin_updater::Error::Network(_) => "network",
