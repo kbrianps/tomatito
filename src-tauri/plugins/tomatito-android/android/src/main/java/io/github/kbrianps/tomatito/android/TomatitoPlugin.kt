@@ -62,6 +62,60 @@ class TomatitoPlugin(private val activity: Activity) : Plugin(activity) {
     /** Os canais existem desde a primeira abertura (5.5, A08), antes de qualquer aviso. */
     override fun load(webView: WebView) {
         criarCanais(activity.applicationContext)
+        // v0.5: aberto por um botão da contínua, com o app fechado.
+        guardarAcao(activity.intent, emSegundoPlano = true)
+    }
+
+    // v0.5: o controle pela barra de notificações. A ação pedida num botão da
+    // contínua fica guardada até a página buscá-la (`acao_pendente`), e
+    // `voltar` diz se o app estava em segundo plano (parado) quando ela
+    // chegou: nesse caso, depois de executar, a página o devolve para lá
+    // (`para_o_fundo`).
+    private var acaoGuardada: String? = null
+    private var voltarDepois = false
+    private var parado = true
+
+    override fun onResume() {
+        parado = false
+    }
+
+    override fun onStop() {
+        parado = true
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        guardarAcao(intent, emSegundoPlano = parado)
+    }
+
+    private fun guardarAcao(intent: Intent?, emSegundoPlano: Boolean) {
+        val acao = intent?.getStringExtra(EXTRA_ACAO) ?: return
+        intent.removeExtra(EXTRA_ACAO)
+        // Um pedido já atendido (a Activity recriada com o mesmo Intent) não repete.
+        val id = intent.getLongExtra(EXTRA_ACAO_ID, 0L)
+        if (id != 0L) {
+            if (preferencias().getLong(CHAVE_ULTIMA_ACAO, 0L) == id) return
+            preferencias().edit().putLong(CHAVE_ULTIMA_ACAO, id).apply()
+        }
+        acaoGuardada = acao
+        voltarDepois = emSegundoPlano
+    }
+
+    /** `{ acao, voltar }` da ação guardada (e a esquece), ou `{ acao: null }`. */
+    @Command
+    fun acaoPendente(invoke: Invoke) {
+        val r = JSObject()
+        r.put("acao", acaoGuardada ?: org.json.JSONObject.NULL)
+        r.put("voltar", voltarDepois)
+        acaoGuardada = null
+        voltarDepois = false
+        invoke.resolve(r)
+    }
+
+    /** Devolve o app ao segundo plano, depois de uma ação pedida pela barra. */
+    @Command
+    fun paraOFundo(invoke: Invoke) {
+        activity.moveTaskToBack(true)
+        invoke.resolve()
     }
 
     /**
@@ -282,6 +336,8 @@ class TomatitoPlugin(private val activity: Activity) : Plugin(activity) {
     private fun preferencias() = activity.getSharedPreferences(PREFERENCIAS, Context.MODE_PRIVATE)
 
     companion object {
+        /** v0.5: o número do último pedido de ação atendido ([EXTRA_ACAO_ID]). */
+        const val CHAVE_ULTIMA_ACAO = "ultima-acao"
         const val PREFERENCIAS = "tomatito-android"
         /** Gravada pelo `pedir_notificacoes` (A07b): distingue "nunca pedido" de "recusado de vez". */
         const val JA_PEDIU_NOTIFICACOES = "notificacoes_pedidas"

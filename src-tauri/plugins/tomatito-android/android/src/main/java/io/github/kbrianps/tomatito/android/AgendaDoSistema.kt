@@ -175,6 +175,29 @@ object AgendaDoSistema {
     }
 
     /**
+     * O toque num botão da contínua (v0.5): abre a `MainActivity` (que é
+     * `singleTask`: com o app vivo, chega pelo `onNewIntent`) com a ação no
+     * [EXTRA_ACAO]. Vai direto à atividade, e não a um receiver: o motor só
+     * existe com ela, e o Android 12+ não deixa um receiver de notificação
+     * abrir atividade. O plugin executa a ação e, se o app estava em segundo
+     * plano, devolve-o para lá. Um `PendingIntent` por ação (a `action` do
+     * `Intent` e o código de pedido mudam).
+     */
+    private fun acaoDoApp(ctx: Context, acao: String): PendingIntent {
+        val intent = (ctx.packageManager.getLaunchIntentForPackage(ctx.packageName) ?: Intent().setPackage(ctx.packageName))
+            .setAction("$EXTRA_ACAO.$acao")
+            .putExtra(EXTRA_ACAO, acao)
+            .putExtra(EXTRA_ACAO_ID, System.currentTimeMillis())
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+        return PendingIntent.getActivity(
+            ctx,
+            1000 + acao.hashCode().mod(1000),
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+    }
+
+    /**
      * Posta o aviso do item no canal dele (o canal toca o som, 5.5; nada de
      * `MediaPlayer` aqui) e troca a contínua pela `continuaDepois` (ou a
      * tira). Sem permissão de avisos, não posta nada e não quebra.
@@ -224,6 +247,8 @@ object AgendaDoSistema {
             .setContentIntent(abrirOApp(ctx))
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+        // v0.5: os botões do foco (pausar ou retomar, pular e encerrar).
+        for (botao in botoesDaContinua(c)) b.addAction(0, botao.rotulo, acaoDoApp(ctx, botao.acao))
         if (c.pausado) {
             b.setShowWhen(false).setUsesChronometer(false)
         } else {

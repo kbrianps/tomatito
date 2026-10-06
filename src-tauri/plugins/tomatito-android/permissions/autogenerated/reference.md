@@ -10,6 +10,8 @@ O que a janela main do Tomatito usa no Android (capabilities/android.json).
 - `allow-abrir-config-avisos`
 - `allow-tocar`
 - `allow-abrir-url`
+- `allow-acao-pendente`
+- `allow-para-o-fundo`
 
 ## Permission Table
 
@@ -75,6 +77,32 @@ Denies the abrir_url command without any pre-configured scope.
 <tr>
 <td>
 
+`tomatito-android:allow-acao-pendente`
+
+</td>
+<td>
+
+Enables the acao_pendente command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`tomatito-android:deny-acao-pendente`
+
+</td>
+<td>
+
+Denies the acao_pendente command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `tomatito-android:allow-cores`
 
 </td>
@@ -94,6 +122,32 @@ Enables the cores command without any pre-configured scope.
 <td>
 
 Denies the cores command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`tomatito-android:allow-para-o-fundo`
+
+</td>
+<td>
+
+Enables the para_o_fundo command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`tomatito-android:deny-para-o-fundo`
+
+</td>
+<td>
+
+Denies the para_o_fundo command without any pre-configured scope.
 
 </td>
 </tr>

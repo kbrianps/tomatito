@@ -233,6 +233,10 @@ export const android = Object.freeze({
   abrirConfigAvisos: () => invoke('plugin:tomatito-android|abrir_config_avisos'),
   tocar: (som) => invoke('plugin:tomatito-android|tocar', { som }),
   abrirUrl: (url) => invoke('plugin:tomatito-android|abrir_url', { url }),
+  // v0.5: a ação pedida num botão da notificação (`{ acao, voltar }`), e a
+  // volta ao segundo plano depois de executá-la.
+  acaoPendente: () => invoke('plugin:tomatito-android|acao_pendente'),
+  paraOFundo: () => invoke('plugin:tomatito-android|para_o_fundo'),
 });
 
 /** Ouve um evento do Rust; `cb` recebe só o conteúdo. Devolve o `unlisten`. */

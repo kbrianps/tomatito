@@ -1,5 +1,9 @@
 // A agenda dos avisos de fim (PLANO-ANDROID 5.2, A09): só o Android a usa;
 // no desktop, só os testes a compilam.
+#[cfg(desktop)]
+mod acoes;
+#[cfg(windows)]
+mod acoes_windows;
 #[cfg(any(test, target_os = "android"))]
 mod agenda;
 mod anuncio;
@@ -58,7 +62,14 @@ pub fn run() {
     // app instalado não se confundem.
     #[cfg(desktop)]
     let builder =
-        tauri::Builder::default().plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+        tauri::Builder::default().plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            // v0.5: uma segunda abertura com `--acao=...` (o menu do ícone na
+            // dock ou na barra de tarefas) só executa a ação, sem mexer nas
+            // janelas.
+            if let Some(acao) = acoes::dos_argumentos(&argv) {
+                acoes::executar(app, acao);
+                return;
+            }
             window::mostrar(app)
         }));
     // No Android, nem ele nem o window-state (A03, PLANO-ANDROID 4.1): o
@@ -177,6 +188,17 @@ pub fn run() {
             }
             app.manage(motor.clone());
             bandeja.criar_icone(&motor.state().focus);
+            // v0.5: aberto já com `--acao=...` (o menu do ícone com o app
+            // fechado): a ação roda assim que o motor existe.
+            #[cfg(desktop)]
+            if let Some(acao) = acoes::dos_argumentos(&std::env::args().collect::<Vec<_>>()) {
+                acoes::executar(app.handle(), acao);
+            }
+            // v0.5: as tarefas da lista de atalhos da barra de tarefas.
+            #[cfg(windows)]
+            if let Err(e) = acoes_windows::registrar() {
+                eprintln!("[tomatito] lista de atalhos não gravada: {e}");
+            }
             tauri::async_runtime::spawn(engine::laco(motor.clone(), acordador));
 
             // As janelas nascem aqui, e não no tauri.conf.json (PLANO.md, 4.7).

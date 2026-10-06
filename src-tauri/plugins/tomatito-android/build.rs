@@ -3,7 +3,8 @@
 // na Kotlin, o método tem o nome em lowerCamelCase (`abrir_url` → `abrirUrl`); o `default` lista as do app
 // (permissions/default.toml). Os próximos entram aqui no marco de cada um
 // (PLANO-ANDROID 4.2: A16b). Os que só o Rust chama (`agendar`, A10a) ficam
-// de fora: sem permissão, o JS recebe "not allowed".
+// de fora: sem permissão, o JS recebe "not allowed". v0.5: `acao_pendente` e
+// `para_o_fundo` são os da ação pedida num botão da notificação contínua.
 const COMMANDS: &[&str] = &[
     "permissoes",
     "cores",
@@ -11,6 +12,8 @@ const COMMANDS: &[&str] = &[
     "abrir_config_avisos",
     "tocar",
     "abrir_url",
+    "acao_pendente",
+    "para_o_fundo",
 ];
 
 fn main() {

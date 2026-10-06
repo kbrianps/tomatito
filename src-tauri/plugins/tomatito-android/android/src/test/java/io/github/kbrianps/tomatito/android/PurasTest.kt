@@ -285,4 +285,17 @@ class PurasTest {
         assertNull(Agenda.pacoteDeJson("não é json"))
         assertNull(Agenda.pacoteDeJson(null))
     }
+
+    @Test
+    fun botoesDaContinuaPorEstado() {
+        // v0.5: correndo, pausar, pular e encerrar; pausada, retomar e encerrar.
+        assertEquals(listOf("pausar", "pular", "encerrar"), botoesDaContinua(Continua("foco", fimMs = 1)).map { it.acao })
+        assertEquals(listOf("Pausar", "Pular", "Encerrar"), botoesDaContinua(Continua("intervalo", fimMs = 1)).map { it.rotulo })
+        assertEquals(
+            listOf(BotaoDaContinua("retomar", "Retomar"), BotaoDaContinua("encerrar", "Encerrar")),
+            botoesDaContinua(Continua("foco", pausado = true, restanteMs = 40_000)),
+        )
+        // O temporizador não é controlado pela notificação.
+        assertEquals(emptyList<BotaoDaContinua>(), botoesDaContinua(Continua("temporizador", nome = "Chá", fimMs = 1)))
+    }
 }

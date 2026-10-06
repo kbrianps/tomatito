@@ -41,6 +41,14 @@ class MainActivity : TauriActivity() {
     }
   }
 
+  // v0.5: o `Intent` novo (um botão da notificação contínua) fica como o da
+  // Activity. Com o processo morto, ele chega antes de o plugin carregar, e o
+  // plugin o lê no `load()` (TomatitoPlugin.guardarAcao).
+  override fun onNewIntent(intent: android.content.Intent) {
+    setIntent(intent)
+    super.onNewIntent(intent)
+  }
+
   // O dispatcher chama o callback registrado por último. A biblioteca do Tauri
   // registra o dela (que vai pelo histórico da WebView) depois do onCreate;
   // por isso o nosso entra quando a WebView existe e de novo a cada retomada.

@@ -9,4 +9,6 @@ permissions = [
   "allow-abrir-config-avisos",
   "allow-tocar",
   "allow-abrir-url",
+  "allow-acao-pendente",
+  "allow-para-o-fundo",
 ]
