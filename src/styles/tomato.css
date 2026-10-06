@@ -277,6 +277,90 @@ body {
   color: var(--tt-tomato-ink-2);
 }
 
+/* v0.4, modo compacto: a janelinha como um cartão quadrado no tema normal
+   (Lite, Suave, Claro ou Escuro), com o anel redondo no lugar do tomate, como
+   a janelinha do Relógio do Windows. O <html> vem com data-skin="card" e o
+   data-theme do tema normal (o boot); a janela é opaca (data-full-mode). As
+   cores do tomate passam a ser as do tema. */
+.art-cartao {
+  display: none;
+}
+[data-skin='card'] body {
+  background: var(--tt-bg-app);
+}
+[data-skin='card'] .stage {
+  --tt-tomato-ink: var(--tt-fg-1);
+  --tt-tomato-ink-2: var(--tt-fg-2);
+  --tt-tomato-ring: var(--tt-accent-fg);
+  --tt-tomato-ring-track: var(--tt-ring-track);
+  --tt-tomato-btn-bg: var(--tt-accent-fg);
+  --tt-tomato-btn-bg-hover: var(--tt-accent-fg);
+  --tt-tomato-btn-bg-pressed: var(--tt-accent-fg);
+  --tt-tomato-btn-ink: var(--tt-bg-app);
+  background: var(--tt-bg-app);
+  border: 1px solid var(--tt-border);
+  box-sizing: border-box;
+}
+[data-skin='card'] .stage[data-state='break'] {
+  --tt-tomato-ring: var(--tt-fg-2);
+}
+[data-skin='card'] .stage[data-state='paused'] {
+  --tt-tomato-ring: var(--tt-fg-2);
+}
+[data-skin='card'] .art {
+  display: none;
+}
+[data-skin='card'] .art-cartao {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+[data-skin='card'] .art-cartao .ring-track {
+  stroke-dasharray: none;
+  stroke-dashoffset: 0;
+}
+[data-skin='card'] .art-cartao .ring-progress {
+  stroke-dashoffset: 0;
+}
+[data-skin='card'] .btn:hover {
+  background: color-mix(in srgb, var(--tt-fg-1) 12%, transparent);
+}
+[data-skin='card'] .btn:active {
+  background: color-mix(in srgb, var(--tt-fg-1) 18%, transparent);
+}
+[data-skin='card'] .btn-primary:hover,
+[data-skin='card'] .btn-primary:active {
+  background: var(--tt-accent-fg);
+  filter: brightness(1.06);
+}
+/* O texto dentro do anel (centro em y = 140) e os botões na faixa de baixo. */
+[data-skin='card'] .label {
+  top: 30%;
+}
+[data-skin='card'] .time {
+  top: 43.75%;
+}
+[data-skin='card'] .count {
+  top: 56.5%;
+  font-size: max(10px, 3.4cqw);
+}
+[data-skin='card'] .face > .pos-restore {
+  left: 9.5%;
+  top: 9.5%;
+}
+[data-skin='card'] .face > .pos-settings {
+  left: 90.5%;
+  top: 9.5%;
+}
+[data-skin='card'] .face > .pos-reset,
+[data-skin='card'] .face > .pos-play,
+[data-skin='card'] .face > .pos-skip {
+  top: 89%;
+}
+
 /* A região aria-live do anúncio das fases, fora da tela. */
 .tt-anuncio {
   position: absolute;

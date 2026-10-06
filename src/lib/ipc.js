@@ -180,7 +180,8 @@ export const full = Object.freeze({
   EVENTO_PRONTO: 'tt://tomato-ready',
   EVENTO_VALIDACAO: 'tt://full-validation',
   EVENTO_REGIAO: 'tt://tomato-region',
-  trocarModo: (entrar) => invoke('switch_window_mode', { full: entrar }),
+  // v0.4: `compacto` abre a janelinha como um cartão no tema normal.
+  trocarModo: (entrar, { compacto = false } = {}) => invoke('switch_window_mode', { full: entrar, compact: compacto }),
   mostrarMain: (rota = null) => invoke('show_main', { route: rota }),
   avisarPronto: (dados) => emit('tt://tomato-ready', dados),
   validacao: () => invoke('full_validation_get'),

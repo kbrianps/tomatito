@@ -795,18 +795,20 @@ test('tomate: duas entradas no Vite, janela da 5.3 e comandos async (M50 e M51)'
     '.resizable(false)',
     '.maximizable(false)',
     '.always_on_top(s.tomato_on_top)',
-    '.theme(Some(Theme::Dark))',
+    '.theme(Some(nativo))',
     '.background_color(fundo)',
     '.visible(false)',
-    '.initialization_script(init_script(modo))',
+    '.initialization_script(init_script(modo, s))',
     // M55: o A/B do no_redirection_bitmap (ligado por padrão, nunca na opaca).
     'builder.no_redirection_bitmap(sem_redirecionamento(',
   ];
   for (const c of chamadas) assert.ok(tomato.includes(c), `tomato.rs sem ${c}`);
-  assert.match(tomato, /let fundo = if opaca \{\s*FUNDO_OPACO\s*\} else \{\s*Color\(0, 0, 0, 0\)\s*\};/);
+  // v0.4: o cartão do modo compacto nasce na cor do tema normal; o resto, como antes.
+  assert.match(tomato, /let fundo = if s\.compact \{[^}]*main_window::background_for\(s\.resolved_theme\)\s*\} else if opaca \{\s*FUNDO_OPACO\s*\} else \{\s*Color\(0, 0, 0, 0\)\s*\};/);
+  assert.match(tomato, /let nativo = if s\.compact \{\s*main_window::native_theme\(s\)\.unwrap_or\(Theme::Dark\)\s*\} else \{\s*Theme::Dark\s*\};/);
   assert.match(tomato, /let size = f64::from\(s\.tomato_size\);/);
   const comandos = ler('src-tauri/src/commands.rs');
-  assert.match(comandos, /pub async fn switch_window_mode\(app: AppHandle, full: bool\)/, 'criar janela num comando síncrono trava no Windows (5.3)');
+  assert.match(comandos, /pub async fn switch_window_mode\(\s*app: AppHandle,\s*full: bool,\s*compact: Option<bool>,\s*\)/, 'criar janela num comando síncrono trava no Windows (5.3)');
   assert.match(comandos, /pub async fn show_main\(/);
   assert.doesNotMatch(comandos, /tomato_debug_open/, 'o comando de debug do M50 saiu no M51');
   const lib = ler('src-tauri/src/lib.rs');
@@ -856,7 +858,7 @@ test('Full: switch_window_mode pelo caminho do settings_set, tt://tomato-ready c
   assert.match(js, /e\.key !== 'Escape'/);
   assert.match(js, /voltar: \(\) => sair\(\)/);
   assert.match(js, /ipc\.full\.trocarModo\(false\)/);
-  assert.match(ler('src/lib/ipc.js'), /trocarModo: \(entrar\) => invoke\('switch_window_mode', \{ full: entrar \}\)/);
+  assert.match(ler('src/lib/ipc.js'), /trocarModo: \(entrar, \{ compacto = false \} = \{\}\) => invoke\('switch_window_mode', \{ full: entrar, compact: compacto \}\)/);
   assert.match(ler('src/main.js'), /trocarModo: ipc\.full\.trocarModo,/);
 });
 

@@ -49,6 +49,8 @@ const el = {
   tempo: q('[data-tempo]'),
   contagem: q('[data-contagem]'),
   anel: q('[data-anel]'),
+  // v0.4: o anel redondo do modo compacto (o mesmo --tt-anel).
+  anelDoCartao: q('[data-anel-cartao]'),
   principal: q('[data-acao="principal"]'),
   encerrar: q('[data-acao="encerrar"]'),
   pular: q('[data-acao="pular"]'),
@@ -78,7 +80,10 @@ function escrever(v) {
   if (v.rotulo !== antes.rotulo) el.rotulo.textContent = v.rotulo;
   if (v.tempo !== antes.tempo) el.tempo.textContent = v.tempo;
   if (v.contagem !== antes.contagem) el.contagem.textContent = v.contagem;
-  if (v.anel !== antes.anel) el.anel.style.setProperty('--tt-anel', String(v.anel));
+  if (v.anel !== antes.anel) {
+    el.anel.style.setProperty('--tt-anel', String(v.anel));
+    el.anelDoCartao?.style.setProperty('--tt-anel', String(v.anel));
+  }
   // O rótulo do tempo muda no máximo uma vez por minuto (3.8).
   const rotulo = rotuloDoTempo(v);
   if (el.tempo.getAttribute('aria-label') !== rotulo) el.tempo.setAttribute('aria-label', rotulo);
@@ -132,7 +137,9 @@ store.assinar(atualizar);
 // get_state no store; aqui só vai para o console.
 const acoes = {
   voltar: () => sair(),
-  configuracoes: () => ipc.full.mostrarMain('#/configuracoes'),
+  // v0.4: no modo compacto (o cartão), a engrenagem volta ao modo normal e
+  // abre as Configurações: a Aparência mostra o tema de verdade, e não o Full.
+  configuracoes: () => (h.dataset.skin === 'card' ? sair().then(() => ipc.full.mostrarMain('#/configuracoes')) : ipc.full.mostrarMain('#/configuracoes')),
   encerrar: () => store.comando('parar'),
   pular: () => store.comando('pular'),
   principal: () => {

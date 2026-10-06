@@ -8,11 +8,13 @@ const root = fileURLToPath(new URL('../..', import.meta.url));
 
 // Globais do initialization_script (src-tauri/src/window/main_window.rs), lidas
 // da URL (--path do shot.mjs): ?pref=lite|suave|light|dark|system|full,
-// ?ultimo=<lastNormalTheme> e ?plataforma=linux|windows. Sem parâmetro, a
+// ?ultimo=<lastNormalTheme>, ?plataforma=linux|windows e ?pele=card (v0.4: o
+// modo compacto, no tomato.html). Sem parâmetro, a
 // global fica indefinida, como num navegador comum (o boot cai em lite e web).
 const GLOBAIS = `(function(){var q=new URLSearchParams(location.search),w=window;
 if(q.get('pref'))w.__TT_PREF__=q.get('pref');if(q.get('ultimo'))w.__TT_LAST__=q.get('ultimo');
-if(q.get('plataforma'))w.__TT_PLATFORM__=q.get('plataforma');})();`;
+if(q.get('plataforma'))w.__TT_PLATFORM__=q.get('plataforma');
+if(q.get('pele')){w.__TT_SKIN__=q.get('pele');w.__TT_FULL_MODE__='opaque';}})();`;
 
 export default {
   ...base,

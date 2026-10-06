@@ -87,7 +87,8 @@ pub fn full_mode(s: &Settings) -> FullMode {
 /// `"0"`, como no `getenv` do WebKitGTK.
 pub fn full_mode_com(s: &Settings, dmabuf: Option<&OsStr>) -> FullMode {
     let dmabuf_off = cfg!(target_os = "linux") && dmabuf.is_some_and(|v| v.to_str() != Some("0"));
-    if dmabuf_off || s.full_mode == settings::FullMode::Opaque {
+    // v0.4: o modo compacto é um cartão quadrado, sempre opaco.
+    if s.compact || dmabuf_off || s.full_mode == settings::FullMode::Opaque {
         FullMode::Opaque
     } else {
         FullMode::Transparent
@@ -98,14 +99,27 @@ pub fn full_mode_com(s: &Settings, dmabuf: Option<&OsStr>) -> FullMode {
 /// script de boot do `tomato.html` lê. A página do tomate é sempre `full`
 /// (4.6), seja qual for o tema salvo; no B3, o `__TT_FULL_MODE__ = "opaque"`
 /// vira o `data-full-mode="opaque"` do `<html>` (M52).
-pub fn init_script(modo: FullMode) -> String {
+///
+/// v0.4: no modo compacto (`compact`), a página é o cartão no tema normal:
+/// `__TT_SKIN__ = "card"` e o `__TT_LAST__` com o `lastNormalTheme`, de onde
+/// o boot tira o `data-theme` (o `system` é resolvido lá, pela mídia).
+pub fn init_script(modo: FullMode, s: &Settings) -> String {
     let json = |valor: &str| serde_json::Value::from(valor).to_string();
     let opaco = match modo {
         FullMode::Opaque => format!("window.__TT_FULL_MODE__={};", json("opaque")),
         FullMode::Transparent => String::new(),
     };
+    let cartao = if s.compact {
+        format!(
+            "window.__TT_SKIN__={};window.__TT_LAST__={};",
+            json("card"),
+            json(s.last_normal_theme.as_str()),
+        )
+    } else {
+        String::new()
+    };
     format!(
-        "window.__TT_PREF__={};window.__TT_PLATFORM__={};{opaco}",
+        "window.__TT_PREF__={};window.__TT_PLATFORM__={};{opaco}{cartao}",
         json("full"),
         json(std::env::consts::OS),
     )
@@ -132,10 +146,18 @@ pub fn init_lado(lado: u32) -> String {
 pub fn build_tomato(app: &AppHandle, s: &Settings, modo: FullMode) -> tauri::Result<WebviewWindow> {
     let opaca = modo == FullMode::Opaque;
     let size = f64::from(s.tomato_size);
-    let fundo = if opaca {
+    let fundo = if s.compact {
+        // v0.4: o cartão nasce na cor de fundo do tema normal.
+        main_window::background_for(s.resolved_theme)
+    } else if opaca {
         FUNDO_OPACO
     } else {
         Color(0, 0, 0, 0)
+    };
+    let nativo = if s.compact {
+        main_window::native_theme(s).unwrap_or(Theme::Dark)
+    } else {
+        Theme::Dark
     };
     let builder = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("tomato.html".into()))
         .title("Tomatito")
@@ -149,10 +171,10 @@ pub fn build_tomato(app: &AppHandle, s: &Settings, modo: FullMode) -> tauri::Res
         .maximizable(false)
         // Sem efeito no Wayland (3.8); no Windows, "Sempre na frente" (M56).
         .always_on_top(s.tomato_on_top)
-        .theme(Some(Theme::Dark))
+        .theme(Some(nativo))
         .background_color(fundo)
         .visible(false)
-        .initialization_script(init_script(modo))
+        .initialization_script(init_script(modo, s))
         // M54: o lado da janela, para a região antes do show (5.6). Escondida,
         // a página do WebKitGTK tem `innerWidth` 0 (docs/decisoes.md, M54).
         .initialization_script(init_lado(s.tomato_size));
@@ -547,14 +569,38 @@ async fn criar_e_mostrar(app: &AppHandle, s: &Settings, modo: FullMode) -> tauri
 /// `set_focus`, sem `hide` nem `show`: no Linux, a `tomato` nunca pode ser
 /// escondida; 5.3) e deixa a `main` como está: é o "Mostrar Tomatito" da
 /// 3.4, e a `main` pode estar aberta nas Configurações.
-pub async fn entrar(app: &AppHandle) -> Result<(), String> {
+///
+/// v0.4: `compacto` escolhe o desenho da janelinha: o tomate (`false`) ou o
+/// cartão no tema normal (`true`, a chave `compact`). `None` (o "Mostrar
+/// Tomatito" da bandeja, a segunda instância) fica com o que está gravado.
+/// Uma janelinha aberta com o outro desenho é fechada e nasce de novo.
+pub async fn entrar(app: &AppHandle, compacto: Option<bool>) -> Result<(), String> {
     let troca = app.state::<Troca>();
     let _vez = troca.trava.lock().await;
+    let antes = app.state::<SettingsStore>().get();
+    let compacto = compacto.unwrap_or(antes.compact);
+    let trocou = antes.compact != compacto;
+    if trocou {
+        let store = app.state::<SettingsStore>();
+        crate::commands::gravar_configuracoes(app, &store, &json!({ "compact": compacto }))
+            .map_err(|e| format!("{:?}: {}", e.code, e.message))?;
+    }
     let s = gravar_tema(app, ThemePref::Full.as_str())?;
     if let Some(t) = app.get_webview_window(LABEL) {
-        let _ = t.unminimize();
-        let _ = t.set_focus();
-        return Ok(());
+        if trocou {
+            t.destroy().map_err(|e| e.to_string())?;
+            // O `destroy()` só tira o rótulo no laço de eventos: sem esperar,
+            // a janela nova esbarra em "a webview with label `tomato` already
+            // exists".
+            let t0 = std::time::Instant::now();
+            while app.get_webview_window(LABEL).is_some() && t0.elapsed() < ESPERA_DO_PRONTO {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        } else {
+            let _ = t.unminimize();
+            let _ = t.set_focus();
+            return Ok(());
+        }
     }
     let modo = full_mode(&s);
     let mut e = criar_e_mostrar(app, &s, modo)
@@ -926,7 +972,7 @@ mod tests {
     #[test]
     fn script_de_inicializacao_do_tomate_e_sempre_full() {
         assert_eq!(
-            init_script(FullMode::Transparent),
+            init_script(FullMode::Transparent, &Settings::default()),
             format!(
                 "window.__TT_PREF__=\"full\";window.__TT_PLATFORM__=\"{}\";",
                 std::env::consts::OS
@@ -934,11 +980,22 @@ mod tests {
         );
         // B3 (M52): o boot do tomato.html põe o data-full-mode="opaque".
         assert_eq!(
-            init_script(FullMode::Opaque),
+            init_script(FullMode::Opaque, &Settings::default()),
             format!(
                 "window.__TT_PREF__=\"full\";window.__TT_PLATFORM__=\"{}\";window.__TT_FULL_MODE__=\"opaque\";",
                 std::env::consts::OS
             )
+        );
+        // v0.4: o cartão do modo compacto, no tema normal.
+        let compacto = Settings {
+            compact: true,
+            last_normal_theme: settings::NormalTheme::Dark,
+            ..Settings::default()
+        };
+        assert_eq!(full_mode_com(&compacto, None), FullMode::Opaque);
+        assert!(
+            init_script(FullMode::Opaque, &compacto)
+                .ends_with("window.__TT_SKIN__=\"card\";window.__TT_LAST__=\"dark\";")
         );
     }
 

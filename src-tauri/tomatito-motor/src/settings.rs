@@ -196,6 +196,9 @@ pub struct Settings {
     /// v0.3: procurar atualizações ao abrir (só no desktop; desligada por
     /// padrão, porque é a única coisa que faz o app falar com a internet).
     pub auto_update: bool,
+    /// v0.4: o Full no modo compacto: a janelinha é um cartão quadrado nas
+    /// cores do `lastNormalTheme`, e não o tomate. Só vale com `theme = full`.
+    pub compact: bool,
 }
 
 impl Default for Settings {
@@ -225,6 +228,7 @@ impl Default for Settings {
             full_validated: String::new(),
             linux_x11: false,
             auto_update: false,
+            compact: false,
         }
     }
 }
@@ -487,6 +491,7 @@ mod tests {
                 "fullValidated": "",
                 "linuxX11": false,
                 "autoUpdate": false,
+                "compact": false,
             })
         );
     }

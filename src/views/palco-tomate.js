@@ -35,6 +35,7 @@ export function ligarTomate(stage, { store, acoes, janela = globalThis }) {
     tempo: q('[data-tempo]'),
     contagem: q('[data-contagem]'),
     anel: q('[data-anel]'),
+    anelDoCartao: q('[data-anel-cartao]'),
     principal: q('[data-acao="principal"]'),
     encerrar: q('[data-acao="encerrar"]'),
     pular: q('[data-acao="pular"]'),
@@ -59,7 +60,10 @@ export function ligarTomate(stage, { store, acoes, janela = globalThis }) {
     if (v.rotulo !== antes.rotulo) el.rotulo.textContent = v.rotulo;
     if (v.tempo !== antes.tempo) el.tempo.textContent = v.tempo;
     if (v.contagem !== antes.contagem) el.contagem.textContent = v.contagem;
-    if (v.anel !== antes.anel) el.anel.style.setProperty('--tt-anel', String(v.anel));
+    if (v.anel !== antes.anel) {
+      el.anel.style.setProperty('--tt-anel', String(v.anel));
+      el.anelDoCartao?.style.setProperty('--tt-anel', String(v.anel));
+    }
     const rotulo = rotuloDoTempo(v);
     if (el.tempo.getAttribute('aria-label') !== rotulo) el.tempo.setAttribute('aria-label', rotulo);
     nomear(el.principal, v.principal.rotulo);

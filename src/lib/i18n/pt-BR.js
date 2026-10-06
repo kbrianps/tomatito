@@ -104,6 +104,8 @@ export default Object.freeze({
     // botão "Ver histórico" do cartão de progresso: os totais de todo o tempo
     // e o foco por semana (segunda a domingo). Sem sequência, recorde nem
     // comparação (1.1, sem gamificação).
+    // v0.4: o botão do cartão de sessão que abre a janelinha (views/focus/compacto.js).
+    compacto: 'Modo compacto',
     historico: Object.freeze({
       abrir: 'Ver histórico',
       titulo: 'Histórico',
