@@ -78,6 +78,7 @@ impl Acao {
 pub struct Contagem {
     pub fase: Option<TrayPhase>,
     pub restante_ms: u64,
+    pub duracao_ms: u64,
 }
 
 impl Contagem {
@@ -91,6 +92,10 @@ impl Contagem {
         Self {
             fase,
             restante_ms: f.session.as_ref().map_or(0, |s| s.remaining_ms),
+            duracao_ms: f
+                .session
+                .as_ref()
+                .map_or(0, |s| s.phase.duration_s.saturating_mul(1000)),
         }
     }
 
@@ -102,6 +107,7 @@ impl Contagem {
                 PhaseKindDto::Break => TrayPhase::Break,
             }),
             restante_ms: t.remaining_ms,
+            duracao_ms: t.phase.duration_s.saturating_mul(1000),
         }
     }
 
@@ -121,6 +127,42 @@ pub struct Vista {
     /// O tempo na bandeja ("24 min"), só com a opção ligada e uma sessão em
     /// andamento.
     pub tempo: Option<String>,
+    pub anel: Option<u8>,
+}
+
+pub const PASSO_DO_ANEL: u8 = 5;
+
+const ICONE_PARADO: &[u8] = include_bytes!("../icons/bandeja/parado.png");
+
+const ICONES_DO_ANEL: [&[u8]; 21] = [
+    include_bytes!("../icons/bandeja/000.png"),
+    include_bytes!("../icons/bandeja/005.png"),
+    include_bytes!("../icons/bandeja/010.png"),
+    include_bytes!("../icons/bandeja/015.png"),
+    include_bytes!("../icons/bandeja/020.png"),
+    include_bytes!("../icons/bandeja/025.png"),
+    include_bytes!("../icons/bandeja/030.png"),
+    include_bytes!("../icons/bandeja/035.png"),
+    include_bytes!("../icons/bandeja/040.png"),
+    include_bytes!("../icons/bandeja/045.png"),
+    include_bytes!("../icons/bandeja/050.png"),
+    include_bytes!("../icons/bandeja/055.png"),
+    include_bytes!("../icons/bandeja/060.png"),
+    include_bytes!("../icons/bandeja/065.png"),
+    include_bytes!("../icons/bandeja/070.png"),
+    include_bytes!("../icons/bandeja/075.png"),
+    include_bytes!("../icons/bandeja/080.png"),
+    include_bytes!("../icons/bandeja/085.png"),
+    include_bytes!("../icons/bandeja/090.png"),
+    include_bytes!("../icons/bandeja/095.png"),
+    include_bytes!("../icons/bandeja/100.png"),
+];
+
+pub fn icone_da_bandeja(anel: Option<u8>) -> &'static [u8] {
+    match anel {
+        None => ICONE_PARADO,
+        Some(p) => ICONES_DO_ANEL[usize::from(p.min(100) / PASSO_DO_ANEL)],
+    }
 }
 
 /// A vista para uma contagem. Os minutos são arredondados para cima, como no
@@ -130,9 +172,14 @@ pub fn vista(c: &Contagem, tray_time: bool) -> Vista {
         Some(fase) if tray_time => Some(i18n::tray_time(fase, c.restante_ms.div_ceil(60_000))),
         _ => None,
     };
+    let anel = c.fase.map(|_| {
+        let p = crate::progresso::percentual(c.duracao_ms, c.restante_ms);
+        p / PASSO_DO_ANEL * PASSO_DO_ANEL
+    });
     Vista {
         acao: c.acao(),
         tempo,
+        anel,
     }
 }
 
@@ -230,6 +277,7 @@ impl Bandeja {
         let anterior = e.aplicada.replace(nova.clone());
         let mudou_acao = anterior.as_ref().map(|a| a.acao) != Some(nova.acao);
         let mudou_tempo = anterior.as_ref().map(|a| &a.tempo) != Some(&nova.tempo);
+        let mudou_anel = anterior.as_ref().map(|a| a.anel) != Some(nova.anel);
         let (icone, acao) = (alcas.icone.clone(), alcas.acao.clone());
         // Postado, sem esperar (ver o topo do arquivo). As postagens saem na
         // ordem, e esta é feita com a trava da bandeja pega.
@@ -239,6 +287,16 @@ impl Bandeja {
             }
             if mudou_tempo {
                 mostrar_tempo(&icone, nova.tempo.as_deref());
+            }
+            if mudou_anel {
+                match Image::from_bytes(icone_da_bandeja(nova.anel)) {
+                    Ok(imagem) => {
+                        if let Err(e) = icone.set_icon(Some(imagem)) {
+                            eprintln!("[tomatito] bandeja: ícone não atualizado: {e}");
+                        }
+                    }
+                    Err(e) => eprintln!("[tomatito] bandeja: ícone ilegível: {e}"),
+                }
             }
         });
         if let Err(e) = r {
@@ -269,9 +327,9 @@ fn montar(app: &AppHandle) -> tauri::Result<Alcas> {
     let item_sair = MenuItem::with_id(app, ITEM_SAIR, t::SAIR, true, None::<&str>)?;
     let separador = PredefinedMenuItem::separator(app)?;
     let menu = Menu::with_items(app, &[&acao, &mostrar, &separador, &item_sair])?;
-    // Variante simples da bandeja (M44, icons/tray.svg): PNG de 64 px (3.8:
-    // pelo menos 64 px, legível entre 16 e 22 px).
-    let imagem = Image::from_bytes(include_bytes!("../icons/tray.png"))?;
+    // A bandeja (v0.5.2, scripts/gerar-bandeja.mjs): o tomatinho parado, e
+    // durante uma sessão o anel com o progresso da fase, de 5 em 5%.
+    let imagem = Image::from_bytes(ICONE_PARADO)?;
     let icone = TrayIconBuilder::with_id(ID)
         .icon(imagem)
         .tooltip(i18n::tray_tooltip(None))
@@ -311,7 +369,39 @@ mod tests {
     use super::*;
 
     fn c(fase: Option<TrayPhase>, restante_ms: u64) -> Contagem {
-        Contagem { fase, restante_ms }
+        Contagem {
+            fase,
+            restante_ms,
+            duracao_ms: 1_500_000,
+        }
+    }
+
+    #[test]
+    fn anel_da_bandeja_segue_o_progresso_da_fase_de_5_em_5() {
+        assert_eq!(vista(&c(None, 0), false).anel, None);
+        assert_eq!(
+            vista(&c(Some(TrayPhase::Focus), 1_500_000), false).anel,
+            Some(0)
+        );
+        assert_eq!(
+            vista(&c(Some(TrayPhase::Focus), 750_000), false).anel,
+            Some(50)
+        );
+        assert_eq!(
+            vista(&c(Some(TrayPhase::Focus), 720_000), false).anel,
+            Some(50)
+        );
+        assert_eq!(
+            vista(&c(Some(TrayPhase::Paused), 300_000), false).anel,
+            Some(80)
+        );
+        assert_eq!(vista(&c(Some(TrayPhase::Break), 0), false).anel, Some(100));
+        assert_eq!(icone_da_bandeja(None), ICONE_PARADO);
+        assert_eq!(icone_da_bandeja(Some(100)), ICONES_DO_ANEL[20]);
+        assert_eq!(icone_da_bandeja(Some(7)), ICONES_DO_ANEL[1]);
+        for bytes in std::iter::once(ICONE_PARADO).chain(ICONES_DO_ANEL) {
+            assert!(Image::from_bytes(bytes).is_ok());
+        }
     }
 
     #[test]
@@ -332,7 +422,8 @@ mod tests {
             vista(&c(Some(TrayPhase::Focus), 1_453_000), false),
             Vista {
                 acao: Acao::Pausar,
-                tempo: None
+                tempo: None,
+                anel: Some(0),
             }
         );
         assert_eq!(vista(&c(None, 0), false).acao, Acao::Iniciar);
@@ -385,14 +476,22 @@ mod tests {
             ends_at_ms: 0,
             remaining_ms: 200_000,
         };
-        assert_eq!(Contagem::do_tick(&tick), c(Some(TrayPhase::Break), 200_000));
+        assert_eq!(
+            Contagem::do_tick(&tick),
+            Contagem {
+                fase: Some(TrayPhase::Break),
+                restante_ms: 200_000,
+                duracao_ms: 300_000,
+            }
+        );
+        assert_eq!(vista(&Contagem::do_tick(&tick), false).anel, Some(30));
         let ocioso = FocusDto {
             seq: 0,
             status: StatusDto::Idle,
             at: 0,
             session: None,
         };
-        assert_eq!(Contagem::do_foco(&ocioso), c(None, 0));
+        assert_eq!(Contagem::do_foco(&ocioso), Contagem::default());
     }
 
     #[test]

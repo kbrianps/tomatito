@@ -1798,3 +1798,11 @@ Relato de uso no Windows: a pergunta "O tomate aparece com o fundo transparente?
 1. **Configurações → Aparência** ganha o cartão "Fundo do Tomatito Full: opaco", só com o modo opaco gravado e só onde há o Full (`fundo-do-full.js`). "Usar fundo transparente" grava `fullMode = auto` e `fullValidated = ""`: a próxima entrada no Full abre transparente e pergunta de novo.
 2. **A pergunta dura 20 s** (eram 10).
 3. **A oferta depois de reverter** tem "Tentar de novo" em destaque (resposta `retry`: entra no Full e pergunta outra vez), depois "Usar o modo opaco" e "Agora não". O título passa a ser "O fundo do tomate ficou transparente?", e o texto diz onde voltar atrás.
+
+## v0.5.2: ícones sem progresso falso (24/11/2026)
+
+Relato de uso no Windows: o ícone da barra de tarefas tinha um anel parado em cerca de 62% e o da bandeja um arco parado em 75%; os dois pareciam progresso e não mudavam. Na bandeja, em 16 px, o arco sumia e ficava "um círculo vermelho".
+
+1. **Ícone do app:** o mesmo tomate, com o anel creme fechado (sem o trilho e sem o `stroke-dasharray`). PNGs, `.ico` e `.icns` do desktop regerados pelo `npx tauri icon`, e os três da web pelo `scripts/web/icones.mjs`. O ícone adaptativo do Android (`icons/android/`) ficou como estava.
+2. **Bandeja viva:** o tomatinho (corpo, cabinho e cálice) parado sem sessão; com uma fase em andamento (foco, intervalo ou pausa), o anel acompanha o progresso da fase, de 5 em 5%. São 22 PNGs de 64 px em `src-tauri/icons/bandeja/`, gerados pelo `scripts/gerar-bandeja.mjs` e embutidos no binário; o `tray.rs` troca o ícone só quando o passo muda. O `tray.png` e o `tray.svg` antigos deixaram de ser usados.
+3. **CI:** o Rust estável do GitHub passou a marcar o `AtomicI64::fetch_update` como obsoleto, e o `clippy -D warnings` barrava a `main`. O `FakeClock::advance` usa um laço de `compare_exchange_weak`, que vale nas duas versões.

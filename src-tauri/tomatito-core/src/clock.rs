@@ -141,13 +141,16 @@ impl FakeClock {
     /// Anda `by` para a frente e devolve o novo "agora".
     pub fn advance(&self, by: Duration) -> EpochMs {
         let ms = i64::try_from(by.as_millis()).unwrap_or(i64::MAX);
-        // `fetch_update` com saturação, para um salto enorme não dar a volta.
-        let antes = self
-            .now
-            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |t| {
-                Some(t.saturating_add(ms))
-            })
-            .unwrap_or_else(|t| t);
+        // Soma com saturação, para um salto enorme não dar a volta.
+        let mut antes = self.now.load(Ordering::SeqCst);
+        while let Err(t) = self.now.compare_exchange_weak(
+            antes,
+            antes.saturating_add(ms),
+            Ordering::SeqCst,
+            Ordering::SeqCst,
+        ) {
+            antes = t;
+        }
         EpochMs(antes.saturating_add(ms))
     }
 
