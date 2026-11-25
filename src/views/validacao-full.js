@@ -60,7 +60,8 @@ export function marcacao(r, { agora = Date.now() } = {}) {
       `<p data-motivo>${v.revertida[r.reason] ?? v.revertida.revert}</p>` +
       `<p>${v.opacoExplicacao}</p>` +
       '</div>' +
-      botao('opaque', v.usarOpaco, true) +
+      botao('retry', v.tentarDeNovo, true) +
+      botao('opaque', v.usarOpaco, false) +
       botao('dismiss', v.agoraNao, false) +
       '</fluent-dialog-body>'
     );

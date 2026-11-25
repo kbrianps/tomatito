@@ -863,7 +863,7 @@ test('Full: switch_window_mode pelo caminho do settings_set, tt://tomato-ready c
 });
 
 // M52: a validação com reversão (5.9) e o plano B3 (fullMode=opaque e a variável do DMA-BUF, 5.6).
-test('Full: validação de 10 s pelo fullValidated, full_mode() com o WEBKIT_DISABLE_DMABUF_RENDERER e a tomato opaca', () => {
+test('Full: validação de 20 s pelo fullValidated, full_mode() com o WEBKIT_DISABLE_DMABUF_RENDERER e a tomato opaca', () => {
   const tomato = ler('src-tauri/src/window/tomato.rs');
   // O full_mode() da 5.6: lê a variável do ambiente, compara com "0" e decide só o modo.
   assert.match(tomato, /pub fn full_mode\(s: &Settings\) -> FullMode \{\s*full_mode_com\(s, std::env::var_os\(VARIAVEL_DMABUF\)\.as_deref\(\)\)/);
@@ -893,7 +893,7 @@ test('Full: validação de 10 s pelo fullValidated, full_mode() com o WEBKIT_DIS
   assert.ok(ordem(sair, ['trava.lock().await', 'validacao::cancelar(app)', 'gravar_tema(']));
   // O prazo corre no Rust (10 s), e a reversão é o "Sair" da 5.7, antes da oferta do B3.
   const val = ler('src-tauri/src/window/validacao.rs');
-  assert.match(val, /pub const PRAZO: Duration = Duration::from_secs\(10\);/);
+  assert.match(val, /pub const PRAZO: Duration = Duration::from_secs\(20\);/);
   assert.match(val, /pub const EVENTO: &str = "tt:\/\/full-validation";/);
   assert.ok(ordem(val, ['tokio::time::sleep(PRAZO).await;', 'expirar(&app, id).await;']));
   const reverter = val.slice(val.indexOf('async fn reverter('));

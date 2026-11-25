@@ -31,16 +31,17 @@ test('marcação: a pergunta da 5.9, Manter em destaque e com o foco, e a contag
 
 test('marcação: a oferta do modo opaco, com o motivo', () => {
   const tempo = marcacao({ seq: 2, state: 'reverted', reason: 'timeout' });
-  assert.match(tempo, /<h2 slot="title">Usar o modo opaco\?<\/h2>/);
+  assert.match(tempo, /<h2 slot="title">O fundo do tomate ficou transparente\?<\/h2>/);
   assert.match(tempo, /<p data-motivo>Sem resposta, o Tomatito voltou ao tema anterior\.<\/p>/);
-  assert.match(tempo, /No modo opaco, o tomate aparece dentro de um quadrado escuro/);
+  assert.match(tempo, /tente de novo e escolha Manter/);
+  assert.match(tempo, /Dá para voltar em Configurações → Aparência/);
   assert.match(
     tempo,
-    /class="tt-accent" autofocus data-resposta="opaque">Usar o modo opaco<\/button><button type="button" slot="action" data-resposta="dismiss">Agora não<\/button>/,
+    /class="tt-accent" autofocus data-resposta="retry">Tentar de novo<\/button><button type="button" slot="action" data-resposta="opaque">Usar o modo opaco<\/button><button type="button" slot="action" data-resposta="dismiss">Agora não<\/button>/,
   );
   assert.match(marcacao({ seq: 2, state: 'reverted', reason: 'revert' }), /<p data-motivo>O Tomatito voltou ao tema anterior\.<\/p>/);
   assert.equal(marcacao({ seq: 3, state: 'none' }), '');
-  assert.equal(nomeDo({ state: 'reverted' }), 'Usar o modo opaco?');
+  assert.equal(nomeDo({ state: 'reverted' }), 'O fundo do tomate ficou transparente?');
   assert.equal(respostaDoEsc({ state: 'asking' }), 'revert');
   assert.equal(respostaDoEsc({ state: 'reverted' }), 'dismiss');
   assert.equal(respostaDoEsc({ state: 'none' }), null);
@@ -194,8 +195,8 @@ test('contagem: troca o texto a cada segundo e para quando a pergunta sai', asyn
   a.evento({ seq: 2, state: 'reverted', reason: 'timeout' });
   assert.equal(a.intervalos.size, 0, 'a contagem parou');
   assert.match(el.html, /Sem resposta, o Tomatito voltou ao tema anterior\./);
-  assert.equal(el.attrs['aria-label'], 'Usar o modo opaco?');
-  assert.deepEqual(a.chamadas.slice(1), ['blur', 'show', 'foco:opaque']);
+  assert.equal(el.attrs['aria-label'], 'O fundo do tomate ficou transparente?');
+  assert.deepEqual(a.chamadas.slice(1), ['blur', 'show', 'foco:retry']);
   d.desligar();
 });
 

@@ -1790,3 +1790,11 @@ Na worktree `android`, com A13, A05, A06, A14 e A15 feitos: `npm test` 497/497; 
 
 A versão web passou a responder em **https://tomatito.kbrianps.com** (domínio personalizado do Worker, no `wrangler.jsonc`). O `tomatito.kbrianps.workers.dev` continua no ar de propósito (`workers_dev: true`; com `routes`, ele sai por padrão): os dados da web são por endereço, e quem usava o antigo os leva com Exportar e Importar. Os links do app e dos documentos apontam para o endereço novo; os apps já publicados (até a 0.5.0) abrem a política de privacidade pelo antigo, que segue valendo.
 
+
+## v0.5.1 (24/11/2026): modo opaco com volta
+
+Relato de uso no Windows: a pergunta "O tomate aparece com o fundo transparente?" passou sem resposta, a oferta seguinte tinha "Usar o modo opaco" em destaque, e o `fullMode = opaque` ficou gravado sem nenhum caminho na interface para desfazer (só editando o `settings.json`).
+
+1. **Configurações → Aparência** ganha o cartão "Fundo do Tomatito Full: opaco", só com o modo opaco gravado e só onde há o Full (`fundo-do-full.js`). "Usar fundo transparente" grava `fullMode = auto` e `fullValidated = ""`: a próxima entrada no Full abre transparente e pergunta de novo.
+2. **A pergunta dura 20 s** (eram 10).
+3. **A oferta depois de reverter** tem "Tentar de novo" em destaque (resposta `retry`: entra no Full e pergunta outra vez), depois "Usar o modo opaco" e "Agora não". O título passa a ser "O fundo do tomate ficou transparente?", e o texto diz onde voltar atrás.

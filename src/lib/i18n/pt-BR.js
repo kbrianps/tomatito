@@ -294,6 +294,12 @@ export default Object.freeze({
     aparencia: 'Aparência',
     tema: 'Tema do aplicativo',
     temaDescricao: 'Escolha as cores do Tomatito.',
+    fundoDoFull: Object.freeze({
+      titulo: 'Fundo do Tomatito Full: opaco',
+      descricao: 'O tomate aparece dentro de um quadrado escuro. Use o fundo transparente se ele funciona neste computador.',
+      botao: 'Usar fundo transparente',
+      feito: 'Pronto. Na próxima vez que você ativar o Tomatito Full, ele abre com o fundo transparente e pergunta se ficou certo.',
+    }),
     temas: Object.freeze({
       lite: 'Tomatito Lite',
       suave: 'Tomatito Suave',
@@ -576,12 +582,13 @@ export default Object.freeze({
       prazo: (s) => `Voltando ao tema anterior em ${s} ${s === 1 ? 'segundo' : 'segundos'}.`,
       manter: 'Manter',
       reverter: 'Reverter',
-      opacoTitulo: 'Usar o modo opaco?',
+      opacoTitulo: 'O fundo do tomate ficou transparente?',
       revertida: Object.freeze({
         timeout: 'Sem resposta, o Tomatito voltou ao tema anterior.',
         revert: 'O Tomatito voltou ao tema anterior.',
       }),
-      opacoExplicacao: 'No modo opaco, o tomate aparece dentro de um quadrado escuro e não depende da transparência.',
+      opacoExplicacao: 'Se o fundo apareceu transparente, tente de novo e escolha Manter. Se apareceu um quadrado preto, branco ou vazio, use o modo opaco: o tomate fica dentro de um quadrado escuro. Dá para voltar em Configurações → Aparência.',
+      tentarDeNovo: 'Tentar de novo',
       usarOpaco: 'Usar o modo opaco',
       agoraNao: 'Agora não',
     }),

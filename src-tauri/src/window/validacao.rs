@@ -5,10 +5,10 @@
 //! o userAgent e o renderizador que a página do tomate informa, mais a versão
 //! do WebView e a placa de vídeo; `tomato::chave_de_validacao`), a `main`
 //! fica na tela (ou é criada) com a pergunta "O tomate aparece com o fundo
-//! transparente?", Manter ou Reverter, e uma contagem de 10 s:
+//! transparente?", Manter ou Reverter, e uma contagem de 20 s:
 //! - **Manter** grava `fullValidated` com a chave e termina a entrada (a
 //!   `main` se esconde);
-//! - **Reverter**, ou nenhuma resposta em 10 s: o app volta ao tema anterior
+//! - **Reverter**, ou nenhuma resposta em 20 s: o app volta ao tema anterior
 //!   (o "Sair" da 5.7) e a `main` oferece o plano B3, o modo opaco;
 //! - **Usar o modo opaco** grava `fullMode = opaque` e entra no Full de novo,
 //!   já opaco (sem pergunta: a janela opaca é o próprio plano de reserva);
@@ -36,7 +36,7 @@ use crate::settings::SettingsStore;
 pub const EVENTO: &str = "tt://full-validation";
 
 /// A contagem do diálogo (5.9).
-pub const PRAZO: Duration = Duration::from_secs(10);
+pub const PRAZO: Duration = Duration::from_secs(20);
 
 /// Por que o app voltou ao tema anterior.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -72,6 +72,8 @@ pub enum Resposta {
     Keep,
     /// "Reverter" (ou o Esc), na pergunta.
     Revert,
+    /// "Tentar de novo", na oferta do B3: entra no Full e pergunta de novo.
+    Retry,
     /// "Usar o modo opaco", na oferta do B3.
     Opaque,
     /// "Agora não" (ou o Esc), na oferta do B3.
@@ -183,7 +185,7 @@ pub fn atual(app: &AppHandle) -> Value {
 
 /// Faz a pergunta (5.7, passo 5): a `main` na tela (mostrada de novo ou,
 /// se não existe, criada; a página dela pede o retrato ao ligar), a fase em
-/// `Perguntando` com o prazo de 10 s a partir de agora, e a reversão
+/// `Perguntando` com o prazo de 20 s a partir de agora, e a reversão
 /// agendada. Chamada pelo `entrar` e pelo `abrir_no_inicio`, com o tomate já
 /// na tela; não espera a resposta.
 pub async fn perguntar(app: &AppHandle, chave: String) {
@@ -316,6 +318,14 @@ pub async fn responder(app: &AppHandle, resposta: Resposta) -> Result<Value, Str
             }
             Ok(reverter(app, Motivo::Reverter).await)
         }
+        Resposta::Retry => {
+            if !matches!(v.fase(), Fase::Revertida(_)) {
+                return Ok(v.retrato());
+            }
+            let r = avisar(app, Fase::Nenhuma);
+            tomato::entrar(app, None).await?;
+            Ok(r)
+        }
         Resposta::Opaque => {
             let r = avisar(app, Fase::Nenhuma);
             let store = app.state::<SettingsStore>();
@@ -352,7 +362,7 @@ mod tests {
                     prazo_ms: 1_000
                 }
             ),
-            json!({ "seq": 4, "state": "asking", "deadlineMs": 1_000, "seconds": 10 }),
+            json!({ "seq": 4, "state": "asking", "deadlineMs": 1_000, "seconds": 20 }),
             "a chave fica no Rust"
         );
         assert_eq!(
@@ -370,6 +380,7 @@ mod tests {
         for (texto, r) in [
             ("keep", Resposta::Keep),
             ("revert", Resposta::Revert),
+            ("retry", Resposta::Retry),
             ("opaque", Resposta::Opaque),
             ("dismiss", Resposta::Dismiss),
         ] {
