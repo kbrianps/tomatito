@@ -1,6 +1,6 @@
 [package]
 name = "tomatito"
-version = "0.5.2"
+version = "0.5.3"
 description = "Timer de foco para Windows e Linux"
 authors = ["kbrianps"]
 license = "MIT"
