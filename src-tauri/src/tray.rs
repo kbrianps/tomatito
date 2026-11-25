@@ -355,7 +355,12 @@ pub(crate) fn alternar_foco(app: &AppHandle) {
         return;
     };
     let r = match Acao::para(motor.state().focus.status) {
-        Acao::Iniciar => motor.start(MINUTOS_AO_INICIAR, false, None),
+        Acao::Iniciar => {
+            let minutos = app
+                .try_state::<crate::settings::SettingsStore>()
+                .map_or(MINUTOS_AO_INICIAR, |s| s.get().tomato_minutes);
+            motor.start(minutos, false, None)
+        }
         Acao::Pausar => motor.pause(),
         Acao::Retomar => motor.resume(),
     };

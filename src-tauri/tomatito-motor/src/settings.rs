@@ -32,6 +32,9 @@ pub const FOCUS_MINUTES: std::ops::RangeInclusive<u32> = 1..=240;
 pub const BREAK_MINUTES: std::ops::RangeInclusive<u32> = 1..=60;
 pub const DAILY_GOALS: [u32; 9] = [0, 30, 60, 90, 120, 180, 240, 360, 480];
 pub const TOMATO_SIZES: [u32; 3] = [240, 280, 320];
+pub const TOMATO_SIZE_RANGE: std::ops::RangeInclusive<u32> = 160..=480;
+pub const TOMATO_MINUTES: std::ops::RangeInclusive<u32> = 5..=240;
+pub const TOMATO_OPACITY: std::ops::RangeInclusive<u8> = 40..=100;
 
 /// O padrão do `tomatoOnTop` fora do Windows 10: `true`. O desktop, no
 /// Windows, troca-o no começo do `run()` pelo da versão do sistema
@@ -202,6 +205,8 @@ pub struct Settings {
     /// v0.4: a barra de progresso da fase no ícone do app (a dock do Ubuntu e
     /// a barra de tarefas do Windows).
     pub icon_progress: bool,
+    pub tomato_minutes: u32,
+    pub tomato_opacity: u8,
 }
 
 impl Default for Settings {
@@ -233,6 +238,8 @@ impl Default for Settings {
             auto_update: false,
             compact: false,
             icon_progress: true,
+            tomato_minutes: 30,
+            tomato_opacity: 100,
         }
     }
 }
@@ -259,8 +266,14 @@ impl Settings {
         if self.reset_hour > 23 {
             ruins.push("resetHour");
         }
-        if !TOMATO_SIZES.contains(&self.tomato_size) {
+        if !TOMATO_SIZE_RANGE.contains(&self.tomato_size) {
             ruins.push("tomatoSize");
+        }
+        if !TOMATO_MINUTES.contains(&self.tomato_minutes) || !self.tomato_minutes.is_multiple_of(5) {
+            ruins.push("tomatoMinutes");
+        }
+        if !TOMATO_OPACITY.contains(&self.tomato_opacity) {
+            ruins.push("tomatoOpacity");
         }
         ruins
     }
@@ -497,6 +510,8 @@ mod tests {
                 "autoUpdate": false,
                 "compact": false,
                 "iconProgress": true,
+                "tomatoMinutes": 30,
+                "tomatoOpacity": 100,
             })
         );
     }
@@ -559,5 +574,26 @@ mod tests {
         assert_eq!(a.unknown, ["sounds.y", "x"]);
         assert_eq!(a.invalid, ["sounds.focusEnd"]);
         assert_eq!(a.settings.volume, 10);
+    }
+
+    #[test]
+    fn faixas_do_tomate() {
+        let ruins = |patch: Value| {
+            let m = patch.as_object().unwrap().clone();
+            apply(&Settings::default(), &m).invalid
+        };
+        assert!(
+            ruins(json!({ "tomatoSize": 160, "tomatoMinutes": 5, "tomatoOpacity": 40 })).is_empty()
+        );
+        assert!(
+            ruins(json!({ "tomatoSize": 480, "tomatoMinutes": 240, "tomatoOpacity": 100 }))
+                .is_empty()
+        );
+        assert!(ruins(json!({ "tomatoSize": 350, "tomatoMinutes": 45 })).is_empty());
+        assert_eq!(ruins(json!({ "tomatoSize": 159 })), ["tomatoSize"]);
+        assert_eq!(ruins(json!({ "tomatoSize": 481 })), ["tomatoSize"]);
+        assert_eq!(ruins(json!({ "tomatoMinutes": 32 })), ["tomatoMinutes"]);
+        assert_eq!(ruins(json!({ "tomatoMinutes": 245 })), ["tomatoMinutes"]);
+        assert_eq!(ruins(json!({ "tomatoOpacity": 39 })), ["tomatoOpacity"]);
     }
 }

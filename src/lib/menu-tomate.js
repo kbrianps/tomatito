@@ -10,6 +10,10 @@
 import t from './i18n/pt-BR.js';
 
 export const TAMANHOS = Object.freeze([240, 280, 320]);
+export const LADO_MINIMO = 160;
+export const LADO_MAXIMO = 480;
+export const OPACIDADES = Object.freeze([100, 85, 70, 55, 40]);
+export const DURACOES = Object.freeze([15, 20, 25, 30, 45, 60, 90]);
 
 const tm = t.tomate.menu;
 
@@ -24,7 +28,7 @@ const tm = t.tomate.menu;
  *   `vista` é a de lib/tomate.js; `tamanho` o `tomatoSize`; `sempreNaFrente`
  *   se o item existe (o `tomato_on_top_available`); `naFrente` o `tomatoOnTop`.
  */
-export function itensDoMenu({ vista, tamanho, sempreNaFrente, naFrente }) {
+export function itensDoMenu({ vista, tamanho, sempreNaFrente, naFrente, opacidade = 100 }) {
   const itens = [
     { id: 'principal', tipo: 'item', texto: vista.principal.rotulo, ativo: true },
     { id: 'pular', tipo: 'item', texto: vista.pular.rotulo, ativo: Boolean(vista.pular.ativo) },
@@ -39,6 +43,17 @@ export function itensDoMenu({ vista, tamanho, sempreNaFrente, naFrente }) {
         tipo: 'marcar',
         texto: tm.tamanhos[lado],
         marcado: lado === tamanho,
+      })),
+    },
+    {
+      id: 'opacidade',
+      tipo: 'submenu',
+      texto: tm.opacidade,
+      itens: OPACIDADES.map((valor) => ({
+        id: `opacidade-${valor}`,
+        tipo: 'marcar',
+        texto: tm.porcento(valor),
+        marcado: valor === opacidade,
       })),
     },
   ];
@@ -57,6 +72,29 @@ export function itensDoMenu({ vista, tamanho, sempreNaFrente, naFrente }) {
 }
 
 /** O lado de um id `tamanho-240`, ou null. */
+export function itensDaDuracao(minutos) {
+  const lista = DURACOES.includes(minutos) ? DURACOES : [...DURACOES, minutos].sort((a, b) => a - b);
+  return lista.map((m) => ({ id: `duracao-${m}`, tipo: 'marcar', texto: tm.minutos(m), marcado: m === minutos }));
+}
+
+const numeroDoItem = (prefixo, id) => {
+  const m = new RegExp(`^${prefixo}-(\\d+)$`).exec(id ?? '');
+  return m ? Number(m[1]) : null;
+};
+
+export function opacidadeDoItem(id) {
+  const v = numeroDoItem('opacidade', id);
+  return OPACIDADES.includes(v) ? v : null;
+}
+
+export function minutosDoItem(id) {
+  const v = numeroDoItem('duracao', id);
+  return Number.isInteger(v) && v >= 5 && v <= 240 && v % 5 === 0 ? v : null;
+}
+
+export const ladoArrastado = (inicial, dx, dy) =>
+  Math.min(LADO_MAXIMO, Math.max(LADO_MINIMO, Math.round((inicial + Math.max(dx, dy)) / 10) * 10));
+
 export function ladoDoItem(id) {
   const m = /^tamanho-(\d+)$/.exec(id ?? '');
   const lado = m ? Number(m[1]) : NaN;

@@ -273,6 +273,68 @@ body {
   top: 78.75%;
 } /* (214, 252) */
 
+.stage {
+  opacity: var(--tt-opacidade, 1);
+  transition: opacity 0.2s ease;
+}
+.stage:hover,
+.stage:focus-within {
+  opacity: 1;
+}
+
+.face > .btn-duracao {
+  top: 53.75%;
+  width: 66cqw;
+  height: 20cqw;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--tt-tomato-ink);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background-color 0.15s ease;
+}
+.face > .btn-duracao[hidden] {
+  display: none;
+}
+.btn-duracao svg {
+  position: absolute;
+  right: 3.5cqw;
+  top: 50%;
+  width: max(12px, 5.5cqw);
+  height: max(12px, 5.5cqw);
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.btn-duracao:hover,
+.btn-duracao:focus-visible {
+  background: rgb(255 255 255 / 0.14);
+}
+.btn-duracao:hover svg,
+.btn-duracao:focus-visible svg {
+  opacity: 0.9;
+}
+.btn-duracao:focus-visible {
+  outline: 2px solid var(--tt-tomato-ink);
+  outline-offset: 2px;
+}
+
+.face > .pos-alca {
+  left: 82%;
+  top: 80.6%;
+  width: max(24px, 9cqw);
+  height: max(24px, 9cqw);
+  cursor: nwse-resize;
+  opacity: 0;
+  touch-action: none;
+}
+.stage:hover .pos-alca,
+.pos-alca:active {
+  opacity: 0.85;
+}
+
 .stage[data-state='paused'] .time {
   color: var(--tt-tomato-ink-2);
 }
@@ -359,6 +421,10 @@ body {
 [data-skin='card'] .face > .pos-play,
 [data-skin='card'] .face > .pos-skip {
   top: 89%;
+}
+[data-skin='card'] .face > .pos-alca {
+  left: 94%;
+  top: 94%;
 }
 
 /* A região aria-live do anúncio das fases, fora da tela. */

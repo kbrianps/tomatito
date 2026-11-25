@@ -227,7 +227,7 @@ mod tests {
         fs::create_dir_all(&d.0).unwrap();
         fs::write(
             d.0.join(FILE),
-            r#"{"theme":"roxo","volume":300,"resetHour":24,"tomatoSize":300,"dailyGoalMinutes":45,
+            r#"{"theme":"roxo","volume":300,"resetHour":24,"tomatoSize":500,"dailyGoalMinutes":45,
                 "breakMinutes":0,"focusMinutes":"25","closeToTray":"sim","sounds":{"focusEnd":1},
                 "fullMode":"opaque","tomatoOnTop":false}"#,
         )

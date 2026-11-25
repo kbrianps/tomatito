@@ -35,7 +35,7 @@ import { MINUTOS_AO_INICIAR, chaveDaFase, restanteDaFase, rotuloDoTempo, vista }
 import { regionStrips } from './lib/regiao.js';
 import { espacoLivre, ligarAtalhosDaJanela, rotaDoAtalho } from './lib/keys.js';
 import { ligarBloqueiosDeProducao, ligarRecargaDoDev } from './lib/producao.js';
-import { criarItens, itensDoMenu, ladoDoItem } from './lib/menu-tomate.js';
+import { criarItens, itensDaDuracao, itensDoMenu, ladoArrastado, ladoDoItem, minutosDoItem, opacidadeDoItem } from './lib/menu-tomate.js';
 
 const h = document.documentElement;
 // Sem transições até o primeiro retrato estar na página: a cor do corpo e o
@@ -54,6 +54,8 @@ const el = {
   principal: q('[data-acao="principal"]'),
   encerrar: q('[data-acao="encerrar"]'),
   pular: q('[data-acao="pular"]'),
+  duracao: q('[data-acao="duracao"]'),
+  alca: q('[data-alca]'),
 };
 
 // Botões só de ícone: nome acessível e dica (3.8), do catálogo.
@@ -70,6 +72,8 @@ const store = criarStore({ ipc, eventos: { estado: ipc.EVENTOS.estado, tick: ipc
 
 let ultima = null;
 let chave = null;
+let cfg = { tomatoMinutes: MINUTOS_AO_INICIAR, tomatoOpacity: 100, tomatoSize: Number(window.__TT_TOMATO_SIZE__) || 280 };
+const minutosAoIniciar = () => cfg.tomatoMinutes ?? MINUTOS_AO_INICIAR;
 
 const restante = () =>
   restanteDaFase(store.foco, { agora: Date.now(), velocidade: store.velocidade, estimado: store.restanteMs() });
@@ -80,6 +84,9 @@ function escrever(v) {
   if (v.rotulo !== antes.rotulo) el.rotulo.textContent = v.rotulo;
   if (v.tempo !== antes.tempo) el.tempo.textContent = v.tempo;
   if (v.contagem !== antes.contagem) el.contagem.textContent = v.contagem;
+  const ocioso = v.estado === 'idle';
+  if (el.duracao.hidden === ocioso) el.duracao.hidden = !ocioso;
+  if (ocioso) nomear(el.duracao, t.tomate.mudarDuracao(v.minutosAoIniciar));
   if (v.anel !== antes.anel) {
     el.anel.style.setProperty('--tt-anel', String(v.anel));
     el.anelDoCartao?.style.setProperty('--tt-anel', String(v.anel));
@@ -101,7 +108,7 @@ function escrever(v) {
 }
 
 function desenhar() {
-  const v = vista(store.foco, restante());
+  const v = vista(store.foco, restante(), minutosAoIniciar());
   const k = chaveDaFase(store.foco);
   if (k !== chave) {
     // Outra fase, outra sessão ou o fim: o anel vai direto para o lugar.
@@ -119,7 +126,7 @@ function desenhar() {
 let pedido = null;
 function passo() {
   pedido = null;
-  const v = vista(store.foco, restante());
+  const v = vista(store.foco, restante(), minutosAoIniciar());
   if (!ultima || v.segundos !== ultima.segundos) desenhar();
   if (store.correndo) pedido = requestAnimationFrame(passo);
 }
@@ -142,9 +149,13 @@ const acoes = {
   configuracoes: () => (h.dataset.skin === 'card' ? sair().then(() => ipc.full.mostrarMain('#/configuracoes')) : ipc.full.mostrarMain('#/configuracoes')),
   encerrar: () => store.comando('parar'),
   pular: () => store.comando('pular'),
+  duracao: () => {
+    const r = el.duracao.getBoundingClientRect();
+    return abrirItens(itensDaDuracao(minutosAoIniciar()), r.left + r.width / 2, r.bottom);
+  },
   principal: () => {
     const acao = ultima?.principal.acao;
-    if (acao === 'iniciar') return store.comando('iniciar', MINUTOS_AO_INICIAR, { pularIntervalos: false });
+    if (acao === 'iniciar') return store.comando('iniciar', minutosAoIniciar(), { pularIntervalos: false });
     return acao ? store.comando(acao) : undefined;
   },
 };
@@ -272,13 +283,16 @@ const fabricas = {
   separador: () => PredefinedMenuItem.new({ item: 'Separator' }),
 };
 async function abrirMenu(x, y) {
+  sempreNaFrente ??= await ipc.full.sempreNaFrente().catch(() => false);
+  const s = await ipc.configuracoes.obter();
+  const v = ultima ?? vista(store.foco, restante(), minutosAoIniciar());
+  const itens = itensDoMenu({ vista: v, tamanho: s.tomatoSize, sempreNaFrente, naFrente: s.tomatoOnTop, opacidade: s.tomatoOpacity });
+  return abrirItens(itens, x, y, s);
+}
+async function abrirItens(itens, x, y, s = cfg) {
   if (abrindo) return;
   abrindo = true;
   try {
-    sempreNaFrente ??= await ipc.full.sempreNaFrente().catch(() => false);
-    const s = await ipc.configuracoes.obter();
-    const v = ultima ?? vista(store.foco, restante());
-    const itens = itensDoMenu({ vista: v, tamanho: s.tomatoSize, sempreNaFrente, naFrente: s.tomatoOnTop });
     // Só no dev: os roteiros do GNOME aninhado conferem o menu que abriu.
     if (import.meta.env.DEV) window.__TT_MENU__ = itens;
     // O anterior já foi fechado pelo usuário; os recursos dele saem agora.
@@ -294,6 +308,10 @@ async function abrirMenu(x, y) {
 function doMenu(id, s) {
   const lado = ladoDoItem(id);
   if (lado) return ipc.configuracoes.gravar({ tomatoSize: lado });
+  const opacidade = opacidadeDoItem(id);
+  if (opacidade) return ipc.configuracoes.gravar({ tomatoOpacity: opacidade });
+  const minutos = minutosDoItem(id);
+  if (minutos) return ipc.configuracoes.gravar({ tomatoMinutes: minutos });
   if (id === 'sempre-na-frente') return ipc.configuracoes.gravar({ tomatoOnTop: !s.tomatoOnTop });
   // Minimizar, e nunca esconder (5.3). Fechar passa pelo CloseRequested: o
   // Rust decide entre ficar na bandeja e sair (window/tomato.rs).
@@ -369,3 +387,46 @@ try {
   await quadroPintado();
   avisar(true);
 }
+
+function aplicarConfiguracoes(s) {
+  if (!s || typeof s !== 'object') return;
+  cfg = { ...cfg, ...s };
+  stage.style.setProperty('--tt-opacidade', String((cfg.tomatoOpacity ?? 100) / 100));
+  desenhar();
+}
+ipc.configuracoes
+  .obter()
+  .then(aplicarConfiguracoes)
+  .catch((erro) => console.warn('[tomate]', erro));
+ipc.ouvir(ipc.EVENTOS.configuracoes, aplicarConfiguracoes).catch((erro) => console.warn('[tomate]', erro));
+
+el.alca.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  e.stopPropagation();
+  el.alca.setPointerCapture(e.pointerId);
+  const inicio = { x: e.clientX, y: e.clientY, lado: cfg.tomatoSize || window.innerWidth };
+  let lado = inicio.lado;
+  let enviado = inicio.lado;
+  let espera = null;
+  const enviar = () => {
+    espera = null;
+    if (lado === enviado) return;
+    enviado = lado;
+    ipc.configuracoes.gravar({ tomatoSize: lado }).catch((erro) => console.warn('[tomate]', erro));
+  };
+  const mover = (ev) => {
+    lado = ladoArrastado(inicio.lado, ev.clientX - inicio.x, ev.clientY - inicio.y);
+    espera ??= setTimeout(enviar, 60);
+  };
+  const soltar = () => {
+    el.alca.removeEventListener('pointermove', mover);
+    el.alca.removeEventListener('pointerup', soltar);
+    el.alca.removeEventListener('pointercancel', soltar);
+    clearTimeout(espera);
+    enviar();
+  };
+  el.alca.addEventListener('pointermove', mover);
+  el.alca.addEventListener('pointerup', soltar);
+  el.alca.addEventListener('pointercancel', soltar);
+});

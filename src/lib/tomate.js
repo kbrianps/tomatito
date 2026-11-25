@@ -69,8 +69,8 @@ export function acaoPrincipal(estado) {
 }
 
 /** A contagem, embaixo do tempo. */
-function contagem(foco, estado) {
-  if (estado === 'idle') return tt.sessaoDe(MINUTOS_AO_INICIAR);
+function contagem(foco, estado, minutos) {
+  if (estado === 'idle') return tt.sessaoDe(minutos);
   if (estado === 'completed') return tt.sessaoDe(foco.session.minutes);
   if (estado === 'break') {
     const r = rodape(foco);
@@ -92,12 +92,12 @@ function contagem(foco, estado) {
  *   - os botões: `principal` ({ acao, rotulo, icone }), `encerrar` e `pular`
  *     ({ rotulo, ativo }).
  */
-export function vista(foco, restanteMs) {
+export function vista(foco, restanteMs, minutosAoIniciar = MINUTOS_AO_INICIAR) {
   const estado = estadoDoTomate(foco);
   const s = foco?.session;
   const andamento = emAndamento(estado);
   let segundos = 0;
-  if (estado === 'idle') segundos = MINUTOS_AO_INICIAR * 60;
+  if (estado === 'idle') segundos = minutosAoIniciar * 60;
   else if (andamento) segundos = Number.isFinite(restanteMs) && restanteMs > 0 ? Math.ceil(restanteMs / 1000) : 0;
   const duracaoS = andamento ? s.phase.durationS : 0;
   let fracao = 0;
@@ -111,7 +111,8 @@ export function vista(foco, restanteMs) {
     tempo: mmss(segundos * 1000),
     segundos,
     minutos: andamento ? minutosRestantes(segundos * 1000) : null,
-    contagem: contagem(foco, estado),
+    contagem: contagem(foco, estado, minutosAoIniciar),
+    minutosAoIniciar,
     anel: Math.round(FAIXA_DO_ANEL * fracao * 100) / 100,
     principal: {
       acao,
@@ -131,7 +132,7 @@ export function vista(foco, restanteMs) {
  * ocioso e "Concluída" no fim.
  */
 export function rotuloDoTempo(v) {
-  if (v.estado === 'idle') return minutosPorExtenso(MINUTOS_AO_INICIAR);
+  if (v.estado === 'idle') return minutosPorExtenso(v.minutosAoIniciar ?? MINUTOS_AO_INICIAR);
   if (v.estado === 'completed') return tt.estados.completed;
   // Em pt-BR, o 0 cai em "one" no PluralRules; "0 minutos restantes".
   const restantes = v.minutos === 0 ? a.restantes.other(0) : plurais(v.minutos, a.restantes);

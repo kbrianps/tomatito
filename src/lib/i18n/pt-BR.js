@@ -548,6 +548,8 @@ export default Object.freeze({
     }),
     // Ocioso e concluída: a duração da sessão ("Sessão de 30 min").
     sessaoDe: (min) => `Sessão de ${min} min`,
+    mudarDuracao: (min) => `Duração da sessão: ${min} minutos. Mudar`,
+    redimensionar: 'Arraste para mudar o tamanho',
     voltar: 'Voltar ao modo normal',
     configuracoes: 'Configurações',
     // "Pular" leva à próxima fase; na última (ou sem sessão), fica desabilitado.
@@ -564,6 +566,9 @@ export default Object.freeze({
     menu: Object.freeze({
       tamanho: 'Tamanho',
       tamanhos: Object.freeze({ 240: 'Pequeno', 280: 'Médio', 320: 'Grande' }),
+      opacidade: 'Opacidade',
+      porcento: (n) => `${n}%`,
+      minutos: (n) => `${n} min`,
       // Só no Windows e no X11; no Wayland, a dica abaixo.
       sempreNaFrente: 'Sempre na frente',
       minimizar: 'Minimizar',
