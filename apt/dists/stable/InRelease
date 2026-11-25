@@ -1,0 +1,34 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Architectures: amd64
+Codename: stable
+Components: main
+Date: Wed, 25 Nov 2026 11:17:46 +0000
+Description: Tomatito, timer de foco
+Label: Tomatito
+Origin: Tomatito
+Suite: stable
+MD5Sum:
+ f2cb5752afb7fb4eee8f235c642a9ffc              177 Release
+ 03cd78bbaed4f6886e20f21d726b684b              609 main/binary-amd64/Packages
+ 3d988a6de449824e31fa7ed26ccb4de0              440 main/binary-amd64/Packages.gz
+SHA1:
+ de501a974f2cf5144735c0bc459b2b29090e575c              177 Release
+ 22a5d51dee503af6f7783e66a8c3618b65d7b24a              609 main/binary-amd64/Packages
+ fe29b38fca9149543772e33edd4cf384cbfa55fa              440 main/binary-amd64/Packages.gz
+SHA256:
+ 154667f03327ceaecfbf77df773aa6e4c4b5070e481280a2e5e771f50794d7d0              177 Release
+ 8403beda64bba7beba332e01c6e4f959760b4d2adcb21977b74cbf15af2c445a              609 main/binary-amd64/Packages
+ 28565f1893de573a3dcc0607138384f2251983379fde63022548e4a716bb9ec9              440 main/binary-amd64/Packages.gz
+SHA512:
+ adbd9c90742e413bc859b2b0493c53c18f2afd1e8d4979ef7ce58bf812bfac7238d061fed67c84a7c6613a946ee27baa3430fe5c666f033ddbc1cd11edf2e1a0              177 Release
+ a975db17a9b4f5937b8bbe42f88cd468a8651522bd710869a5f25055edd7bfcce4a0d6de5727ccfea30829143b2ee4ca4ca862d9f046ed3cf2ef7806c1104f3d              609 main/binary-amd64/Packages
+ 656c91536848768e11917b9e01285bfac2b830fe25c84477514cb0527fb2295fec691709945e9f65f5a30a85fcceaafc3f157f9a167876e5dcab5cd35c1ef17c              440 main/binary-amd64/Packages.gz
+-----BEGIN PGP SIGNATURE-----
+
+iHUEARYKAB0WIQTvF6S2yJryVir1m79+oQ7U26Q0OwUCawbD2gAKCRB+oQ7U26Q0
+O46IAP92rKxVG4n5AY2nulxn73guIRloj4liQBz+57OVGxY+iQD+M29Wquh8aF8B
+ee0onCHLOGwo7nQW0DBV/O7M1dYDQAg=
+=eANC
+-----END PGP SIGNATURE-----
