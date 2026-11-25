@@ -269,7 +269,8 @@ impl Settings {
         if !TOMATO_SIZE_RANGE.contains(&self.tomato_size) {
             ruins.push("tomatoSize");
         }
-        if !TOMATO_MINUTES.contains(&self.tomato_minutes) || !self.tomato_minutes.is_multiple_of(5) {
+        if !TOMATO_MINUTES.contains(&self.tomato_minutes) || !self.tomato_minutes.is_multiple_of(5)
+        {
             ruins.push("tomatoMinutes");
         }
         if !TOMATO_OPACITY.contains(&self.tomato_opacity) {
